@@ -15,6 +15,7 @@ import {
   TrendingUp, Users, Package, Calendar, DollarSign, 
   BarChart3, PieChartIcon, Award, Building2 
 } from "lucide-react";
+import CommissionReport from "@/components/admin/CommissionReport";
 
 const COLORS = ["hsl(142, 76%, 36%)", "hsl(45, 93%, 47%)", "hsl(142, 50%, 50%)", "hsl(45, 70%, 60%)", "hsl(200, 70%, 50%)"];
 
@@ -359,11 +360,12 @@ const AdminReports = () => {
 
       {/* Charts */}
       <Tabs defaultValue="bookings" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="bookings">Booking</TabsTrigger>
           <TabsTrigger value="packages">Paket</TabsTrigger>
           <TabsTrigger value="departures">Keberangkatan</TabsTrigger>
           <TabsTrigger value="agents">Agen</TabsTrigger>
+          <TabsTrigger value="commissions">Komisi</TabsTrigger>
         </TabsList>
 
         {/* Booking Stats Tab */}
@@ -668,6 +670,11 @@ const AdminReports = () => {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Commission Stats Tab */}
+        <TabsContent value="commissions" className="space-y-4">
+          <CommissionReport startDate={getDateRange().start} endDate={getDateRange().end} />
         </TabsContent>
       </Tabs>
     </div>
