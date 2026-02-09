@@ -45,6 +45,7 @@ import AdminSettings from "./pages/admin/Settings";
 import AdminNavigation from "./pages/admin/Navigation";
 import AdminPilgrims from "./pages/admin/Pilgrims";
 import AdminAgents from "./pages/admin/Agents";
+import AdminMuthawifs from "./pages/admin/Muthawifs";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const AppContent = () => {
         <Route path="pilgrims" element={<AdminPilgrims />} />
         <Route path="branches" element={<AdminBranches />} />
         <Route path="agents" element={<AdminAgents />} />
+        <Route path="muthawifs" element={<AdminMuthawifs />} />
         <Route path="hotels" element={<AdminHotels />} />
         <Route path="airlines" element={<AdminAirlines />} />
         <Route path="airports" element={<AdminAirports />} />

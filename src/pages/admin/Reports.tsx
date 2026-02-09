@@ -332,8 +332,8 @@ const AdminReports = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-emerald-500/10">
-                <Users className="w-6 h-6 text-emerald-600" />
+              <div className="p-3 rounded-xl bg-primary/10">
+                <Users className="w-6 h-6 text-primary" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Jemaah</p>
@@ -346,8 +346,8 @@ const AdminReports = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-blue-500/10">
-                <TrendingUp className="w-6 h-6 text-blue-600" />
+              <div className="p-3 rounded-xl bg-accent/10">
+                <TrendingUp className="w-6 h-6 text-accent" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Rata-rata Booking</p>
@@ -452,7 +452,7 @@ const AdminReports = () => {
                         cy="50%"
                         labelLine={false}
                         outerRadius={100}
-                        fill="#8884d8"
+                        fill="hsl(var(--accent))"
                         dataKey="bookings"
                         nameKey="name"
                         label={({ name, percent }) => `${name.slice(0, 15)}... (${(percent * 100).toFixed(0)}%)`}
@@ -485,9 +485,9 @@ const AdminReports = () => {
                     packageStats.map((pkg, index) => (
                       <div key={pkg.name} className="flex items-center gap-4">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                          index === 0 ? "bg-gold text-primary" : 
-                          index === 1 ? "bg-gray-300 text-gray-700" : 
-                          index === 2 ? "bg-amber-600 text-white" : 
+                          index === 0 ? "bg-accent text-accent-foreground" : 
+                          index === 1 ? "bg-muted text-muted-foreground" : 
+                          index === 2 ? "bg-secondary text-secondary-foreground" : 
                           "bg-muted text-muted-foreground"
                         }`}>
                           {index + 1}
@@ -624,9 +624,9 @@ const AdminReports = () => {
                         <TableRow key={agent.id}>
                           <TableCell>
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                              index === 0 ? "bg-gold text-primary" : 
-                              index === 1 ? "bg-gray-300 text-gray-700" : 
-                              index === 2 ? "bg-amber-600 text-white" : 
+                              index === 0 ? "bg-accent text-accent-foreground" : 
+                              index === 1 ? "bg-muted text-muted-foreground" : 
+                              index === 2 ? "bg-secondary text-secondary-foreground" : 
                               "bg-muted text-muted-foreground"
                             }`}>
                               {index + 1}

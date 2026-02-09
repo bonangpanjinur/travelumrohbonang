@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Helmet } from "react-helmet-async";
+import SEO from "@/components/SEO";
 
 interface BlogPost {
   id: string;
@@ -66,10 +66,10 @@ const Blog = () => {
 
   return (
     <div className="min-h-screen">
-      <Helmet>
-        <title>Blog - UmrohPlus Travel</title>
-        <meta name="description" content="Artikel dan tips seputar ibadah umroh, panduan perjalanan, dan informasi terkini dari UmrohPlus Travel." />
-      </Helmet>
+      <SEO
+        title="Blog"
+        description="Artikel dan tips seputar ibadah umroh, panduan perjalanan, dan informasi terkini dari UmrohPlus Travel."
+      />
       
       <Navbar />
       <main className="pt-20">

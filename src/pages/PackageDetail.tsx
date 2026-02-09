@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { Calendar, Star, Users, Plane, Hotel, MapPin, ArrowRight, Check } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import SEO from "@/components/SEO";
 
 interface Package {
   id: string;
@@ -115,6 +116,11 @@ const PackageDetail = () => {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title={pkg.title}
+        description={pkg.description || `Paket ${pkg.title} dengan pelayanan premium dan bimbingan ibadah lengkap.`}
+        image={pkg.image_url}
+      />
       <Navbar />
       <main className="pt-20">
         {/* Hero */}

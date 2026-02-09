@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { Helmet } from "react-helmet-async";
+import SEO from "@/components/SEO";
 import { toast } from "sonner";
 
 interface BlogPost {
@@ -122,14 +122,14 @@ const BlogDetail = () => {
 
   return (
     <div className="min-h-screen">
-      <Helmet>
-        <title>{post.seo_title || post.title} - UmrohPlus Travel</title>
-        <meta name="description" content={post.seo_description || post.excerpt} />
-        <meta property="og:title" content={post.seo_title || post.title} />
-        <meta property="og:description" content={post.seo_description || post.excerpt} />
-        {post.image_url && <meta property="og:image" content={post.image_url} />}
-        <meta property="og:type" content="article" />
-      </Helmet>
+      <SEO
+        title={post.seo_title || post.title}
+        description={post.seo_description || post.excerpt}
+        image={post.image_url}
+        type="article"
+        publishedTime={post.published_at || post.created_at}
+        author={post.author}
+      />
       
       <Navbar />
       <main className="pt-20">

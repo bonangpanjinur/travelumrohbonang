@@ -380,7 +380,7 @@ const AdminGallery = () => {
               </div>
 
               {/* Overlay actions */}
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              <div className="absolute inset-0 bg-primary/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 <Button
                   size="icon"
                   variant="secondary"
@@ -399,8 +399,8 @@ const AdminGallery = () => {
 
               {/* Info */}
               {image.title && (
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                  <p className="text-white text-xs font-medium truncate">{image.title}</p>
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary/80 to-transparent p-2">
+                  <p className="text-primary-foreground text-xs font-medium truncate">{image.title}</p>
                 </div>
               )}
             </div>

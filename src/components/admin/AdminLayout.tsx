@@ -51,6 +51,7 @@ const menuItems = [
   { label: "Pembayaran", href: "/admin/payments", icon: Ticket },
   { label: "Laporan", href: "/admin/reports", icon: FileText },
   { label: "Jemaah", href: "/admin/pilgrims", icon: Users },
+  { label: "Muthawif", href: "/admin/muthawifs", icon: User },
   { label: "Cabang", href: "/admin/branches", icon: Building2 },
   { label: "Agen", href: "/admin/agents", icon: User },
   { label: "Hotel", href: "/admin/hotels", icon: Hotel },

@@ -3,8 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
-import { Camera, X } from "lucide-react";
-import { Helmet } from "react-helmet-async";
+import { Camera } from "lucide-react";
+import SEO from "@/components/SEO";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface GalleryItem {
@@ -68,10 +68,10 @@ const Gallery = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Helmet>
-        <title>Galeri | UmrohPlus</title>
-        <meta name="description" content="Galeri foto perjalanan umroh bersama UmrohPlus. Lihat momen-momen indah jamaah kami di Tanah Suci." />
-      </Helmet>
+      <SEO
+        title="Galeri Perjalanan"
+        description="Galeri foto perjalanan umroh bersama UmrohPlus. Lihat momen-momen indah jamaah kami di Tanah Suci Makkah dan Madinah."
+      />
 
       <Navbar />
 

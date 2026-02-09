@@ -36,7 +36,7 @@ interface PackagePopularity {
   value: number;
 }
 
-const CHART_COLORS = ["#D4AF37", "#059669", "#3B82F6", "#8B5CF6", "#F59E0B", "#EC4899"];
+const CHART_COLORS = ["hsl(38, 75%, 55%)", "hsl(160, 84%, 39%)", "hsl(217, 91%, 60%)", "hsl(263, 70%, 50%)", "hsl(38, 92%, 50%)", "hsl(330, 81%, 60%)"];
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState<Stats>({
@@ -194,7 +194,7 @@ const AdminDashboard = () => {
             className="bg-card border border-border rounded-xl p-4"
           >
             <div className={`w-10 h-10 rounded-lg ${stat.color} flex items-center justify-center mb-3`}>
-              <stat.icon className="w-5 h-5 text-white" />
+              <stat.icon className="w-5 h-5 text-primary-foreground" />
             </div>
             <div className="text-2xl font-bold">{stat.value}</div>
             <div className="text-xs text-muted-foreground">{stat.label}</div>
@@ -227,8 +227,8 @@ const AdminDashboard = () => {
           className="bg-card border border-border rounded-xl p-6"
         >
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-yellow-500 flex items-center justify-center">
-              <Clock className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
+              <Clock className="w-6 h-6 text-accent-foreground" />
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Menunggu Pembayaran</div>
@@ -253,8 +253,8 @@ const AdminDashboard = () => {
               <AreaChart data={monthlyData}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
+                    <stop offset="5%" stopColor="hsl(38, 75%, 55%)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(38, 75%, 55%)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
@@ -267,7 +267,7 @@ const AdminDashboard = () => {
                 <Area
                   type="monotone"
                   dataKey="revenue"
-                  stroke="#D4AF37"
+                  stroke="hsl(38, 75%, 55%)"
                   strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#colorRevenue)"
@@ -295,7 +295,7 @@ const AdminDashboard = () => {
                   formatter={(value: number) => [value, "Booking"]}
                   contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
                 />
-                <Bar dataKey="bookings" fill="#059669" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="bookings" fill="hsl(160, 84%, 39%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

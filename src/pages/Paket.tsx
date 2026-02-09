@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import PackageCard, { PackageCardData } from "@/components/PackageCard";
+import SEO from "@/components/SEO";
 
 interface Package extends PackageCardData {
   description: string;
@@ -334,6 +335,10 @@ const Paket = () => {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="Paket Perjalanan Umroh"
+        description="Temukan paket perjalanan umroh terbaik sesuai kebutuhan dan budget Anda. Berbagai pilihan paket dari ekonomi hingga VIP."
+      />
       <Navbar />
       <main className="pt-20">
         {/* Header */}

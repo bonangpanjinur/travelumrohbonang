@@ -193,7 +193,7 @@ const AdminFloatingButtons = () => {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full ${config?.bgClass || "bg-muted"} flex items-center justify-center text-white shrink-0`}>
+                      <div className={`w-10 h-10 rounded-full ${config?.bgClass || "bg-muted"} flex items-center justify-center text-primary-foreground shrink-0`}>
                         <Icon className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
