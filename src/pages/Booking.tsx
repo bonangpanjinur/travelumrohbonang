@@ -237,9 +237,13 @@ const Booking = () => {
 
       toast({ title: "Booking berhasil!", description: `Kode: ${bookingCode}` });
       navigate(`/booking/payment/${booking.id}`);
-    } catch (error) {
-      console.error(error);
-      toast({ title: "Gagal membuat booking", variant: "destructive" });
+    } catch (error: any) {
+      console.error("Booking error:", error);
+      toast({ 
+        title: "Gagal membuat booking", 
+        description: error?.message || "Terjadi kesalahan saat membuat booking",
+        variant: "destructive" 
+      });
     } finally {
       setSubmitting(false);
     }
