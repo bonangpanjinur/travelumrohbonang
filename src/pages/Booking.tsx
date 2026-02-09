@@ -52,6 +52,7 @@ interface Agent {
   id: string;
   name: string;
   branch_id: string | null;
+  branch?: { name: string } | null;
 }
 
 const STEPS = ["Pilih Kamar", "Data Jemaah", "PIC & Konfirmasi"];
@@ -75,6 +76,7 @@ const Booking = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [picType, setPicType] = useState<string>("pusat");
   const [picBranchId, setPicBranchId] = useState<string>("");
+  const [selectedAgentType, setSelectedAgentType] = useState<string>("pusat"); // "pusat" or branch_id
   const [picAgentId, setPicAgentId] = useState<string>("");
 
   useEffect(() => {
@@ -88,7 +90,7 @@ const Booking = () => {
       const [pkgRes, branchRes, agentRes] = await Promise.all([
         supabase.from("packages").select("id, title, slug").eq("slug", slug).single(),
         supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
-        supabase.from("agents").select("id, name, branch_id").eq("is_active", true).order("name")
+        supabase.from("agents").select("id, name, branch_id, branch:branches(name)").eq("is_active", true).order("name")
       ]);
 
       setBranches(branchRes.data || []);
@@ -459,23 +461,67 @@ const Booking = () => {
                   )}
                   
                   {picType === "agen" && agents.length > 0 && (
-                    <div className="mt-4">
-                      <Label>Pilih Agen</Label>
-                      <Select value={picAgentId} onValueChange={setPicAgentId}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Pilih agen" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {agents.map((agent) => (
-                            <SelectItem key={agent.id} value={agent.id}>
+                    <div className="mt-4 space-y-3">
+                      {/* Select agent type: pusat or branch */}
+                      <div>
+                        <Label>Agen Dibawah</Label>
+                        <Select value={selectedAgentType} onValueChange={(v) => { setSelectedAgentType(v); setPicAgentId(""); }}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Pilih tipe agen" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pusat">
                               <div className="flex items-center gap-2">
-                                <UserCheck className="w-4 h-4" />
-                                {agent.name}
+                                <Building2 className="w-4 h-4" />
+                                Agen Pusat (Langsung)
                               </div>
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            {branches.map((branch) => (
+                              <SelectItem key={branch.id} value={branch.id}>
+                                <div className="flex items-center gap-2">
+                                  <Building2 className="w-4 h-4" />
+                                  Agen {branch.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {/* Select specific agent based on type */}
+                      <div>
+                        <Label>Pilih Agen</Label>
+                        <Select value={picAgentId} onValueChange={setPicAgentId}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Pilih agen" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {agents
+                              .filter((agent) => 
+                                selectedAgentType === "pusat" 
+                                  ? agent.branch_id === null 
+                                  : agent.branch_id === selectedAgentType
+                              )
+                              .map((agent) => (
+                                <SelectItem key={agent.id} value={agent.id}>
+                                  <div className="flex items-center gap-2">
+                                    <UserCheck className="w-4 h-4" />
+                                    {agent.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            {agents.filter((agent) => 
+                              selectedAgentType === "pusat" 
+                                ? agent.branch_id === null 
+                                : agent.branch_id === selectedAgentType
+                            ).length === 0 && (
+                              <div className="p-2 text-sm text-muted-foreground text-center">
+                                Tidak ada agen tersedia
+                              </div>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -505,9 +551,9 @@ const Booking = () => {
                   </div>
                   {rooms.filter((r) => r.quantity > 0).map((r) => (
                     <div key={r.room_type} className="flex justify-between py-2 border-b border-border">
-                      <span className="text-muted-foreground">{getRoomLabel(r.room_type)} x{r.quantity}</span>
+                      <span className="text-muted-foreground">{getRoomLabel(r.room_type)} x{r.quantity} jemaah</span>
                       <span className="font-semibold">
-                        Rp {(r.quantity * r.price * (r.room_type === "quad" ? 4 : r.room_type === "triple" ? 3 : 2)).toLocaleString("id-ID")}
+                        Rp {(r.quantity * r.price).toLocaleString("id-ID")}
                       </span>
                     </div>
                   ))}
