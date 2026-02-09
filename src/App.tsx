@@ -44,7 +44,7 @@ import AdminBlog from "./pages/admin/Blog";
 import AdminSettings from "./pages/admin/Settings";
 import AdminNavigation from "./pages/admin/Navigation";
 import AdminPilgrims from "./pages/admin/Pilgrims";
-import { AdminAgents } from "./pages/admin/Placeholder";
+import AdminAgents from "./pages/admin/Agents";
 
 const queryClient = new QueryClient();
 

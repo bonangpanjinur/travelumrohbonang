@@ -9,4 +9,4 @@ const AdminPlaceholder = ({ title }: { title: string }) => {
   );
 };
 
-export const AdminAgents = () => <AdminPlaceholder title="Agen" />;
+export default AdminPlaceholder;
