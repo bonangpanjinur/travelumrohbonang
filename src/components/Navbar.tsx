@@ -1,10 +1,17 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Phone, User, LogOut, ChevronDown } from "lucide-react";
+import { Menu, X, User, LogOut, ChevronDown, LayoutDashboard, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface NavItem {
   id: string;
@@ -165,30 +172,46 @@ const Navbar = () => {
           ))}
         </div>
 
-        {/* CTA */}
+        {/* CTA - Simplified */}
         <div className="hidden lg:flex items-center gap-3">
-          <a href="tel:+6281234567890" className="flex items-center gap-2 text-sm text-gold">
-            <Phone className="w-4 h-4" />
-            <span>0812-3456-7890</span>
-          </a>
           {user ? (
-            <div className="flex items-center gap-2">
-              {isAdmin && (
-                <Link to="/admin">
-                  <Button variant="ghost" size="sm" className="text-gold-light hover:text-gold">
-                    Admin
-                  </Button>
-                </Link>
-              )}
-              <Link to="/my-bookings">
-                <Button variant="ghost" size="sm" className="text-primary-foreground/80 hover:text-gold">
-                  <User className="w-4 h-4 mr-1" /> Booking Saya
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20">
+                  <div className="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center">
+                    <User className="w-4 h-4 text-gold" />
+                  </div>
+                  <ChevronDown className="w-4 h-4" />
                 </Button>
-              </Link>
-              <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-primary-foreground/60 hover:text-destructive">
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 bg-card border-border z-50">
+                {isAdmin && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="flex items-center gap-2 cursor-pointer">
+                        <LayoutDashboard className="w-4 h-4" />
+                        Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem asChild>
+                  <Link to="/my-bookings" className="flex items-center gap-2 cursor-pointer">
+                    <Ticket className="w-4 h-4" />
+                    Booking Saya
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => signOut()} 
+                  className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Keluar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Link to="/auth">
               <Button className="gradient-gold text-primary font-semibold hover:opacity-90 transition-opacity">
@@ -238,31 +261,52 @@ const Navbar = () => {
                   ))}
                 </div>
               ))}
+              
               {user && (
                 <>
-                  <Link to="/my-bookings" onClick={() => setIsOpen(false)} className="block px-4 py-3 text-sm font-medium text-gold">
-                    Booking Saya
-                  </Link>
-                  {isAdmin && (
-                    <Link to="/admin" onClick={() => setIsOpen(false)} className="block px-4 py-3 text-sm font-medium text-gold">
-                      Admin Dashboard
+                  <div className="pt-4 border-t border-emerald-light/20 mt-2">
+                    <p className="px-4 py-2 text-xs text-primary-foreground/40 uppercase tracking-wider">Akun</p>
+                    {isAdmin && (
+                      <Link 
+                        to="/admin" 
+                        onClick={() => setIsOpen(false)} 
+                        className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg"
+                      >
+                        <LayoutDashboard className="w-4 h-4" />
+                        Dashboard
+                      </Link>
+                    )}
+                    <Link 
+                      to="/my-bookings" 
+                      onClick={() => setIsOpen(false)} 
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg"
+                    >
+                      <Ticket className="w-4 h-4" />
+                      Booking Saya
                     </Link>
-                  )}
+                  </div>
+                  <div className="pt-2">
+                    <Button 
+                      onClick={() => { signOut(); setIsOpen(false); }} 
+                      variant="ghost" 
+                      className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Keluar
+                    </Button>
+                  </div>
                 </>
               )}
-              <div className="pt-4 border-t border-emerald-light/20">
-                {user ? (
-                  <Button onClick={() => { signOut(); setIsOpen(false); }} variant="outline" className="w-full border-destructive/50 text-destructive">
-                    <LogOut className="w-4 h-4 mr-2" /> Keluar
-                  </Button>
-                ) : (
+              
+              {!user && (
+                <div className="pt-4 border-t border-emerald-light/20">
                   <Link to="/auth" onClick={() => setIsOpen(false)}>
                     <Button className="w-full gradient-gold text-primary font-semibold">
                       Masuk / Daftar
                     </Button>
                   </Link>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
