@@ -11,5 +11,4 @@ const AdminPlaceholder = ({ title }: { title: string }) => {
 
 export const AdminPilgrims = () => <AdminPlaceholder title="Data Jemaah" />;
 export const AdminAgents = () => <AdminPlaceholder title="Agen" />;
-export const AdminPages = () => <AdminPlaceholder title="Halaman CMS" />;
 export const AdminSettings = () => <AdminPlaceholder title="Pengaturan" />;
