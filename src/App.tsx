@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import Booking from "./pages/Booking";
 import Payment from "./pages/Payment";
 import MyBookings from "./pages/MyBookings";
+import Gallery from "./pages/Gallery";
 import DynamicPage from "./pages/DynamicPage";
 import NotFound from "./pages/NotFound";
 
@@ -29,6 +30,7 @@ import AdminHotels from "./pages/admin/Hotels";
 import AdminAirlines from "./pages/admin/Airlines";
 import AdminAirports from "./pages/admin/Airports";
 import AdminBranches from "./pages/admin/Branches";
+import AdminGallery from "./pages/admin/Gallery";
 import { AdminPilgrims, AdminAgents, AdminSettings } from "./pages/admin/Placeholder";
 
 const queryClient = new QueryClient();
@@ -50,6 +52,7 @@ const App = () => (
               <Route path="/booking/:slug/:departureId" element={<Booking />} />
               <Route path="/booking/payment/:bookingId" element={<Payment />} />
               <Route path="/my-bookings" element={<MyBookings />} />
+              <Route path="/galeri" element={<Gallery />} />
 
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminLayout />}>
@@ -66,6 +69,7 @@ const App = () => (
                 <Route path="hotels" element={<AdminHotels />} />
                 <Route path="airlines" element={<AdminAirlines />} />
                 <Route path="airports" element={<AdminAirports />} />
+                <Route path="gallery" element={<AdminGallery />} />
                 <Route path="pages" element={<AdminPages />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
