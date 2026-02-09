@@ -21,6 +21,7 @@ interface BrandingSettings {
   company_name: string;
   tagline: string;
   favicon_url: string;
+  display_mode: "logo_only" | "text_only" | "both";
 }
 
 const defaultBranding: BrandingSettings = {
@@ -28,6 +29,7 @@ const defaultBranding: BrandingSettings = {
   company_name: "UmrohPlus",
   tagline: "Travel & Tours",
   favicon_url: "",
+  display_mode: "both",
 };
 
 const Navbar = () => {
@@ -46,7 +48,6 @@ const Navbar = () => {
         .order("sort_order");
 
       if (data) {
-        // Build hierarchy
         const items = data as NavItem[];
         const parentItems = items.filter(item => !item.parent_id);
         const childItems = items.filter(item => item.parent_id);
@@ -77,7 +78,6 @@ const Navbar = () => {
     fetchBranding();
   }, []);
 
-  // Fallback to static links if no nav items in DB
   const displayLinks = navItems.length > 0 ? navItems : [
     { id: "1", label: "Beranda", url: "/", parent_id: null, sort_order: 1, open_in_new_tab: false },
     { id: "2", label: "Paket Perjalanan", url: "/paket", parent_id: null, sort_order: 2, open_in_new_tab: false },
@@ -85,12 +85,14 @@ const Navbar = () => {
     { id: "4", label: "Blog", url: "/blog", parent_id: null, sort_order: 4, open_in_new_tab: false },
   ];
 
-  return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-md border-b border-emerald-light/20">
-      <div className="container-custom flex items-center justify-between h-16 md:h-20 px-4 sm:px-6 lg:px-8">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          {branding.logo_url ? (
+  const renderLogo = () => {
+    const showLogo = branding.display_mode === "logo_only" || branding.display_mode === "both";
+    const showText = branding.display_mode === "text_only" || branding.display_mode === "both";
+
+    return (
+      <Link to="/" className="flex items-center gap-2">
+        {showLogo && (
+          branding.logo_url ? (
             <img 
               src={branding.logo_url} 
               alt={branding.company_name} 
@@ -102,7 +104,9 @@ const Navbar = () => {
                 {branding.company_name.charAt(0)}
               </span>
             </div>
-          )}
+          )
+        )}
+        {showText && (
           <div>
             <span className="font-display text-xl font-bold text-primary-foreground">
               {branding.company_name}
@@ -111,7 +115,16 @@ const Navbar = () => {
               {branding.tagline}
             </span>
           </div>
-        </Link>
+        )}
+      </Link>
+    );
+  };
+
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-md border-b border-emerald-light/20">
+      <div className="container-custom flex items-center justify-between h-16 md:h-20 px-4 sm:px-6 lg:px-8">
+        {/* Logo */}
+        {renderLogo()}
 
         {/* Desktop Nav */}
         <div className="hidden lg:flex items-center gap-1">
@@ -132,7 +145,6 @@ const Navbar = () => {
                 )}
               </Link>
               
-              {/* Dropdown for children */}
               {link.children && link.children.length > 0 && (
                 <div className="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                   <div className="bg-card border border-border rounded-lg shadow-xl py-2 min-w-[160px]">

@@ -8,6 +8,7 @@ interface BrandingSettings {
   company_name: string;
   tagline: string;
   favicon_url: string;
+  display_mode: "logo_only" | "text_only" | "both";
 }
 
 interface ContactSettings {
@@ -23,6 +24,7 @@ const defaultBranding: BrandingSettings = {
   company_name: "UmrohPlus",
   tagline: "Travel & Tours",
   favicon_url: "",
+  display_mode: "both",
 };
 
 const defaultContact: ContactSettings = {
@@ -58,6 +60,9 @@ const Footer = () => {
     fetchSettings();
   }, []);
 
+  const showLogo = branding.display_mode === "logo_only" || branding.display_mode === "both";
+  const showText = branding.display_mode === "text_only" || branding.display_mode === "both";
+
   return (
     <footer id="kontak" className="bg-primary text-primary-foreground">
       <div className="container-custom section-padding pb-8">
@@ -65,25 +70,29 @@ const Footer = () => {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              {branding.logo_url ? (
-                <img 
-                  src={branding.logo_url} 
-                  alt={branding.company_name} 
-                  className="h-10 w-auto object-contain"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center">
-                  <span className="font-display font-bold text-lg text-primary">
-                    {branding.company_name.charAt(0)}
+              {showLogo && (
+                branding.logo_url ? (
+                  <img 
+                    src={branding.logo_url} 
+                    alt={branding.company_name} 
+                    className="h-10 w-auto object-contain"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center">
+                    <span className="font-display font-bold text-lg text-primary">
+                      {branding.company_name.charAt(0)}
+                    </span>
+                  </div>
+                )
+              )}
+              {showText && (
+                <div>
+                  <span className="font-display text-xl font-bold">{branding.company_name}</span>
+                  <span className="block text-[10px] text-gold-light tracking-widest uppercase -mt-1">
+                    {branding.tagline}
                   </span>
                 </div>
               )}
-              <div>
-                <span className="font-display text-xl font-bold">{branding.company_name}</span>
-                <span className="block text-[10px] text-gold-light tracking-widest uppercase -mt-1">
-                  {branding.tagline}
-                </span>
-              </div>
             </div>
             <p className="text-sm text-primary-foreground/60 leading-relaxed">
               Mitra terpercaya perjalanan ibadah umroh Anda dengan pelayanan terbaik dan pengalaman lebih dari 15 tahun.

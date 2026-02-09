@@ -42,6 +42,7 @@ interface BrandingSettings {
   company_name: string;
   tagline: string;
   favicon_url: string;
+  display_mode: "logo_only" | "text_only" | "both";
 }
 
 interface ContactSettings {
@@ -155,6 +156,7 @@ const defaultBranding: BrandingSettings = {
   company_name: "UmrohPlus",
   tagline: "Travel & Tours",
   favicon_url: "",
+  display_mode: "both",
 };
 
 const defaultContact: ContactSettings = {
@@ -682,62 +684,129 @@ const AdminSettings = () => {
           <div className="bg-card border border-border rounded-xl p-6 space-y-6">
             <h2 className="text-lg font-semibold">Branding</h2>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <Label>Nama Perusahaan</Label>
-                  <Input
-                    value={branding.company_name}
-                    onChange={(e) => setBranding({ ...branding, company_name: e.target.value })}
-                    className="mt-1"
-                  />
-                </div>
+            <div className="space-y-6">
+              {/* Display Mode */}
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <Label className="text-base font-medium">Mode Tampilan Brand</Label>
+                <p className="text-sm text-muted-foreground mb-4">Pilih bagaimana logo dan nama ditampilkan di navbar, footer, dan admin</p>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setBranding({ ...branding, display_mode: "logo_only" })}
+                    className={cn(
+                      "p-4 rounded-lg border-2 text-center transition-all",
+                      branding.display_mode === "logo_only"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <div className="w-10 h-10 mx-auto mb-2 rounded-full gradient-gold flex items-center justify-center">
+                      <span className="font-display font-bold text-sm text-primary">U</span>
+                    </div>
+                    <span className="text-sm font-medium">Logo Saja</span>
+                  </button>
 
-                <div>
-                  <Label>Tagline</Label>
-                  <Input
-                    value={branding.tagline}
-                    onChange={(e) => setBranding({ ...branding, tagline: e.target.value })}
-                    className="mt-1"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setBranding({ ...branding, display_mode: "text_only" })}
+                    className={cn(
+                      "p-4 rounded-lg border-2 text-center transition-all",
+                      branding.display_mode === "text_only"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <div className="mb-2">
+                      <span className="font-display text-lg font-bold">UmrohPlus</span>
+                      <span className="block text-[10px] text-muted-foreground tracking-widest uppercase">Travel</span>
+                    </div>
+                    <span className="text-sm font-medium">Teks Saja</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setBranding({ ...branding, display_mode: "both" })}
+                    className={cn(
+                      "p-4 rounded-lg border-2 text-center transition-all",
+                      branding.display_mode === "both"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center">
+                        <span className="font-display font-bold text-xs text-primary">U</span>
+                      </div>
+                      <div className="text-left">
+                        <span className="font-display text-sm font-bold block leading-tight">UmrohPlus</span>
+                        <span className="text-[8px] text-muted-foreground tracking-widest uppercase">Travel</span>
+                      </div>
+                    </div>
+                    <span className="text-sm font-medium">Logo + Teks</span>
+                  </button>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <Label>Logo</Label>
-                  {branding.logo_url && (
-                    <img src={branding.logo_url} alt="Logo" className="h-16 object-contain mt-2 mb-2" />
-                  )}
-                  <div className="flex gap-2 mt-1">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label>Nama Perusahaan</Label>
                     <Input
-                      value={branding.logo_url}
-                      onChange={(e) => setBranding({ ...branding, logo_url: e.target.value })}
-                      placeholder="URL logo"
+                      value={branding.company_name}
+                      onChange={(e) => setBranding({ ...branding, company_name: e.target.value })}
+                      className="mt-1"
                     />
-                    <Button variant="outline" asChild>
-                      <label className="cursor-pointer">
-                        Upload
-                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, (url) => setBranding({ ...branding, logo_url: url }))} />
-                      </label>
-                    </Button>
+                  </div>
+
+                  <div>
+                    <Label>Tagline</Label>
+                    <Input
+                      value={branding.tagline}
+                      onChange={(e) => setBranding({ ...branding, tagline: e.target.value })}
+                      className="mt-1"
+                    />
                   </div>
                 </div>
 
-                <div>
-                  <Label>Favicon</Label>
-                  <div className="flex gap-2 mt-1">
-                    <Input
-                      value={branding.favicon_url}
-                      onChange={(e) => setBranding({ ...branding, favicon_url: e.target.value })}
-                      placeholder="URL favicon"
-                    />
-                    <Button variant="outline" asChild>
-                      <label className="cursor-pointer">
-                        Upload
-                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, (url) => setBranding({ ...branding, favicon_url: url }))} />
-                      </label>
-                    </Button>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Logo</Label>
+                    {branding.logo_url && (
+                      <img src={branding.logo_url} alt="Logo" className="h-16 object-contain mt-2 mb-2" />
+                    )}
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        value={branding.logo_url}
+                        onChange={(e) => setBranding({ ...branding, logo_url: e.target.value })}
+                        placeholder="URL logo"
+                      />
+                      <Button variant="outline" asChild>
+                        <label className="cursor-pointer">
+                          Upload
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, (url) => setBranding({ ...branding, logo_url: url }))} />
+                        </label>
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {branding.display_mode === "text_only" ? "Logo tidak akan ditampilkan (mode teks saja)" : "Logo akan ditampilkan di navbar, footer, dan admin"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label>Favicon</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        value={branding.favicon_url}
+                        onChange={(e) => setBranding({ ...branding, favicon_url: e.target.value })}
+                        placeholder="URL favicon"
+                      />
+                      <Button variant="outline" asChild>
+                        <label className="cursor-pointer">
+                          Upload
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, (url) => setBranding({ ...branding, favicon_url: url }))} />
+                        </label>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>

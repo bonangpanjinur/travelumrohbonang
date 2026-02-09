@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   LayoutDashboard, 
   Package, 
@@ -22,7 +23,22 @@ import {
   BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+
+interface BrandingSettings {
+  logo_url: string;
+  company_name: string;
+  tagline: string;
+  favicon_url: string;
+  display_mode: "logo_only" | "text_only" | "both";
+}
+
+const defaultBranding: BrandingSettings = {
+  logo_url: "",
+  company_name: "UmrohPlus",
+  tagline: "Travel & Tours",
+  favicon_url: "",
+  display_mode: "both",
+};
 
 const menuItems = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -53,12 +69,29 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
       navigate("/auth");
     }
   }, [user, isAdmin, loading, navigate]);
+
+  useEffect(() => {
+    const fetchBranding = async () => {
+      const { data } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "branding")
+        .eq("category", "general")
+        .single();
+
+      if (data?.value && typeof data.value === 'object') {
+        setBranding({ ...defaultBranding, ...(data.value as object) });
+      }
+    };
+    fetchBranding();
+  }, []);
 
   const handleLogout = async () => {
     await signOut();
@@ -77,16 +110,52 @@ const AdminLayout = () => {
     return null;
   }
 
+  const showLogo = branding.display_mode === "logo_only" || branding.display_mode === "both";
+  const showText = branding.display_mode === "text_only" || branding.display_mode === "both";
+
+  const renderBrand = (isMobile = false) => {
+    const logoSize = isMobile ? "w-8 h-8" : "w-10 h-10";
+    const textSize = isMobile ? "text-lg" : "text-xl";
+
+    return (
+      <Link to="/" className="flex items-center gap-2">
+        {showLogo && (
+          branding.logo_url ? (
+            <img 
+              src={branding.logo_url} 
+              alt={branding.company_name} 
+              className={`${isMobile ? "h-8" : "h-10"} w-auto object-contain`}
+            />
+          ) : (
+            <div className={`${logoSize} rounded-full gradient-gold flex items-center justify-center`}>
+              <span className={`font-display font-bold ${isMobile ? "text-sm" : "text-lg"} text-primary`}>
+                {branding.company_name.charAt(0)}
+              </span>
+            </div>
+          )
+        )}
+        {showText && (
+          <div>
+            <span className={`font-display ${textSize} font-bold text-primary-foreground`}>
+              {isMobile ? "Admin" : branding.company_name}
+            </span>
+            <span className="block text-[10px] text-gold-light tracking-widest uppercase -mt-1">
+              {isMobile ? "" : "Dashboard"}
+            </span>
+          </div>
+        )}
+        {!showText && isMobile && (
+          <span className="font-display text-lg font-bold text-primary-foreground">Admin</span>
+        )}
+      </Link>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-muted">
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-primary h-16 flex items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center">
-            <span className="font-display font-bold text-sm text-primary">U</span>
-          </div>
-          <span className="font-display text-lg font-bold text-primary-foreground">Admin</span>
-        </Link>
+        {renderBrand(true)}
         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-primary-foreground">
           <Menu className="w-6 h-6" />
         </button>
@@ -101,15 +170,29 @@ const AdminLayout = () => {
         <div className="h-full flex flex-col">
           {/* Logo */}
           <div className="p-4 border-b border-emerald-light/20 hidden lg:flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center">
-              <span className="font-display font-bold text-lg text-primary">U</span>
-            </div>
-            <div>
-              <span className="font-display text-xl font-bold text-primary-foreground">Admin</span>
-              <span className="block text-[10px] text-gold-light tracking-widest uppercase -mt-1">
-                Dashboard
-              </span>
-            </div>
+            {showLogo && (
+              branding.logo_url ? (
+                <img 
+                  src={branding.logo_url} 
+                  alt={branding.company_name} 
+                  className="h-10 w-auto object-contain"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center">
+                  <span className="font-display font-bold text-lg text-primary">
+                    {branding.company_name.charAt(0)}
+                  </span>
+                </div>
+              )
+            )}
+            {showText && (
+              <div>
+                <span className="font-display text-xl font-bold text-primary-foreground">{branding.company_name}</span>
+                <span className="block text-[10px] text-gold-light tracking-widest uppercase -mt-1">
+                  Dashboard
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Navigation */}
