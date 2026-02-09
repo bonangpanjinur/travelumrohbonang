@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuth";
+import { useDynamicFavicon } from "@/hooks/useDynamicFavicon";
 import Index from "./pages/Index";
 import Paket from "./pages/Paket";
 import PackageDetail from "./pages/PackageDetail";
@@ -47,6 +48,59 @@ import { AdminAgents } from "./pages/admin/Placeholder";
 
 const queryClient = new QueryClient();
 
+const AppContent = () => {
+  useDynamicFavicon();
+  
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={<Index />} />
+      <Route path="/paket" element={<Paket />} />
+      <Route path="/paket/:slug" element={<PackageDetail />} />
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/booking/:slug/:departureId" element={<Booking />} />
+      <Route path="/booking/payment/:bookingId" element={<Payment />} />
+      <Route path="/my-bookings" element={<MyBookings />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/galeri" element={<Gallery />} />
+      <Route path="/blog" element={<Blog />} />
+      <Route path="/blog/:slug" element={<BlogDetail />} />
+
+      {/* Admin Routes */}
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<AdminDashboard />} />
+        <Route path="packages" element={<AdminPackages />} />
+        <Route path="departures" element={<AdminDepartures />} />
+        <Route path="itineraries" element={<AdminItineraries />} />
+        <Route path="bookings" element={<AdminBookings />} />
+        <Route path="payments" element={<AdminPayments />} />
+        <Route path="reports" element={<AdminReports />} />
+        <Route path="pilgrims" element={<AdminPilgrims />} />
+        <Route path="branches" element={<AdminBranches />} />
+        <Route path="agents" element={<AdminAgents />} />
+        <Route path="hotels" element={<AdminHotels />} />
+        <Route path="airlines" element={<AdminAirlines />} />
+        <Route path="airports" element={<AdminAirports />} />
+        <Route path="gallery" element={<AdminGallery />} />
+        <Route path="testimonials" element={<AdminTestimonials />} />
+        <Route path="faq" element={<AdminFAQ />} />
+        <Route path="floating-buttons" element={<AdminFloatingButtons />} />
+        <Route path="blog" element={<AdminBlog />} />
+        <Route path="pages" element={<AdminPages />} />
+        <Route path="navigation" element={<AdminNavigation />} />
+        <Route path="settings" element={<AdminSettings />} />
+      </Route>
+
+      {/* CMS Dynamic Page - must be after all other routes */}
+      <Route path="/:slug" element={<DynamicPage />} />
+
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
 const App = () => (
   <HelmetProvider>
     <QueryClientProvider client={queryClient}>
@@ -55,52 +109,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/paket" element={<Paket />} />
-              <Route path="/paket/:slug" element={<PackageDetail />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/booking/:slug/:departureId" element={<Booking />} />
-              <Route path="/booking/payment/:bookingId" element={<Payment />} />
-              <Route path="/my-bookings" element={<MyBookings />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/galeri" element={<Gallery />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/blog/:slug" element={<BlogDetail />} />
-
-              {/* Admin Routes */}
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<AdminDashboard />} />
-                <Route path="packages" element={<AdminPackages />} />
-                <Route path="departures" element={<AdminDepartures />} />
-                <Route path="itineraries" element={<AdminItineraries />} />
-                <Route path="bookings" element={<AdminBookings />} />
-                <Route path="payments" element={<AdminPayments />} />
-                <Route path="reports" element={<AdminReports />} />
-                <Route path="pilgrims" element={<AdminPilgrims />} />
-                <Route path="branches" element={<AdminBranches />} />
-                <Route path="agents" element={<AdminAgents />} />
-                <Route path="hotels" element={<AdminHotels />} />
-                <Route path="airlines" element={<AdminAirlines />} />
-                <Route path="airports" element={<AdminAirports />} />
-                <Route path="gallery" element={<AdminGallery />} />
-                <Route path="testimonials" element={<AdminTestimonials />} />
-                <Route path="faq" element={<AdminFAQ />} />
-                <Route path="floating-buttons" element={<AdminFloatingButtons />} />
-                <Route path="blog" element={<AdminBlog />} />
-                <Route path="pages" element={<AdminPages />} />
-                <Route path="navigation" element={<AdminNavigation />} />
-                <Route path="settings" element={<AdminSettings />} />
-              </Route>
-
-              {/* CMS Dynamic Page - must be after all other routes */}
-              <Route path="/:slug" element={<DynamicPage />} />
-
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppContent />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
