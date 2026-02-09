@@ -3,15 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Eye, FileText, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, FileText, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import RichTextEditor from "@/components/ui/rich-text-editor";
 
 interface Page {
   id: string;
@@ -194,16 +194,13 @@ const AdminPages = () => {
 
               <div>
                 <Label>Konten</Label>
-                <Textarea
-                  value={form.content}
-                  onChange={(e) => setForm({ ...form, content: e.target.value })}
-                  placeholder="Tulis konten halaman di sini... (mendukung HTML)"
-                  className="mt-1 min-h-[200px] font-mono text-sm"
-                  rows={10}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Mendukung HTML untuk formatting. Contoh: &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;strong&gt;
-                </p>
+                <div className="mt-1">
+                  <RichTextEditor
+                    content={form.content}
+                    onChange={(content) => setForm({ ...form, content })}
+                    placeholder="Tulis konten halaman di sini..."
+                  />
+                </div>
               </div>
 
               <div className="border-t pt-4">
@@ -224,11 +221,11 @@ const AdminPages = () => {
                   </div>
                   <div>
                     <Label>SEO Description</Label>
-                    <Textarea
+                    <textarea
                       value={form.seo_description}
                       onChange={(e) => setForm({ ...form, seo_description: e.target.value })}
                       placeholder="Deskripsi untuk mesin pencari"
-                      className="mt-1"
+                      className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       rows={2}
                       maxLength={160}
                     />
@@ -287,11 +284,11 @@ const AdminPages = () => {
                   </TableCell>
                   <TableCell>
                     {page.seo_title ? (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
                         Configured
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
                         Not Set
                       </Badge>
                     )}
