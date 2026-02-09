@@ -20,9 +20,11 @@ import {
   Image,
   HelpCircle,
   MessageCircle,
-  BookOpen
+  BookOpen,
+  Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import UpgradeDialog from "@/components/admin/UpgradeDialog";
 
 interface BrandingSettings {
   logo_url: string;
@@ -64,12 +66,23 @@ const menuItems = [
   { label: "Pengaturan", href: "/admin/settings", icon: Settings },
 ];
 
+const premiumMenuItems = [
+  { label: "Akuntansi & Keuangan", feature: "Akuntansi & Keuangan" },
+  { label: "CRM & Follow-up", feature: "CRM & Follow-up Otomatis" },
+  { label: "Payment Gateway", feature: "Integrasi Payment Gateway" },
+  { label: "Dokumen Jemaah", feature: "Manajemen Dokumen Jemaah" },
+  { label: "Analitik AI", feature: "Analitik AI" },
+  { label: "Multi-Bahasa", feature: "Multi-Bahasa" },
+  { label: "Multi-Cabang Dashboard", feature: "Multi-Cabang Dashboard" },
+];
+
 const AdminLayout = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
+  const [upgradeDialog, setUpgradeDialog] = useState({ open: false, feature: "" });
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -217,6 +230,24 @@ const AdminLayout = () => {
                   </li>
                 );
               })}
+              {/* Premium Menu */}
+              <li className="pt-4 mt-4 border-t border-emerald-light/20">
+                <span className="px-4 text-[10px] uppercase tracking-wider text-gold-light font-semibold">Premium</span>
+              </li>
+              {premiumMenuItems.map((item) => (
+                <li key={item.feature}>
+                  <button
+                    onClick={() => {
+                      setSidebarOpen(false);
+                      setUpgradeDialog({ open: true, feature: item.feature });
+                    }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-primary-foreground/40 hover:bg-emerald-light/10 hover:text-primary-foreground/60 transition-colors w-full"
+                  >
+                    <Lock className="w-4 h-4" />
+                    {item.label}
+                  </button>
+                </li>
+              ))}
             </ul>
           </nav>
 
@@ -247,6 +278,11 @@ const AdminLayout = () => {
           <Outlet />
         </div>
       </main>
+      <UpgradeDialog
+        open={upgradeDialog.open}
+        onOpenChange={(open) => setUpgradeDialog({ ...upgradeDialog, open })}
+        featureName={upgradeDialog.feature}
+      />
     </div>
   );
 };

@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Eye, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, CheckCircle } from "lucide-react";
+import BookingDetailPanel from "@/components/admin/BookingDetailPanel";
 
 interface Booking {
   id: string;
@@ -15,6 +16,9 @@ interface Booking {
   total_price: number;
   status: string;
   created_at: string;
+  package_id: string | null;
+  pic_type: string | null;
+  pic_id: string | null;
   package: { title: string } | null;
   departure: { departure_date: string } | null;
   profile: { name: string; email: string } | null;
@@ -38,6 +42,7 @@ const AdminBookings = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -48,7 +53,7 @@ const AdminBookings = () => {
     let query = supabase
       .from("bookings")
       .select(`
-        id, booking_code, total_price, status, created_at,
+        id, booking_code, total_price, status, created_at, package_id, pic_type, pic_id,
         package:packages(title),
         departure:package_departures(departure_date),
         profile:profiles(name, email)
@@ -73,7 +78,6 @@ const AdminBookings = () => {
     if (error) {
       toast({ title: "Gagal verifikasi", variant: "destructive" });
     } else {
-      // Also update payment
       await supabase
         .from("payments")
         .update({ status: "paid", paid_at: new Date().toISOString() })
@@ -124,39 +128,62 @@ const AdminBookings = () => {
             </TableHeader>
             <TableBody>
               {bookings.map((b) => (
-                <TableRow key={b.id}>
-                  <TableCell className="font-mono text-sm">{b.booking_code}</TableCell>
-                  <TableCell>
-                    <div className="font-semibold">{b.profile?.name || "-"}</div>
-                    <div className="text-xs text-muted-foreground">{b.profile?.email}</div>
-                  </TableCell>
-                  <TableCell>{b.package?.title || "-"}</TableCell>
-                  <TableCell>
-                    {b.departure?.departure_date
-                      ? format(new Date(b.departure.departure_date), "d MMM yyyy", { locale: localeId })
-                      : "-"}
-                  </TableCell>
-                  <TableCell className="font-semibold">
-                    Rp {b.total_price.toLocaleString("id-ID")}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={statusColors[b.status]}>{statusLabels[b.status]}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      {b.status === "waiting_payment" && (
+                <>
+                  <TableRow key={b.id} className={expandedId === b.id ? "border-b-0" : ""}>
+                    <TableCell className="font-mono text-sm">{b.booking_code}</TableCell>
+                    <TableCell>
+                      <div className="font-semibold">{b.profile?.name || "-"}</div>
+                      <div className="text-xs text-muted-foreground">{b.profile?.email}</div>
+                    </TableCell>
+                    <TableCell>{b.package?.title || "-"}</TableCell>
+                    <TableCell>
+                      {b.departure?.departure_date
+                        ? format(new Date(b.departure.departure_date), "d MMM yyyy", { locale: localeId })
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="font-semibold">
+                      Rp {b.total_price.toLocaleString("id-ID")}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={statusColors[b.status]}>{statusLabels[b.status]}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleVerifyPayment(b.id)}
-                          className="text-green-600 hover:text-green-700"
+                          onClick={() => setExpandedId(expandedId === b.id ? null : b.id)}
                         >
-                          <CheckCircle className="w-4 h-4 mr-1" /> Verifikasi
+                          {expandedId === b.id ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          <span className="ml-1">Detail</span>
                         </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
+                        {b.status === "waiting_payment" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleVerifyPayment(b.id)}
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" /> Verifikasi
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {expandedId === b.id && (
+                    <TableRow key={`${b.id}-detail`}>
+                      <TableCell colSpan={7} className="bg-muted/30 p-0">
+                        <BookingDetailPanel
+                          bookingId={b.id}
+                          packageId={b.package_id}
+                          picType={b.pic_type}
+                          picId={b.pic_id}
+                          packageTitle={b.package?.title || "-"}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
               ))}
             </TableBody>
           </Table>
