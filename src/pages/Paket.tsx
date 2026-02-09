@@ -339,11 +339,34 @@ const Paket = () => {
               animate={{ opacity: 1, y: 0 }}
               className="text-3xl md:text-5xl font-display font-bold text-primary-foreground mb-4"
             >
-              Paket <span className="text-gradient-gold">Umroh</span>
+              Paket <span className="text-gradient-gold">Perjalanan</span>
             </motion.h1>
-            <p className="text-primary-foreground/70 max-w-xl mx-auto mb-8">
-              Temukan paket umroh terbaik sesuai kebutuhan dan budget Anda
+            <p className="text-primary-foreground/70 max-w-xl mx-auto mb-6">
+              Temukan paket perjalanan terbaik sesuai kebutuhan dan budget Anda
             </p>
+
+            {/* Category Tabs */}
+            <div className="flex flex-wrap justify-center gap-2 mb-6">
+              <Button
+                variant={selectedCategory === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory("all")}
+                className={selectedCategory === "all" ? "gradient-gold text-primary" : "bg-card/50 text-primary-foreground border-gold/30 hover:bg-gold/20"}
+              >
+                Semua
+              </Button>
+              {categories.map((cat) => (
+                <Button
+                  key={cat.id}
+                  variant={selectedCategory === cat.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={selectedCategory === cat.id ? "gradient-gold text-primary" : "bg-card/50 text-primary-foreground border-gold/30 hover:bg-gold/20"}
+                >
+                  {cat.name}
+                </Button>
+              ))}
+            </div>
 
             {/* Search */}
             <div className="max-w-md mx-auto relative">

@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Image, Globe, Building2, Phone, Palette, Type } from "lucide-react";
+import { Save, Image, Globe, Building2, Phone, Palette, ImageIcon } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Json } from "@/integrations/supabase/types";
 
 interface HeroSettings {
@@ -54,6 +55,12 @@ interface SeoSettings {
   site_description: string;
   og_image: string;
   keywords: string;
+}
+
+interface BackgroundSettings {
+  type: "pattern" | "image";
+  image_url: string;
+  pattern_type: "islamic" | "dots" | "grid";
 }
 
 const defaultHero: HeroSettings = {
@@ -112,6 +119,12 @@ const defaultSeo: SeoSettings = {
   keywords: "umroh, paket umroh, travel umroh, umroh 2024, umroh murah",
 };
 
+const defaultBackground: BackgroundSettings = {
+  type: "pattern",
+  image_url: "",
+  pattern_type: "islamic",
+};
+
 const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -122,6 +135,7 @@ const AdminSettings = () => {
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
   const [contact, setContact] = useState<ContactSettings>(defaultContact);
   const [seo, setSeo] = useState<SeoSettings>(defaultSeo);
+  const [background, setBackground] = useState<BackgroundSettings>(defaultBackground);
 
   useEffect(() => {
     fetchSettings();
@@ -150,6 +164,9 @@ const AdminSettings = () => {
             break;
           case "seo":
             setSeo({ ...defaultSeo, ...(value as object) });
+            break;
+          case "background":
+            setBackground({ ...defaultBackground, ...(value as object) });
             break;
         }
       });
@@ -214,12 +231,15 @@ const AdminSettings = () => {
       <h1 className="text-2xl font-display font-bold mb-6">Pengaturan Website</h1>
 
       <Tabs defaultValue="hero" className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-2 h-auto bg-transparent">
+        <TabsList className="grid grid-cols-3 md:grid-cols-6 gap-2 h-auto bg-transparent">
           <TabsTrigger value="hero" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Image className="w-4 h-4 mr-2" /> Hero
           </TabsTrigger>
           <TabsTrigger value="about" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Building2 className="w-4 h-4 mr-2" /> About
+          </TabsTrigger>
+          <TabsTrigger value="background" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <ImageIcon className="w-4 h-4 mr-2" /> Background
           </TabsTrigger>
           <TabsTrigger value="branding" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Palette className="w-4 h-4 mr-2" /> Branding
@@ -694,6 +714,101 @@ const AdminSettings = () => {
             <Button onClick={() => saveSetting("seo", "general", seo)} disabled={saving} className="gradient-gold text-primary">
               <Save className="w-4 h-4 mr-2" />
               {saving ? "Menyimpan..." : "Simpan SEO Settings"}
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* Background Settings */}
+        <TabsContent value="background">
+          <div className="bg-card border border-border rounded-xl p-6 space-y-6">
+            <h2 className="text-lg font-semibold">Pengaturan Background</h2>
+            <p className="text-muted-foreground text-sm">
+              Atur tampilan background di seluruh halaman website. Pilih antara pattern atau gambar masjid.
+            </p>
+
+            <div className="space-y-6">
+              <div>
+                <Label>Tipe Background</Label>
+                <Select
+                  value={background.type}
+                  onValueChange={(val: "pattern" | "image") => setBackground({ ...background, type: val })}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pattern">Pattern (Islamic Pattern)</SelectItem>
+                    <SelectItem value="image">Gambar (Masjidil Haram/Nabawi)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {background.type === "pattern" && (
+                <div>
+                  <Label>Jenis Pattern</Label>
+                  <Select
+                    value={background.pattern_type}
+                    onValueChange={(val: "islamic" | "dots" | "grid") => setBackground({ ...background, pattern_type: val })}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="islamic">Islamic Pattern (Diamond)</SelectItem>
+                      <SelectItem value="dots">Dots Pattern</SelectItem>
+                      <SelectItem value="grid">Grid Pattern</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {background.type === "image" && (
+                <div className="space-y-4">
+                  <div>
+                    <Label>Gambar Background</Label>
+                    {background.image_url && (
+                      <img src={background.image_url} alt="Background Preview" className="w-full h-48 object-cover rounded-lg mt-2 mb-2" />
+                    )}
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        value={background.image_url}
+                        onChange={(e) => setBackground({ ...background, image_url: e.target.value })}
+                        placeholder="URL gambar masjid"
+                      />
+                      <Button variant="outline" asChild>
+                        <label className="cursor-pointer">
+                          Upload
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, (url) => setBackground({ ...background, image_url: url }))} />
+                        </label>
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setBackground({ ...background, image_url: "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=1920&q=80" })}
+                    >
+                      Masjidil Haram
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setBackground({ ...background, image_url: "https://images.unsplash.com/photo-1564769625905-50e93615e769?w=1920&q=80" })}
+                    >
+                      Masjid Nabawi
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Button onClick={() => saveSetting("background", "appearance", background)} disabled={saving} className="gradient-gold text-primary">
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? "Menyimpan..." : "Simpan Background Settings"}
             </Button>
           </div>
         </TabsContent>
