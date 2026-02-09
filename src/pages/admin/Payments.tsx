@@ -241,7 +241,7 @@ const AdminPayments = () => {
         />
       ) : (
         <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-w-0">
             <Table>
               <TableHeader>
                 <TableRow>

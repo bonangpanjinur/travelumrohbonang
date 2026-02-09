@@ -324,64 +324,66 @@ const AdminAgents = () => {
         </div>
       ) : (
         <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama Agen</TableHead>
-                <TableHead>Telepon</TableHead>
-                <TableHead>Cabang</TableHead>
-                <TableHead className="text-center">Komisi</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAgents.map((agent) => (
-                <TableRow key={agent.id}>
-                  <TableCell className="font-semibold">{agent.name}</TableCell>
-                  <TableCell>
-                    {agent.phone ? (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Phone className="w-3 h-3" />
-                        {agent.phone}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {agent.branch?.name ? (
-                      <Badge variant="outline" className="font-normal">
-                        <Building2 className="w-3 h-3 mr-1" />
-                        {agent.branch.name}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant="secondary" className="font-semibold">
-                      {agent.commission_percent || 0}%
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Switch
-                      checked={agent.is_active}
-                      onCheckedChange={() => handleToggleActive(agent)}
-                    />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(agent)}>
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(agent.id)}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nama Agen</TableHead>
+                  <TableHead>Telepon</TableHead>
+                  <TableHead>Cabang</TableHead>
+                  <TableHead className="text-center">Komisi</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredAgents.map((agent) => (
+                  <TableRow key={agent.id}>
+                    <TableCell className="font-semibold">{agent.name}</TableCell>
+                    <TableCell>
+                      {agent.phone ? (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Phone className="w-3 h-3" />
+                          {agent.phone}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {agent.branch?.name ? (
+                        <Badge variant="outline" className="font-normal">
+                          <Building2 className="w-3 h-3 mr-1" />
+                          {agent.branch.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="secondary" className="font-semibold">
+                        {agent.commission_percent || 0}%
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Switch
+                        checked={agent.is_active}
+                        onCheckedChange={() => handleToggleActive(agent)}
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(agent)}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(agent.id)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
     </div>
