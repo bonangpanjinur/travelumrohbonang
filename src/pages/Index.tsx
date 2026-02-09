@@ -6,8 +6,10 @@ import PackagesPreview from "@/components/PackagesPreview";
 import GuideSection from "@/components/GuideSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import GallerySection from "@/components/GallerySection";
+import FAQSection from "@/components/FAQSection";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
+import FloatingButtons from "@/components/FloatingButtons";
 
 const Index = () => {
   return (
@@ -21,9 +23,11 @@ const Index = () => {
         <GuideSection />
         <TestimonialsSection />
         <GallerySection />
+        <FAQSection />
         <CTASection />
       </main>
       <Footer />
+      <FloatingButtons />
     </div>
   );
 };

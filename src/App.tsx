@@ -32,6 +32,8 @@ import AdminAirports from "./pages/admin/Airports";
 import AdminBranches from "./pages/admin/Branches";
 import AdminGallery from "./pages/admin/Gallery";
 import AdminTestimonials from "./pages/admin/Testimonials";
+import AdminFAQ from "./pages/admin/FAQ";
+import AdminFloatingButtons from "./pages/admin/FloatingButtons";
 import { AdminPilgrims, AdminAgents, AdminSettings } from "./pages/admin/Placeholder";
 
 const queryClient = new QueryClient();
@@ -72,6 +74,8 @@ const App = () => (
                 <Route path="airports" element={<AdminAirports />} />
                 <Route path="gallery" element={<AdminGallery />} />
                 <Route path="testimonials" element={<AdminTestimonials />} />
+                <Route path="faq" element={<AdminFAQ />} />
+                <Route path="floating-buttons" element={<AdminFloatingButtons />} />
                 <Route path="pages" element={<AdminPages />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
