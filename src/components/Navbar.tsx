@@ -1,22 +1,59 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Phone, User, LogOut } from "lucide-react";
+import { Menu, X, Phone, User, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
-const navLinks = [
-  { label: "Beranda", href: "/" },
-  { label: "Paket Umroh", href: "/paket" },
-  { label: "Galeri", href: "/galeri" },
-  { label: "Tentang Kami", href: "/#tentang" },
-  { label: "Kontak", href: "/#kontak" },
-];
+interface NavItem {
+  id: string;
+  label: string;
+  url: string;
+  parent_id: string | null;
+  sort_order: number;
+  open_in_new_tab: boolean;
+  children?: NavItem[];
+}
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [navItems, setNavItems] = useState<NavItem[]>([]);
   const location = useLocation();
   const { user, isAdmin, signOut } = useAuth();
+
+  useEffect(() => {
+    const fetchNavItems = async () => {
+      const { data } = await supabase
+        .from("navigation_items")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+
+      if (data) {
+        // Build hierarchy
+        const items = data as NavItem[];
+        const parentItems = items.filter(item => !item.parent_id);
+        const childItems = items.filter(item => item.parent_id);
+        
+        const hierarchy = parentItems.map(parent => ({
+          ...parent,
+          children: childItems.filter(child => child.parent_id === parent.id)
+        }));
+        
+        setNavItems(hierarchy);
+      }
+    };
+    fetchNavItems();
+  }, []);
+
+  // Fallback to static links if no nav items in DB
+  const displayLinks = navItems.length > 0 ? navItems : [
+    { id: "1", label: "Beranda", url: "/", parent_id: null, sort_order: 1, open_in_new_tab: false },
+    { id: "2", label: "Paket Perjalanan", url: "/paket", parent_id: null, sort_order: 2, open_in_new_tab: false },
+    { id: "3", label: "Galeri", url: "/galeri", parent_id: null, sort_order: 3, open_in_new_tab: false },
+    { id: "4", label: "Blog", url: "/blog", parent_id: null, sort_order: 4, open_in_new_tab: false },
+  ];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-md border-b border-emerald-light/20">
@@ -38,18 +75,41 @@ const Navbar = () => {
 
         {/* Desktop Nav */}
         <div className="hidden lg:flex items-center gap-1">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              to={link.href}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                location.pathname === link.href
-                  ? "text-gold bg-emerald-light/30"
-                  : "text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20"
-              }`}
-            >
-              {link.label}
-            </Link>
+          {displayLinks.map((link) => (
+            <div key={link.id} className="relative group">
+              <Link
+                to={link.url}
+                target={link.open_in_new_tab ? "_blank" : undefined}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-1 ${
+                  location.pathname === link.url
+                    ? "text-gold bg-emerald-light/30"
+                    : "text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20"
+                }`}
+              >
+                {link.label}
+                {link.children && link.children.length > 0 && (
+                  <ChevronDown className="w-3 h-3" />
+                )}
+              </Link>
+              
+              {/* Dropdown for children */}
+              {link.children && link.children.length > 0 && (
+                <div className="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <div className="bg-card border border-border rounded-lg shadow-xl py-2 min-w-[160px]">
+                    {link.children.map((child) => (
+                      <Link
+                        key={child.id}
+                        to={child.url}
+                        target={child.open_in_new_tab ? "_blank" : undefined}
+                        className="block px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                      >
+                        {child.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
         </div>
 
@@ -105,15 +165,26 @@ const Navbar = () => {
             className="lg:hidden bg-primary border-t border-emerald-light/20 overflow-hidden"
           >
             <div className="px-4 py-4 space-y-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  onClick={() => setIsOpen(false)}
-                  className="block px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg transition-colors"
-                >
-                  {link.label}
-                </Link>
+              {displayLinks.map((link) => (
+                <div key={link.id}>
+                  <Link
+                    to={link.url}
+                    onClick={() => setIsOpen(false)}
+                    className="block px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                  {link.children && link.children.map((child) => (
+                    <Link
+                      key={child.id}
+                      to={child.url}
+                      onClick={() => setIsOpen(false)}
+                      className="block px-8 py-2 text-sm text-primary-foreground/60 hover:text-gold"
+                    >
+                      {child.label}
+                    </Link>
+                  ))}
+                </div>
               ))}
               {user && (
                 <>

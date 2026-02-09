@@ -38,6 +38,7 @@ import AdminFAQ from "./pages/admin/FAQ";
 import AdminFloatingButtons from "./pages/admin/FloatingButtons";
 import AdminBlog from "./pages/admin/Blog";
 import AdminSettings from "./pages/admin/Settings";
+import AdminNavigation from "./pages/admin/Navigation";
 import AdminPilgrims from "./pages/admin/Pilgrims";
 import { AdminAgents } from "./pages/admin/Placeholder";
 
@@ -85,6 +86,7 @@ const App = () => (
                 <Route path="floating-buttons" element={<AdminFloatingButtons />} />
                 <Route path="blog" element={<AdminBlog />} />
                 <Route path="pages" element={<AdminPages />} />
+                <Route path="navigation" element={<AdminNavigation />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
 

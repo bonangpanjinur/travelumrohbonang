@@ -662,26 +662,84 @@ export type Database = {
         }
         Relationships: []
       }
+      navigation_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          label: string
+          open_in_new_tab: boolean | null
+          parent_id: string | null
+          sort_order: number | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          open_in_new_tab?: boolean | null
+          parent_id?: string | null
+          sort_order?: number | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          open_in_new_tab?: boolean | null
+          parent_id?: string | null
+          sort_order?: number | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "navigation_items_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "navigation_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_categories: {
         Row: {
           created_at: string | null
           description: string | null
           id: string
+          is_active: boolean | null
           name: string
+          parent_id: string | null
+          sort_order: number | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           name: string
+          parent_id?: string | null
+          sort_order?: number | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           name?: string
+          parent_id?: string | null
+          sort_order?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "package_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "package_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       package_departures: {
         Row: {

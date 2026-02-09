@@ -44,6 +44,7 @@ const menuItems = [
   { label: "Floating Button", href: "/admin/floating-buttons", icon: MessageCircle },
   { label: "Blog", href: "/admin/blog", icon: BookOpen },
   { label: "Halaman CMS", href: "/admin/pages", icon: FileText },
+  { label: "Navigasi & Kategori", href: "/admin/navigation", icon: Menu },
   { label: "Pengaturan", href: "/admin/settings", icon: Settings },
 ];
 
