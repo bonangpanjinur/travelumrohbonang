@@ -37,7 +37,8 @@ import AdminTestimonials from "./pages/admin/Testimonials";
 import AdminFAQ from "./pages/admin/FAQ";
 import AdminFloatingButtons from "./pages/admin/FloatingButtons";
 import AdminBlog from "./pages/admin/Blog";
-import { AdminPilgrims, AdminAgents, AdminSettings } from "./pages/admin/Placeholder";
+import AdminSettings from "./pages/admin/Settings";
+import { AdminPilgrims, AdminAgents } from "./pages/admin/Placeholder";
 
 const queryClient = new QueryClient();
 
