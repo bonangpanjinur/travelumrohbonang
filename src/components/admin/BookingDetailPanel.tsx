@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, UserCheck, DollarSign } from "lucide-react";
+import { Users, UserCheck, DollarSign, FileDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { fetchInvoiceData, generateInvoiceHTML, openInvoicePrintWindow } from "./InvoiceGenerator";
+import { toast } from "sonner";
 
 interface BookingDetailPanelProps {
   bookingId: string;
@@ -82,8 +85,24 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
   const totalCommission = commissionRate * pilgrims.length;
   const isPusat = !picType || picType === "pusat";
 
+  const handleDownloadInvoice = async () => {
+    const data = await fetchInvoiceData(bookingId);
+    if (!data) {
+      toast.error("Gagal mengambil data invoice");
+      return;
+    }
+    const html = generateInvoiceHTML(data);
+    openInvoicePrintWindow(html);
+  };
+
   return (
-    <div className="p-4 grid gap-4 md:grid-cols-2">
+    <div className="p-4 space-y-4">
+      <div className="flex justify-end">
+        <Button size="sm" variant="outline" onClick={handleDownloadInvoice}>
+          <FileDown className="w-4 h-4 mr-2" /> Cetak Invoice
+        </Button>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
       {/* Commission Info */}
       <div className="bg-muted/50 rounded-lg p-4 space-y-2">
         <h4 className="font-semibold flex items-center gap-2 text-sm">
@@ -141,6 +160,7 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
             ))}
           </ul>
         )}
+      </div>
       </div>
     </div>
   );
