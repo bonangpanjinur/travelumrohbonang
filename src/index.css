@@ -7,51 +7,51 @@
 @layer base {
   :root {
     --background: 40 30% 97%;
-    --foreground: 160 30% 10%;
+    --foreground: 300 4% 14%;
 
     --card: 40 25% 95%;
-    --card-foreground: 160 30% 10%;
+    --card-foreground: 300 4% 14%;
 
     --popover: 40 30% 97%;
-    --popover-foreground: 160 30% 10%;
+    --popover-foreground: 300 4% 14%;
 
-    --primary: 155 45% 22%;
+    --primary: 300 4% 14%;
     --primary-foreground: 40 30% 97%;
 
     --secondary: 40 35% 90%;
-    --secondary-foreground: 155 45% 22%;
+    --secondary-foreground: 300 4% 14%;
 
     --muted: 40 20% 93%;
-    --muted-foreground: 160 10% 45%;
+    --muted-foreground: 300 4% 40%;
 
     --accent: 38 75% 55%;
-    --accent-foreground: 160 30% 10%;
+    --accent-foreground: 300 4% 14%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 40 20% 88%;
     --input: 40 20% 88%;
-    --ring: 155 45% 22%;
+    --ring: 38 75% 55%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 155 45% 22%;
+    --sidebar-background: 300 4% 14%;
     --sidebar-foreground: 40 30% 97%;
     --sidebar-primary: 38 75% 55%;
-    --sidebar-primary-foreground: 160 30% 10%;
-    --sidebar-accent: 155 35% 28%;
+    --sidebar-primary-foreground: 300 4% 14%;
+    --sidebar-accent: 300 4% 22%;
     --sidebar-accent-foreground: 40 30% 97%;
-    --sidebar-border: 155 30% 30%;
+    --sidebar-border: 300 4% 25%;
     --sidebar-ring: 38 75% 55%;
 
     /* Custom tokens */
     --gold: 38 75% 55%;
     --gold-light: 38 60% 75%;
     --gold-dark: 38 80% 40%;
-    --emerald: 155 45% 22%;
-    --emerald-light: 155 35% 35%;
-    --emerald-dark: 155 50% 15%;
+    --elegant-black: 300 4% 14%;
+    --elegant-black-light: 300 4% 25%;
+    --elegant-black-dark: 300 4% 8%;
     --cream: 40 30% 97%;
     --cream-dark: 40 25% 92%;
 
@@ -60,32 +60,32 @@
   }
 
   .dark {
-    --background: 155 50% 6%;
+    --background: 300 4% 6%;
     --foreground: 40 30% 95%;
-    --card: 155 40% 10%;
+    --card: 300 4% 10%;
     --card-foreground: 40 30% 95%;
-    --popover: 155 50% 6%;
+    --popover: 300 4% 6%;
     --popover-foreground: 40 30% 95%;
     --primary: 38 75% 55%;
-    --primary-foreground: 155 50% 6%;
-    --secondary: 155 30% 15%;
+    --primary-foreground: 300 4% 6%;
+    --secondary: 300 4% 15%;
     --secondary-foreground: 40 30% 95%;
-    --muted: 155 25% 15%;
+    --muted: 300 4% 15%;
     --muted-foreground: 40 15% 60%;
     --accent: 38 75% 55%;
-    --accent-foreground: 155 50% 6%;
+    --accent-foreground: 300 4% 6%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 40 30% 95%;
-    --border: 155 25% 18%;
-    --input: 155 25% 18%;
+    --border: 300 4% 18%;
+    --input: 300 4% 18%;
     --ring: 38 75% 55%;
-    --sidebar-background: 155 50% 8%;
+    --sidebar-background: 300 4% 8%;
     --sidebar-foreground: 40 30% 95%;
     --sidebar-primary: 38 75% 55%;
-    --sidebar-primary-foreground: 155 50% 6%;
-    --sidebar-accent: 155 30% 15%;
+    --sidebar-primary-foreground: 300 4% 6%;
+    --sidebar-accent: 300 4% 15%;
     --sidebar-accent-foreground: 40 30% 95%;
-    --sidebar-border: 155 25% 18%;
+    --sidebar-border: 300 4% 18%;
     --sidebar-ring: 38 75% 55%;
   }
 }
@@ -118,8 +118,12 @@
     background: linear-gradient(135deg, hsl(var(--gold)) 0%, hsl(var(--gold-dark)) 100%);
   }
 
+  .gradient-elegant {
+    background: linear-gradient(135deg, hsl(var(--elegant-black)) 0%, hsl(var(--elegant-black-dark)) 100%);
+  }
+
   .gradient-emerald {
-    background: linear-gradient(135deg, hsl(var(--emerald)) 0%, hsl(var(--emerald-dark)) 100%);
+    background: linear-gradient(135deg, hsl(var(--elegant-black)) 0%, hsl(var(--elegant-black-dark)) 100%);
   }
 
   .text-gradient-gold {
