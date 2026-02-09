@@ -7,9 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Image, Globe, Building2, Phone, Palette, ImageIcon } from "lucide-react";
+import { Save, Image, Globe, Building2, Phone, Palette, ImageIcon, Layout, Check } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Json } from "@/integrations/supabase/types";
+import { IconPicker } from "@/components/ui/icon-picker";
+import { cn } from "@/lib/utils";
 
 interface HeroSettings {
   background_url: string;
@@ -62,6 +64,57 @@ interface BackgroundSettings {
   image_url: string;
   pattern_type: "islamic" | "dots" | "grid";
 }
+
+interface TemplateSettings {
+  active_template: string;
+  color_scheme: string;
+  font_style: string;
+}
+
+// Template definitions
+const templates = [
+  {
+    id: "classic",
+    name: "Classic Umroh",
+    description: "Tampilan elegan dan profesional dengan nuansa hijau emas",
+    preview: "linear-gradient(135deg, #0D4715 0%, #1a5c20 50%, #D4AF37 100%)",
+    colors: { primary: "emerald", accent: "gold" },
+  },
+  {
+    id: "modern",
+    name: "Modern Minimalist",
+    description: "Desain bersih dan modern dengan sentuhan minimalis",
+    preview: "linear-gradient(135deg, #1e293b 0%, #334155 50%, #94a3b8 100%)",
+    colors: { primary: "slate", accent: "blue" },
+  },
+  {
+    id: "luxury",
+    name: "Luxury Premium",
+    description: "Tampilan mewah untuk paket premium dan VIP",
+    preview: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #e94560 100%)",
+    colors: { primary: "indigo", accent: "rose" },
+  },
+  {
+    id: "nature",
+    name: "Nature Fresh",
+    description: "Nuansa alam yang segar dan menenangkan",
+    preview: "linear-gradient(135deg, #134e4a 0%, #0f766e 50%, #5eead4 100%)",
+    colors: { primary: "teal", accent: "cyan" },
+  },
+];
+
+const colorSchemes = [
+  { id: "default", name: "Default (Hijau Emas)", value: "emerald-gold" },
+  { id: "blue", name: "Biru Profesional", value: "blue-slate" },
+  { id: "purple", name: "Ungu Elegan", value: "purple-violet" },
+  { id: "warm", name: "Hangat & Ramah", value: "orange-amber" },
+];
+
+const fontStyles = [
+  { id: "classic", name: "Classic (Playfair)", value: "playfair" },
+  { id: "modern", name: "Modern (Inter)", value: "inter" },
+  { id: "elegant", name: "Elegant (Cormorant)", value: "cormorant" },
+];
 
 const defaultHero: HeroSettings = {
   background_url: "",
@@ -125,6 +178,12 @@ const defaultBackground: BackgroundSettings = {
   pattern_type: "islamic",
 };
 
+const defaultTemplate: TemplateSettings = {
+  active_template: "classic",
+  color_scheme: "default",
+  font_style: "classic",
+};
+
 const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -136,6 +195,7 @@ const AdminSettings = () => {
   const [contact, setContact] = useState<ContactSettings>(defaultContact);
   const [seo, setSeo] = useState<SeoSettings>(defaultSeo);
   const [background, setBackground] = useState<BackgroundSettings>(defaultBackground);
+  const [template, setTemplate] = useState<TemplateSettings>(defaultTemplate);
 
   useEffect(() => {
     fetchSettings();
@@ -167,6 +227,9 @@ const AdminSettings = () => {
             break;
           case "background":
             setBackground({ ...defaultBackground, ...(value as object) });
+            break;
+          case "template":
+            setTemplate({ ...defaultTemplate, ...(value as object) });
             break;
         }
       });
@@ -230,8 +293,11 @@ const AdminSettings = () => {
     <div>
       <h1 className="text-2xl font-display font-bold mb-6">Pengaturan Website</h1>
 
-      <Tabs defaultValue="hero" className="space-y-6">
-        <TabsList className="grid grid-cols-3 md:grid-cols-6 gap-2 h-auto bg-transparent">
+      <Tabs defaultValue="template" className="space-y-6">
+        <TabsList className="flex flex-wrap gap-2 h-auto bg-transparent">
+          <TabsTrigger value="template" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Layout className="w-4 h-4 mr-2" /> Template
+          </TabsTrigger>
           <TabsTrigger value="hero" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Image className="w-4 h-4 mr-2" /> Hero
           </TabsTrigger>
@@ -251,6 +317,97 @@ const AdminSettings = () => {
             <Globe className="w-4 h-4 mr-2" /> SEO
           </TabsTrigger>
         </TabsList>
+
+        {/* Template Settings */}
+        <TabsContent value="template">
+          <div className="bg-card border border-border rounded-xl p-6 space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold">Pilih Template</h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                Pilih template dasar lalu sesuaikan dengan kebutuhan Anda
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              {templates.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTemplate({ ...template, active_template: t.id })}
+                  className={cn(
+                    "relative text-left p-4 rounded-xl border-2 transition-all hover:shadow-lg",
+                    template.active_template === t.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  {template.active_template === t.id && (
+                    <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="w-4 h-4 text-primary-foreground" />
+                    </div>
+                  )}
+                  <div
+                    className="w-full h-20 rounded-lg mb-3"
+                    style={{ background: t.preview }}
+                  />
+                  <h3 className="font-semibold">{t.name}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{t.description}</p>
+                </button>
+              ))}
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6 pt-4 border-t">
+              <div className="space-y-3">
+                <Label>Skema Warna</Label>
+                <Select
+                  value={template.color_scheme}
+                  onValueChange={(val) => setTemplate({ ...template, color_scheme: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {colorSchemes.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Pilih kombinasi warna untuk website Anda
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Gaya Font</Label>
+                <Select
+                  value={template.font_style}
+                  onValueChange={(val) => setTemplate({ ...template, font_style: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fontStyles.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Pilih gaya tipografi untuk website Anda
+                </p>
+              </div>
+            </div>
+
+            <Button onClick={() => saveSetting("template", "appearance", template)} disabled={saving} className="gradient-gold text-primary">
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? "Menyimpan..." : "Simpan Template"}
+            </Button>
+          </div>
+        </TabsContent>
 
         {/* Hero Settings */}
         <TabsContent value="hero">
@@ -467,34 +624,46 @@ const AdminSettings = () => {
 
               <div className="space-y-4">
                 <Label>Features / Keunggulan</Label>
+                <p className="text-xs text-muted-foreground">Klik icon untuk memilih dari daftar icon yang tersedia</p>
                 {about.features.map((feature, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      placeholder="Icon (lucide)"
+                  <div key={index} className="flex gap-2 items-center">
+                    <IconPicker
                       value={feature.icon}
-                      onChange={(e) => {
+                      onChange={(val) => {
                         const newFeatures = [...about.features];
-                        newFeatures[index].icon = e.target.value;
+                        newFeatures[index].icon = val;
                         setAbout({ ...about, features: newFeatures });
                       }}
-                      className="w-32"
                     />
                     <Input
-                      placeholder="Title"
+                      placeholder="Title keunggulan"
                       value={feature.title}
                       onChange={(e) => {
                         const newFeatures = [...about.features];
                         newFeatures[index].title = e.target.value;
                         setAbout({ ...about, features: newFeatures });
                       }}
+                      className="flex-1"
                     />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => {
+                        const newFeatures = about.features.filter((_, i) => i !== index);
+                        setAbout({ ...about, features: newFeatures });
+                      }}
+                    >
+                      ×
+                    </Button>
                   </div>
                 ))}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setAbout({ ...about, features: [...about.features, { icon: "check", title: "" }] })}
+                  onClick={() => setAbout({ ...about, features: [...about.features, { icon: "check-circle", title: "" }] })}
                 >
                   + Tambah Feature
                 </Button>
