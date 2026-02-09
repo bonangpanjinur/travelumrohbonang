@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp } from "lucide-react";
 import { Link } from "react-router-dom";
+import PackageCommissions from "@/components/admin/PackageCommissions";
 
 interface Package {
   id: string;
@@ -29,6 +30,7 @@ const AdminPackages = () => {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Package | null>(null);
+  const [expandedCommission, setExpandedCommission] = useState<string | null>(null);
   const { toast } = useToast();
 
   const [form, setForm] = useState({
@@ -239,29 +241,46 @@ const AdminPackages = () => {
             </TableHeader>
             <TableBody>
               {packages.map((pkg) => (
-                <TableRow key={pkg.id}>
-                  <TableCell className="font-semibold">{pkg.title}</TableCell>
-                  <TableCell>{pkg.package_type || "-"}</TableCell>
-                  <TableCell>{pkg.duration_days} hari</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${pkg.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
-                      {pkg.is_active ? "Aktif" : "Nonaktif"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link to={`/paket/${pkg.slug}`} target="_blank">
-                        <Button variant="ghost" size="icon"><Eye className="w-4 h-4" /></Button>
-                      </Link>
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(pkg)}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(pkg.id)}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <React.Fragment key={pkg.id}>
+                  <TableRow>
+                    <TableCell className="font-semibold">{pkg.title}</TableCell>
+                    <TableCell>{pkg.package_type || "-"}</TableCell>
+                    <TableCell>{pkg.duration_days} hari</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs ${pkg.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
+                        {pkg.is_active ? "Aktif" : "Nonaktif"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setExpandedCommission(expandedCommission === pkg.id ? null : pkg.id)}
+                          title="Komisi"
+                        >
+                          {expandedCommission === pkg.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </Button>
+                        <Link to={`/paket/${pkg.slug}`} target="_blank">
+                          <Button variant="ghost" size="icon"><Eye className="w-4 h-4" /></Button>
+                        </Link>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(pkg)}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(pkg.id)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {expandedCommission === pkg.id && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="bg-muted/50 p-4">
+                        <PackageCommissions packageId={pkg.id} packageTitle={pkg.title} />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
               ))}
             </TableBody>
           </Table>

@@ -789,6 +789,38 @@ export type Database = {
           },
         ]
       }
+      package_commissions: {
+        Row: {
+          commission_amount: number
+          created_at: string | null
+          id: string
+          package_id: string
+          pic_type: string
+        }
+        Insert: {
+          commission_amount?: number
+          created_at?: string | null
+          id?: string
+          package_id: string
+          pic_type: string
+        }
+        Update: {
+          commission_amount?: number
+          created_at?: string | null
+          id?: string
+          package_id?: string
+          pic_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_commissions_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_departures: {
         Row: {
           created_at: string | null
