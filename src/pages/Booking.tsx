@@ -132,18 +132,14 @@ const Booking = () => {
     );
   };
 
+  // Jumlah jemaah = total quantity kamar yang dipilih (bukan kapasitas kamar)
   const getTotalPeople = () => {
-    return rooms.reduce((sum, r) => {
-      const multiplier = r.room_type === "quad" ? 4 : r.room_type === "triple" ? 3 : 2;
-      return sum + r.quantity * multiplier;
-    }, 0);
+    return rooms.reduce((sum, r) => sum + r.quantity, 0);
   };
 
+  // Harga total = quantity × harga per orang (1 kamar = 1 jemaah)
   const getTotalPrice = () => {
-    return rooms.reduce((sum, r) => {
-      const multiplier = r.room_type === "quad" ? 4 : r.room_type === "triple" ? 3 : 2;
-      return sum + r.quantity * r.price * multiplier;
-    }, 0);
+    return rooms.reduce((sum, r) => sum + r.quantity * r.price, 0);
   };
 
   const handleNextStep = () => {
@@ -212,19 +208,16 @@ const Booking = () => {
 
       if (bookingError) throw bookingError;
 
-      // Create booking rooms
+      // Create booking rooms (1 quantity = 1 jemaah)
       const roomsToInsert = rooms
         .filter((r) => r.quantity > 0)
-        .map((r) => {
-          const multiplier = r.room_type === "quad" ? 4 : r.room_type === "triple" ? 3 : 2;
-          return {
-            booking_id: booking.id,
-            room_type: r.room_type,
-            price: r.price,
-            quantity: r.quantity,
-            subtotal: r.quantity * r.price * multiplier,
-          };
-        });
+        .map((r) => ({
+          booking_id: booking.id,
+          room_type: r.room_type,
+          price: r.price,
+          quantity: r.quantity,
+          subtotal: r.quantity * r.price,
+        }));
 
       await supabase.from("booking_rooms").insert(roomsToInsert);
 
@@ -330,7 +323,7 @@ const Booking = () => {
                 ))}
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Users className="w-5 h-5" />
-                  <span>Total: {getTotalPeople()} orang</span>
+                  <span>Total: {getTotalPeople()} jemaah</span>
                 </div>
               </div>
             )}
