@@ -710,6 +710,47 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          booking_id: string | null
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_categories: {
         Row: {
           created_at: string | null
@@ -806,7 +847,9 @@ export type Database = {
           category_id: string | null
           created_at: string | null
           description: string | null
+          dp_deadline_days: number | null
           duration_days: number | null
+          full_deadline_days: number | null
           hotel_madinah_id: string | null
           hotel_makkah_id: string | null
           id: string
@@ -823,7 +866,9 @@ export type Database = {
           category_id?: string | null
           created_at?: string | null
           description?: string | null
+          dp_deadline_days?: number | null
           duration_days?: number | null
+          full_deadline_days?: number | null
           hotel_madinah_id?: string | null
           hotel_makkah_id?: string | null
           id?: string
@@ -840,7 +885,9 @@ export type Database = {
           category_id?: string | null
           created_at?: string | null
           description?: string | null
+          dp_deadline_days?: number | null
           duration_days?: number | null
+          full_deadline_days?: number | null
           hotel_madinah_id?: string | null
           hotel_makkah_id?: string | null
           id?: string
@@ -927,6 +974,7 @@ export type Database = {
           amount: number
           booking_id: string | null
           created_at: string | null
+          deadline: string | null
           id: string
           paid_at: string | null
           payment_method: string | null
@@ -940,6 +988,7 @@ export type Database = {
           amount: number
           booking_id?: string | null
           created_at?: string | null
+          deadline?: string | null
           id?: string
           paid_at?: string | null
           payment_method?: string | null
@@ -953,6 +1002,7 @@ export type Database = {
           amount?: number
           booking_id?: string | null
           created_at?: string | null
+          deadline?: string | null
           id?: string
           paid_at?: string | null
           payment_method?: string | null

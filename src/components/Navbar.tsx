@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import NotificationBell from "@/components/NotificationBell";
 
 interface NavItem {
   id: string;
@@ -200,6 +201,7 @@ const Navbar = () => {
 
         {/* CTA - Simplified */}
         <div className="hidden lg:flex items-center gap-3">
+          {user && <NotificationBell />}
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

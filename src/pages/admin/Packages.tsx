@@ -18,6 +18,8 @@ interface Package {
   package_type: string;
   duration_days: number;
   minimum_dp: number;
+  dp_deadline_days: number;
+  full_deadline_days: number;
   is_active: boolean;
   created_at: string;
 }
@@ -36,6 +38,8 @@ const AdminPackages = () => {
     package_type: "",
     duration_days: 9,
     minimum_dp: 0,
+    dp_deadline_days: 30,
+    full_deadline_days: 7,
   });
 
   useEffect(() => {
@@ -93,6 +97,8 @@ const AdminPackages = () => {
       package_type: pkg.package_type || "",
       duration_days: pkg.duration_days,
       minimum_dp: pkg.minimum_dp || 0,
+      dp_deadline_days: pkg.dp_deadline_days || 30,
+      full_deadline_days: pkg.full_deadline_days || 7,
     });
     setIsOpen(true);
   };
@@ -111,7 +117,7 @@ const AdminPackages = () => {
 
   const resetForm = () => {
     setEditing(null);
-    setForm({ title: "", slug: "", description: "", package_type: "", duration_days: 9, minimum_dp: 0 });
+    setForm({ title: "", slug: "", description: "", package_type: "", duration_days: 9, minimum_dp: 0, dp_deadline_days: 30, full_deadline_days: 7 });
   };
 
   return (
@@ -174,6 +180,26 @@ const AdminPackages = () => {
                   placeholder="0 = tidak ada minimal DP"
                   className="mt-1"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Deadline DP (hari sebelum berangkat)</Label>
+                  <Input
+                    type="number"
+                    value={form.dp_deadline_days}
+                    onChange={(e) => setForm({ ...form, dp_deadline_days: parseInt(e.target.value) || 30 })}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Deadline Pelunasan (hari sebelum berangkat)</Label>
+                  <Input
+                    type="number"
+                    value={form.full_deadline_days}
+                    onChange={(e) => setForm({ ...form, full_deadline_days: parseInt(e.target.value) || 7 })}
+                    className="mt-1"
+                  />
+                </div>
               </div>
               <div>
                 <Label>Deskripsi</Label>
