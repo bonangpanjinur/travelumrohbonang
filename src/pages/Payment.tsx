@@ -9,15 +9,22 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
-import { Check, Copy, ArrowLeft, CreditCard, Upload, Image, Loader2, Wallet } from "lucide-react";
+import { Check, Copy, ArrowLeft, CreditCard, Upload, Image, Loader2, Wallet, Clock, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { format, differenceInDays, addDays } from "date-fns";
+import { id as localeId } from "date-fns/locale";
 
 interface BookingData {
   id: string;
   booking_code: string;
   total_price: number;
   status: string;
-  package: { title: string; minimum_dp: number | null } | null;
+  package: { 
+    title: string; 
+    minimum_dp: number | null;
+    dp_deadline_days: number | null;
+    full_deadline_days: number | null;
+  } | null;
   departure: { departure_date: string } | null;
 }
 
@@ -56,7 +63,7 @@ const Payment = () => {
         .from("bookings")
         .select(`
           id, booking_code, total_price, status,
-          package:packages(title, minimum_dp),
+          package:packages(title, minimum_dp, dp_deadline_days, full_deadline_days),
           departure:package_departures(departure_date)
         `)
         .eq("id", bookingId)
@@ -96,6 +103,29 @@ const Payment = () => {
   const remainingAmount = booking ? booking.total_price - paidAmount - pendingAmount : 0;
   const minimumDp = booking?.package?.minimum_dp || 0;
   const paymentProgress = booking ? ((paidAmount / booking.total_price) * 100) : 0;
+
+  // Calculate deadlines
+  const departureDate = booking?.departure?.departure_date 
+    ? new Date(booking.departure.departure_date) 
+    : null;
+  
+  const dpDeadlineDays = booking?.package?.dp_deadline_days || 30;
+  const fullDeadlineDays = booking?.package?.full_deadline_days || 7;
+  
+  const dpDeadline = departureDate 
+    ? addDays(departureDate, -dpDeadlineDays) 
+    : null;
+  
+  const fullDeadline = departureDate 
+    ? addDays(departureDate, -fullDeadlineDays) 
+    : null;
+
+  const now = new Date();
+  const daysUntilDpDeadline = dpDeadline ? differenceInDays(dpDeadline, now) : null;
+  const daysUntilFullDeadline = fullDeadline ? differenceInDays(fullDeadline, now) : null;
+  
+  const isDpOverdue = daysUntilDpDeadline !== null && daysUntilDpDeadline < 0;
+  const isFullOverdue = daysUntilFullDeadline !== null && daysUntilFullDeadline < 0;
 
   // Determine current payment amount based on option
   const getCurrentPaymentAmount = () => {
@@ -261,6 +291,64 @@ const Payment = () => {
                   </div>
                 )}
               </div>
+
+              {/* Deadline Info */}
+              {departureDate && (
+                <div className={`p-4 rounded-xl border ${
+                  (isDpOverdue && paidAmount === 0) || (isFullOverdue && remainingAmount > 0)
+                    ? "border-destructive/50 bg-destructive/5"
+                    : "border-border bg-muted/50"
+                }`}>
+                  <h3 className="font-semibold flex items-center gap-2 mb-3">
+                    <Clock className="w-5 h-5 text-gold" />
+                    Deadline Pembayaran
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Tanggal Keberangkatan</span>
+                      <span className="font-semibold">
+                        {format(departureDate, "d MMMM yyyy", { locale: localeId })}
+                      </span>
+                    </div>
+                    {paidAmount === 0 && dpDeadline && (
+                      <div className={`flex justify-between items-center ${
+                        isDpOverdue ? "text-destructive" : daysUntilDpDeadline !== null && daysUntilDpDeadline <= 7 ? "text-yellow-600" : ""
+                      }`}>
+                        <span className="flex items-center gap-1">
+                          {isDpOverdue && <AlertTriangle className="w-4 h-4" />}
+                          Deadline DP
+                        </span>
+                        <span className="font-semibold">
+                          {format(dpDeadline, "d MMMM yyyy", { locale: localeId })}
+                          {daysUntilDpDeadline !== null && (
+                            <span className="ml-1">
+                              ({isDpOverdue ? "Lewat!" : `${daysUntilDpDeadline} hari lagi`})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {paidAmount > 0 && remainingAmount > 0 && fullDeadline && (
+                      <div className={`flex justify-between items-center ${
+                        isFullOverdue ? "text-destructive" : daysUntilFullDeadline !== null && daysUntilFullDeadline <= 7 ? "text-yellow-600" : ""
+                      }`}>
+                        <span className="flex items-center gap-1">
+                          {isFullOverdue && <AlertTriangle className="w-4 h-4" />}
+                          Deadline Pelunasan
+                        </span>
+                        <span className="font-semibold">
+                          {format(fullDeadline, "d MMMM yyyy", { locale: localeId })}
+                          {daysUntilFullDeadline !== null && (
+                            <span className="ml-1">
+                              ({isFullOverdue ? "Lewat!" : `${daysUntilFullDeadline} hari lagi`})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Payment Progress */}
               {(paidAmount > 0 || pendingAmount > 0) && (
