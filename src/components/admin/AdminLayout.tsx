@@ -16,7 +16,9 @@ import {
   Settings,
   LogOut,
   Menu,
-  Image
+  Image,
+  HelpCircle,
+  MessageCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -37,6 +39,8 @@ const menuItems = [
   { label: "Bandara", href: "/admin/airports", icon: MapPin },
   { label: "Galeri", href: "/admin/gallery", icon: Image },
   { label: "Testimoni", href: "/admin/testimonials", icon: FileText },
+  { label: "FAQ", href: "/admin/faq", icon: HelpCircle },
+  { label: "Floating Button", href: "/admin/floating-buttons", icon: MessageCircle },
   { label: "Halaman CMS", href: "/admin/pages", icon: FileText },
   { label: "Pengaturan", href: "/admin/settings", icon: Settings },
 ];
