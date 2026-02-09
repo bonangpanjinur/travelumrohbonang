@@ -201,14 +201,14 @@ const AdminAgents = () => {
               <div>
                 <Label>Cabang</Label>
                 <Select 
-                  value={form.branch_id} 
-                  onValueChange={(value) => setForm({ ...form, branch_id: value })}
+                  value={form.branch_id || "none"} 
+                  onValueChange={(value) => setForm({ ...form, branch_id: value === "none" ? "" : value })}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Pilih cabang (opsional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tanpa Cabang</SelectItem>
+                    <SelectItem value="none">Tanpa Cabang</SelectItem>
                     {branches.map((branch) => (
                       <SelectItem key={branch.id} value={branch.id}>
                         {branch.name}
