@@ -84,10 +84,10 @@ const AdminPilgrims = () => {
 
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
-      case "confirmed": return "bg-green-100 text-green-800";
-      case "pending": return "bg-yellow-100 text-yellow-800";
-      case "cancelled": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "confirmed": return "bg-success/10 text-success border-success/20";
+      case "pending": return "bg-warning/10 text-warning border-warning/20";
+      case "cancelled": return "bg-destructive/10 text-destructive border-destructive/20";
+      default: return "bg-muted text-muted-foreground";
     }
   };
 
