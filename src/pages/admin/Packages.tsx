@@ -17,6 +17,7 @@ interface Package {
   description: string;
   package_type: string;
   duration_days: number;
+  minimum_dp: number;
   is_active: boolean;
   created_at: string;
 }
@@ -34,6 +35,7 @@ const AdminPackages = () => {
     description: "",
     package_type: "",
     duration_days: 9,
+    minimum_dp: 0,
   });
 
   useEffect(() => {
@@ -90,6 +92,7 @@ const AdminPackages = () => {
       description: pkg.description || "",
       package_type: pkg.package_type || "",
       duration_days: pkg.duration_days,
+      minimum_dp: pkg.minimum_dp || 0,
     });
     setIsOpen(true);
   };
@@ -108,7 +111,7 @@ const AdminPackages = () => {
 
   const resetForm = () => {
     setEditing(null);
-    setForm({ title: "", slug: "", description: "", package_type: "", duration_days: 9 });
+    setForm({ title: "", slug: "", description: "", package_type: "", duration_days: 9, minimum_dp: 0 });
   };
 
   return (
@@ -159,6 +162,16 @@ const AdminPackages = () => {
                   type="number"
                   value={form.duration_days}
                   onChange={(e) => setForm({ ...form, duration_days: parseInt(e.target.value) })}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Minimal DP (Rp)</Label>
+                <Input
+                  type="number"
+                  value={form.minimum_dp}
+                  onChange={(e) => setForm({ ...form, minimum_dp: parseInt(e.target.value) || 0 })}
+                  placeholder="0 = tidak ada minimal DP"
                   className="mt-1"
                 />
               </div>

@@ -812,6 +812,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean | null
+          minimum_dp: number | null
           package_type: string | null
           slug: string
           title: string
@@ -828,6 +829,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          minimum_dp?: number | null
           package_type?: string | null
           slug: string
           title: string
@@ -844,6 +846,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean | null
+          minimum_dp?: number | null
           package_type?: string | null
           slug?: string
           title?: string
@@ -927,6 +930,7 @@ export type Database = {
           id: string
           paid_at: string | null
           payment_method: string | null
+          payment_type: string | null
           proof_url: string | null
           status: string | null
           verified_at: string | null
@@ -939,6 +943,7 @@ export type Database = {
           id?: string
           paid_at?: string | null
           payment_method?: string | null
+          payment_type?: string | null
           proof_url?: string | null
           status?: string | null
           verified_at?: string | null
@@ -951,6 +956,7 @@ export type Database = {
           id?: string
           paid_at?: string | null
           payment_method?: string | null
+          payment_type?: string | null
           proof_url?: string | null
           status?: string | null
           verified_at?: string | null
