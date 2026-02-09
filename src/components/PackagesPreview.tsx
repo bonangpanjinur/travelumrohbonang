@@ -120,6 +120,7 @@ const PackagesPreview = () => {
                       Rp {pkg.price}
                     </div>
                   </div>
+                  <Link to="/paket">
                   <Button
                     size="sm"
                     className={pkg.popular ? "gradient-gold text-primary" : "bg-primary text-primary-foreground"}
@@ -127,6 +128,7 @@ const PackagesPreview = () => {
                     Detail
                     <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
+                  </Link>
                 </div>
               </div>
             </motion.div>

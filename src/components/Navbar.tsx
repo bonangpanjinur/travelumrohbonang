@@ -1,21 +1,22 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Phone } from "lucide-react";
+import { Menu, X, Phone, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
 
 const navLinks = [
   { label: "Beranda", href: "/" },
   { label: "Paket Umroh", href: "/paket" },
   { label: "Tentang Kami", href: "/#tentang" },
   { label: "Galeri", href: "/#galeri" },
-  { label: "Blog", href: "/#blog" },
   { label: "Kontak", href: "/#kontak" },
 ];
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { user, isAdmin, signOut } = useAuth();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-md border-b border-emerald-light/20">
@@ -58,9 +59,31 @@ const Navbar = () => {
             <Phone className="w-4 h-4" />
             <span>0812-3456-7890</span>
           </a>
-          <Button className="gradient-gold text-primary font-semibold hover:opacity-90 transition-opacity">
-            Daftar Sekarang
-          </Button>
+          {user ? (
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button variant="ghost" size="sm" className="text-gold-light hover:text-gold">
+                    Admin
+                  </Button>
+                </Link>
+              )}
+              <Link to="/my-bookings">
+                <Button variant="ghost" size="sm" className="text-primary-foreground/80 hover:text-gold">
+                  <User className="w-4 h-4 mr-1" /> Booking Saya
+                </Button>
+              </Link>
+              <Button variant="ghost" size="icon" onClick={() => signOut()} className="text-primary-foreground/60 hover:text-destructive">
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <Link to="/auth">
+              <Button className="gradient-gold text-primary font-semibold hover:opacity-90 transition-opacity">
+                Masuk / Daftar
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Mobile Toggle */}
@@ -92,10 +115,30 @@ const Navbar = () => {
                   {link.label}
                 </Link>
               ))}
+              {user && (
+                <>
+                  <Link to="/my-bookings" onClick={() => setIsOpen(false)} className="block px-4 py-3 text-sm font-medium text-gold">
+                    Booking Saya
+                  </Link>
+                  {isAdmin && (
+                    <Link to="/admin" onClick={() => setIsOpen(false)} className="block px-4 py-3 text-sm font-medium text-gold">
+                      Admin Dashboard
+                    </Link>
+                  )}
+                </>
+              )}
               <div className="pt-4 border-t border-emerald-light/20">
-                <Button className="w-full gradient-gold text-primary font-semibold">
-                  Daftar Sekarang
-                </Button>
+                {user ? (
+                  <Button onClick={() => { signOut(); setIsOpen(false); }} variant="outline" className="w-full border-destructive/50 text-destructive">
+                    <LogOut className="w-4 h-4 mr-2" /> Keluar
+                  </Button>
+                ) : (
+                  <Link to="/auth" onClick={() => setIsOpen(false)}>
+                    <Button className="w-full gradient-gold text-primary font-semibold">
+                      Masuk / Daftar
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           </motion.div>
