@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, User, LogOut, ChevronDown, LayoutDashboard, Ticket } from "lucide-react";
+import { Menu, X, User, LogOut, ChevronDown, LayoutDashboard, Ticket, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +44,7 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
+  const [userProfile, setUserProfile] = useState<{ name: string; avatar_url: string } | null>(null);
   const location = useLocation();
   const { user, isAdmin, signOut } = useAuth();
 
@@ -84,6 +86,30 @@ const Navbar = () => {
     fetchNavItems();
     fetchBranding();
   }, []);
+
+  // Fetch user profile when user changes
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user) {
+        setUserProfile(null);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("name, avatar_url")
+        .eq("id", user.id)
+        .single();
+
+      if (data) {
+        setUserProfile(data);
+      } else {
+        setUserProfile({ name: user.user_metadata?.name || user.email || "", avatar_url: "" });
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
 
   const displayLinks = navItems.length > 0 ? navItems : [
     { id: "1", label: "Beranda", url: "/", parent_id: null, sort_order: 1, open_in_new_tab: false },
@@ -177,14 +203,24 @@ const Navbar = () => {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20">
-                  <div className="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center">
-                    <User className="w-4 h-4 text-gold" />
-                  </div>
+                <Button variant="ghost" className="flex items-center gap-2 text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 p-1">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={userProfile?.avatar_url} alt={userProfile?.name} />
+                    <AvatarFallback className="bg-gold/20 text-gold text-sm">
+                      {userProfile?.name?.charAt(0)?.toUpperCase() || <User className="w-4 h-4" />}
+                    </AvatarFallback>
+                  </Avatar>
                   <ChevronDown className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 bg-card border-border z-50">
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
+                    <UserCircle className="w-4 h-4" />
+                    Profil Saya
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 {isAdmin && (
                   <>
                     <DropdownMenuItem asChild>
@@ -266,6 +302,14 @@ const Navbar = () => {
                 <>
                   <div className="pt-4 border-t border-emerald-light/20 mt-2">
                     <p className="px-4 py-2 text-xs text-primary-foreground/40 uppercase tracking-wider">Akun</p>
+                    <Link 
+                      to="/profile" 
+                      onClick={() => setIsOpen(false)} 
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg"
+                    >
+                      <UserCircle className="w-4 h-4" />
+                      Profil Saya
+                    </Link>
                     {isAdmin && (
                       <Link 
                         to="/admin" 
