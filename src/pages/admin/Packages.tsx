@@ -114,7 +114,7 @@ const AdminPackages = () => {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-display font-bold">Paket Umroh</h1>
+        <h1 className="text-2xl font-display font-bold">Paket</h1>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button className="gradient-gold text-primary">

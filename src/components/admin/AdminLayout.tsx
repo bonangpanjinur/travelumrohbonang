@@ -26,7 +26,7 @@ import { useState } from "react";
 
 const menuItems = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Paket Umroh", href: "/admin/packages", icon: Package },
+  { label: "Paket", href: "/admin/packages", icon: Package },
   { label: "Keberangkatan", href: "/admin/departures", icon: Calendar },
   { label: "Itinerary", href: "/admin/itineraries", icon: MapPin },
   { label: "Booking", href: "/admin/bookings", icon: Ticket },
