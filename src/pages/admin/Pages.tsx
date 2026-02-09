@@ -178,7 +178,7 @@ const AdminPages = () => {
                     className="mt-1"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Akan menjadi: /page/{form.slug || "slug"}
+                    Akan menjadi: /{form.slug || "slug"}
                   </p>
                 </div>
                 <div>
@@ -280,7 +280,7 @@ const AdminPages = () => {
                 <TableRow key={page.id}>
                   <TableCell className="font-semibold">{page.title || "(Tanpa Judul)"}</TableCell>
                   <TableCell>
-                    <code className="text-xs bg-muted px-2 py-1 rounded">/page/{page.slug}</code>
+                    <code className="text-xs bg-muted px-2 py-1 rounded">/{page.slug}</code>
                   </TableCell>
                   <TableCell>
                     {page.seo_title ? (
@@ -305,7 +305,7 @@ const AdminPages = () => {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" asChild>
-                        <a href={`/page/${page.slug}`} target="_blank" rel="noopener noreferrer">
+                        <a href={`/${page.slug}`} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="w-4 h-4" />
                         </a>
                       </Button>

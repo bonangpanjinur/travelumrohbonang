@@ -7,6 +7,9 @@ import Underline from "@tiptap/extension-underline";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import {
   Bold,
   Italic,
@@ -27,9 +30,11 @@ import {
   Heading3,
   Code,
   Minus,
+  Upload,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface RichTextEditorProps {
   content: string;
@@ -44,6 +49,10 @@ const RichTextEditor = ({
   placeholder = "Tulis konten di sini...",
   className,
 }: RichTextEditorProps) => {
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -97,15 +106,91 @@ const RichTextEditor = ({
     }
   };
 
-  const addImage = () => {
+  const addImageByUrl = () => {
     const url = prompt("Masukkan URL gambar:");
     if (url) {
       editor.chain().focus().setImage({ src: url }).run();
     }
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "File tidak valid",
+        description: "Silakan pilih file gambar (JPG, PNG, GIF, WebP)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File terlalu besar",
+        description: "Ukuran maksimal file adalah 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `cms/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("cms-images")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("cms-images")
+        .getPublicUrl(filePath);
+
+      // Insert image into editor
+      editor.chain().focus().setImage({ src: publicUrl }).run();
+
+      toast({
+        title: "Gambar berhasil diupload",
+        description: "Gambar telah ditambahkan ke konten",
+      });
+    } catch (error: unknown) {
+      console.error("Upload error:", error);
+      toast({
+        title: "Gagal upload gambar",
+        description: error instanceof Error ? error.message : "Terjadi kesalahan saat upload",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   return (
     <div className={cn("border border-input rounded-lg overflow-hidden bg-background", className)}>
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageUpload}
+      />
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-1 p-2 border-b border-border bg-muted/30">
         {/* Undo/Redo */}
@@ -277,7 +362,7 @@ const RichTextEditor = ({
 
         <Separator orientation="vertical" className="h-6 mx-1" />
 
-        {/* Link & Image */}
+        {/* Link */}
         <Toggle
           size="sm"
           pressed={editor.isActive("link")}
@@ -285,14 +370,34 @@ const RichTextEditor = ({
         >
           <LinkIcon className="h-4 w-4" />
         </Toggle>
+
+        {/* Image URL */}
         <Button
           type="button"
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          onClick={addImage}
+          onClick={addImageByUrl}
+          title="Tambah gambar dari URL"
         >
           <ImageIcon className="h-4 w-4" />
+        </Button>
+
+        {/* Image Upload */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          title="Upload gambar"
+        >
+          {uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="h-4 w-4" />
+          )}
         </Button>
       </div>
 

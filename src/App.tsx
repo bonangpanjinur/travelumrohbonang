@@ -50,7 +50,6 @@ const App = () => (
               <Route path="/booking/:slug/:departureId" element={<Booking />} />
               <Route path="/booking/payment/:bookingId" element={<Payment />} />
               <Route path="/my-bookings" element={<MyBookings />} />
-              <Route path="/page/:slug" element={<DynamicPage />} />
 
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminLayout />}>
@@ -70,6 +69,9 @@ const App = () => (
                 <Route path="pages" element={<AdminPages />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
+
+              {/* CMS Dynamic Page - must be after all other routes */}
+              <Route path="/:slug" element={<DynamicPage />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
