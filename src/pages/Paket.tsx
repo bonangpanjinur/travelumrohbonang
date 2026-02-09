@@ -1,12 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BackgroundPattern from "@/components/BackgroundPattern";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Star, Calendar, Users, ArrowRight, Search, Filter, X, Plane, MapPin, Building } from "lucide-react";
+import { Calendar, ArrowRight, Search, Filter, X, Plane, MapPin, Building } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -14,29 +14,15 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
+import PackageCard, { PackageCardData } from "@/components/PackageCard";
 
-interface Package {
-  id: string;
-  title: string;
-  slug: string;
+interface Package extends PackageCardData {
   description: string;
-  package_type: string;
-  image_url: string;
-  duration_days: number;
   airline_id: string | null;
   airport_id: string | null;
   category_id: string | null;
   hotel_makkah_id: string | null;
   category: { id: string; name: string; parent_id: string | null } | null;
-  hotel_makkah: { id: string; star: number; name: string } | null;
-  airline: { id: string; name: string } | null;
-  airport: { id: string; name: string; city: string } | null;
-  departures: { 
-    id: string; 
-    departure_date: string; 
-    remaining_quota: number; 
-    prices: { price: number; room_type: string }[] 
-  }[];
 }
 
 interface Category {
@@ -539,88 +525,9 @@ const Paket = () => {
                   </div>
                 ) : (
                   <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {filteredPackages.map((pkg, index) => {
-                      const lowestPrice = getLowestPrice(pkg.departures);
-                      const nextDep = getNextDeparture(pkg.departures);
-
-                      return (
-                        <motion.div
-                          key={pkg.id}
-                          initial={{ opacity: 0, y: 30 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          className="rounded-2xl overflow-hidden bg-card border border-border hover:border-gold/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
-                        >
-                          <div className="relative h-48 overflow-hidden">
-                            <img
-                              src={pkg.image_url || "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=600&q=80"}
-                              alt={pkg.title}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
-                            <div className="absolute bottom-3 left-4 flex gap-2">
-                              <span className="bg-primary/90 text-primary-foreground text-xs px-3 py-1 rounded-full">
-                                {pkg.category?.name || pkg.package_type || "Reguler"}
-                              </span>
-                            </div>
-                            {nextDep && (
-                              <div className="absolute top-3 right-3 bg-card/90 backdrop-blur-sm text-xs px-2 py-1 rounded-full">
-                                {format(new Date(nextDep.departure_date), "d MMM", { locale: idLocale })}
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="p-5">
-                            <h3 className="text-lg font-display font-bold text-foreground line-clamp-1">{pkg.title}</h3>
-
-                            <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3.5 h-3.5" /> {pkg.duration_days} Hari
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Star className="w-3.5 h-3.5" /> Bintang {pkg.hotel_makkah?.star || 4}
-                              </span>
-                              {nextDep && (
-                                <span className="flex items-center gap-1">
-                                  <Users className="w-3.5 h-3.5" /> {nextDep.remaining_quota} seat
-                                </span>
-                              )}
-                            </div>
-
-                            {(pkg.airline || pkg.airport) && (
-                              <div className="flex flex-wrap gap-2 mt-3">
-                                {pkg.airline && (
-                                  <span className="text-xs bg-muted px-2 py-1 rounded flex items-center gap-1">
-                                    <Plane className="w-3 h-3" /> {pkg.airline.name}
-                                  </span>
-                                )}
-                                {pkg.airport && (
-                                  <span className="text-xs bg-muted px-2 py-1 rounded flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" /> {pkg.airport.city}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-
-                            <div className="mt-4 pt-4 border-t border-border flex items-end justify-between">
-                              <div>
-                                <span className="text-xs text-muted-foreground">Mulai dari</span>
-                                <div className="text-xl font-display font-bold text-foreground">
-                                  Rp {lowestPrice.toLocaleString("id-ID")}
-                                </div>
-                              </div>
-                              <Link to={`/paket/${pkg.slug}`}>
-                                <Button size="sm" className="gradient-gold text-primary">
-                                  Detail
-                                  <ArrowRight className="w-4 h-4 ml-1" />
-                                </Button>
-                              </Link>
-                            </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
+                    {filteredPackages.map((pkg, index) => (
+                      <PackageCard key={pkg.id} pkg={pkg} index={index} />
+                    ))}
                   </div>
                 )}
               </div>
