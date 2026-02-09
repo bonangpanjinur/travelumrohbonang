@@ -340,6 +340,39 @@ export type Database = {
           },
         ]
       }
+      gallery: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string
+          is_active: boolean | null
+          sort_order: number | null
+          title: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean | null
+          sort_order?: number | null
+          title?: string | null
+        }
+        Relationships: []
+      }
       hotels: {
         Row: {
           city: string | null

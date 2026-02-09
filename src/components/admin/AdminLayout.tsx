@@ -15,7 +15,8 @@ import {
   FileText,
   Settings,
   LogOut,
-  Menu
+  Menu,
+  Image
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -34,6 +35,7 @@ const menuItems = [
   { label: "Hotel", href: "/admin/hotels", icon: Hotel },
   { label: "Maskapai", href: "/admin/airlines", icon: Plane },
   { label: "Bandara", href: "/admin/airports", icon: MapPin },
+  { label: "Galeri", href: "/admin/gallery", icon: Image },
   { label: "Halaman CMS", href: "/admin/pages", icon: FileText },
   { label: "Pengaturan", href: "/admin/settings", icon: Settings },
 ];

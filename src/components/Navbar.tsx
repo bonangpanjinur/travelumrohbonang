@@ -8,8 +8,8 @@ import { useAuth } from "@/hooks/useAuth";
 const navLinks = [
   { label: "Beranda", href: "/" },
   { label: "Paket Umroh", href: "/paket" },
+  { label: "Galeri", href: "/galeri" },
   { label: "Tentang Kami", href: "/#tentang" },
-  { label: "Galeri", href: "/#galeri" },
   { label: "Kontak", href: "/#kontak" },
 ];
 
