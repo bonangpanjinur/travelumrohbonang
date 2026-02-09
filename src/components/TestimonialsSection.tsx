@@ -97,8 +97,11 @@ const TestimonialsSection = () => {
   ];
 
   return (
-    <section className={`section-padding gradient-elegant ${getBackgroundClass()}`}>
-      <div className="container-custom">
+    <section className="section-padding bg-primary relative overflow-hidden">
+      {/* Subtle pattern overlay */}
+      <div className={`absolute inset-0 pointer-events-none ${getBackgroundClass()}`} />
+      
+      <div className="container-custom relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

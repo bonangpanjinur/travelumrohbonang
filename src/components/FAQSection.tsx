@@ -32,7 +32,7 @@ const FAQSection = () => {
   if (faqs.length === 0) return null;
 
   return (
-    <section id="faq" className="py-20 bg-muted/30">
+    <section id="faq" className="py-20 bg-card islamic-pattern-light">
       <div className="container-custom px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">

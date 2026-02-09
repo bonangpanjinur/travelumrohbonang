@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import { Plane, Hotel, BookOpen, Users, Shield, Headphones } from "lucide-react";
-import BackgroundPattern from "./BackgroundPattern";
 
 const services = [
   {
@@ -37,7 +36,7 @@ const services = [
 
 const ServicesSection = () => {
   return (
-    <BackgroundPattern className="section-padding bg-background">
+    <section className="section-padding bg-background islamic-pattern-light">
       <div className="container-custom">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -79,7 +78,7 @@ const ServicesSection = () => {
           ))}
         </div>
       </div>
-    </BackgroundPattern>
+    </section>
   );
 };
 

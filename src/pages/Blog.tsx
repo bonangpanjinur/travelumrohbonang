@@ -74,8 +74,11 @@ const Blog = () => {
       <Navbar />
       <main className="pt-20">
         {/* Header */}
-        <section className="gradient-emerald section-padding islamic-pattern">
-          <div className="container-custom text-center">
+        <section className="bg-primary section-padding relative overflow-hidden">
+          {/* Subtle pattern overlay */}
+          <div className="absolute inset-0 islamic-pattern pointer-events-none" />
+          
+          <div className="container-custom text-center relative z-10">
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -83,7 +86,7 @@ const Blog = () => {
             >
               Blog <span className="text-gradient-gold">UmrohPlus</span>
             </motion.h1>
-            <p className="text-primary-foreground/70 max-w-xl mx-auto mb-8">
+            <p className="text-primary-foreground/80 max-w-xl mx-auto mb-8">
               Artikel, tips, dan informasi seputar ibadah umroh
             </p>
 

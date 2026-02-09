@@ -77,8 +77,11 @@ const Gallery = () => {
 
       <main className="pt-24 pb-16">
         {/* Hero Section */}
-        <section className={`py-16 gradient-elegant ${getBackgroundClass()}`}>
-          <div className="container-custom text-center">
+        <section className="py-16 bg-primary relative overflow-hidden">
+          {/* Subtle pattern overlay */}
+          <div className={`absolute inset-0 pointer-events-none ${getBackgroundClass()}`} />
+          
+          <div className="container-custom text-center relative z-10">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

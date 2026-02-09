@@ -13,8 +13,11 @@ const advantages = [
 
 const AboutSection = () => {
   return (
-    <section id="tentang" className="section-padding gradient-emerald">
-      <div className="container-custom">
+    <section id="tentang" className="section-padding bg-primary relative overflow-hidden">
+      {/* Subtle pattern overlay */}
+      <div className="absolute inset-0 islamic-pattern pointer-events-none" />
+      
+      <div className="container-custom relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Image */}
           <motion.div
@@ -51,7 +54,7 @@ const AboutSection = () => {
             <h2 className="text-3xl md:text-4xl font-display font-bold text-primary-foreground mt-3 mb-6">
               Mitra Terpercaya Perjalanan Spiritual Anda
             </h2>
-            <p className="text-primary-foreground/70 mb-8 leading-relaxed">
+            <p className="text-primary-foreground/80 mb-8 leading-relaxed">
               UmrohPlus hadir sebagai mitra perjalanan ibadah Anda dengan komitmen
               memberikan pelayanan terbaik. Dengan pengalaman lebih dari 15 tahun,
               kami telah memberangkatkan ribuan jemaah dengan penuh keikhlasan dan
@@ -62,7 +65,7 @@ const AboutSection = () => {
               {advantages.map((item) => (
                 <div key={item} className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-gold flex-shrink-0" />
-                  <span className="text-primary-foreground/80 text-sm">{item}</span>
+                  <span className="text-primary-foreground/90 text-sm">{item}</span>
                 </div>
               ))}
             </div>

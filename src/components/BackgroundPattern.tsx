@@ -4,21 +4,19 @@ import { supabase } from "@/integrations/supabase/client";
 interface BackgroundPatternProps {
   children: React.ReactNode;
   className?: string;
-  overlay?: boolean;
-  overlayOpacity?: number;
+  variant?: "light" | "dark" | "none";
 }
 
 interface BackgroundSettings {
-  type: "pattern" | "image";
+  type: "pattern" | "image" | "none";
   image_url?: string;
-  pattern_type?: "islamic" | "dots" | "grid";
+  pattern_type?: "islamic" | "dots" | "grid" | "none";
 }
 
 const BackgroundPattern = ({ 
   children, 
   className = "", 
-  overlay = true,
-  overlayOpacity = 0.85
+  variant = "light"
 }: BackgroundPatternProps) => {
   const [settings, setSettings] = useState<BackgroundSettings | null>(null);
 
@@ -41,6 +39,11 @@ const BackgroundPattern = ({
     fetchSettings();
   }, []);
 
+  // If settings are "none", just render children with className
+  if (settings?.type === "none" || settings?.pattern_type === "none") {
+    return <div className={className}>{children}</div>;
+  }
+
   const getBackgroundStyle = (): React.CSSProperties => {
     if (settings?.type === "image" && settings.image_url) {
       return {
@@ -55,8 +58,22 @@ const BackgroundPattern = ({
 
   const getPatternClass = () => {
     if (settings?.type === "image") return "";
+    if (variant === "none") return "";
     
-    switch (settings?.pattern_type) {
+    const patternType = settings?.pattern_type || "islamic";
+    
+    // Use lighter patterns for light backgrounds
+    if (variant === "light") {
+      switch (patternType) {
+        case "dots": return "bg-dots-pattern";
+        case "grid": return "bg-grid-pattern";
+        case "islamic": 
+        default: return "islamic-pattern-light";
+      }
+    }
+    
+    // Use standard patterns for dark backgrounds
+    switch (patternType) {
       case "dots": return "bg-dots-pattern";
       case "grid": return "bg-grid-pattern";
       case "islamic":
@@ -64,20 +81,24 @@ const BackgroundPattern = ({
     }
   };
 
-  return (
-    <div 
-      className={`relative ${getPatternClass()} ${className}`}
-      style={getBackgroundStyle()}
-    >
-      {overlay && settings?.type === "image" && (
-        <div 
-          className="absolute inset-0 bg-background"
-          style={{ opacity: overlayOpacity }}
-        />
-      )}
-      <div className="relative z-10">
-        {children}
+  // For image backgrounds, add an overlay
+  if (settings?.type === "image" && settings.image_url) {
+    return (
+      <div 
+        className={`relative ${className}`}
+        style={getBackgroundStyle()}
+      >
+        <div className="absolute inset-0 bg-background/95" />
+        <div className="relative z-10">
+          {children}
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className={`${getPatternClass()} ${className}`}>
+      {children}
     </div>
   );
 };
