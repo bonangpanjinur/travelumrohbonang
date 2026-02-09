@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import Booking from "./pages/Booking";
 import Payment from "./pages/Payment";
 import MyBookings from "./pages/MyBookings";
+import Profile from "./pages/Profile";
 import Gallery from "./pages/Gallery";
 import Blog from "./pages/Blog";
 import BlogDetail from "./pages/BlogDetail";
@@ -61,6 +62,7 @@ const App = () => (
               <Route path="/booking/:slug/:departureId" element={<Booking />} />
               <Route path="/booking/payment/:bookingId" element={<Payment />} />
               <Route path="/my-bookings" element={<MyBookings />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/galeri" element={<Gallery />} />
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:slug" element={<BlogDetail />} />
