@@ -36,6 +36,7 @@ const menuItems = [
   { label: "Maskapai", href: "/admin/airlines", icon: Plane },
   { label: "Bandara", href: "/admin/airports", icon: MapPin },
   { label: "Galeri", href: "/admin/gallery", icon: Image },
+  { label: "Testimoni", href: "/admin/testimonials", icon: FileText },
   { label: "Halaman CMS", href: "/admin/pages", icon: FileText },
   { label: "Pengaturan", href: "/admin/settings", icon: Settings },
 ];
