@@ -9,6 +9,8 @@ import Index from "./pages/Index";
 import Paket from "./pages/Paket";
 import PackageDetail from "./pages/PackageDetail";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Booking from "./pages/Booking";
 import Payment from "./pages/Payment";
 import MyBookings from "./pages/MyBookings";
@@ -59,6 +61,8 @@ const App = () => (
               <Route path="/paket" element={<Paket />} />
               <Route path="/paket/:slug" element={<PackageDetail />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/booking/:slug/:departureId" element={<Booking />} />
               <Route path="/booking/payment/:bookingId" element={<Payment />} />
               <Route path="/my-bookings" element={<MyBookings />} />

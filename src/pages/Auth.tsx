@@ -171,6 +171,13 @@ const Auth = () => {
                 </button>
               </div>
               {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
+              {isLogin && (
+                <div className="text-right">
+                  <Link to="/forgot-password" className="text-xs text-accent hover:underline">
+                    Lupa kata sandi?
+                  </Link>
+                </div>
+              )}
             </div>
 
             {!isLogin && (

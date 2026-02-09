@@ -252,6 +252,21 @@ const Profile = () => {
                     placeholder="Contoh: 08123456789"
                   />
                 </div>
+
+                {/* Change Password Section */}
+                <div className="pt-4 border-t">
+                  <Label>Keamanan</Label>
+                  <p className="text-xs text-muted-foreground mt-1 mb-2">
+                    Ubah kata sandi untuk mengamankan akun Anda
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate("/forgot-password")}
+                    className="w-full"
+                  >
+                    Ubah Kata Sandi
+                  </Button>
+                </div>
               </div>
 
               {/* Save Button */}
