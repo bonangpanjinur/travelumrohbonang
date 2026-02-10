@@ -44,6 +44,22 @@ const AdminPackages = () => {
     full_deadline_days: 7,
   });
 
+  // Build payload dynamically — only include fields that have values
+  const buildPayload = () => {
+    const payload: Record<string, unknown> = {
+      title: form.title,
+      slug: form.slug || form.title.toLowerCase().replace(/\s+/g, "-"),
+      description: form.description || null,
+      package_type: form.package_type || null,
+      duration_days: form.duration_days,
+    };
+    // These columns may not be in PostgREST cache yet, only include if non-default
+    if (form.minimum_dp !== 0) payload.minimum_dp = form.minimum_dp;
+    if (form.dp_deadline_days !== 30) payload.dp_deadline_days = form.dp_deadline_days;
+    if (form.full_deadline_days !== 7) payload.full_deadline_days = form.full_deadline_days;
+    return payload;
+  };
+
   useEffect(() => {
     fetchPackages();
   }, []);
@@ -60,12 +76,12 @@ const AdminPackages = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const slug = form.slug || form.title.toLowerCase().replace(/\s+/g, "-");
+    const payload = buildPayload();
 
     if (editing) {
       const { error } = await supabase
         .from("packages")
-        .update({ ...form, slug })
+        .update(payload as any)
         .eq("id", editing.id);
 
       if (error) {
@@ -77,7 +93,7 @@ const AdminPackages = () => {
         resetForm();
       }
     } else {
-      const { error } = await supabase.from("packages").insert({ ...form, slug });
+      const { error } = await supabase.from("packages").insert(payload as any);
 
       if (error) {
         toast({ title: "Gagal membuat paket", description: error.message, variant: "destructive" });
