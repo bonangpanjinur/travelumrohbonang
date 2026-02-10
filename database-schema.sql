@@ -1038,6 +1038,227 @@ CREATE POLICY "Admins can update cms objects" ON storage.objects
 
 
 -- ============================================================
+-- 9. DUMMY DATA
+-- ============================================================
+
+-- BRANCHES
+INSERT INTO public.branches (id, name, address, phone, is_active) VALUES
+  ('b0000001-0000-0000-0000-000000000001', 'Cabang Jakarta Pusat', 'Jl. Thamrin No. 10, Jakarta Pusat', '021-5551234', true),
+  ('b0000002-0000-0000-0000-000000000002', 'Cabang Surabaya', 'Jl. Pemuda No. 25, Surabaya', '031-5559876', true),
+  ('b0000003-0000-0000-0000-000000000003', 'Cabang Bandung', 'Jl. Asia Afrika No. 15, Bandung', '022-5554321', true)
+ON CONFLICT DO NOTHING;
+
+-- AGENTS
+INSERT INTO public.agents (id, name, phone, commission_percent, is_active, branch_id) VALUES
+  ('a0000001-0000-0000-0000-000000000001', 'Agen Ahmad Fauzi', '08121234567', 5, true, 'b0000001-0000-0000-0000-000000000001'),
+  ('a0000002-0000-0000-0000-000000000002', 'Agen Siti Nurhaliza', '08129876543', 4, true, 'b0000002-0000-0000-0000-000000000002'),
+  ('a0000003-0000-0000-0000-000000000003', 'Agen Budi Santoso', '08131112233', 5, true, 'b0000003-0000-0000-0000-000000000003')
+ON CONFLICT DO NOTHING;
+
+-- AIRLINES
+INSERT INTO public.airlines (id, name, logo_url) VALUES
+  ('aa000001-0000-0000-0000-000000000001', 'Saudi Arabian Airlines', null),
+  ('aa000002-0000-0000-0000-000000000002', 'Garuda Indonesia', null),
+  ('aa000003-0000-0000-0000-000000000003', 'Emirates', null),
+  ('aa000004-0000-0000-0000-000000000004', 'Qatar Airways', null)
+ON CONFLICT DO NOTHING;
+
+-- AIRPORTS
+INSERT INTO public.airports (id, name, city, code) VALUES
+  ('ab000001-0000-0000-0000-000000000001', 'Soekarno-Hatta International Airport', 'Jakarta', 'CGK'),
+  ('ab000002-0000-0000-0000-000000000002', 'Juanda International Airport', 'Surabaya', 'SUB'),
+  ('ab000003-0000-0000-0000-000000000003', 'Sultan Hasanuddin International Airport', 'Makassar', 'UPG'),
+  ('ab000004-0000-0000-0000-000000000004', 'Kualanamu International Airport', 'Medan', 'KNO')
+ON CONFLICT DO NOTHING;
+
+-- HOTELS
+INSERT INTO public.hotels (id, name, city, star) VALUES
+  ('cc000001-0000-0000-0000-000000000001', 'Pullman Zamzam Makkah', 'Makkah', 5),
+  ('cc000002-0000-0000-0000-000000000002', 'Hilton Suites Makkah', 'Makkah', 5),
+  ('cc000003-0000-0000-0000-000000000003', 'Swissotel Al Maqam Makkah', 'Makkah', 5),
+  ('cc000004-0000-0000-0000-000000000004', 'Pullman Zamzam Madinah', 'Madinah', 5),
+  ('cc000005-0000-0000-0000-000000000005', 'Oberoi Madinah', 'Madinah', 5),
+  ('cc000006-0000-0000-0000-000000000006', 'Shaza Al Madina', 'Madinah', 5),
+  ('cc000007-0000-0000-0000-000000000007', 'Grand Mercure Holy Makkah', 'Makkah', 4),
+  ('cc000008-0000-0000-0000-000000000008', 'Dallah Taibah Hotel Madinah', 'Madinah', 4)
+ON CONFLICT DO NOTHING;
+
+-- MUTHAWIFS
+INSERT INTO public.muthawifs (id, name, phone) VALUES
+  ('dd000001-0000-0000-0000-000000000001', 'Ustadz H. Abdul Rahman', '08551112233'),
+  ('dd000002-0000-0000-0000-000000000002', 'Ustadz Muhammad Ridwan', '08554445566'),
+  ('dd000003-0000-0000-0000-000000000003', 'Ustadzah Hj. Fatimah', '08557778899')
+ON CONFLICT DO NOTHING;
+
+-- PACKAGE CATEGORIES
+INSERT INTO public.package_categories (id, name, description, sort_order, is_active) VALUES
+  ('ee000001-0000-0000-0000-000000000001', 'Umroh Reguler', 'Paket umroh dengan harga terjangkau', 1, true),
+  ('ee000002-0000-0000-0000-000000000002', 'Umroh VIP', 'Paket umroh premium dengan fasilitas terbaik', 2, true),
+  ('ee000003-0000-0000-0000-000000000003', 'Umroh Plus Turki', 'Paket umroh plus wisata Turki', 3, true),
+  ('ee000004-0000-0000-0000-000000000004', 'Haji Khusus', 'Paket haji dengan pelayanan eksklusif', 4, true)
+ON CONFLICT DO NOTHING;
+
+-- PACKAGES (5 paket lengkap dengan relasi)
+INSERT INTO public.packages (id, title, slug, description, package_type, duration_days, minimum_dp, dp_deadline_days, full_deadline_days, is_active, category_id, hotel_makkah_id, hotel_madinah_id, airline_id, airport_id) VALUES
+  ('ff000001-0000-0000-0000-000000000001', 'Umroh Hemat 9 Hari', 'umroh-hemat-9-hari', 'Paket umroh hemat dengan fasilitas standar namun tetap nyaman. Cocok untuk jamaah yang ingin beribadah dengan budget terjangkau.', 'Hemat', 9, 5000000, 30, 7, true, 'ee000001-0000-0000-0000-000000000001', 'cc000007-0000-0000-0000-000000000007', 'cc000008-0000-0000-0000-000000000008', 'aa000002-0000-0000-0000-000000000002', 'ab000001-0000-0000-0000-000000000001'),
+  ('ff000002-0000-0000-0000-000000000002', 'Umroh Reguler 9 Hari', 'umroh-reguler-9-hari', 'Paket umroh reguler dengan hotel bintang 4-5 dekat Masjidil Haram dan Masjid Nabawi. Termasuk makan 3x sehari.', 'Reguler', 9, 7500000, 30, 7, true, 'ee000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', 'cc000004-0000-0000-0000-000000000004', 'aa000002-0000-0000-0000-000000000002', 'ab000001-0000-0000-0000-000000000001'),
+  ('ff000003-0000-0000-0000-000000000003', 'Umroh VIP 12 Hari', 'umroh-vip-12-hari', 'Paket umroh VIP dengan hotel bintang 5 terbaik, pesawat business class, dan muthawif eksklusif.', 'VIP', 12, 15000000, 45, 14, true, 'ee000002-0000-0000-0000-000000000002', 'cc000003-0000-0000-0000-000000000003', 'cc000005-0000-0000-0000-000000000005', 'aa000001-0000-0000-0000-000000000001', 'ab000001-0000-0000-0000-000000000001'),
+  ('ff000004-0000-0000-0000-000000000004', 'Umroh Plus Turki 14 Hari', 'umroh-plus-turki-14-hari', 'Paket umroh plus wisata Turki. Kunjungi Istanbul, Cappadocia, dan tempat bersejarah Islam.', 'Plus', 14, 12000000, 45, 14, true, 'ee000003-0000-0000-0000-000000000003', 'cc000002-0000-0000-0000-000000000002', 'cc000006-0000-0000-0000-000000000006', 'aa000004-0000-0000-0000-000000000004', 'ab000001-0000-0000-0000-000000000001'),
+  ('ff000005-0000-0000-0000-000000000005', 'Umroh Ramadhan 15 Hari', 'umroh-ramadhan-15-hari', 'Paket spesial umroh di bulan Ramadhan. Rasakan kekhusyukan ibadah di tanah suci.', 'Reguler', 15, 10000000, 60, 21, true, 'ee000001-0000-0000-0000-000000000001', 'cc000001-0000-0000-0000-000000000001', 'cc000004-0000-0000-0000-000000000004', 'aa000001-0000-0000-0000-000000000001', 'ab000001-0000-0000-0000-000000000001')
+ON CONFLICT (slug) DO NOTHING;
+
+-- PACKAGE COMMISSIONS (komisi per paket per tipe PIC)
+INSERT INTO public.package_commissions (package_id, pic_type, commission_amount) VALUES
+  ('ff000001-0000-0000-0000-000000000001', 'pusat', 500000),
+  ('ff000001-0000-0000-0000-000000000001', 'cabang', 400000),
+  ('ff000001-0000-0000-0000-000000000001', 'agen', 300000),
+  ('ff000002-0000-0000-0000-000000000002', 'pusat', 750000),
+  ('ff000002-0000-0000-0000-000000000002', 'cabang', 600000),
+  ('ff000002-0000-0000-0000-000000000002', 'agen', 500000),
+  ('ff000003-0000-0000-0000-000000000003', 'pusat', 1500000),
+  ('ff000003-0000-0000-0000-000000000003', 'cabang', 1200000),
+  ('ff000003-0000-0000-0000-000000000003', 'agen', 1000000),
+  ('ff000004-0000-0000-0000-000000000004', 'pusat', 1200000),
+  ('ff000004-0000-0000-0000-000000000004', 'cabang', 1000000),
+  ('ff000004-0000-0000-0000-000000000004', 'agen', 800000),
+  ('ff000005-0000-0000-0000-000000000005', 'pusat', 1000000),
+  ('ff000005-0000-0000-0000-000000000005', 'cabang', 800000),
+  ('ff000005-0000-0000-0000-000000000005', 'agen', 600000)
+ON CONFLICT (package_id, pic_type) DO NOTHING;
+
+-- PACKAGE DEPARTURES (7 jadwal keberangkatan)
+INSERT INTO public.package_departures (id, package_id, muthawif_id, departure_date, return_date, quota, remaining_quota, status) VALUES
+  ('d1000001-0000-0000-0000-000000000001', 'ff000001-0000-0000-0000-000000000001', 'dd000001-0000-0000-0000-000000000001', '2026-04-15', '2026-04-24', 45, 40, 'active'),
+  ('d1000002-0000-0000-0000-000000000002', 'ff000001-0000-0000-0000-000000000001', 'dd000002-0000-0000-0000-000000000002', '2026-05-20', '2026-05-29', 45, 45, 'active'),
+  ('d1000003-0000-0000-0000-000000000003', 'ff000002-0000-0000-0000-000000000002', 'dd000001-0000-0000-0000-000000000001', '2026-04-10', '2026-04-19', 40, 35, 'active'),
+  ('d1000004-0000-0000-0000-000000000004', 'ff000002-0000-0000-0000-000000000002', 'dd000003-0000-0000-0000-000000000003', '2026-06-05', '2026-06-14', 40, 40, 'active'),
+  ('d1000005-0000-0000-0000-000000000005', 'ff000003-0000-0000-0000-000000000003', 'dd000003-0000-0000-0000-000000000003', '2026-05-01', '2026-05-13', 25, 22, 'active'),
+  ('d1000006-0000-0000-0000-000000000006', 'ff000004-0000-0000-0000-000000000004', 'dd000002-0000-0000-0000-000000000002', '2026-06-15', '2026-06-29', 30, 28, 'active'),
+  ('d1000007-0000-0000-0000-000000000007', 'ff000005-0000-0000-0000-000000000005', 'dd000001-0000-0000-0000-000000000001', '2026-03-01', '2026-03-16', 35, 30, 'active')
+ON CONFLICT DO NOTHING;
+
+-- DEPARTURE PRICES (harga per tipe kamar - quad/triple/double only per constraint)
+INSERT INTO public.departure_prices (departure_id, room_type, price) VALUES
+  ('d1000001-0000-0000-0000-000000000001', 'quad', 22000000),
+  ('d1000001-0000-0000-0000-000000000001', 'triple', 24000000),
+  ('d1000001-0000-0000-0000-000000000001', 'double', 27000000),
+  ('d1000002-0000-0000-0000-000000000002', 'quad', 22500000),
+  ('d1000002-0000-0000-0000-000000000002', 'triple', 24500000),
+  ('d1000002-0000-0000-0000-000000000002', 'double', 27500000),
+  ('d1000003-0000-0000-0000-000000000003', 'quad', 28000000),
+  ('d1000003-0000-0000-0000-000000000003', 'triple', 30000000),
+  ('d1000003-0000-0000-0000-000000000003', 'double', 34000000),
+  ('d1000004-0000-0000-0000-000000000004', 'quad', 28500000),
+  ('d1000004-0000-0000-0000-000000000004', 'triple', 30500000),
+  ('d1000004-0000-0000-0000-000000000004', 'double', 34500000),
+  ('d1000005-0000-0000-0000-000000000005', 'quad', 45000000),
+  ('d1000005-0000-0000-0000-000000000005', 'triple', 50000000),
+  ('d1000005-0000-0000-0000-000000000005', 'double', 58000000),
+  ('d1000006-0000-0000-0000-000000000006', 'quad', 38000000),
+  ('d1000006-0000-0000-0000-000000000006', 'triple', 42000000),
+  ('d1000006-0000-0000-0000-000000000006', 'double', 48000000),
+  ('d1000007-0000-0000-0000-000000000007', 'quad', 35000000),
+  ('d1000007-0000-0000-0000-000000000007', 'triple', 38000000),
+  ('d1000007-0000-0000-0000-000000000007', 'double', 43000000);
+
+-- FAQS (6 pertanyaan umum)
+INSERT INTO public.faqs (question, answer, sort_order, is_active) VALUES
+  ('Apa saja yang termasuk dalam paket umroh?', 'Paket umroh kami sudah termasuk tiket pesawat PP, hotel, makan 3x sehari, visa umroh, transportasi bus AC, muthawif/pembimbing ibadah, dan perlengkapan umroh.', 1, true),
+  ('Berapa lama proses pengurusan visa umroh?', 'Proses pengurusan visa umroh biasanya memakan waktu 7-14 hari kerja setelah semua dokumen lengkap diterima.', 2, true),
+  ('Dokumen apa saja yang diperlukan untuk umroh?', 'Dokumen yang diperlukan: Paspor (minimal 7 bulan sebelum keberangkatan), KTP, foto 4x6 (latar belakang putih), buku kuning vaksin meningitis, dan surat mahram untuk wanita di bawah 45 tahun.', 3, true),
+  ('Apakah bisa cicilan untuk pembayaran?', 'Ya, kami menyediakan opsi pembayaran DP (uang muka) dan cicilan. Minimal DP bervariasi tergantung paket. Pelunasan paling lambat 7-21 hari sebelum keberangkatan.', 4, true),
+  ('Bagaimana jika saya ingin membatalkan keberangkatan?', 'Pembatalan dapat dilakukan dengan ketentuan: lebih dari 30 hari sebelum keberangkatan dikenakan biaya admin 10%, 15-30 hari dikenakan 25%, kurang dari 15 hari dikenakan 50%.', 5, true),
+  ('Apakah ada pendampingan selama di tanah suci?', 'Ya, setiap rombongan didampingi muthawif berpengalaman yang akan membimbing seluruh rangkaian ibadah umroh dari awal hingga selesai.', 6, true)
+ON CONFLICT DO NOTHING;
+
+-- SERVICES (6 layanan)
+INSERT INTO public.services (title, description, icon, sort_order, is_active) VALUES
+  ('Visa Umroh', 'Pengurusan visa umroh cepat dan terpercaya', 'passport', 1, true),
+  ('Hotel Bintang 5', 'Akomodasi hotel terbaik dekat Masjidil Haram', 'hotel', 2, true),
+  ('Pesawat Langsung', 'Penerbangan direct tanpa transit yang melelahkan', 'plane', 3, true),
+  ('Muthawif Berpengalaman', 'Pembimbing ibadah yang profesional dan berpengalaman', 'users', 4, true),
+  ('Makan 3x Sehari', 'Katering halal dengan menu Indonesia dan Arab', 'utensils', 5, true),
+  ('Transportasi AC', 'Bus ber-AC full selama di tanah suci', 'bus', 6, true)
+ON CONFLICT DO NOTHING;
+
+-- ADVANTAGES (6 keunggulan)
+INSERT INTO public.advantages (title, icon, sort_order, is_active) VALUES
+  ('Berizin Resmi Kemenag', 'shield-check', 1, true),
+  ('Berpengalaman 15+ Tahun', 'award', 2, true),
+  ('Hotel Dekat Masjidil Haram', 'map-pin', 3, true),
+  ('Pembimbing Profesional', 'user-check', 4, true),
+  ('Harga Transparan', 'credit-card', 5, true),
+  ('Garansi Kepuasan', 'thumbs-up', 6, true)
+ON CONFLICT DO NOTHING;
+
+-- GUIDE STEPS (5 langkah booking)
+INSERT INTO public.guide_steps (step_number, title, description, icon, is_active) VALUES
+  (1, 'Pilih Paket', 'Pilih paket umroh yang sesuai dengan kebutuhan dan budget Anda', 'package', true),
+  (2, 'Daftar Online', 'Isi formulir pendaftaran online dan upload dokumen yang diperlukan', 'clipboard-list', true),
+  (3, 'Bayar DP', 'Lakukan pembayaran DP untuk mengamankan kursi keberangkatan Anda', 'wallet', true),
+  (4, 'Pelunasan', 'Lunasi sisa pembayaran sebelum batas waktu yang ditentukan', 'check-circle', true),
+  (5, 'Berangkat!', 'Siap berangkat ke tanah suci dengan tenang dan nyaman', 'plane-takeoff', true)
+ON CONFLICT DO NOTHING;
+
+-- TESTIMONIALS (5 testimoni)
+INSERT INTO public.testimonials (name, content, rating, location, package_name, is_active, sort_order) VALUES
+  ('Hj. Sari Mulyani', 'Alhamdulillah, pengalaman umroh bersama Aisyah Tour sangat memuaskan. Hotel dekat Masjidil Haram, muthawif sangat sabar membimbing. Insya Allah akan berangkat lagi!', 5, 'Jakarta', 'Umroh Reguler 9 Hari', true, 1),
+  ('H. Ridwan Kamil', 'Pelayanan sangat profesional dari awal pendaftaran hingga pulang. Semua terorganisir dengan baik. Terima kasih Aisyah Tour!', 5, 'Bandung', 'Umroh VIP 12 Hari', true, 2),
+  ('Ibu Aminah', 'Pertama kali umroh dan terasa sangat nyaman. Staff ramah, hotel bagus, makanan enak. Recommended banget!', 5, 'Surabaya', 'Umroh Hemat 9 Hari', true, 3),
+  ('Bapak Hasan', 'Sudah 3x umroh bersama Aisyah Tour. Konsisten dalam pelayanan dan kualitas. Harga juga sangat kompetitif.', 5, 'Medan', 'Umroh Plus Turki 14 Hari', true, 4),
+  ('Keluarga Wijaya', 'Berangkat sekeluarga 5 orang, semuanya puas. Anak-anak juga senang. Muthawif sangat perhatian.', 5, 'Semarang', 'Umroh Reguler 9 Hari', true, 5)
+ON CONFLICT DO NOTHING;
+
+-- NAVIGATION ITEMS
+INSERT INTO public.navigation_items (label, url, sort_order, is_active) VALUES
+  ('Beranda', '/', 1, true),
+  ('Paket', '/paket', 2, true),
+  ('Galeri', '/galeri', 3, true),
+  ('Blog', '/blog', 4, true),
+  ('Tentang Kami', '/halaman/tentang-kami', 5, true)
+ON CONFLICT DO NOTHING;
+
+-- FLOATING BUTTONS
+INSERT INTO public.floating_buttons (label, platform, url, icon, sort_order, is_active) VALUES
+  ('WhatsApp Pusat', 'whatsapp', 'https://wa.me/6281234567890', 'message-circle', 1, true),
+  ('WhatsApp Cabang Surabaya', 'whatsapp', 'https://wa.me/6281298765432', 'message-circle', 2, true)
+ON CONFLICT DO NOTHING;
+
+-- BLOG POSTS (3 artikel)
+INSERT INTO public.blog_posts (title, slug, content, excerpt, author, category, is_published, published_at) VALUES
+  ('Tips Persiapan Umroh untuk Pemula', 'tips-persiapan-umroh-pemula', '<p>Berikut adalah tips lengkap persiapan umroh bagi Anda yang pertama kali.</p><h2>1. Persiapkan Dokumen</h2><p>Pastikan paspor masih berlaku minimal 7 bulan sebelum keberangkatan.</p><h2>2. Latihan Fisik</h2><p>Mulailah berjalan kaki minimal 30 menit setiap hari.</p><h2>3. Pelajari Manasik</h2><p>Ikuti pelatihan manasik yang disediakan travel.</p>', 'Panduan lengkap persiapan umroh untuk jamaah pemula', 'Admin', 'Tips', true, NOW()),
+  ('Keutamaan Umroh di Bulan Ramadhan', 'keutamaan-umroh-ramadhan', '<p>Umroh di bulan Ramadhan memiliki keutamaan yang luar biasa. Rasulullah SAW bersabda bahwa umroh di bulan Ramadhan pahalanya setara dengan haji.</p>', 'Ketahui keutamaan istimewa menunaikan umroh di bulan Ramadhan', 'Admin', 'Ibadah', true, NOW()),
+  ('Panduan Memilih Paket Umroh yang Tepat', 'panduan-memilih-paket-umroh', '<p>Memilih paket umroh yang tepat sangat penting untuk kenyamanan ibadah Anda.</p><h2>Budget</h2><p>Sesuaikan dengan kemampuan finansial.</p><h2>Durasi</h2><p>Pilih durasi yang sesuai ketersediaan waktu Anda.</p>', 'Panduan lengkap memilih paket umroh sesuai kebutuhan dan budget', 'Admin', 'Tips', true, NOW())
+ON CONFLICT (slug) DO NOTHING;
+
+-- GALLERY (4 foto)
+INSERT INTO public.gallery (image_url, title, description, category, sort_order, is_active) VALUES
+  ('https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=800', 'Masjidil Haram', 'Pemandangan Masjidil Haram dari atas', 'umroh', 1, true),
+  ('https://images.unsplash.com/photo-1542816417-0983c9c9ad53?w=800', 'Masjid Nabawi', 'Keindahan Masjid Nabawi di malam hari', 'umroh', 2, true),
+  ('https://images.unsplash.com/photo-1564769625905-50e93615e769?w=800', 'Kabah', 'Kabah yang megah di tengah Masjidil Haram', 'umroh', 3, true),
+  ('https://images.unsplash.com/photo-1580418827493-f2b22c0a76cb?w=800', 'Rombongan Aisyah Tour', 'Jamaah Aisyah Tour siap berangkat', 'kegiatan', 4, true)
+ON CONFLICT DO NOTHING;
+
+-- SITE SETTINGS (branding)
+INSERT INTO public.site_settings (key, category, value) VALUES
+  ('branding', 'general', '{"company_name": "Aisyah Tour & Travel", "tagline": "Melayani Dengan Hati, Menuju Tanah Suci", "logo_url": "", "primary_color": "#0d6b4e", "phone": "021-5551234", "email": "info@aisyahtour.co.id", "address": "Jl. Thamrin No. 10, Jakarta Pusat"}')
+ON CONFLICT (key, category) DO UPDATE SET value = EXCLUDED.value;
+
+-- COUPONS (3 kupon diskon)
+INSERT INTO public.coupons (code, discount_type, value, min_purchase, max_uses, is_active, expired_at) VALUES
+  ('UMROH2026', 'fixed', 500000, 20000000, 100, true, '2026-12-31'),
+  ('HEMAT10', 'percent', 10, 15000000, 50, true, '2026-06-30'),
+  ('RAMADHAN', 'fixed', 1000000, 30000000, 30, true, '2026-03-15')
+ON CONFLICT DO NOTHING;
+
+-- PAGES (2 halaman CMS)
+INSERT INTO public.pages (title, slug, content, seo_title, seo_description, is_active) VALUES
+  ('Tentang Kami', 'tentang-kami', '<h1>Tentang Aisyah Tour & Travel</h1><p>Biro perjalanan umroh dan haji yang telah berpengalaman melayani jamaah Indonesia sejak 2011.</p><h2>Visi</h2><p>Menjadi biro perjalanan umroh dan haji terpercaya di Indonesia.</p><h2>Misi</h2><p>1. Memberikan pelayanan prima kepada setiap jamaah<br/>2. Menyediakan paket dengan harga kompetitif<br/>3. Memastikan kenyamanan dan keamanan jamaah</p>', 'Tentang Aisyah Tour & Travel - Biro Umroh Terpercaya', 'Aisyah Tour & Travel adalah biro perjalanan umroh dan haji terpercaya sejak 2011', true),
+  ('Syarat & Ketentuan', 'syarat-ketentuan', '<h1>Syarat & Ketentuan</h1><p>Berikut adalah syarat dan ketentuan yang berlaku untuk seluruh paket perjalanan Aisyah Tour & Travel.</p><h2>Pendaftaran</h2><p>Pendaftaran dilakukan melalui website atau kantor cabang terdekat.</p><h2>Pembayaran</h2><p>Pembayaran DP minimal sesuai ketentuan paket. Pelunasan paling lambat sesuai deadline yang tercantum.</p>', 'Syarat & Ketentuan - Aisyah Tour & Travel', 'Syarat dan ketentuan paket perjalanan umroh Aisyah Tour & Travel', true)
+ON CONFLICT (slug) DO NOTHING;
+
+
+-- ============================================================
 -- SELESAI! File ini berisi:
 -- • 6 functions
 -- • 34 tabel
@@ -1045,8 +1266,18 @@ CREATE POLICY "Admins can update cms objects" ON storage.objects
 -- • 70+ RLS policies
 -- • 4 triggers
 -- • 6 storage buckets + 6 storage policies
+-- • DUMMY DATA LENGKAP:
+--   - 3 cabang, 3 agen, 4 maskapai, 4 bandara
+--   - 8 hotel, 3 muthawif, 4 kategori paket
+--   - 5 paket umroh (lengkap relasi)
+--   - 15 komisi (3 per paket), 7 keberangkatan
+--   - 21 harga kamar (quad/triple/double)
+--   - 6 FAQ, 6 layanan, 6 keunggulan, 5 langkah panduan
+--   - 5 testimoni, 5 navigasi, 2 floating button
+--   - 3 blog, 4 galeri, 3 kupon, 2 halaman CMS
+--   - 1 branding settings
 -- 3 PERBAIKAN DITERAPKAN:
 --   #1 UNIQUE(package_id, pic_type) pada package_commissions
---   #2 is_admin() pada storage policies (bukan query langsung)
---   #3 AFTER UPDATE OF status pada trigger booking (lebih efisien)
+--   #2 is_admin() pada storage policies
+--   #3 AFTER UPDATE OF status pada trigger booking
 -- ============================================================
