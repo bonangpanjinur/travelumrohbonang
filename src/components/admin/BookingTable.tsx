@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, CheckCircle } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import BookingStatusBadge from "./BookingStatusBadge";
@@ -26,15 +26,9 @@ interface BookingTableProps {
   bookings: Booking[];
   expandedId: string | null;
   onToggleExpand: (id: string) => void;
-  onVerifyPayment: (id: string) => void;
 }
 
-const BookingTable = ({ 
-  bookings, 
-  expandedId, 
-  onToggleExpand, 
-  onVerifyPayment 
-}: BookingTableProps) => {
+const BookingTable = ({ bookings, expandedId, onToggleExpand }: BookingTableProps) => {
   const isMobile = useIsMobile();
 
   if (isMobile) {
@@ -65,16 +59,6 @@ const BookingTable = ({
                   {expandedId === b.id ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
                   Detail
                 </Button>
-                {b.status === "waiting_payment" && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onVerifyPayment(b.id)}
-                    className="text-success hover:text-success/80 flex-1"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-1" /> Verifikasi
-                  </Button>
-                )}
               </div>
             </MobileCard>
             {expandedId === b.id && (
@@ -131,26 +115,14 @@ const BookingTable = ({
                     <BookingStatusBadge status={b.status} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onToggleExpand(b.id)}
-                      >
-                        {expandedId === b.id ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        <span className="ml-1">Detail</span>
-                      </Button>
-                      {b.status === "waiting_payment" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onVerifyPayment(b.id)}
-                          className="text-success hover:text-success/80"
-                        >
-                          <CheckCircle className="w-4 h-4 mr-1" /> Verifikasi
-                        </Button>
-                      )}
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onToggleExpand(b.id)}
+                    >
+                      {expandedId === b.id ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <span className="ml-1">Detail</span>
+                    </Button>
                   </TableCell>
                 </TableRow>
                 {expandedId === b.id && (

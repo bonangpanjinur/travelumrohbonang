@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import BookingTable, { Booking } from "@/components/admin/BookingTable";
 import BookingFilters from "@/components/admin/BookingFilters";
 
@@ -9,7 +8,7 @@ const AdminBookings = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const { toast } = useToast();
+  
 
   useEffect(() => {
     fetchBookings();
@@ -35,25 +34,6 @@ const AdminBookings = () => {
     setLoading(false);
   };
 
-  const handleVerifyPayment = async (bookingId: string) => {
-    const { error } = await supabase
-      .from("bookings")
-      .update({ status: "paid" })
-      .eq("id", bookingId);
-
-    if (error) {
-      toast({ title: "Gagal verifikasi", variant: "destructive" });
-    } else {
-      await supabase
-        .from("payments")
-        .update({ status: "paid", paid_at: new Date().toISOString() })
-        .eq("booking_id", bookingId);
-
-      toast({ title: "Pembayaran diverifikasi!" });
-      fetchBookings();
-    }
-  };
-
   const handleToggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
   };
@@ -76,7 +56,6 @@ const AdminBookings = () => {
           bookings={bookings}
           expandedId={expandedId}
           onToggleExpand={handleToggleExpand}
-          onVerifyPayment={handleVerifyPayment}
         />
       )}
     </div>

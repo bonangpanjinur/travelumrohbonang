@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { Package, Calendar, Users, CreditCard, Building2, UserCheck, TrendingUp, Clock, Plane, MapPin } from "lucide-react";
+import { Package, Calendar, Users, CreditCard, Building2, UserCheck, TrendingUp, Clock, Plane, MapPin, Wallet } from "lucide-react";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from "recharts";
@@ -13,8 +13,10 @@ interface Stats {
   totalPilgrims: number;
   totalBranches: number;
   totalAgents: number;
+  totalMuthawifs: number;
   pendingPayments: number;
   revenue: number;
+  potentialRevenue: number;
 }
 
 interface UpcomingDeparture {
@@ -46,8 +48,10 @@ const AdminDashboard = () => {
     totalPilgrims: 0,
     totalBranches: 0,
     totalAgents: 0,
+    totalMuthawifs: 0,
     pendingPayments: 0,
     revenue: 0,
+    potentialRevenue: 0,
   });
   const [upcoming, setUpcoming] = useState<UpcomingDeparture[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
@@ -64,8 +68,10 @@ const AdminDashboard = () => {
         { count: pilgrims },
         { count: branches },
         { count: agents },
+        { count: muthawifs },
         { count: pending },
         { data: paidBookings },
+        { data: waitingBookings },
         { data: upcomingData },
         { data: allBookings },
       ] = await Promise.all([
@@ -75,8 +81,10 @@ const AdminDashboard = () => {
         supabase.from("booking_pilgrims").select("*", { count: "exact", head: true }),
         supabase.from("branches").select("*", { count: "exact", head: true }),
         supabase.from("agents").select("*", { count: "exact", head: true }),
+        supabase.from("muthawifs").select("*", { count: "exact", head: true }),
         supabase.from("bookings").select("*", { count: "exact", head: true }).eq("status", "waiting_payment"),
         supabase.from("bookings").select("total_price").eq("status", "paid"),
+        supabase.from("bookings").select("total_price").eq("status", "waiting_payment"),
         supabase
           .from("package_departures")
           .select("id, departure_date, remaining_quota, quota, package:packages(title)")
@@ -90,6 +98,7 @@ const AdminDashboard = () => {
       ]);
 
       const revenue = (paidBookings || []).reduce((sum, b) => sum + (b.total_price || 0), 0);
+      const potentialRevenue = (waitingBookings || []).reduce((sum, b) => sum + (b.total_price || 0), 0);
 
       setStats({
         totalPackages: packages || 0,
@@ -98,8 +107,10 @@ const AdminDashboard = () => {
         totalPilgrims: pilgrims || 0,
         totalBranches: branches || 0,
         totalAgents: agents || 0,
+        totalMuthawifs: muthawifs || 0,
         pendingPayments: pending || 0,
         revenue,
+        potentialRevenue,
       });
 
       setUpcoming((upcomingData as unknown as UpcomingDeparture[]) || []);
@@ -169,6 +180,7 @@ const AdminDashboard = () => {
     { label: "Total Jemaah", value: stats.totalPilgrims, icon: Users, color: "bg-purple-500" },
     { label: "Cabang", value: stats.totalBranches, icon: Building2, color: "bg-orange-500" },
     { label: "Agen", value: stats.totalAgents, icon: UserCheck, color: "bg-pink-500" },
+    { label: "Muthawif", value: stats.totalMuthawifs, icon: MapPin, color: "bg-teal-500" },
   ];
 
   if (loading) {
@@ -203,7 +215,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Revenue & Pending */}
-      <div className="grid md:grid-cols-2 gap-4 mb-8">
+      <div className="grid md:grid-cols-3 gap-4 mb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -233,6 +245,23 @@ const AdminDashboard = () => {
             <div>
               <div className="text-sm text-muted-foreground">Menunggu Pembayaran</div>
               <div className="text-2xl font-display font-bold">{stats.pendingPayments} Booking</div>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-card border border-border rounded-xl p-6"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center">
+              <Wallet className="w-6 h-6 text-accent-foreground" />
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Potensi Pendapatan</div>
+              <div className="text-2xl font-display font-bold">Rp {stats.potentialRevenue.toLocaleString("id-ID")}</div>
             </div>
           </div>
         </motion.div>

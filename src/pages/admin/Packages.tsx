@@ -69,6 +69,7 @@ const AdminPackages = () => {
     hotel_madinah_id: "",
     airline_id: "",
     airport_id: "",
+    image_url: "",
   });
 
   useEffect(() => {
@@ -128,6 +129,7 @@ const AdminPackages = () => {
       hotel_madinah_id: form.hotel_madinah_id || null,
       airline_id: form.airline_id || null,
       airport_id: form.airport_id || null,
+      image_url: form.image_url || null,
     };
     if (form.minimum_dp !== 0) payload.minimum_dp = form.minimum_dp;
     if (form.dp_deadline_days !== 30) payload.dp_deadline_days = form.dp_deadline_days;
@@ -194,6 +196,7 @@ const AdminPackages = () => {
       hotel_madinah_id: pkg.hotel_madinah_id || "",
       airline_id: pkg.airline_id || "",
       airport_id: pkg.airport_id || "",
+      image_url: (pkg as any).image_url || "",
     });
     await fetchExtraHotels(pkg.id);
     setIsOpen(true);
@@ -213,7 +216,7 @@ const AdminPackages = () => {
   const resetForm = () => {
     setEditing(null);
     setExtraHotels([]);
-    setForm({ title: "", slug: "", description: "", package_type: "", duration_days: 9, minimum_dp: 0, dp_deadline_days: 30, full_deadline_days: 7, category_id: "", hotel_makkah_id: "", hotel_madinah_id: "", airline_id: "", airport_id: "" });
+    setForm({ title: "", slug: "", description: "", package_type: "", duration_days: 9, minimum_dp: 0, dp_deadline_days: 30, full_deadline_days: 7, category_id: "", hotel_makkah_id: "", hotel_madinah_id: "", airline_id: "", airport_id: "", image_url: "" });
   };
 
   const addExtraHotel = () => {
@@ -379,6 +382,13 @@ const AdminPackages = () => {
                   <Label>Deadline Pelunasan (hari)</Label>
                   <Input type="number" value={form.full_deadline_days} onChange={(e) => setForm({ ...form, full_deadline_days: parseInt(e.target.value) || 7 })} className="mt-1" />
                 </div>
+              </div>
+              <div>
+                <Label>URL Gambar Paket</Label>
+                <Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://... atau upload ke CMS Images" className="mt-1" />
+                {form.image_url && (
+                  <img src={form.image_url} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg border border-border" />
+                )}
               </div>
               <div>
                 <Label>Deskripsi</Label>
