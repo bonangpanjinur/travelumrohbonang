@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuth";
 import { useDynamicFavicon } from "@/hooks/useDynamicFavicon";
@@ -71,7 +71,9 @@ const AppContent = () => {
 
       {/* Admin Routes - Nested under AdminLayout */}
       <Route path="/admin" element={<AdminLayout />}>
+        {/* Redirect /admin to /admin/dashboard or just use index */}
         <Route index element={<AdminDashboard />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="packages" element={<AdminPackages />} />
         <Route path="departures" element={<AdminDepartures />} />
         <Route path="itineraries" element={<AdminItineraries />} />

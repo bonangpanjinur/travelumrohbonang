@@ -1,43 +1,59 @@
 import { useEffect, useState } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
 import UpgradeDialog from "./UpgradeDialog";
 import { BrandingSettings, defaultBranding } from "./adminMenuConfig";
+import { Loader2 } from "lucide-react";
 
 const AdminLayout = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
   const [upgradeDialog, setUpgradeDialog] = useState({ open: false, feature: "" });
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // Only redirect if loading is finished
-    if (!loading) {
+    const checkAccess = async () => {
+      // Wait until useAuth finished its initial loading
+      if (loading) return;
+
+      console.log("AdminLayout: Checking access...", { hasUser: !!user, isAdmin });
+
       if (!user) {
-        console.log("AdminLayout: No user found, redirecting to /auth");
-        navigate("/auth");
+        console.log("AdminLayout: No user, redirecting to /auth");
+        navigate("/auth", { state: { from: location.pathname } });
       } else if (!isAdmin) {
-        console.log("AdminLayout: User is not an admin, redirecting to /");
+        console.log("AdminLayout: Not an admin, redirecting to home");
         navigate("/");
+      } else {
+        console.log("AdminLayout: Access granted");
+        setIsChecking(false);
       }
-    }
-  }, [user, isAdmin, loading, navigate]);
+    };
+
+    checkAccess();
+  }, [user, isAdmin, loading, navigate, location.pathname]);
 
   useEffect(() => {
     const fetchBranding = async () => {
-      const { data } = await supabase
-        .from("site_settings")
-        .select("value")
-        .eq("key", "branding")
-        .eq("category", "general")
-        .single();
+      try {
+        const { data } = await supabase
+          .from("site_settings")
+          .select("value")
+          .eq("key", "branding")
+          .eq("category", "general")
+          .maybeSingle();
 
-      if (data?.value && typeof data.value === 'object') {
-        setBranding({ ...defaultBranding, ...(data.value as object) });
+        if (data?.value && typeof data.value === 'object') {
+          setBranding({ ...defaultBranding, ...(data.value as object) });
+        }
+      } catch (error) {
+        console.error("Error fetching branding:", error);
       }
     };
     fetchBranding();
@@ -52,19 +68,20 @@ const AdminLayout = () => {
     setUpgradeDialog({ open: true, feature });
   };
 
-  // Return loading spinner while authentication status is being determined
-  if (loading) {
+  // Show loading screen if useAuth is loading OR if we are still verifying access
+  if (loading || isChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <p className="text-muted-foreground animate-pulse">Memuat dashboard...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <Loader2 className="h-12 w-12 animate-spin text-[#D4AF37]" />
+        <div className="text-center space-y-2">
+          <p className="text-lg font-medium animate-pulse">Memverifikasi Akses Admin...</p>
+          <p className="text-sm text-muted-foreground">Mohon tunggu sebentar.</p>
         </div>
       </div>
     );
   }
 
-  // Prevent rendering if not authorized (redirect will happen in useEffect)
+  // Double check to prevent flash of content if state hasn't updated yet
   if (!user || !isAdmin) {
     return null;
   }
@@ -89,7 +106,6 @@ const AdminLayout = () => {
       {/* Main Content */}
       <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
         <div className="p-4 lg:p-8">
-          {/* Ensure Outlet is present to render child routes like Dashboard */}
           <Outlet />
         </div>
       </main>
