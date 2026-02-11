@@ -184,7 +184,8 @@ const Booking = () => {
 
       // Determine PIC
       let finalPicId: string | null = null;
-      let finalPicType = picType;
+      // Map UI values to DB constraint values: 'pusat'|'branch'|'agent'
+      let finalPicType = picType === "cabang" ? "branch" : picType === "agen" ? "agent" : picType;
       
       if (picType === "cabang" && picBranchId) {
         finalPicId = picBranchId;
