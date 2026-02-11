@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -7,9 +7,8 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
-  isBuyer: boolean;
   role: string | null;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null; isAdmin?: boolean; role?: string }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null; isAdmin?: boolean }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -21,144 +20,113 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isBuyer, setIsBuyer] = useState(false);
   const [role, setRole] = useState<string | null>(null);
 
-  const fetchRole = async (userId: string) => {
-    // Simple caching to prevent redundant fetches
-    if (role && user?.id === userId) return role;
-
+  const checkRole = useCallback(async (userId: string): Promise<string> => {
     try {
-      // 1. Priority Check: User Metadata (Fastest)
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      const metadataRole = currentUser?.user_metadata?.role?.toLowerCase();
+      // Single source of truth: user_roles table via is_admin RPC
+      const { data: adminResult, error } = await supabase.rpc('is_admin', { _user_id: userId });
       
-      if (metadataRole === 'admin' || metadataRole === 'superadmin' || metadataRole === 'super_admin') {
-        updateAuthState(metadataRole);
-        return metadataRole;
+      if (!error && adminResult === true) {
+        return 'admin';
       }
 
-      // 2. Database Check: user_roles table (Single Source of Truth)
+      // Fallback: check user_roles table directly
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .maybeSingle();
-      
-      let currentRole = roleData?.role?.toLowerCase() || null;
 
-      // 3. Fallback: profiles table (Legacy support)
-      if (!currentRole) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('role' as any)
-          .eq('id', userId)
-          .maybeSingle();
-        
-        if (profileData && (profileData as any).role) {
-          currentRole = (profileData as any).role.toLowerCase();
-        }
-      }
-
-      // 4. Final Fallback: RPC (Security bypass)
-      if (!currentRole) {
-        try {
-          const { data: rpcIsAdmin } = await supabase.rpc('is_admin', { _user_id: userId });
-          if (rpcIsAdmin) currentRole = 'admin';
-        } catch (rpcErr) {
-          console.error("RPC is_admin failed:", rpcErr);
-        }
-      }
-
-      const finalRole = currentRole || 'buyer';
-      updateAuthState(finalRole);
-      return finalRole;
+      return roleData?.role || 'buyer';
     } catch (err) {
-      console.error("Failed to check admin status:", err);
+      console.error("Role check failed:", err);
       return 'buyer';
     }
-  };
+  }, []);
 
-  const updateAuthState = (newRole: string) => {
+  const updateRole = useCallback((newRole: string) => {
     const adminStatus = ['admin', 'superadmin', 'super_admin'].includes(newRole);
     setRole(newRole);
     setIsAdmin(adminStatus);
-    setIsBuyer(!adminStatus);
-  };
+  }, []);
+
+  const clearAuth = useCallback(() => {
+    setUser(null);
+    setSession(null);
+    setIsAdmin(false);
+    setRole(null);
+  }, []);
 
   useEffect(() => {
-    const initAuth = async () => {
-      setLoading(true);
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
-        
-        if (initialSession?.user) {
-          await fetchRole(initialSession.user.id);
-        } else {
-          setIsAdmin(false);
-          setIsBuyer(false);
-          setRole(null);
-        }
-      } catch (error) {
-        console.error("Auth initialization error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    let mounted = true;
 
-    initAuth();
-
+    // 1. Set up auth listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        if (!mounted) return;
         console.log("Auth event:", event);
-        
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED') {
-          setLoading(true);
+
+        if (event === 'SIGNED_OUT') {
+          clearAuth();
+          setLoading(false);
+          return;
+        }
+
+        if (currentSession?.user) {
           setSession(currentSession);
-          setUser(currentSession?.user ?? null);
+          setUser(currentSession.user);
           
-          if (currentSession?.user) {
-            await fetchRole(currentSession.user.id);
-          }
+          // Use setTimeout to avoid Supabase deadlock on auth state change
+          setTimeout(async () => {
+            if (!mounted) return;
+            const userRole = await checkRole(currentSession.user.id);
+            if (mounted) {
+              updateRole(userRole);
+              setLoading(false);
+            }
+          }, 0);
+        } else {
+          clearAuth();
           setLoading(false);
-        } else if (event === 'SIGNED_OUT') {
-          setSession(null);
-          setUser(null);
-          setIsAdmin(false);
-          setIsBuyer(false);
-          setRole(null);
-          setLoading(false);
-          // Optional: Clear local storage if needed
-          // localStorage.clear();
         }
       }
     );
 
-    return () => subscription.unsubscribe();
-  }, []);
+    // 2. Then get initial session
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      if (!mounted) return;
+      
+      if (initialSession?.user) {
+        setSession(initialSession);
+        setUser(initialSession.user);
+        const userRole = await checkRole(initialSession.user.id);
+        if (mounted) {
+          updateRole(userRole);
+        }
+      }
+      if (mounted) setLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [checkRole, updateRole, clearAuth]);
 
   const signIn = async (email: string, password: string) => {
-    setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      
-      let userRole = null;
+
       if (data?.user) {
-        userRole = await fetchRole(data.user.id);
+        const userRole = await checkRole(data.user.id);
+        updateRole(userRole);
+        return { error: null, isAdmin: ['admin', 'superadmin', 'super_admin'].includes(userRole) };
       }
-      
-      return { 
-        error: null, 
-        isAdmin: userRole === 'admin' || userRole === 'superadmin' || userRole === 'super_admin',
-        role: userRole 
-      };
+      return { error: null };
     } catch (error) {
       return { error: error as Error };
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -167,9 +135,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: { name }
-        }
+        options: { data: { name } }
       });
       return { error: error as Error | null };
     } catch (error) {
@@ -178,37 +144,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    setLoading(true);
-    try {
-      // 1. Clear local state first for immediate UI response
-      setIsAdmin(false);
-      setIsBuyer(false);
-      setRole(null);
-      setUser(null);
-      setSession(null);
-      
-      // 2. Call Supabase signOut
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        // If session is already gone, Supabase might return an error, but we should still proceed
-        console.warn("Supabase signOut returned an error (possibly already signed out):", error.message);
-      }
-      
-      // 3. Clear storage to be sure
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.clear();
-      
-    } catch (error) {
-      console.error("Error during sign out process:", error);
-    } finally {
-      setLoading(false);
-      // 4. Force a hard reload to the auth page to clear all memory states
-      window.location.href = '/auth';
-    }
+    clearAuth();
+    await supabase.auth.signOut();
+    window.location.href = '/auth';
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, isBuyer, role, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, role, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );

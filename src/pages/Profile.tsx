@@ -21,7 +21,7 @@ interface ProfileData {
 }
 
 const Profile = () => {
-  const { user, isAdmin, isBuyer, role, loading: authLoading } = useAuth();
+  const { user, isAdmin, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -283,7 +283,7 @@ const Profile = () => {
               </div>
 
               {/* Role Specific Access Section */}
-              {(isAdmin || isBuyer) && (
+              {true && (
                 <div className="pt-4 border-t space-y-4">
                   {isAdmin && (
                     <div>
@@ -302,7 +302,7 @@ const Profile = () => {
                     </div>
                   )}
                   
-                  {isBuyer && (
+                  {!isAdmin && (
                     <div>
                       <Label className="text-accent flex items-center gap-2">
                         <ShoppingBag className="w-4 h-4" />
