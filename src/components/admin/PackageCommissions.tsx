@@ -30,15 +30,23 @@ const PackageCommissions = ({ packageId, packageTitle }: PackageCommissionsProps
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("package_commissions")
         .select("pic_type, commission_amount")
         .eq("package_id", packageId);
 
+      if (error) {
+        console.error("Error fetching commissions:", error);
+        return;
+      }
+
       if (data) {
         const map: Commission = { cabang: 0, agen: 0, karyawan: 0 };
         data.forEach((d: any) => {
-          if (d.pic_type in map) map[d.pic_type as keyof Commission] = d.commission_amount;
+          const type = d.pic_type.toLowerCase();
+          if (type in map) {
+            map[type as keyof Commission] = d.commission_amount;
+          }
         });
         setCommissions(map);
       }
@@ -48,17 +56,39 @@ const PackageCommissions = ({ packageId, packageTitle }: PackageCommissionsProps
 
   const handleSave = async () => {
     setSaving(true);
-    // Upsert all 3 types
-    for (const { key } of PIC_TYPES) {
-      await supabase
-        .from("package_commissions")
-        .upsert(
-          { package_id: packageId, pic_type: key, commission_amount: commissions[key] },
-          { onConflict: "package_id,pic_type" }
-        );
+    try {
+      // Upsert all 3 types concurrently
+      const promises = PIC_TYPES.map(({ key }) => 
+        supabase
+          .from("package_commissions")
+          .upsert(
+            { 
+              package_id: packageId, 
+              pic_type: key, 
+              commission_amount: commissions[key] 
+            },
+            { onConflict: "package_id,pic_type" }
+          )
+      );
+
+      const results = await Promise.all(promises);
+      const firstError = results.find(r => r.error)?.error;
+
+      if (firstError) {
+        throw firstError;
+      }
+
+      toast({ title: "Komisi disimpan!" });
+    } catch (error: any) {
+      console.error("Error saving commissions:", error);
+      toast({ 
+        title: "Gagal menyimpan komisi", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    toast({ title: "Komisi disimpan!" });
   };
 
   return (
