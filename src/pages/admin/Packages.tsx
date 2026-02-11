@@ -252,13 +252,13 @@ const AdminPackages = () => {
       const filePath = `package-images/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('cms_images')
+        .from('cms-images')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('cms_images')
+        .from('cms-images')
         .getPublicUrl(filePath);
 
       setForm({ ...form, image_url: publicUrl });
