@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Camera, Loader2, ArrowLeft, LayoutDashboard } from "lucide-react";
+import { Camera, Loader2, ArrowLeft, LayoutDashboard, User as UserIcon, ShieldCheck, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -21,7 +21,7 @@ interface ProfileData {
 }
 
 const Profile = () => {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, isBuyer, role, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -174,10 +174,22 @@ const Profile = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Profil Saya</CardTitle>
-              <CardDescription>
-                Kelola informasi profil dan data pribadi Anda
-              </CardDescription>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>Profil Saya</CardTitle>
+                  <CardDescription>
+                    Kelola informasi profil dan data pribadi Anda
+                  </CardDescription>
+                </div>
+                {role && (
+                  <div className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 ${
+                    isAdmin ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-accent/10 text-accent border border-accent/20'
+                  }`}>
+                    {isAdmin ? <ShieldCheck className="w-3 h-3" /> : <ShoppingBag className="w-3 h-3" />}
+                    {role.charAt(0).toUpperCase() + role.slice(1)}
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Avatar Section */}
@@ -270,21 +282,42 @@ const Profile = () => {
                 </div>
               </div>
 
-              {/* Admin Access Section */}
-              {isAdmin && (
-                <div className="pt-4 border-t">
-                  <Label className="text-primary flex items-center gap-2">
-                    <LayoutDashboard className="w-4 h-4" />
-                    Akses Administrator
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-1 mb-3">
-                    Anda memiliki hak akses untuk mengelola sistem.
-                  </p>
-                  <Link to="/admin">
-                    <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary/5">
-                      Buka Dashboard Admin
-                    </Button>
-                  </Link>
+              {/* Role Specific Access Section */}
+              {(isAdmin || isBuyer) && (
+                <div className="pt-4 border-t space-y-4">
+                  {isAdmin && (
+                    <div>
+                      <Label className="text-primary flex items-center gap-2">
+                        <LayoutDashboard className="w-4 h-4" />
+                        Akses Administrator
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1 mb-3">
+                        Anda memiliki hak akses untuk mengelola sistem.
+                      </p>
+                      <Link to="/admin">
+                        <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary/5">
+                          Buka Dashboard Admin
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                  
+                  {isBuyer && (
+                    <div>
+                      <Label className="text-accent flex items-center gap-2">
+                        <ShoppingBag className="w-4 h-4" />
+                        Pesanan Saya
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1 mb-3">
+                        Lihat riwayat pemesanan dan status pembayaran Anda.
+                      </p>
+                      <Link to="/my-bookings">
+                        <Button variant="outline" className="w-full border-accent text-accent hover:bg-accent/5">
+                          Lihat Riwayat Pesanan
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -54,7 +54,7 @@ const Auth = () => {
           return;
         }
 
-        const { error, isAdmin } = await signIn(email, password);
+        const { error, isAdmin, role } = await signIn(email, password);
         if (error) {
           toast({
             title: "Gagal masuk",
@@ -67,6 +67,8 @@ const Auth = () => {
           toast({ title: "Berhasil masuk!", description: "Selamat datang kembali" });
           if (isAdmin) {
             navigate("/admin");
+          } else if (role === 'buyer') {
+            navigate("/profile"); // Redirect buyer to profile or dashboard if exists
           } else {
             navigate("/");
           }

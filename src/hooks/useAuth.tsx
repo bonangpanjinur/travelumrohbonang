@@ -7,7 +7,9 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null; isAdmin?: boolean }>;
+  isBuyer: boolean;
+  role: string | null;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null; isAdmin?: boolean; role?: string }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -19,6 +21,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isBuyer, setIsBuyer] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
 
   const fetchRole = async (userId: string) => {
     try {
@@ -36,11 +40,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (data?.role) {
-        // Step 1.1: Case-insensitive check
         const roleLower = data.role.toLowerCase();
-        const isUserAdmin = roleLower === 'admin' || roleLower === 'superadmin';
-        console.log(`User role: ${data.role}, isAdmin: ${isUserAdmin}`);
-        return isUserAdmin;
+        setRole(roleLower);
+        setIsAdmin(roleLower === 'admin' || roleLower === 'superadmin');
+        setIsBuyer(roleLower === 'buyer');
+        return roleLower;
       }
 
       // Fallback to RPC if profile fetch returns nothing
@@ -61,10 +65,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(initialSession?.user ?? null);
         
         if (initialSession?.user) {
-          const adminStatus = await fetchRole(initialSession.user.id);
-          setIsAdmin(adminStatus);
+          await fetchRole(initialSession.user.id);
         } else {
           setIsAdmin(false);
+          setIsBuyer(false);
+          setRole(null);
         }
       } catch (error) {
         console.error("Auth initialization error:", error);
@@ -87,10 +92,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          const adminStatus = await fetchRole(currentSession.user.id);
-          setIsAdmin(adminStatus);
+          await fetchRole(currentSession.user.id);
         } else {
           setIsAdmin(false);
+          setIsBuyer(false);
+          setRole(null);
         }
         
         setLoading(false);
@@ -104,12 +110,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      let adminStatus = false;
+      let userRole = null;
       if (data?.user) {
-        adminStatus = await fetchRole(data.user.id);
-        setIsAdmin(adminStatus);
+        userRole = await fetchRole(data.user.id);
       }
-      return { error: error as Error | null, isAdmin: adminStatus };
+      return { 
+        error: error as Error | null, 
+        isAdmin: userRole === 'admin' || userRole === 'superadmin',
+        role: userRole 
+      };
     } finally {
       setLoading(false);
     }
@@ -129,12 +138,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     await supabase.auth.signOut();
     setIsAdmin(false);
+    setIsBuyer(false);
+    setRole(null);
     setUser(null);
     setSession(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, isBuyer, role, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
