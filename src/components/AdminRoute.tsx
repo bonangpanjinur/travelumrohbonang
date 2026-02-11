@@ -1,28 +1,35 @@
-import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
-export const AdminRoute = () => {
-  const { user, isAdmin, loading } = useAuth();
+export const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { session, profile, loading: authLoading } = useAuth();
   const location = useLocation();
 
-  // 1. Prevent Premature Redirect: Show loading while checking status
-  if (loading) {
+  // 1. Tampilkan Loading Screen yang Proper saat Auth sedang memproses
+  // Kita cek authLoading (dari hook) dan juga memastikan jika session ada, profile juga harus sudah ada sebelum render
+  if (authLoading || (session && !profile)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
-        <Loader2 className="h-12 w-12 animate-spin text-[#D4AF37]" />
-        <p className="text-muted-foreground animate-pulse font-medium">Memverifikasi Akses Admin...</p>
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-gray-50 gap-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-muted-foreground animate-pulse font-medium">Memverifikasi akses admin...</p>
       </div>
     );
   }
 
-  // 2. Only redirect if loading is finished AND user is not admin
-  if (!user || !isAdmin) {
-    console.warn("Akses Admin Ditolak: User tidak terautentikasi atau bukan admin. Redirecting...");
-    // Store the attempted path to redirect back after login if needed
+  // 2. Jika tidak ada session (belum login), lempar ke halaman Auth
+  if (!session) {
+    // State 'from' berguna agar setelah login user dikembalikan ke halaman admin yang tadi dia akses
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // 3. Access granted
-  return <Outlet />;
+  // 3. Jika sudah login tapi role bukan admin/super_admin, lempar ke Dashboard User biasa
+  // Menggunakan optional chaining (?.) untuk keamanan ekstra
+  if (profile?.role !== "admin" && profile?.role !== "super_admin") {
+    console.warn("Unauthorized access attempt to admin area by user:", profile?.id);
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // 4. Jika lolos semua cek, render halaman Admin
+  return <>{children}</>;
 };
