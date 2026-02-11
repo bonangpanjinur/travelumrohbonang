@@ -7,6 +7,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
+  userRole: string | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; isAdmin?: boolean }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -20,21 +21,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const checkAdminStatus = async (userId: string): Promise<boolean> => {
     try {
-      console.log("Checking admin status for user:", userId);
+      console.log("[AuthDebug] Checking admin status for user:", userId);
       
-      // 1. Try RPC first
-      const { data: rpcData, error: rpcError } = await supabase.rpc('is_admin', { _user_id: userId });
-      
-      if (!rpcError && rpcData === true) {
-        console.log("Admin status confirmed via RPC");
-        setIsAdmin(true);
-        return true;
-      }
-
-      // 2. Fallback: Check profiles table
+      // 1. Try fetching profile directly first (often more reliable than RPC if RLS is set up)
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
@@ -42,22 +35,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .maybeSingle();
 
       if (profileError) {
-        console.error("Error fetching profile for admin check:", profileError);
+        console.error("[AuthDebug] Error fetching profile:", profileError);
       }
 
       if (profileData?.role) {
-        const roleLower = profileData.role.toLowerCase();
-        const isUserAdmin = roleLower === 'admin' || roleLower === 'superadmin';
-        console.log(`Admin status via profile table: ${isUserAdmin} (Role: ${profileData.role})`);
+        const roleStr = String(profileData.role).toLowerCase();
+        setUserRole(profileData.role);
+        const isUserAdmin = roleStr === 'admin' || roleStr === 'superadmin';
+        console.log(`[AuthDebug] Profile found. Role: "${profileData.role}", isAdmin: ${isUserAdmin}`);
         setIsAdmin(isUserAdmin);
         return isUserAdmin;
       }
 
-      console.warn("No admin role found for user");
+      // 2. Fallback to RPC if profile fetch didn't return a role
+      console.log("[AuthDebug] No role in profile, trying RPC fallback...");
+      const { data: rpcData, error: rpcError } = await supabase.rpc('is_admin', { _user_id: userId });
+      
+      if (!rpcError && rpcData === true) {
+        console.log("[AuthDebug] Admin status confirmed via RPC");
+        setIsAdmin(true);
+        setUserRole('admin (via rpc)');
+        return true;
+      }
+
+      console.warn("[AuthDebug] Access Denied: User has no admin role in database.");
       setIsAdmin(false);
+      setUserRole('none');
       return false;
     } catch (err) {
-      console.error("Failed to check admin status:", err);
+      console.error("[AuthDebug] Critical error in checkAdminStatus:", err);
       setIsAdmin(false);
       return false;
     }
@@ -74,48 +80,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         await checkAdminStatus(currentSession.user.id);
       } else {
         setIsAdmin(false);
+        setUserRole(null);
       }
     } catch (error) {
-      console.error("Auth refresh error:", error);
+      console.error("[AuthDebug] Auth refresh error:", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Initial check
     refreshAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log("Auth state change event:", event);
+        console.log("[AuthDebug] Auth event:", event);
         
-        // For these events, we definitely want to show loading while we verify the role
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           setLoading(true);
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
-          
           if (currentSession?.user) {
             await checkAdminStatus(currentSession.user.id);
-          } else {
-            setIsAdmin(false);
           }
           setLoading(false);
         } else if (event === 'SIGNED_OUT') {
           setSession(null);
           setUser(null);
           setIsAdmin(false);
+          setUserRole(null);
           setLoading(false);
-        } else {
-          // For other events, just update the state without forcing loading if not necessary
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          if (currentSession?.user) {
-            await checkAdminStatus(currentSession.user.id);
-          } else {
-            setIsAdmin(false);
-          }
         }
       }
     );
@@ -138,12 +132,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string, name: string) => {
-    const redirectUrl = `${window.location.origin}/`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
         data: { name }
       }
     });
@@ -151,19 +143,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    setLoading(true);
-    try {
-      await supabase.auth.signOut();
-      setIsAdmin(false);
-      setUser(null);
-      setSession(null);
-    } finally {
-      setLoading(false);
-    }
+    await supabase.auth.signOut();
+    setIsAdmin(false);
+    setUser(null);
+    setSession(null);
+    setUserRole(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, signIn, signUp, signOut, refreshAuth }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, userRole, signIn, signUp, signOut, refreshAuth }}>
       {children}
     </AuthContext.Provider>
   );

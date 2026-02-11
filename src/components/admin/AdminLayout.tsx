@@ -6,10 +6,11 @@ import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
 import UpgradeDialog from "./UpgradeDialog";
 import { BrandingSettings, defaultBranding } from "./adminMenuConfig";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle, ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const AdminLayout = () => {
-  const { user, isAdmin, loading, signOut } = useAuth();
+  const { user, isAdmin, loading, userRole, signOut, refreshAuth } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -18,26 +19,16 @@ const AdminLayout = () => {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    const checkAccess = async () => {
-      // Wait until useAuth finished its initial loading
-      if (loading) return;
-
-      console.log("AdminLayout: Checking access...", { hasUser: !!user, isAdmin });
-
-      if (!user) {
-        console.log("AdminLayout: No user, redirecting to /auth");
-        navigate("/auth", { state: { from: location.pathname } });
-      } else if (!isAdmin) {
-        console.log("AdminLayout: Not an admin, redirecting to home");
-        navigate("/");
-      } else {
-        console.log("AdminLayout: Access granted");
+    if (!loading) {
+      console.log("[AdminLayout] Auth check complete:", { hasUser: !!user, isAdmin, role: userRole });
+      if (user && isAdmin) {
         setIsChecking(false);
+      } else if (!user && !loading) {
+        // Only redirect if we're sure there's no user
+        navigate("/auth", { state: { from: location.pathname } });
       }
-    };
-
-    checkAccess();
-  }, [user, isAdmin, loading, navigate, location.pathname]);
+    }
+  }, [user, isAdmin, loading, navigate, location.pathname, userRole]);
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -64,46 +55,78 @@ const AdminLayout = () => {
     navigate("/");
   };
 
-  const handlePremiumClick = (feature: string) => {
-    setUpgradeDialog({ open: true, feature });
-  };
-
-  // Show loading screen if useAuth is loading OR if we are still verifying access
-  if (loading || isChecking) {
+  // 1. Loading State
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-[#D4AF37]" />
-        <div className="text-center space-y-2">
-          <p className="text-lg font-medium animate-pulse">Memverifikasi Akses Admin...</p>
-          <p className="text-sm text-muted-foreground">Mohon tunggu sebentar.</p>
+        <p className="text-lg font-medium animate-pulse">Memuat Data Autentikasi...</p>
+      </div>
+    );
+  }
+
+  // 2. Access Denied / Debug State
+  // If we have a user but they are NOT an admin, show a helpful error instead of just redirecting
+  if (user && !isAdmin && !loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg border border-red-100 p-8 text-center space-y-6">
+          <div className="flex justify-center">
+            <div className="bg-red-50 p-4 rounded-full">
+              <ShieldAlert className="h-12 w-12 text-red-600" />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-slate-900">Akses Ditolak</h1>
+            <p className="text-slate-600">
+              Akun Anda tidak memiliki izin untuk mengakses Dashboard Admin.
+            </p>
+          </div>
+
+          <div className="bg-slate-50 rounded-lg p-4 text-left text-sm font-mono border border-slate-200">
+            <p className="text-slate-500 mb-1 font-sans text-xs uppercase tracking-wider">Debug Info:</p>
+            <p><span className="text-slate-400">Email:</span> {user.email}</p>
+            <p><span className="text-slate-400">ID:</span> {user.id.substring(0, 8)}...</p>
+            <p><span className="text-slate-400">Role di DB:</span> <span className="text-red-600 font-bold">{userRole || 'Tidak ditemukan'}</span></p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <Button onClick={() => refreshAuth()} variant="outline" className="w-full">
+              Coba Segarkan Status
+            </Button>
+            <Button onClick={handleLogout} className="w-full bg-red-600 hover:bg-red-700 text-white">
+              Keluar & Gunakan Akun Lain
+            </Button>
+            <Button onClick={() => navigate('/')} variant="ghost" className="w-full">
+              Kembali ke Beranda
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Double check to prevent flash of content if state hasn't updated yet
+  // 3. Final Check
   if (!user || !isAdmin) {
     return null;
   }
 
   return (
     <div className="min-h-screen bg-muted">
-      {/* Mobile Header */}
       <AdminHeader 
         branding={branding} 
         onMenuToggle={() => setSidebarOpen(!sidebarOpen)} 
       />
 
-      {/* Sidebar */}
       <AdminSidebar
         branding={branding}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onLogout={handleLogout}
-        onPremiumClick={handlePremiumClick}
+        onPremiumClick={(feature) => setUpgradeDialog({ open: true, feature })}
       />
 
-      {/* Main Content */}
       <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
         <div className="p-4 lg:p-8">
           <Outlet />
