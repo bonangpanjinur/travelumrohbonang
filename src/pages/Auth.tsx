@@ -54,7 +54,7 @@ const Auth = () => {
           return;
         }
 
-        const { error } = await signIn(email, password);
+        const { error, isAdmin } = await signIn(email, password);
         if (error) {
           toast({
             title: "Gagal masuk",
@@ -65,7 +65,11 @@ const Auth = () => {
           });
         } else {
           toast({ title: "Berhasil masuk!", description: "Selamat datang kembali" });
-          navigate("/");
+          if (isAdmin) {
+            navigate("/admin");
+          } else {
+            navigate("/");
+          }
         }
       } else {
         const validation = registerSchema.safeParse({ email, password, name, confirmPassword });
