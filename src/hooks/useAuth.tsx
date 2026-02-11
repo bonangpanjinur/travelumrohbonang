@@ -26,7 +26,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchRole = async (userId: string) => {
     try {
-      // Fetch role from profiles table
+      // 1. Priority Check: User Metadata (Fastest)
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const metadataRole = currentUser?.user_metadata?.role?.toLowerCase();
+      
+      if (metadataRole === 'admin' || metadataRole === 'superadmin' || metadataRole === 'super_admin') {
+        setRole(metadataRole);
+        setIsAdmin(true);
+        setIsBuyer(false);
+        return metadataRole;
+      }
+
+      // 2. Database Check: Profiles Table (Accurate)
       const { data, error } = await supabase
         .from('profiles')
         .select('role')
@@ -39,7 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       let currentRole = data?.role?.toLowerCase() || null;
 
-      // Fallback to user_roles table if not found in profiles
+      // 3. Fallback: user_roles table
       if (!currentRole) {
         const { data: roleData } = await supabase
           .from('user_roles')
@@ -52,19 +63,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      // Final fallback to RPC
+      // 4. Final Fallback: RPC (Bypasses RLS)
       if (!currentRole) {
-        const { data: rpcIsAdmin } = await supabase.rpc('is_admin', { _user_id: userId });
-        if (rpcIsAdmin) currentRole = 'admin';
+        try {
+          const { data: rpcIsAdmin } = await supabase.rpc('is_admin');
+          if (rpcIsAdmin) currentRole = 'admin';
+        } catch (rpcErr) {
+          console.error("RPC is_admin failed:", rpcErr);
+        }
       }
 
       if (currentRole) {
+        const adminStatus = currentRole === 'admin' || currentRole === 'superadmin' || currentRole === 'super_admin';
         setRole(currentRole);
-        setIsAdmin(currentRole === 'admin' || currentRole === 'superadmin' || currentRole === 'super_admin');
-        setIsBuyer(currentRole === 'buyer' || currentRole === 'user');
+        setIsAdmin(adminStatus);
+        setIsBuyer(!adminStatus);
         return currentRole;
       }
 
+      // Default to user
       setRole('user');
       setIsAdmin(false);
       setIsBuyer(true);
@@ -93,6 +110,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } catch (error) {
         console.error("Auth initialization error:", error);
       } finally {
+        // Ensure loading is only set to false after all checks are done
         setLoading(false);
       }
     };
@@ -101,32 +119,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED') {
           setLoading(true);
-        }
-        
-        if (event === 'SIGNED_OUT') {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          
+          if (currentSession?.user) {
+            await fetchRole(currentSession.user.id);
+          }
+          setLoading(false);
+        } else if (event === 'SIGNED_OUT') {
           setSession(null);
           setUser(null);
           setIsAdmin(false);
           setIsBuyer(false);
           setRole(null);
           setLoading(false);
-          return;
         }
-
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        if (currentSession?.user) {
-          await fetchRole(currentSession.user.id);
-        } else {
-          setIsAdmin(false);
-          setIsBuyer(false);
-          setRole(null);
-        }
-        
-        setLoading(false);
       }
     );
 
@@ -137,29 +146,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      
       let userRole = null;
       if (data?.user) {
         userRole = await fetchRole(data.user.id);
       }
+      
       return { 
-        error: error as Error | null, 
+        error: null, 
         isAdmin: userRole === 'admin' || userRole === 'superadmin' || userRole === 'super_admin',
         role: userRole 
       };
+    } catch (error) {
+      return { error: error as Error };
     } finally {
       setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, name: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { name }
-      }
-    });
-    return { error: error as Error | null };
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name }
+        }
+      });
+      return { error: error as Error | null };
+    } catch (error) {
+      return { error: error as Error };
+    }
   };
 
   const signOut = async () => {
@@ -175,8 +193,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error("Error during sign out:", error);
     } finally {
       setLoading(false);
-      // Force redirect to home or login if needed, though usually handled by router
-      window.location.href = '/';
+      window.location.href = '/auth';
     }
   };
 

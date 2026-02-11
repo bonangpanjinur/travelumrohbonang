@@ -51,36 +51,44 @@ const Navbar = () => {
 
   useEffect(() => {
     const fetchNavItems = async () => {
-      const { data } = await supabase
-        .from("navigation_items")
-        .select("*")
-        .eq("is_active", true)
-        .order("sort_order");
+      try {
+        const { data } = await supabase
+          .from("navigation_items")
+          .select("*")
+          .eq("is_active", true)
+          .order("sort_order");
 
-      if (data) {
-        const items = data as NavItem[];
-        const parentItems = items.filter(item => !item.parent_id);
-        const childItems = items.filter(item => item.parent_id);
-        
-        const hierarchy = parentItems.map(parent => ({
-          ...parent,
-          children: childItems.filter(child => child.parent_id === parent.id)
-        }));
-        
-        setNavItems(hierarchy);
+        if (data) {
+          const items = data as NavItem[];
+          const parentItems = items.filter(item => !item.parent_id);
+          const childItems = items.filter(item => item.parent_id);
+          
+          const hierarchy = parentItems.map(parent => ({
+            ...parent,
+            children: childItems.filter(child => child.parent_id === parent.id)
+          }));
+          
+          setNavItems(hierarchy);
+        }
+      } catch (err) {
+        console.error("Error fetching navigation:", err);
       }
     };
 
     const fetchBranding = async () => {
-      const { data } = await supabase
-        .from("site_settings")
-        .select("value")
-        .eq("key", "branding")
-        .eq("category", "general")
-        .single();
+      try {
+        const { data } = await supabase
+          .from("site_settings")
+          .select("value")
+          .eq("key", "branding")
+          .eq("category", "general")
+          .single();
 
-      if (data?.value && typeof data.value === 'object') {
-        setBranding({ ...defaultBranding, ...(data.value as object) });
+        if (data?.value && typeof data.value === 'object') {
+          setBranding({ ...defaultBranding, ...(data.value as object) });
+        }
+      } catch (err) {
+        console.error("Error fetching branding:", err);
       }
     };
 
@@ -96,21 +104,30 @@ const Navbar = () => {
         return;
       }
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("name, avatar_url")
-        .eq("id", user.id)
-        .single();
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("name, avatar_url")
+          .eq("id", user.id)
+          .maybeSingle();
 
-      if (data) {
-        setUserProfile(data);
-      } else {
-        setUserProfile({ name: user.user_metadata?.name || user.email || "", avatar_url: "" });
+        if (data) {
+          setUserProfile(data);
+        } else {
+          setUserProfile({ name: user.user_metadata?.name || user.email || "", avatar_url: "" });
+        }
+      } catch (err) {
+        console.error("Error fetching profile:", err);
       }
     };
 
     fetchUserProfile();
   }, [user]);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location.pathname]);
 
   const displayLinks = navItems.length > 0 ? navItems : [
     { id: "1", label: "Beranda", url: "/", parent_id: null, sort_order: 1, open_in_new_tab: false },
@@ -155,7 +172,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-md border-b border-emerald-light/20">
+    <nav className="fixed top-0 left-0 right-0 z-[100] bg-primary/95 backdrop-blur-md border-b border-emerald-light/20">
       <div className="container-custom flex items-center justify-between h-16 md:h-20 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         {renderLogo()}
@@ -180,7 +197,7 @@ const Navbar = () => {
               </Link>
               
               {link.children && link.children.length > 0 && (
-                <div className="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                <div className="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[110]">
                   <div className="bg-card border border-border rounded-lg shadow-xl py-2 min-w-[160px]">
                     {link.children.map((child) => (
                       <Link
@@ -215,31 +232,38 @@ const Navbar = () => {
                   <ChevronDown className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-card border-border z-50">
+              <DropdownMenuContent align="end" className="w-56 bg-card border-border z-[120]">
+                <div className="px-2 py-1.5">
+                  <p className="text-xs font-medium text-muted-foreground px-2 py-1 uppercase tracking-wider">Akun Saya</p>
+                </div>
                 <DropdownMenuItem asChild>
                   <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
                     <UserCircle className="w-4 h-4" />
                     Profil Saya
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {isAdmin && (
-                  <>
-                    <DropdownMenuItem asChild>
-                      <Link to="/admin" className="flex items-center gap-2 cursor-pointer">
-                        <LayoutDashboard className="w-4 h-4" />
-                        Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
                 <DropdownMenuItem asChild>
                   <Link to="/my-bookings" className="flex items-center gap-2 cursor-pointer">
                     <Ticket className="w-4 h-4" />
                     Booking Saya
                   </Link>
                 </DropdownMenuItem>
+                
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-1.5">
+                      <p className="text-xs font-medium text-gold px-2 py-1 uppercase tracking-wider">Administrasi</p>
+                    </div>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="flex items-center gap-2 cursor-pointer font-medium text-gold hover:text-gold">
+                        <LayoutDashboard className="w-4 h-4" />
+                        Dashboard Admin
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => signOut()} 
@@ -263,6 +287,7 @@ const Navbar = () => {
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="lg:hidden text-primary-foreground p-2"
+          aria-label="Toggle menu"
         >
           {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
@@ -275,9 +300,9 @@ const Navbar = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-primary border-t border-emerald-light/20 overflow-hidden"
+            className="lg:hidden bg-primary border-t border-emerald-light/20 overflow-hidden z-[100]"
           >
-            <div className="px-4 py-4 space-y-1">
+            <div className="px-4 py-4 space-y-1 max-h-[80vh] overflow-y-auto">
               {displayLinks.map((link) => (
                 <div key={link.id}>
                   <Link
@@ -300,51 +325,52 @@ const Navbar = () => {
                 </div>
               ))}
               
-              {user && (
-                <>
-                  <div className="pt-4 border-t border-emerald-light/20 mt-2">
-                    <p className="px-4 py-2 text-xs text-primary-foreground/40 uppercase tracking-wider">Akun</p>
-                    <Link 
-                      to="/profile" 
-                      onClick={() => setIsOpen(false)} 
-                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg"
-                    >
-                      <UserCircle className="w-4 h-4" />
-                      Profil Saya
-                    </Link>
-                    {isAdmin && (
+              {user ? (
+                <div className="pt-4 border-t border-emerald-light/20 mt-2 space-y-1">
+                  <p className="px-4 py-2 text-xs text-primary-foreground/40 uppercase tracking-wider">Akun</p>
+                  <Link 
+                    to="/profile" 
+                    onClick={() => setIsOpen(false)} 
+                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg"
+                  >
+                    <UserCircle className="w-4 h-4" />
+                    Profil Saya
+                  </Link>
+                  <Link 
+                    to="/my-bookings" 
+                    onClick={() => setIsOpen(false)} 
+                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg"
+                  >
+                    <Ticket className="w-4 h-4" />
+                    Booking Saya
+                  </Link>
+
+                  {isAdmin && (
+                    <div className="pt-2 mt-2 border-t border-emerald-light/10">
+                      <p className="px-4 py-2 text-xs text-gold/60 uppercase tracking-wider">Admin</p>
                       <Link 
                         to="/admin" 
                         onClick={() => setIsOpen(false)} 
-                        className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg"
+                        className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gold hover:bg-gold/10 rounded-lg"
                       >
                         <LayoutDashboard className="w-4 h-4" />
-                        Dashboard
+                        Dashboard Admin
                       </Link>
-                    )}
-                    <Link 
-                      to="/my-bookings" 
-                      onClick={() => setIsOpen(false)} 
-                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg"
-                    >
-                      <Ticket className="w-4 h-4" />
-                      Booking Saya
-                    </Link>
-                  </div>
-                  <div className="pt-2">
+                    </div>
+                  )}
+                  
+                  <div className="pt-2 mt-2 border-t border-emerald-light/20">
                     <Button 
                       onClick={() => { signOut(); setIsOpen(false); }} 
                       variant="ghost" 
-                      className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10 px-4"
                     >
                       <LogOut className="w-4 h-4" />
                       Keluar
                     </Button>
                   </div>
-                </>
-              )}
-              
-              {!user && (
+                </div>
+              ) : (
                 <div className="pt-4 border-t border-emerald-light/20">
                   <Link to="/auth" onClick={() => setIsOpen(false)}>
                     <Button className="w-full gradient-gold text-primary font-semibold">
