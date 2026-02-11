@@ -134,7 +134,8 @@ const AdminReports = () => {
       .from("bookings")
       .select(`
         total_price,
-        package:packages(title)
+        package:packages(title),
+        profile:profiles!bookings_user_id_profiles_fkey(name, email)
       `)
       .gte("created_at", start.toISOString())
       .lte("created_at", end.toISOString())

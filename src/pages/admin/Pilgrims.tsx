@@ -52,7 +52,8 @@ const AdminPilgrims = () => {
         booking:bookings(
           id, booking_code, status, total_price,
           package:packages(title),
-          departure:package_departures(departure_date)
+          departure:package_departures(departure_date),
+          profile:profiles!bookings_user_id_profiles_fkey(name, email)
         )
       `)
       .order("created_at", { ascending: false });

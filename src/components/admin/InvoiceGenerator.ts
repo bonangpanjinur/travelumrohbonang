@@ -27,7 +27,7 @@ export const fetchInvoiceData = async (bookingId: string): Promise<InvoiceData |
         booking_code, total_price, status, created_at,
         package:packages(title),
         departure:package_departures(departure_date),
-        profile:profiles(name, email)
+        profile:profiles!bookings_user_id_profiles_fkey(name, email)
       `)
       .eq("id", bookingId)
       .single(),

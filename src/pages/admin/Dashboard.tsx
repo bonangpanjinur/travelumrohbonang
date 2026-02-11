@@ -93,7 +93,7 @@ const AdminDashboard = () => {
           .limit(5),
         supabase
           .from("bookings")
-          .select("created_at, total_price, status, package:packages(title)")
+          .select("created_at, total_price, status, package:packages(title), profile:profiles!bookings_user_id_profiles_fkey(name, email)")
           .gte("created_at", subMonths(new Date(), 6).toISOString()),
       ]);
 
