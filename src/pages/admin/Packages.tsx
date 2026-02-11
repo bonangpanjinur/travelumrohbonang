@@ -420,41 +420,55 @@ const AdminPackages = () => {
               </div>
               <div>
                 <Label>Foto Paket</Label>
-                <div className="mt-1 space-y-2">
-                  <Input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleFileUpload} 
-                    disabled={uploading}
-                    className="cursor-pointer"
-                  />
-                  <div className="flex items-center gap-2">
-                    <div className="h-[1px] flex-1 bg-border" />
-                    <span className="text-[10px] text-muted-foreground uppercase">atau URL</span>
-                    <div className="h-[1px] flex-1 bg-border" />
-                  </div>
-                  <Input 
-                    value={form.image_url} 
-                    onChange={(e) => setForm({ ...form, image_url: e.target.value })} 
-                    placeholder="https://..." 
-                    className="text-sm"
-                  />
+                <div className="mt-1">
+                  {!form.image_url ? (
+                    <div className="border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer relative">
+                      <Input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleFileUpload} 
+                        disabled={uploading}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      <div className="text-center">
+                        <Plus className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">Klik untuk upload foto</p>
+                        <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 5MB</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative group">
+                      <img 
+                        src={form.image_url} 
+                        alt="Preview" 
+                        className="w-full h-48 object-cover rounded-lg border border-border" 
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                        <div className="relative">
+                          <Button type="button" variant="secondary" size="sm">
+                            Ganti Foto
+                          </Button>
+                          <Input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleFileUpload} 
+                            disabled={uploading}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                          />
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => setForm({ ...form, image_url: "" })}
+                        >
+                          Hapus
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {uploading && <p className="text-xs text-gold animate-pulse mt-2">Mengunggah...</p>}
-                {form.image_url && (
-                  <div className="relative mt-2">
-                    <img src={form.image_url} alt="Preview" className="w-full h-32 object-cover rounded-lg border border-border" />
-                    <Button 
-                      type="button" 
-                      variant="destructive" 
-                      size="icon" 
-                      className="absolute top-2 right-2 h-6 w-6"
-                      onClick={() => setForm({ ...form, image_url: "" })}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
+                {uploading && <p className="text-xs text-gold animate-pulse mt-2">Sedang mengunggah foto...</p>}
               </div>
               <div>
                 <Label>Deskripsi</Label>
