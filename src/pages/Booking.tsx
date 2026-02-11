@@ -184,12 +184,11 @@ const Booking = () => {
 
       // Determine PIC
       let finalPicId: string | null = null;
-      // Map UI values to DB constraint values: 'pusat'|'branch'|'agent'
-      let finalPicType = picType === "cabang" ? "branch" : picType === "agen" ? "agent" : picType;
+      let finalPicType = picType;
       
-      if (picType === "cabang" && picBranchId) {
+      if (picType === "branch" && picBranchId) {
         finalPicId = picBranchId;
-      } else if (picType === "agen" && picAgentId) {
+      } else if (picType === "agent" && picAgentId) {
         finalPicId = picAgentId;
       }
 
@@ -418,7 +417,7 @@ const Booking = () => {
                     <UserCheck className="w-5 h-5 text-gold" />
                     Pilih Penanggung Jawab (PIC)
                   </h3>
-                  <RadioGroup value={picType} onValueChange={setPicType} className="space-y-3">
+                    <RadioGroup value={picType} onValueChange={setPicType} className="space-y-3">
                     <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:border-gold/50 cursor-pointer">
                       <RadioGroupItem value="pusat" id="pusat" />
                       <Label htmlFor="pusat" className="flex-1 cursor-pointer">
@@ -428,23 +427,23 @@ const Booking = () => {
                     </div>
                     
                     <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:border-gold/50 cursor-pointer">
-                      <RadioGroupItem value="cabang" id="cabang" />
-                      <Label htmlFor="cabang" className="flex-1 cursor-pointer">
+                      <RadioGroupItem value="branch" id="branch" />
+                      <Label htmlFor="branch" className="flex-1 cursor-pointer">
                         <span className="font-medium">Cabang</span>
                         <span className="block text-sm text-muted-foreground">Booking melalui kantor cabang</span>
                       </Label>
                     </div>
                     
                     <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:border-gold/50 cursor-pointer">
-                      <RadioGroupItem value="agen" id="agen" />
-                      <Label htmlFor="agen" className="flex-1 cursor-pointer">
+                      <RadioGroupItem value="agent" id="agent" />
+                      <Label htmlFor="agent" className="flex-1 cursor-pointer">
                         <span className="font-medium">Agen</span>
                         <span className="block text-sm text-muted-foreground">Booking melalui agen travel</span>
                       </Label>
                     </div>
                   </RadioGroup>
                   
-                  {picType === "cabang" && branches.length > 0 && (
+                  {picType === "branch" && branches.length > 0 && (
                     <div className="mt-4">
                       <Label>Pilih Cabang</Label>
                       <Select value={picBranchId} onValueChange={setPicBranchId}>
@@ -465,7 +464,7 @@ const Booking = () => {
                     </div>
                   )}
                   
-                  {picType === "agen" && agents.length > 0 && (
+                  {picType === "agent" && agents.length > 0 && (
                     <div className="mt-4 space-y-3">
                       {/* Select agent type: pusat or branch */}
                       <div>

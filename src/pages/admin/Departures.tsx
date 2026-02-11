@@ -16,6 +16,11 @@ interface Package {
   title: string;
 }
 
+interface Muthawif {
+  id: string;
+  name: string;
+}
+
 interface Departure {
   id: string;
   package_id: string;
@@ -24,6 +29,7 @@ interface Departure {
   quota: number;
   remaining_quota: number;
   status: string;
+  muthawif_id: string | null;
   package: Package | null;
   prices: DeparturePrice[];
 }
@@ -39,6 +45,7 @@ const ROOM_TYPES = ["quad", "triple", "double"];
 const AdminDepartures = () => {
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
+  const [muthawifs, setMuthawifs] = useState<Muthawif[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Departure | null>(null);
@@ -50,6 +57,7 @@ const AdminDepartures = () => {
     return_date: "",
     quota: 45,
     status: "active",
+    muthawif_id: "",
     prices: {
       quad: 0,
       triple: 0,
@@ -62,7 +70,7 @@ const AdminDepartures = () => {
   }, []);
 
   const fetchData = async () => {
-    const [departuresRes, packagesRes] = await Promise.all([
+    const [departuresRes, packagesRes, muthawifRes] = await Promise.all([
       supabase
         .from("package_departures")
         .select(`
@@ -72,10 +80,12 @@ const AdminDepartures = () => {
         `)
         .order("departure_date", { ascending: true }),
       supabase.from("packages").select("id, title").eq("is_active", true),
+      supabase.from("muthawifs").select("id, name").order("name"),
     ]);
 
     setDepartures((departuresRes.data as unknown as Departure[]) || []);
     setPackages(packagesRes.data || []);
+    setMuthawifs(muthawifRes.data || []);
     setLoading(false);
   };
 
@@ -84,6 +94,10 @@ const AdminDepartures = () => {
 
     if (editing) {
       // Update departure
+      // Calculate remaining_quota adjustment: only change if quota changed
+      const quotaDiff = form.quota - editing.quota;
+      const newRemainingQuota = editing.remaining_quota + quotaDiff;
+
       const { error } = await supabase
         .from("package_departures")
         .update({
@@ -91,8 +105,9 @@ const AdminDepartures = () => {
           departure_date: form.departure_date,
           return_date: form.return_date || null,
           quota: form.quota,
-          remaining_quota: form.quota,
+          remaining_quota: newRemainingQuota,
           status: form.status,
+          muthawif_id: form.muthawif_id || null,
         })
         .eq("id", editing.id);
 
@@ -129,6 +144,7 @@ const AdminDepartures = () => {
           quota: form.quota,
           remaining_quota: form.quota,
           status: form.status,
+          muthawif_id: form.muthawif_id || null,
         })
         .select()
         .single();
@@ -167,6 +183,7 @@ const AdminDepartures = () => {
       return_date: dep.return_date || "",
       quota: dep.quota,
       status: dep.status || "active",
+      muthawif_id: dep.muthawif_id || "",
       prices: priceMap,
     });
     setIsOpen(true);
@@ -194,6 +211,7 @@ const AdminDepartures = () => {
       return_date: "",
       quota: 45,
       status: "active",
+      muthawif_id: "",
       prices: { quad: 0, triple: 0, double: 0 },
     });
   };
@@ -273,6 +291,20 @@ const AdminDepartures = () => {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div>
+                <Label>Muthawif</Label>
+                <Select value={form.muthawif_id} onValueChange={(val) => setForm({ ...form, muthawif_id: val })}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Pilih muthawif (opsional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {muthawifs.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="border-t pt-4">
