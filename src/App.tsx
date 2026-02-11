@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 
 // Admin
 import AdminLayout from "./components/admin/AdminLayout";
+import { AdminRoute } from "./components/AdminRoute";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminPackages from "./pages/admin/Packages";
 import AdminDepartures from "./pages/admin/Departures";
@@ -69,30 +70,32 @@ const AppContent = () => {
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<BlogDetail />} />
 
-      {/* Step 3.1: Admin Routes using Nested Routes structure */}
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<AdminDashboard />} />
-        <Route path="packages" element={<AdminPackages />} />
-        <Route path="departures" element={<AdminDepartures />} />
-        <Route path="itineraries" element={<AdminItineraries />} />
-        <Route path="bookings" element={<AdminBookings />} />
-        <Route path="payments" element={<AdminPayments />} />
-        <Route path="reports" element={<AdminReports />} />
-        <Route path="pilgrims" element={<AdminPilgrims />} />
-        <Route path="branches" element={<AdminBranches />} />
-        <Route path="agents" element={<AdminAgents />} />
-        <Route path="muthawifs" element={<AdminMuthawifs />} />
-        <Route path="hotels" element={<AdminHotels />} />
-        <Route path="airlines" element={<AdminAirlines />} />
-        <Route path="airports" element={<AdminAirports />} />
-        <Route path="gallery" element={<AdminGallery />} />
-        <Route path="testimonials" element={<AdminTestimonials />} />
-        <Route path="faq" element={<AdminFAQ />} />
-        <Route path="floating-buttons" element={<AdminFloatingButtons />} />
-        <Route path="blog" element={<AdminBlog />} />
-        <Route path="pages" element={<AdminPages />} />
-        <Route path="navigation" element={<AdminNavigation />} />
-        <Route path="settings" element={<AdminSettings />} />
+      {/* Step 3.1: Admin Routes protected by AdminRoute */}
+      <Route element={<AdminRoute />}>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="packages" element={<AdminPackages />} />
+          <Route path="departures" element={<AdminDepartures />} />
+          <Route path="itineraries" element={<AdminItineraries />} />
+          <Route path="bookings" element={<AdminBookings />} />
+          <Route path="payments" element={<AdminPayments />} />
+          <Route path="reports" element={<AdminReports />} />
+          <Route path="pilgrims" element={<AdminPilgrims />} />
+          <Route path="branches" element={<AdminBranches />} />
+          <Route path="agents" element={<AdminAgents />} />
+          <Route path="muthawifs" element={<AdminMuthawifs />} />
+          <Route path="hotels" element={<AdminHotels />} />
+          <Route path="airlines" element={<AdminAirlines />} />
+          <Route path="airports" element={<AdminAirports />} />
+          <Route path="gallery" element={<AdminGallery />} />
+          <Route path="testimonials" element={<AdminTestimonials />} />
+          <Route path="faq" element={<AdminFAQ />} />
+          <Route path="floating-buttons" element={<AdminFloatingButtons />} />
+          <Route path="blog" element={<AdminBlog />} />
+          <Route path="pages" element={<AdminPages />} />
+          <Route path="navigation" element={<AdminNavigation />} />
+          <Route path="settings" element={<AdminSettings />} />
+        </Route>
       </Route>
 
       {/* CMS Dynamic Page - must be after all other routes */}

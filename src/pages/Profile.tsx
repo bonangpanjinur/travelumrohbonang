@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Camera, Loader2, ArrowLeft } from "lucide-react";
+import { Camera, Loader2, ArrowLeft, LayoutDashboard } from "lucide-react";
+import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -20,7 +21,7 @@ interface ProfileData {
 }
 
 const Profile = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -268,6 +269,24 @@ const Profile = () => {
                   </Button>
                 </div>
               </div>
+
+              {/* Admin Access Section */}
+              {isAdmin && (
+                <div className="pt-4 border-t">
+                  <Label className="text-primary flex items-center gap-2">
+                    <LayoutDashboard className="w-4 h-4" />
+                    Akses Administrator
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1 mb-3">
+                    Anda memiliki hak akses untuk mengelola sistem.
+                  </p>
+                  <Link to="/admin">
+                    <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary/5">
+                      Buka Dashboard Admin
+                    </Button>
+                  </Link>
+                </div>
+              )}
 
               {/* Save Button */}
               <Button
