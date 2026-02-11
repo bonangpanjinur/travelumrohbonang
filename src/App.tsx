@@ -69,7 +69,7 @@ const AppContent = () => {
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<BlogDetail />} />
 
-      {/* Admin Routes */}
+      {/* Admin Routes - Nested under AdminLayout */}
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboard />} />
         <Route path="packages" element={<AdminPackages />} />

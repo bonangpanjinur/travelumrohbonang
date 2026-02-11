@@ -15,8 +15,15 @@ const AdminLayout = () => {
   const [upgradeDialog, setUpgradeDialog] = useState({ open: false, feature: "" });
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
-      navigate("/auth");
+    // Only redirect if loading is finished
+    if (!loading) {
+      if (!user) {
+        console.log("AdminLayout: No user found, redirecting to /auth");
+        navigate("/auth");
+      } else if (!isAdmin) {
+        console.log("AdminLayout: User is not an admin, redirecting to /");
+        navigate("/");
+      }
     }
   }, [user, isAdmin, loading, navigate]);
 
@@ -45,14 +52,19 @@ const AdminLayout = () => {
     setUpgradeDialog({ open: true, feature });
   };
 
+  // Return loading spinner while authentication status is being determined
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground animate-pulse">Memuat dashboard...</p>
+        </div>
       </div>
     );
   }
 
+  // Prevent rendering if not authorized (redirect will happen in useEffect)
   if (!user || !isAdmin) {
     return null;
   }
@@ -77,6 +89,7 @@ const AdminLayout = () => {
       {/* Main Content */}
       <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
         <div className="p-4 lg:p-8">
+          {/* Ensure Outlet is present to render child routes like Dashboard */}
           <Outlet />
         </div>
       </main>

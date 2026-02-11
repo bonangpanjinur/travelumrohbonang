@@ -22,16 +22,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const checkAdminStatus = async (userId: string): Promise<boolean> => {
     try {
-      const { data, error } = await supabase.rpc('is_admin', { _user_id: userId });
-      if (!error) {
-        const adminStatus = data === true;
+      // First try RPC for performance and security
+      const { data: rpcData, error: rpcError } = await supabase.rpc('is_admin', { _user_id: userId });
+      
+      if (!rpcError && rpcData === true) {
+        setIsAdmin(true);
+        return true;
+      }
+
+      // Fallback: Check profiles table directly with case-insensitive role comparison
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      if (!profileError && profileData?.role) {
+        const adminStatus = profileData.role.toLowerCase() === 'admin';
         setIsAdmin(adminStatus);
         return adminStatus;
-      } else {
-        console.error("Error checking admin status:", error);
-        setIsAdmin(false);
-        return false;
       }
+
+      setIsAdmin(false);
+      return false;
     } catch (err) {
       console.error("Failed to check admin status:", err);
       setIsAdmin(false);
@@ -41,6 +54,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const initAuth = async () => {
+      setLoading(true);
       try {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
@@ -62,6 +76,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        // Only set loading to true if we are actually fetching something
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          setLoading(true);
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -79,12 +98,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    let adminStatus = false;
-    if (data?.user) {
-      adminStatus = await checkAdminStatus(data.user.id);
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      let adminStatus = false;
+      if (data?.user) {
+        adminStatus = await checkAdminStatus(data.user.id);
+      }
+      return { error: error as Error | null, isAdmin: adminStatus };
+    } finally {
+      setLoading(false);
     }
-    return { error: error as Error | null, isAdmin: adminStatus };
   };
 
   const signUp = async (email: string, password: string, name: string) => {
@@ -103,6 +127,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     await supabase.auth.signOut();
     setIsAdmin(false);
+    setUser(null);
+    setSession(null);
   };
 
   return (
