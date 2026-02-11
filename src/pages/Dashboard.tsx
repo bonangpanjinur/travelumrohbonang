@@ -16,7 +16,9 @@ import {
   Calendar,
   Clock,
   ShieldCheck,
-  ShoppingBag
+  ShoppingBag,
+  CreditCard,
+  MapPin
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -28,7 +30,8 @@ interface BookingSummary {
   status: string;
   total_price: number;
   created_at: string;
-  package: { title: string } | null;
+  package: { title: string; image_url: string } | null;
+  departure: { departure_date: string } | null;
 }
 
 const UserDashboard = () => {
@@ -37,6 +40,7 @@ const UserDashboard = () => {
   const [recentBookings, setRecentBookings] = useState<BookingSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
+  const [stats, setStats] = useState({ total: 0, paid: 0, pending: 0 });
 
   useEffect(() => {
     if (authLoading) return;
@@ -58,18 +62,27 @@ const UserDashboard = () => {
         
         setProfile(profileData);
 
-        // Fetch Recent Bookings
+        // Fetch Recent Bookings with more details
         const { data: bookingsData } = await supabase
           .from("bookings")
           .select(`
             id, booking_code, status, total_price, created_at,
-            package:packages(title)
+            package:packages(title, image_url),
+            departure:package_departures(departure_date)
           `)
           .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(3);
+          .order("created_at", { ascending: false });
 
-        setRecentBookings((bookingsData as any) || []);
+        const bookings = (bookingsData as any) || [];
+        setRecentBookings(bookings.slice(0, 3));
+        
+        // Calculate Stats
+        setStats({
+          total: bookings.length,
+          paid: bookings.filter((b: any) => b.status === 'paid').length,
+          pending: bookings.filter((b: any) => b.status === 'waiting_payment' || b.status === 'draft').length
+        });
+
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
       } finally {
@@ -85,10 +98,17 @@ const UserDashboard = () => {
   }
 
   const statusColors: Record<string, string> = {
-    draft: "text-muted-foreground",
-    waiting_payment: "text-warning",
-    paid: "text-success",
-    cancelled: "text-destructive",
+    draft: "bg-muted text-muted-foreground",
+    waiting_payment: "bg-warning/10 text-warning border-warning/20",
+    paid: "bg-success/10 text-success border-success/20",
+    cancelled: "bg-destructive/10 text-destructive border-destructive/20",
+  };
+
+  const statusLabels: Record<string, string> = {
+    draft: "Draft",
+    waiting_payment: "Menunggu Pembayaran",
+    paid: "Lunas",
+    cancelled: "Dibatalkan",
   };
 
   return (
@@ -96,10 +116,11 @@ const UserDashboard = () => {
       <Navbar />
       <main className="pt-24 pb-16">
         <div className="container-custom max-w-6xl">
+          {/* Header Section */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-2xl md:text-3xl font-display font-bold">Dashboard Saya</h1>
-              <p className="text-muted-foreground">Selamat datang kembali, {profile?.name || user?.email}</p>
+              <p className="text-muted-foreground">Selamat datang kembali, <span className="text-foreground font-medium">{profile?.name || user?.email}</span></p>
             </div>
             <div className="flex gap-3">
               <Link to="/profile">
@@ -117,124 +138,185 @@ const UserDashboard = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Profile Summary Card */}
-            <Card className="md:col-span-1">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <UserIcon className="w-5 h-5 text-gold" /> Profil
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
-                    {profile?.name?.charAt(0).toUpperCase() || "U"}
-                  </div>
-                  <div>
-                    <div className="font-bold">{profile?.name || "User"}</div>
-                    <div className="text-sm text-muted-foreground">{user?.email}</div>
-                  </div>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <Card className="bg-primary/5 border-primary/10">
+              <CardContent className="p-6 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <ShoppingBag className="w-6 h-6" />
                 </div>
-                <div className="pt-4 border-t space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Role:</span>
-                    <span className="font-medium capitalize">{role || "Buyer"}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Member Sejak:</span>
-                    <span className="font-medium">
-                      {profile?.created_at ? format(new Date(profile.created_at), "MMM yyyy", { locale: localeId }) : "-"}
-                    </span>
-                  </div>
+                <div>
+                  <div className="text-2xl font-bold">{stats.total}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Total Pesanan</div>
                 </div>
               </CardContent>
             </Card>
-
-            {/* Recent Bookings Card */}
-            <Card className="md:col-span-2">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <ShoppingBag className="w-5 h-5 text-gold" /> Booking Terbaru
-                  </CardTitle>
-                  <CardDescription>3 pesanan terakhir Anda</CardDescription>
+            <Card className="bg-success/5 border-success/10">
+              <CardContent className="p-6 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center text-success">
+                  <CreditCard className="w-6 h-6" />
                 </div>
+                <div>
+                  <div className="text-2xl font-bold">{stats.paid}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Sudah Lunas</div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-warning/5 border-warning/10">
+              <CardContent className="p-6 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center text-warning">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold">{stats.pending}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Menunggu</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content: Recent Bookings */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Ticket className="w-5 h-5 text-gold" /> Booking Terbaru
+                </h2>
                 <Link to="/my-bookings">
                   <Button variant="ghost" size="sm" className="text-gold hover:text-gold/80">
                     Lihat Semua <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 </Link>
-              </CardHeader>
-              <CardContent>
-                {recentBookings.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Package className="w-12 h-12 text-muted/30 mx-auto mb-3" />
-                    <p className="text-muted-foreground">Belum ada pesanan</p>
-                    <Link to="/paket" className="mt-4 inline-block">
-                      <Button size="sm" className="gradient-gold text-primary">Cari Paket Umroh</Button>
+              </div>
+
+              {recentBookings.length === 0 ? (
+                <Card className="border-dashed">
+                  <CardContent className="py-12 text-center">
+                    <Package className="w-16 h-16 text-muted/20 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Belum ada pesanan</h3>
+                    <p className="text-muted-foreground mb-6">Mulai perjalanan ibadah Anda dengan memilih paket terbaik kami.</p>
+                    <Link to="/paket">
+                      <Button className="gradient-gold text-primary font-bold">Lihat Paket Umroh</Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {recentBookings.map((booking, index) => (
+                    <motion.div
+                      key={booking.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <Card className="overflow-hidden hover:border-gold/30 transition-colors">
+                        <CardContent className="p-0">
+                          <div className="flex flex-col sm:flex-row">
+                            <div className="w-full sm:w-32 h-32 bg-muted relative">
+                              {booking.package?.image_url ? (
+                                <img 
+                                  src={booking.package.image_url} 
+                                  alt={booking.package.title} 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                                  <Package className="w-8 h-8" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 p-4 flex flex-col justify-between">
+                              <div className="flex justify-between items-start gap-2">
+                                <div>
+                                  <div className="text-xs font-mono text-muted-foreground mb-1">{booking.booking_code}</div>
+                                  <h3 className="font-bold text-lg leading-tight">{booking.package?.title}</h3>
+                                </div>
+                                <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${statusColors[booking.status]}`}>
+                                  {statusLabels[booking.status] || booking.status}
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-4 h-4" />
+                                  {booking.departure?.departure_date ? format(new Date(booking.departure.departure_date), "d MMM yyyy", { locale: localeId }) : "TBA"}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <CreditCard className="w-4 h-4" />
+                                  Rp {booking.total_price.toLocaleString("id-ID")}
+                                </div>
+                                <Link to={`/booking/payment/${booking.id}`} className="ml-auto">
+                                  <Button size="sm" variant="outline" className="h-8 text-xs">Detail</Button>
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar: Profile & Quick Links */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Informasi Akun</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center text-gold font-bold text-xl">
+                      {profile?.name?.charAt(0).toUpperCase() || "U"}
+                    </div>
+                    <div className="overflow-hidden">
+                      <div className="font-bold truncate">{profile?.name || "User"}</div>
+                      <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4" /> Role
+                      </span>
+                      <span className="font-medium capitalize px-2 py-0.5 bg-accent/10 text-accent rounded text-xs">
+                        {role || "Buyer"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <Calendar className="w-4 h-4" /> Bergabung
+                      </span>
+                      <span className="font-medium">
+                        {profile?.created_at ? format(new Date(profile.created_at), "MMM yyyy", { locale: localeId }) : "-"}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Bantuan Cepat</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y">
+                    <a href="https://wa.me/628123456789" target="_blank" rel="noreferrer" className="flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors">
+                      <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center text-success">
+                        <Bell className="w-4 h-4" />
+                      </div>
+                      <div className="text-sm font-medium">Hubungi Customer Service</div>
+                    </a>
+                    <Link to="/galeri" className="flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <div className="text-sm font-medium">Lihat Dokumentasi Perjalanan</div>
                     </Link>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {recentBookings.map((booking) => (
-                      <div key={booking.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-gold/30 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center text-gold">
-                            <Ticket className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-sm">{booking.package?.title}</div>
-                            <div className="text-xs text-muted-foreground">{booking.booking_code} • {format(new Date(booking.created_at), "d MMM yyyy", { locale: localeId })}</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold text-sm">Rp {booking.total_price.toLocaleString("id-ID")}</div>
-                          <div className={`text-[10px] font-bold uppercase ${statusColors[booking.status] || ""}`}>
-                            {booking.status.replace("_", " ")}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions / Info */}
-            <Card className="md:col-span-3">
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-accent/5 border border-accent/10">
-                    <Calendar className="w-8 h-8 text-accent" />
-                    <div>
-                      <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Jadwal</div>
-                      <div className="text-sm font-medium">Cek Keberangkatan</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/10">
-                    <Bell className="w-8 h-8 text-primary" />
-                    <div>
-                      <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Notifikasi</div>
-                      <div className="text-sm font-medium">Pesan Terbaru</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-gold/5 border border-gold/10">
-                    <Clock className="w-8 h-8 text-gold" />
-                    <div>
-                      <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Riwayat</div>
-                      <div className="text-sm font-medium">Aktivitas Akun</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-success/5 border border-success/10">
-                    <ShieldCheck className="w-8 h-8 text-success" />
-                    <div>
-                      <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Bantuan</div>
-                      <div className="text-sm font-medium">Pusat Dukungan</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </main>

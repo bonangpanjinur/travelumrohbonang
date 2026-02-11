@@ -25,20 +25,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [role, setRole] = useState<string | null>(null);
 
   const fetchRole = async (userId: string) => {
+    // Simple caching to prevent redundant fetches
+    if (role && user?.id === userId) return role;
+
     try {
       // 1. Priority Check: User Metadata (Fastest)
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       const metadataRole = currentUser?.user_metadata?.role?.toLowerCase();
       
       if (metadataRole === 'admin' || metadataRole === 'superadmin' || metadataRole === 'super_admin') {
-        setRole(metadataRole);
-        setIsAdmin(true);
-        setIsBuyer(false);
+        updateAuthState(metadataRole);
         return metadataRole;
       }
 
-      // 2. Database Check: user_roles table (Source of Truth)
-      const { data: roleData, error: roleError } = await supabase
+      // 2. Database Check: user_roles table (Single Source of Truth)
+      const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
@@ -46,11 +47,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       let currentRole = roleData?.role?.toLowerCase() || null;
 
-      // 3. Fallback: profiles table
+      // 3. Fallback: profiles table (Legacy support)
       if (!currentRole) {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('role' as any) // Cast to any because role might not be in types yet
+          .select('role' as any)
           .eq('id', userId)
           .maybeSingle();
         
@@ -59,7 +60,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      // 4. Final Fallback: RPC (Bypasses RLS)
+      // 4. Final Fallback: RPC (Security bypass)
       if (!currentRole) {
         try {
           const { data: rpcIsAdmin } = await supabase.rpc('is_admin', { _user_id: userId });
@@ -69,23 +70,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
 
-      if (currentRole) {
-        const adminStatus = currentRole === 'admin' || currentRole === 'superadmin' || currentRole === 'super_admin';
-        setRole(currentRole);
-        setIsAdmin(adminStatus);
-        setIsBuyer(currentRole === 'buyer' || currentRole === 'user');
-        return currentRole;
-      }
-
-      // Default to buyer for new users
-      setRole('buyer');
-      setIsAdmin(false);
-      setIsBuyer(true);
-      return 'buyer';
+      const finalRole = currentRole || 'buyer';
+      updateAuthState(finalRole);
+      return finalRole;
     } catch (err) {
       console.error("Failed to check admin status:", err);
-      return null;
+      return 'buyer';
     }
+  };
+
+  const updateAuthState = (newRole: string) => {
+    const adminStatus = ['admin', 'superadmin', 'super_admin'].includes(newRole);
+    setRole(newRole);
+    setIsAdmin(adminStatus);
+    setIsBuyer(!adminStatus);
   };
 
   useEffect(() => {

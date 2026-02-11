@@ -248,7 +248,7 @@ const Navbar = () => {
                 </div>
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
-                    <LayoutGrid className="w-4 h-4" />
+                    <LayoutDashboard className="w-4 h-4" />
                     Dashboard Saya
                   </Link>
                 </DropdownMenuItem>

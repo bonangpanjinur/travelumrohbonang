@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { LogOut, Lock } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import AdminBranding from "./AdminBranding";
 import { 
   menuItems, 
@@ -22,9 +23,15 @@ const AdminSidebar = ({
   onLogout, 
   onPremiumClick 
 }: AdminSidebarProps) => {
+  const { role } = useAuth();
   const location = useLocation();
   const showLogo = branding.display_mode === "logo_only" || branding.display_mode === "both";
   const showText = branding.display_mode === "text_only" || branding.display_mode === "both";
+
+  const filteredMenuItems = menuItems.filter(item => {
+    if (!item.roles) return true;
+    return role && item.roles.includes(role.toLowerCase());
+  });
 
   return (
     <>
@@ -69,7 +76,7 @@ const AdminSidebar = ({
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-4 pt-20 lg:pt-4">
             <ul className="space-y-1">
-              {menuItems.map((item) => {
+              {filteredMenuItems.map((item) => {
                 const isActive = location.pathname === item.href;
                 return (
                   <li key={item.href}>

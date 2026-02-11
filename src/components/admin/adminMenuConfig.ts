@@ -24,6 +24,7 @@ export interface MenuItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  roles?: string[];
 }
 
 export interface PremiumMenuItem {
@@ -54,7 +55,7 @@ export const menuItems: MenuItem[] = [
   { label: "Blog", href: "/admin/blog", icon: BookOpen },
   { label: "Halaman CMS", href: "/admin/pages", icon: FileText },
   { label: "Navigasi & Kategori", href: "/admin/navigation", icon: Menu },
-  { label: "Pengaturan", href: "/admin/settings", icon: Settings },
+  { label: "Pengaturan", href: "/admin/settings", icon: Settings, roles: ["superadmin", "super_admin"] },
 ];
 
 export const premiumMenuItems: PremiumMenuItem[] = [
