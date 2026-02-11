@@ -57,115 +57,130 @@ const AdminDashboard = () => {
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [packagePopularity, setPackagePopularity] = useState<PackagePopularity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
-      // Basic stats
-      const [
-        { count: packages },
-        { count: departures },
-        { count: bookings },
-        { count: pilgrims },
-        { count: branches },
-        { count: agents },
-        { count: muthawifs },
-        { count: pending },
-        { data: verifiedPayments },
-        { data: allBookings },
-        { data: upcomingData },
-      ] = await Promise.all([
-        supabase.from("packages").select("*", { count: "exact", head: true }),
-        supabase.from("package_departures").select("*", { count: "exact", head: true }),
-        supabase.from("bookings").select("*", { count: "exact", head: true }),
-        supabase.from("booking_pilgrims").select("*", { count: "exact", head: true }),
-        supabase.from("branches").select("*", { count: "exact", head: true }),
-        supabase.from("agents").select("*", { count: "exact", head: true }),
-        supabase.from("muthawifs").select("*", { count: "exact", head: true }),
-        supabase.from("bookings").select("*", { count: "exact", head: true }).eq("status", "waiting_payment"),
-        supabase.from("payments").select("amount").eq("status", "paid"),
-        supabase
-          .from("bookings")
-          .select("created_at, total_price, status, package:packages(title), profile:profiles!bookings_user_id_profiles_fkey(name, email)")
-          .gte("created_at", subMonths(new Date(), 6).toISOString()),
-        supabase
-          .from("package_departures")
-          .select("id, departure_date, remaining_quota, quota, package:packages(title)")
-          .gte("departure_date", new Date().toISOString().split("T")[0])
-          .order("departure_date", { ascending: true })
-          .limit(5),
-      ]);
+      try {
+        setLoading(true);
+        setError(null);
 
-      // Calculate actual revenue from verified payments
-      const revenue = (verifiedPayments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-      
-      // Calculate potential revenue: total_price of all active bookings minus what's already paid
-      const totalPotential = (allBookings || [])
-        .filter(b => b.status !== "cancelled" && b.status !== "failed")
-        .reduce((sum, b) => sum + (Number(b.total_price) || 0), 0);
-      const potentialRevenue = Math.max(0, totalPotential - revenue);
+        // Basic stats with safe destructuring
+        const results = await Promise.all([
+          supabase.from("packages").select("*", { count: "exact", head: true }),
+          supabase.from("package_departures").select("*", { count: "exact", head: true }),
+          supabase.from("bookings").select("*", { count: "exact", head: true }),
+          supabase.from("booking_pilgrims").select("*", { count: "exact", head: true }),
+          supabase.from("branches").select("*", { count: "exact", head: true }),
+          supabase.from("agents").select("*", { count: "exact", head: true }),
+          supabase.from("muthawifs").select("*", { count: "exact", head: true }),
+          supabase.from("bookings").select("*", { count: "exact", head: true }).eq("status", "waiting_payment"),
+          supabase.from("payments").select("amount").eq("status", "paid"),
+          supabase
+            .from("bookings")
+            .select("created_at, total_price, status, package:packages(title)")
+            .gte("created_at", subMonths(new Date(), 6).toISOString()),
+          supabase
+            .from("package_departures")
+            .select("id, departure_date, remaining_quota, quota, package:packages(title)")
+            .gte("departure_date", new Date().toISOString().split("T")[0])
+            .order("departure_date", { ascending: true })
+            .limit(5),
+        ]);
 
-      setStats({
-        totalPackages: packages || 0,
-        totalDepartures: departures || 0,
-        totalBookings: bookings || 0,
-        totalPilgrims: pilgrims || 0,
-        totalBranches: branches || 0,
-        totalAgents: agents || 0,
-        totalMuthawifs: muthawifs || 0,
-        pendingPayments: pending || 0,
-        revenue,
-        potentialRevenue,
-      });
+        // Check for errors in any of the results
+        const firstError = results.find(r => r.error)?.error;
+        if (firstError) {
+          console.error("Supabase error in dashboard:", firstError);
+          // We don't necessarily want to block the whole dashboard if one stat fails
+        }
 
-      setUpcoming((upcomingData as unknown as UpcomingDeparture[]) || []);
+        const [
+          packagesRes, departuresRes, bookingsRes, pilgrimsRes, branchesRes, 
+          agentsRes, muthawifsRes, pendingRes, verifiedPaymentsRes, 
+          allBookingsRes, upcomingDataRes
+        ] = results;
 
-      // Process monthly data for last 6 months
-      const { data: monthlyPayments } = await supabase
-        .from("payments")
-        .select("amount, paid_at, created_at")
-        .eq("status", "paid")
-        .gte("created_at", subMonths(new Date(), 6).toISOString());
+        const verifiedPayments = verifiedPaymentsRes.data || [];
+        const allBookings = allBookingsRes.data || [];
+        const upcomingData = upcomingDataRes.data || [];
 
-      const months: MonthlyData[] = [];
-      for (let i = 5; i >= 0; i--) {
-        const date = subMonths(new Date(), i);
-        const monthStart = startOfMonth(date);
-        const monthEnd = endOfMonth(date);
+        // Calculate actual revenue from verified payments
+        const revenue = verifiedPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
         
-        const monthBookings = (allBookings || []).filter((b: { created_at: string }) => {
-          const bookingDate = new Date(b.created_at);
-          return bookingDate >= monthStart && bookingDate <= monthEnd;
+        // Calculate potential revenue
+        const totalPotential = allBookings
+          .filter(b => b.status !== "cancelled" && b.status !== "failed")
+          .reduce((sum, b) => sum + (Number(b.total_price) || 0), 0);
+        const potentialRevenue = Math.max(0, totalPotential - revenue);
+
+        setStats({
+          totalPackages: packagesRes.count || 0,
+          totalDepartures: departuresRes.count || 0,
+          totalBookings: bookingsRes.count || 0,
+          totalPilgrims: pilgrimsRes.count || 0,
+          totalBranches: branchesRes.count || 0,
+          totalAgents: agentsRes.count || 0,
+          totalMuthawifs: muthawifsRes.count || 0,
+          pendingPayments: pendingRes.count || 0,
+          revenue,
+          potentialRevenue,
         });
 
-        const monthRevenue = (monthlyPayments || [])
-          .filter((p: { created_at: string, paid_at: string | null }) => {
-            const paymentDate = new Date(p.paid_at || p.created_at);
-            return paymentDate >= monthStart && paymentDate <= monthEnd;
-          })
-          .reduce((sum: number, p: { amount: number }) => sum + (Number(p.amount) || 0), 0);
+        setUpcoming((upcomingData as unknown as UpcomingDeparture[]) || []);
 
-        months.push({
-          month: format(date, "MMM", { locale: localeId }),
-          bookings: monthBookings.length,
-          revenue: monthRevenue / 1000000, // In millions
+        // Process monthly data for last 6 months
+        const { data: monthlyPayments } = await supabase
+          .from("payments")
+          .select("amount, paid_at, created_at")
+          .eq("status", "paid")
+          .gte("created_at", subMonths(new Date(), 6).toISOString());
+
+        const months: MonthlyData[] = [];
+        for (let i = 5; i >= 0; i--) {
+          const date = subMonths(new Date(), i);
+          const monthStart = startOfMonth(date);
+          const monthEnd = endOfMonth(date);
+          
+          const monthBookings = allBookings.filter((b: any) => {
+            const bookingDate = new Date(b.created_at);
+            return bookingDate >= monthStart && bookingDate <= monthEnd;
+          });
+
+          const monthRevenue = (monthlyPayments || [])
+            .filter((p: any) => {
+              const paymentDate = new Date(p.paid_at || p.created_at);
+              return paymentDate >= monthStart && paymentDate <= monthEnd;
+            })
+            .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+
+          months.push({
+            month: format(date, "MMM", { locale: localeId }),
+            bookings: monthBookings.length,
+            revenue: monthRevenue / 1000000, // In millions
+          });
+        }
+        setMonthlyData(months);
+
+        // Process package popularity
+        const packageCounts: Record<string, number> = {};
+        allBookings.forEach((b: any) => {
+          const pkgName = b.package?.title || "Paket Lainnya";
+          packageCounts[pkgName] = (packageCounts[pkgName] || 0) + 1;
         });
+
+        const popularPackages = Object.entries(packageCounts)
+          .map(([name, value]) => ({ name: name.length > 15 ? name.substring(0, 15) + "..." : name, value }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 5);
+
+        setPackagePopularity(popularPackages);
+      } catch (err: any) {
+        console.error("Fatal error in dashboard:", err);
+        setError(err.message || "Terjadi kesalahan saat memuat data dashboard");
+      } finally {
+        setLoading(false);
       }
-      setMonthlyData(months);
-
-      // Process package popularity
-      const packageCounts: Record<string, number> = {};
-      (allBookings || []).forEach((b: { package?: { title: string } | null }) => {
-        const pkgName = b.package?.title || "Paket Lainnya";
-        packageCounts[pkgName] = (packageCounts[pkgName] || 0) + 1;
-      });
-
-      const popularPackages = Object.entries(packageCounts)
-        .map(([name, value]) => ({ name: name.length > 15 ? name.substring(0, 15) + "..." : name, value }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 5);
-
-      setPackagePopularity(popularPackages);
-      setLoading(false);
     };
 
     fetchStats();
@@ -200,6 +215,21 @@ const AdminDashboard = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 bg-destructive/10 border border-destructive/20 rounded-xl text-center">
+        <h2 className="text-xl font-bold text-destructive mb-2">Gagal Memuat Dashboard</h2>
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+        >
+          Coba Lagi
+        </button>
       </div>
     );
   }
@@ -280,16 +310,11 @@ const AdminDashboard = () => {
         </motion.div>
       </div>
 
-      {/* Charts Section */}
       <div className="grid lg:grid-cols-2 gap-8 mb-8">
-        {/* Revenue Chart */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-card border border-border rounded-xl p-6"
-        >
-          <h3 className="text-lg font-bold mb-6">Pendapatan 6 Bulan Terakhir (Juta Rp)</h3>
-          <div className="h-64">
+        {/* Monthly Revenue Chart */}
+        <div className="bg-card border border-border rounded-xl p-6">
+          <h3 className="text-lg font-bold mb-6">Pendapatan & Booking (6 Bulan Terakhir)</h3>
+          <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyData}>
                 <defs>
@@ -299,51 +324,21 @@ const AdminDashboard = () => {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} />
+                <YAxis axisLine={false} tickLine={false} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
-                  formatter={(value: number) => [`Rp ${value.toLocaleString("id-ID")} Juta`, "Pendapatan"]}
                 />
-                <Area type="monotone" dataKey="revenue" stroke="hsl(38, 75%, 55%)" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                <Area type="monotone" dataKey="revenue" stroke="hsl(38, 75%, 55%)" fillOpacity={1} fill="url(#colorRevenue)" name="Pendapatan (Juta)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Booking Chart */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          className="bg-card border border-border rounded-xl p-6"
-        >
-          <h3 className="text-lg font-bold mb-6">Tren Booking</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
-                />
-                <Bar dataKey="bookings" fill="hsl(160, 84%, 39%)" radius={[4, 4, 0, 0]} barSize={30} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-      </div>
-
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Popular Packages */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="bg-card border border-border rounded-xl p-6 lg:col-span-1"
-        >
-          <h3 className="text-lg font-bold mb-6">Paket Terpopuler</h3>
-          <div className="h-64">
+        {/* Package Popularity Chart */}
+        <div className="bg-card border border-border rounded-xl p-6">
+          <h3 className="text-lg font-bold mb-6">Popularitas Paket</h3>
+          <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -359,57 +354,56 @@ const AdminDashboard = () => {
                     <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '12px' }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
+                />
+                <Legend />
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </motion.div>
+        </div>
+      </div>
 
-        {/* Upcoming Departures */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="bg-card border border-border rounded-xl p-6 lg:col-span-2"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold">Keberangkatan Terdekat</h3>
-            <Button variant="ghost" size="sm" className="text-gold" asChild>
-              <a href="/admin/departures">Lihat Semua</a>
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {upcoming.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">Tidak ada keberangkatan terdekat</div>
-            ) : (
-              upcoming.map((dep) => (
-                <div key={dep.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-card flex flex-col items-center justify-center border border-border">
-                      <span className="text-xs font-bold text-gold uppercase">{format(new Date(dep.departure_date), "MMM")}</span>
-                      <span className="text-lg font-bold">{format(new Date(dep.departure_date), "d")}</span>
-                    </div>
-                    <div>
-                      <div className="font-semibold">{dep.package?.title || "Paket Umroh"}</div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Plane className="w-3 h-3" /> Keberangkatan: {format(new Date(dep.departure_date), "d MMMM yyyy", { locale: localeId })}
+      {/* Upcoming Departures */}
+      <div className="bg-card border border-border rounded-xl p-6">
+        <h3 className="text-lg font-bold mb-6">Keberangkatan Terdekat</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="pb-3 font-medium text-muted-foreground">Paket</th>
+                <th className="pb-3 font-medium text-muted-foreground">Tanggal</th>
+                <th className="pb-3 font-medium text-muted-foreground">Sisa Kuota</th>
+                <th className="pb-3 font-medium text-muted-foreground">Progress</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {upcoming.map((item) => {
+                const filledPercent = Math.round(((item.quota - item.remaining_quota) / item.quota) * 100);
+                return (
+                  <tr key={item.id}>
+                    <td className="py-4 font-medium">{item.package?.title || "Paket"}</td>
+                    <td className="py-4 text-muted-foreground">{format(new Date(item.departure_date), "dd MMM yyyy", { locale: localeId })}</td>
+                    <td className="py-4">{item.remaining_quota} / {item.quota}</td>
+                    <td className="py-4">
+                      <div className="w-full bg-muted rounded-full h-2 max-w-[100px]">
+                        <div 
+                          className="bg-gold h-2 rounded-full" 
+                          style={{ width: `${filledPercent}%` }}
+                        ></div>
                       </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-semibold">{dep.remaining_quota} Sisa Kuota</div>
-                    <div className="w-24 h-2 bg-muted rounded-full mt-1 overflow-hidden">
-                      <div 
-                        className="h-full bg-gold" 
-                        style={{ width: `${((dep.quota - dep.remaining_quota) / dep.quota) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </motion.div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {upcoming.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-muted-foreground">Tidak ada keberangkatan terdekat</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
