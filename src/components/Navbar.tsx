@@ -44,6 +44,7 @@ const defaultBranding: BrandingSettings = {
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [navItems, setNavItems] = useState<NavItem[]>([]);
+  const [dynamicPages, setDynamicPages] = useState<{title: string, slug: string}[]>([]);
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
   const [userProfile, setUserProfile] = useState<{ name: string; avatar_url: string } | null>(null);
   const location = useLocation();
@@ -93,8 +94,21 @@ const Navbar = () => {
       }
     };
 
+    const fetchDynamicPages = async () => {
+      try {
+        const { data } = await supabase
+          .from("pages")
+          .select("title, slug")
+          .eq("is_active", true);
+        if (data) setDynamicPages(data as {title: string, slug: string}[]);
+      } catch (err) {
+        console.error("Error fetching dynamic pages:", err);
+      }
+    };
+
     fetchNavItems();
     fetchBranding();
+    fetchDynamicPages();
   }, []);
 
   // Fetch user profile when user changes
@@ -144,6 +158,14 @@ const Navbar = () => {
     { id: "2", label: "Paket Perjalanan", url: "/paket", parent_id: null, sort_order: 2, open_in_new_tab: false },
     { id: "3", label: "Galeri", url: "/galeri", parent_id: null, sort_order: 3, open_in_new_tab: false },
     { id: "4", label: "Blog", url: "/blog", parent_id: null, sort_order: 4, open_in_new_tab: false },
+    ...dynamicPages.map((page, index) => ({
+      id: `dynamic-${index}`,
+      label: page.title || page.slug,
+      url: `/${page.slug}`,
+      parent_id: null,
+      sort_order: 100 + index,
+      open_in_new_tab: false
+    }))
   ];
 
   const renderLogo = () => {

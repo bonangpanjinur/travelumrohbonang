@@ -3,11 +3,11 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { motion } from "framer-motion";
 import { ArrowLeft, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Helmet } from "react-helmet-async";
 
 interface PageData {
   id: string;
@@ -27,11 +27,14 @@ const DynamicPage = () => {
 
   useEffect(() => {
     const fetchPage = async () => {
+      setLoading(true);
+      setNotFound(false);
+      
       const { data, error } = await supabase
         .from("pages")
         .select("*")
         .eq("slug", slug)
-        .eq("is_active", true)
+        .eq("is_active", true) // Using is_active as per current schema
         .single();
 
       if (error || !data) {
@@ -42,7 +45,9 @@ const DynamicPage = () => {
       setLoading(false);
     };
 
-    fetchPage();
+    if (slug) {
+      fetchPage();
+    }
   }, [slug]);
 
   if (loading) {
@@ -78,12 +83,10 @@ const DynamicPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Helmet>
-        <title>{page.seo_title || page.title || "Halaman"} | UmrohPlus</title>
-        {page.seo_description && (
-          <meta name="description" content={page.seo_description} />
-        )}
-      </Helmet>
+      <SEO 
+        title={page.seo_title || page.title || "Halaman"}
+        description={page.seo_description || ""}
+      />
 
       <Navbar />
 
@@ -102,7 +105,7 @@ const DynamicPage = () => {
           <motion.article
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-card border border-border rounded-2xl overflow-hidden"
+            className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm"
           >
             {/* Header */}
             <div className="gradient-emerald p-8 text-center">

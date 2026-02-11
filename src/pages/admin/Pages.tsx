@@ -56,7 +56,17 @@ const AdminPages = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const reservedWords = ['login', 'register', 'dashboard', 'admin', 'profile', 'auth', 'booking', 'paket', 'galeri', 'blog', 'forgot-password', 'reset-password', 'my-bookings'];
     const slug = form.slug.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+    if (reservedWords.includes(slug)) {
+      toast({ 
+        title: "Slug terlarang", 
+        description: `Slug "${slug}" tidak boleh digunakan karena merupakan rute sistem.`, 
+        variant: "destructive" 
+      });
+      return;
+    }
 
     if (editing) {
       const { error } = await supabase

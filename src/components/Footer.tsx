@@ -38,6 +38,7 @@ const defaultContact: ContactSettings = {
 const Footer = () => {
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
   const [contact, setContact] = useState<ContactSettings>(defaultContact);
+  const [dynamicPages, setDynamicPages] = useState<{title: string, slug: string}[]>([]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -57,7 +58,21 @@ const Footer = () => {
         });
       }
     };
+
+    const fetchDynamicPages = async () => {
+      try {
+        const { data } = await supabase
+          .from("pages")
+          .select("title, slug")
+          .eq("is_active", true);
+        if (data) setDynamicPages(data as {title: string, slug: string}[]);
+      } catch (err) {
+        console.error("Error fetching dynamic pages:", err);
+      }
+    };
+
     fetchSettings();
+    fetchDynamicPages();
   }, []);
 
   const showLogo = branding.display_mode === "logo_only" || branding.display_mode === "both";
@@ -110,9 +125,13 @@ const Footer = () => {
           <div>
             <h4 className="font-display font-bold text-lg mb-4 text-gold">Menu</h4>
             <div className="space-y-3">
-              {["Beranda", "Paket Umroh", "Tentang Kami", "Galeri", "Blog"].map((item) => (
-                <Link key={item} to="/" className="block text-sm text-primary-foreground/60 hover:text-gold transition-colors">
-                  {item}
+              <Link to="/" className="block text-sm text-primary-foreground/60 hover:text-gold transition-colors">Beranda</Link>
+              <Link to="/paket" className="block text-sm text-primary-foreground/60 hover:text-gold transition-colors">Paket Umroh</Link>
+              <Link to="/galeri" className="block text-sm text-primary-foreground/60 hover:text-gold transition-colors">Galeri</Link>
+              <Link to="/blog" className="block text-sm text-primary-foreground/60 hover:text-gold transition-colors">Blog</Link>
+              {dynamicPages.map((page) => (
+                <Link key={page.slug} to={`/${page.slug}`} className="block text-sm text-primary-foreground/60 hover:text-gold transition-colors">
+                  {page.title || page.slug}
                 </Link>
               ))}
             </div>
