@@ -200,10 +200,10 @@ const AdminPackages = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Kategori</Label>
-                  <Select value={form.category_id} onValueChange={(v) => setForm({ ...form, category_id: v })}>
+                  <Select value={form.category_id || undefined} onValueChange={(v) => setForm({ ...form, category_id: v })}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Kategori" /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      {categories.filter(c => c.id).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -215,19 +215,19 @@ const AdminPackages = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Hotel Makkah</Label>
-                  <Select value={form.hotel_makkah_id} onValueChange={(v) => setForm({ ...form, hotel_makkah_id: v })}>
+                  <Select value={form.hotel_makkah_id || undefined} onValueChange={(v) => setForm({ ...form, hotel_makkah_id: v })}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Hotel" /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {makkahHotels.map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
+                      {makkahHotels.filter(h => h.id).map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Hotel Madinah</Label>
-                  <Select value={form.hotel_madinah_id} onValueChange={(v) => setForm({ ...form, hotel_madinah_id: v })}>
+                  <Select value={form.hotel_madinah_id || undefined} onValueChange={(v) => setForm({ ...form, hotel_madinah_id: v })}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Hotel" /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {madinahHotels.map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
+                      {madinahHotels.filter(h => h.id).map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -235,19 +235,19 @@ const AdminPackages = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Maskapai</Label>
-                  <Select value={form.airline_id} onValueChange={(v) => setForm({ ...form, airline_id: v })}>
+                  <Select value={form.airline_id || undefined} onValueChange={(v) => setForm({ ...form, airline_id: v })}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Maskapai" /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {airlines.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                      {airlines.filter(a => a.id).map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Bandara</Label>
-                  <Select value={form.airport_id} onValueChange={(v) => setForm({ ...form, airport_id: v })}>
+                  <Select value={form.airport_id || undefined} onValueChange={(v) => setForm({ ...form, airport_id: v })}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Bandara" /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {airports.map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.code})</SelectItem>)}
+                      {airports.filter(a => a.id).map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.code})</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
