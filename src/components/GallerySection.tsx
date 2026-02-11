@@ -1,14 +1,42 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
-const images = [
-  { src: "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=600&q=80", alt: "Makkah", span: "col-span-2 row-span-2" },
-  { src: "https://images.unsplash.com/photo-1564769625905-50e93615e769?w=400&q=80", alt: "Madinah", span: "" },
-  { src: "https://images.unsplash.com/photo-1542816417-0983c9c9ad53?w=400&q=80", alt: "Ibadah", span: "" },
-  { src: "https://images.unsplash.com/photo-1466442929976-97f336a657be?w=400&q=80", alt: "Masjid", span: "" },
-  { src: "https://images.unsplash.com/photo-1585036156171-384164a8c821?w=400&q=80", alt: "Perjalanan", span: "" },
-];
+interface GalleryItem {
+  id: string;
+  title: string | null;
+  image_url: string;
+  category: string | null;
+}
 
 const GallerySection = () => {
+  const [images, setImages] = useState<GalleryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchGallery = async () => {
+      const { data, error } = await supabase
+        .from("gallery")
+        .select("id, title, image_url, category")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .limit(5);
+
+      if (!error && data) {
+        setImages(data);
+      }
+      setLoading(false);
+    };
+
+    fetchGallery();
+  }, []);
+
+  // Helper to determine span based on index for a masonry-like look
+  const getSpanClass = (index: number) => {
+    if (index === 0) return "col-span-2 row-span-2";
+    return "";
+  };
+
   return (
     <section id="galeri" className="section-padding bg-background">
       <div className="container-custom">
@@ -26,26 +54,41 @@ const GallerySection = () => {
           </h2>
         </motion.div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[200px]">
-          {images.map((img, index) => (
-            <motion.div
-              key={img.alt}
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-              className={`relative rounded-xl overflow-hidden group ${img.span}`}
-            >
-              <img
-                src={img.src}
-                alt={img.alt}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/30 transition-colors duration-300" />
-            </motion.div>
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gold"></div>
+          </div>
+        ) : images.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[200px]">
+            {images.map((img, index) => (
+              <motion.div
+                key={img.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className={`relative rounded-xl overflow-hidden group ${getSpanClass(index)}`}
+              >
+                <img
+                  src={img.image_url}
+                  alt={img.title || "Gallery image"}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/30 transition-colors duration-300" />
+                {img.title && (
+                  <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-black/60 to-transparent">
+                    <p className="text-white text-xs font-medium">{img.title}</p>
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 text-muted-foreground">
+            <p>Belum ada foto galeri untuk ditampilkan.</p>
+          </div>
+        )}
       </div>
     </section>
   );
