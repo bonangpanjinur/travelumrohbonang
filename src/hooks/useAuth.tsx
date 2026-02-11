@@ -110,7 +110,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } catch (error) {
         console.error("Auth initialization error:", error);
       } finally {
-        // Ensure loading is only set to false after all checks are done
         setLoading(false);
       }
     };
@@ -119,6 +118,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log("Auth event:", event);
+        
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED') {
           setLoading(true);
           setSession(currentSession);
@@ -135,6 +136,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setIsBuyer(false);
           setRole(null);
           setLoading(false);
+          // Optional: Clear local storage if needed
+          // localStorage.clear();
         }
       }
     );
@@ -183,16 +186,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     setLoading(true);
     try {
-      await supabase.auth.signOut();
+      // 1. Clear local state first for immediate UI response
       setIsAdmin(false);
       setIsBuyer(false);
       setRole(null);
       setUser(null);
       setSession(null);
+      
+      // 2. Call Supabase signOut
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        // If session is already gone, Supabase might return an error, but we should still proceed
+        console.warn("Supabase signOut returned an error (possibly already signed out):", error.message);
+      }
+      
+      // 3. Clear storage to be sure
+      localStorage.removeItem('supabase.auth.token');
+      sessionStorage.clear();
+      
     } catch (error) {
-      console.error("Error during sign out:", error);
+      console.error("Error during sign out process:", error);
     } finally {
       setLoading(false);
+      // 4. Force a hard reload to the auth page to clear all memory states
       window.location.href = '/auth';
     }
   };

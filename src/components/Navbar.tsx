@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, User, LogOut, ChevronDown, LayoutDashboard, Ticket, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,6 +47,7 @@ const Navbar = () => {
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
   const [userProfile, setUserProfile] = useState<{ name: string; avatar_url: string } | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, isAdmin, signOut } = useAuth();
 
   useEffect(() => {
@@ -128,6 +129,15 @@ const Navbar = () => {
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
+
+  const handleLogout = async () => {
+    try {
+      setIsOpen(false);
+      await signOut();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   const displayLinks = navItems.length > 0 ? navItems : [
     { id: "1", label: "Beranda", url: "/", parent_id: null, sort_order: 1, open_in_new_tab: false },
@@ -266,7 +276,7 @@ const Navbar = () => {
                 
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
-                  onClick={() => signOut()} 
+                  onClick={handleLogout} 
                   className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="w-4 h-4" />
@@ -361,7 +371,7 @@ const Navbar = () => {
                   
                   <div className="pt-2 mt-2 border-t border-emerald-light/20">
                     <Button 
-                      onClick={() => { signOut(); setIsOpen(false); }} 
+                      onClick={handleLogout} 
                       variant="ghost" 
                       className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10 px-4"
                     >
