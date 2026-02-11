@@ -872,6 +872,48 @@ export type Database = {
           },
         ]
       }
+      package_hotels: {
+        Row: {
+          created_at: string | null
+          hotel_id: string
+          id: string
+          label: string | null
+          package_id: string
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          hotel_id: string
+          id?: string
+          label?: string | null
+          package_id: string
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          hotel_id?: string
+          id?: string
+          label?: string | null
+          package_id?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_hotels_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_hotels_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       packages: {
         Row: {
           airline_id: string | null

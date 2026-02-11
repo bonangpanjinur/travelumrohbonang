@@ -26,6 +26,12 @@ interface Package {
   airport: { name: string; city: string } | null;
 }
 
+interface ExtraHotel {
+  id: string;
+  label: string;
+  hotel: { name: string; star: number; city: string | null } | null;
+}
+
 interface Departure {
   id: string;
   departure_date: string;
@@ -41,6 +47,7 @@ const PackageDetail = () => {
   const { user } = useAuth();
   const [pkg, setPkg] = useState<Package | null>(null);
   const [departures, setDepartures] = useState<Departure[]>([]);
+  const [extraHotels, setExtraHotels] = useState<ExtraHotel[]>([]);
   const [selectedDeparture, setSelectedDeparture] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -62,16 +69,21 @@ const PackageDetail = () => {
       if (pkgData) {
         setPkg(pkgData as unknown as Package);
 
-        const { data: depData } = await supabase
-          .from("package_departures")
-          .select(`
-            *,
-            prices:departure_prices(room_type, price)
-          `)
-          .eq("package_id", pkgData.id)
-          .order("departure_date", { ascending: true });
+        const [depRes, extraRes] = await Promise.all([
+          supabase
+            .from("package_departures")
+            .select(`*, prices:departure_prices(room_type, price)`)
+            .eq("package_id", pkgData.id)
+            .order("departure_date", { ascending: true }),
+          supabase
+            .from("package_hotels")
+            .select(`id, label, hotel:hotels(name, star, city)`)
+            .eq("package_id", pkgData.id)
+            .order("sort_order"),
+        ]);
 
-        setDepartures((depData as unknown as Departure[]) || []);
+        setDepartures((depRes.data as unknown as Departure[]) || []);
+        setExtraHotels((extraRes.data as unknown as ExtraHotel[]) || []);
       }
       setLoading(false);
     };
@@ -203,6 +215,27 @@ const PackageDetail = () => {
                       ))}
                     </div>
                   </div>
+                  {/* Extra Hotels */}
+                  {extraHotels.map((eh) => (
+                    <div key={eh.id} className="bg-card border border-border rounded-xl p-6">
+                      <Hotel className="w-8 h-8 text-gold mb-3" />
+                      <h3 className="font-bold mb-1">{eh.label || `Hotel ${eh.hotel?.city || "Tambahan"}`}</h3>
+                      <p className="text-sm text-muted-foreground">{eh.hotel?.name || "Hotel"}</p>
+                      {eh.hotel?.city && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <MapPin className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">{eh.hotel.city}</span>
+                        </div>
+                      )}
+                      {eh.hotel?.star && (
+                        <div className="flex gap-1 mt-2">
+                          {[...Array(eh.hotel.star)].map((_, i) => (
+                            <Star key={i} className="w-4 h-4 fill-gold text-gold" />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 
