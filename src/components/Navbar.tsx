@@ -252,18 +252,6 @@ const Navbar = () => {
                     Dashboard Saya
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
-                    <UserCircle className="w-4 h-4" />
-                    Profil Saya
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/my-bookings" className="flex items-center gap-2 cursor-pointer">
-                    <Ticket className="w-4 h-4" />
-                    Booking Saya
-                  </Link>
-                </DropdownMenuItem>
                 
                 {isAdmin && (
                   <>
@@ -345,20 +333,12 @@ const Navbar = () => {
                 <div className="pt-4 border-t border-emerald-light/20 mt-2 space-y-1">
                   <p className="px-4 py-2 text-xs text-primary-foreground/40 uppercase tracking-wider">Akun</p>
                   <Link 
-                    to="/profile" 
+                    to="/dashboard" 
                     onClick={() => setIsOpen(false)} 
                     className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg"
                   >
-                    <UserCircle className="w-4 h-4" />
-                    Profil Saya
-                  </Link>
-                  <Link 
-                    to="/my-bookings" 
-                    onClick={() => setIsOpen(false)} 
-                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg"
-                  >
-                    <Ticket className="w-4 h-4" />
-                    Booking Saya
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dashboard Saya
                   </Link>
 
                   {isAdmin && (
