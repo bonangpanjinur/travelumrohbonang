@@ -1,17 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Menggunakan nama variabel yang sesuai dengan pengaturan di Vercel
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables. Please check your Vercel configuration for VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  console.error('Missing Supabase environment variables.');
 }
 
 export const supabase = createClient<Database>(
-  supabaseUrl || '',
-  supabaseAnonKey || '',
+  SUPABASE_URL || '',
+  SUPABASE_PUBLISHABLE_KEY || '',
   {
     auth: {
       storage: localStorage,
