@@ -1,3 +1,15 @@
+-- 0. Tambahkan kolom yang hilang pada tabel packages (jika belum ada)
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='packages' AND column_name='dp_deadline_days') THEN
+        ALTER TABLE packages ADD COLUMN dp_deadline_days INTEGER DEFAULT 30;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='packages' AND column_name='full_deadline_days') THEN
+        ALTER TABLE packages ADD COLUMN full_deadline_days INTEGER DEFAULT 7;
+    END IF;
+END $$;
+
 -- 1. Enable RLS pada tabel bookings (jika belum)
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 

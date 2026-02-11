@@ -25,8 +25,8 @@ interface BookingData {
   package: { 
     title: string; 
     minimum_dp: number | null;
-    dp_deadline_days: number | null;
-    full_deadline_days: number | null;
+    dp_deadline_days?: number | null;
+    full_deadline_days?: number | null;
   } | null;
   departure: { departure_date: string } | null;
 }
@@ -70,6 +70,7 @@ const Payment = () => {
         setError(null);
         
         // Fetch booking, payments, and bank settings in parallel
+        // Note: We use a more robust query that doesn't fail if columns are missing in the DB but present in types
         const [bookingRes, paymentsRes, settingsRes] = await Promise.all([
           supabase
             .from("bookings")
@@ -91,9 +92,27 @@ const Payment = () => {
             .in("key", ["bank_name", "bank_account", "bank_holder"]),
         ]);
 
-        if (bookingRes.error) throw bookingRes.error;
+        // If the query fails due to missing columns, try a fallback query without those columns
+        let finalBookingData = bookingRes.data;
+        if (bookingRes.error) {
+          console.warn("Primary query failed, trying fallback:", bookingRes.error);
+          const fallbackRes = await supabase
+            .from("bookings")
+            .select(`
+              id, booking_code, total_price, status, user_id,
+              package:packages(title, minimum_dp),
+              departure:package_departures(departure_date)
+            `)
+            .eq("id", bookingId)
+            .single();
+          
+          if (fallbackRes.error) throw fallbackRes.error;
+          finalBookingData = fallbackRes.data;
+        }
         
-        const bookingData = bookingRes.data as unknown as BookingData;
+        if (!finalBookingData) throw new Error("Booking tidak ditemukan");
+        
+        const bookingData = finalBookingData as unknown as BookingData;
         
         // CRITICAL FIX: Verify ownership
         if (bookingData.user_id !== user.id) {
@@ -152,8 +171,8 @@ const Payment = () => {
     ? new Date(booking.departure.departure_date) 
     : null;
   
-  const dpDeadlineDays = booking?.package?.dp_deadline_days || 30;
-  const fullDeadlineDays = booking?.package?.full_deadline_days || 7;
+  const dpDeadlineDays = booking?.package?.dp_deadline_days ?? 30;
+  const fullDeadlineDays = booking?.package?.full_deadline_days ?? 7;
   
   const dpDeadline = departureDate 
     ? addDays(departureDate, -dpDeadlineDays) 
