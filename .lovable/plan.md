@@ -1,91 +1,102 @@
 
-# Plan: Komisi Otomatis di Detail Booking Admin + Rekomendasi Fitur MVP
 
-## Bagian 1: Tambah Perhitungan Komisi di Halaman Booking Admin
+# Rencana Perbaikan Menyeluruh: Sinkronisasi Database, Admin Dashboard, dan Frontend
 
-### Perubahan yang Dilakukan
+## Temuan Masalah
 
-**1. Expand Row di Tabel Booking (`src/pages/admin/Bookings.tsx`)**
+Setelah analisis mendalam, berikut masalah-masalah yang ditemukan:
 
-Saat admin klik baris booking, akan muncul panel detail yang menampilkan:
-- Info PIC (nama, tipe: cabang/agen/karyawan)
-- Jumlah jemaah dalam booking tersebut
-- Rate komisi per jemaah (dari `package_commissions`)
-- **Total komisi otomatis** = rate x jumlah jemaah
-- Daftar jemaah dalam booking
+### 1. Bug: Edit Keberangkatan Reset `remaining_quota`
+**Lokasi:** `src/pages/admin/Departures.tsx` baris 94
+**Masalah:** Saat admin mengedit keberangkatan (misal ubah tanggal/harga), `remaining_quota` selalu di-reset ke `form.quota`. Ini akan menghapus data booking yang sudah masuk, karena sisa kursi kembali penuh.
+**Perbaikan:** Hanya update `remaining_quota` jika `quota` berubah (selisih ditambahkan), atau jangan update `remaining_quota` sama sekali saat edit.
 
-**2. Data yang Diambil**
-- Query `booking_pilgrims` untuk hitung jumlah jemaah
-- Query `package_commissions` untuk rate komisi sesuai `pic_type` dan `package_id`
-- Query `agents` / `branches` / `profiles` untuk nama PIC
+### 2. Dashboard Tidak Menampilkan Muthawif
+**Lokasi:** `src/pages/admin/Dashboard.tsx`
+**Masalah:** Dashboard menampilkan stat untuk Total Paket, Keberangkatan, Booking, Jemaah, Cabang, dan Agen -- tapi tidak ada stat untuk Muthawif, padahal tabel `muthawifs` ada dan sudah terisi 3 data.
+**Perbaikan:** Tambahkan stat card "Muthawif" di dashboard.
 
-**3. Tampilan UI**
-- Tombol "Detail" (icon Eye) di setiap baris booking
-- Panel expandable di bawah baris menampilkan:
+### 3. Admin Packages: Tidak Ada Kolom `image_url`
+**Lokasi:** `src/pages/admin/Packages.tsx`
+**Masalah:** Form admin tidak menyediakan field untuk upload/input `image_url` paket. Kolom `image_url` ada di tabel `packages` dan digunakan di frontend (`PackageDetail.tsx`, `Paket.tsx`), tapi admin tidak bisa mengisinya.
+**Perbaikan:** Tambahkan field upload gambar atau input URL di form admin paket.
 
-```text
-+--------------------------------------------------+
-| PIC: Agen - Ahmad Fauzi                          |
-| Paket: Umroh Plus Turkey                         |
-| Jemaah: 3 orang                                  |
-| Komisi/Jemaah: Rp 2.000.000                      |
-| TOTAL KOMISI: Rp 6.000.000                       |
-+--------------------------------------------------+
-| Daftar Jemaah:                                   |
-| 1. Budi - Laki-laki                              |
-| 2. Siti - Perempuan                              |
-| 3. Andi - Laki-laki                              |
-+--------------------------------------------------+
-```
+### 4. Admin Departures: Tidak Ada Kolom Muthawif
+**Lokasi:** `src/pages/admin/Departures.tsx`
+**Masalah:** Tabel `package_departures` memiliki kolom `muthawif_id`, dan sudah ada data yang terisi. Namun form admin keberangkatan tidak menyediakan dropdown untuk memilih muthawif.
+**Perbaikan:** Tambahkan dropdown muthawif di form keberangkatan.
 
-Booking tanpa PIC (pic_type = "pusat") akan menampilkan "Tidak ada komisi (Kantor Pusat)".
+### 5. Frontend PackageDetail: Fasilitas Hardcoded
+**Lokasi:** `src/pages/PackageDetail.tsx` baris 246-262
+**Masalah:** Daftar fasilitas ("Tiket Pesawat PP", "Hotel Dekat Masjidil Haram", dll) di-hardcode, bukan dari database. Tidak bisa dikustomisasi per paket.
+**Perbaikan (opsional):** Buat tabel `package_facilities` atau tambahkan field JSON di packages. Atau biarkan jika memang standar untuk semua paket.
+
+### 6. Booking Admin: Verifikasi Ganda
+**Lokasi:** `src/pages/admin/Bookings.tsx` dan `src/pages/admin/Payments.tsx`
+**Masalah:** Ada dua tempat untuk verifikasi pembayaran: di halaman Booking (update status booking langsung ke "paid") dan di halaman Payments (update payment status + booking status). Logikanya bisa konflik:
+- Di Bookings: langsung set `bookings.status = 'paid'` tanpa cek jumlah bayar
+- Di Payments: set `payments.status = 'paid'` lalu set `bookings.status = 'paid'`
+**Perbaikan:** Hapus tombol verifikasi dari halaman Booking, karena verifikasi seharusnya dilakukan melalui halaman Payments yang lebih detail.
+
+### 7. Bank Account Hardcoded di Payment
+**Lokasi:** `src/pages/Payment.tsx` baris 226-230
+**Masalah:** Informasi rekening bank ("Bank Mandiri", "123-456-7890") di-hardcode. Seharusnya diambil dari `site_settings` atau `settings` agar admin bisa mengubahnya.
+**Perbaikan:** Ambil data rekening dari tabel `settings` atau `site_settings`.
+
+### 8. Booking PIC Type Mismatch di UI vs DB
+**Lokasi:** `src/pages/Booking.tsx`
+**Masalah:** RadioGroup menggunakan value "cabang" dan "agen" di UI, tapi database mengharuskan "branch" dan "agent". Sudah ada mapping di line 188, tapi label dan value di RadioGroup masih inkonsisten -- bisa membingungkan di maintenance.
+**Perbaikan:** Ubah RadioGroup value langsung ke "branch" dan "agent" untuk konsistensi.
+
+### 9. Dashboard Revenue Hanya Hitung Status "paid"
+**Lokasi:** `src/pages/admin/Dashboard.tsx`
+**Masalah:** Revenue dihitung dari `bookings.status = 'paid'`, tapi `waiting_payment` juga bisa dianggap sebagai potensi revenue. Ini mungkin by design, tapi perlu dipertimbangkan apakah menampilkan "Potensi Pendapatan" juga berguna.
+**Perbaikan (minor):** Tambahkan card "Potensi Pendapatan" yang menghitung booking `waiting_payment`.
 
 ---
 
-## Bagian 2: Rekomendasi Fitur MVP vs Premium
+## Rencana Implementasi
 
-### Fitur yang SUDAH ADA (MVP -- Siap Pakai):
-1. Manajemen Paket Umroh (CRUD, harga per tipe kamar)
-2. Keberangkatan & Kuota
-3. Booking Online (pilih kamar, data jemaah, PIC)
-4. Pembayaran Multi-Tahap (DP + cicilan)
-5. Deadline Pembayaran Otomatis
-6. Notifikasi & Reminder Pembayaran
-7. Manajemen Cabang & Agen
-8. Komisi per Paket (Cabang/Agen/Karyawan)
-9. Laporan & Statistik (Booking, Pendapatan, Komisi)
-10. CMS (Blog, Halaman Dinamis, FAQ, Galeri, Testimoni)
-11. Autentikasi & Admin Dashboard
+### Prioritas Tinggi (Bug Fix)
 
-### Fitur yang BELUM ADA tapi PENTING untuk MVP:
-1. **Export Laporan ke Excel/PDF** -- admin butuh cetak laporan
-2. **Invoice/Kwitansi Otomatis** -- bukti pembayaran resmi
-3. **Manajemen Muthawif** -- sudah ada tabel tapi belum ada halaman admin
-4. **WhatsApp Integration** -- kirim notifikasi via WA (paling penting untuk travel umroh)
+| No | Perbaikan | File |
+|----|-----------|------|
+| 1 | Fix remaining_quota reset saat edit keberangkatan | `src/pages/admin/Departures.tsx` |
+| 2 | Sinkronkan PIC type values di Booking form (gunakan "branch"/"agent" langsung) | `src/pages/Booking.tsx` |
+| 3 | Hapus verifikasi ganda di Bookings, arahkan ke Payments | `src/pages/admin/Bookings.tsx` |
 
-### Fitur untuk UPGRADE/PREMIUM (tampil menu tapi muncul notif upgrade):
-1. **Akuntansi & Keuangan** -- Buku besar, neraca, laporan laba rugi
-2. **CRM & Follow-up Otomatis** -- Pipeline calon jemaah, auto follow-up
-3. **Multi-Bahasa** -- Website dalam bahasa Arab/Inggris
-4. **Integrasi Payment Gateway** -- Bayar online via Midtrans/Xendit
-5. **Manajemen Dokumen Jemaah** -- Upload paspor, visa, foto, tracking status dokumen
-6. **Analitik AI** -- Prediksi demand, rekomendasi harga optimal
-7. **Mobile App** -- Aplikasi khusus untuk jemaah dan agen
-8. **Multi-Cabang Dashboard** -- Dashboard terpisah per cabang dengan login sendiri
+### Prioritas Sedang (Fitur Admin Belum Lengkap)
 
-### Implementasi Menu Premium
-- Tambah menu-menu premium di sidebar `AdminLayout.tsx` dengan icon `Crown` atau `Lock`
-- Saat diklik, tampilkan Dialog/Modal:
-  > "Fitur [Nama Fitur] tersedia di paket Premium. Hubungi kami untuk upgrade sistem Anda."
-  > dengan tombol "Hubungi Kami" (link ke WhatsApp)
+| No | Perbaikan | File |
+|----|-----------|------|
+| 4 | Tambah field image_url di form admin paket | `src/pages/admin/Packages.tsx` |
+| 5 | Tambah dropdown muthawif di form keberangkatan | `src/pages/admin/Departures.tsx` |
+| 6 | Tambah stat Muthawif di dashboard | `src/pages/admin/Dashboard.tsx` |
+| 7 | Ambil info rekening bank dari database, bukan hardcode | `src/pages/Payment.tsx` + insert data ke `settings` |
+
+### Prioritas Rendah (Enhancement)
+
+| No | Perbaikan | File |
+|----|-----------|------|
+| 8 | Tambah card "Potensi Pendapatan" di dashboard | `src/pages/admin/Dashboard.tsx` |
 
 ---
 
 ## Detail Teknis
 
-### File yang Diubah:
-1. **`src/pages/admin/Bookings.tsx`** -- Tambah expand row dengan detail komisi, daftar jemaah, dan info PIC
-2. **`src/components/admin/AdminLayout.tsx`** -- Tambah menu premium dengan icon Lock dan handler upgrade dialog
-3. **Buat komponen baru `src/components/admin/UpgradeDialog.tsx`** -- Dialog reusable untuk notifikasi upgrade
+### 1. Fix remaining_quota (Departures.tsx)
+Saat edit, hanya update `remaining_quota` jika quota berubah:
+```text
+remaining_quota = editing.remaining_quota + (form.quota - editing.quota)
+```
+Jika quota tidak berubah, `remaining_quota` tetap.
 
-### Tidak ada perubahan database -- semua data sudah tersedia di tabel yang ada.
+### 4. Image URL di Admin Packages
+Tambahkan input field untuk URL gambar paket, atau file upload ke storage bucket (bisa menggunakan bucket `cms-images` yang sudah ada).
+
+### 5. Muthawif di Departures
+Fetch data muthawifs, tampilkan dropdown di form, dan simpan `muthawif_id` saat create/update departure.
+
+### 7. Bank Account dari Database
+Insert data rekening ke tabel `settings` dengan key seperti `bank_name`, `bank_account`, `bank_holder`. Lalu fetch di halaman Payment.
+
