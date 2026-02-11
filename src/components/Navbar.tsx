@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, User, LogOut, ChevronDown, LayoutDashboard, Ticket, UserCircle } from "lucide-react";
+import { Menu, X, User, LogOut, ChevronDown, LayoutDashboard, Ticket, UserCircle, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -246,6 +246,12 @@ const Navbar = () => {
                 <div className="px-2 py-1.5">
                   <p className="text-xs font-medium text-muted-foreground px-2 py-1 uppercase tracking-wider">Akun Saya</p>
                 </div>
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
+                    <LayoutGrid className="w-4 h-4" />
+                    Dashboard Saya
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
                     <UserCircle className="w-4 h-4" />

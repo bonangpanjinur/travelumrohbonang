@@ -67,8 +67,8 @@ const Auth = () => {
           toast({ title: "Berhasil masuk!", description: "Selamat datang kembali" });
           if (isAdmin) {
             navigate("/admin");
-          } else if (role === 'buyer') {
-            navigate("/profile"); // Redirect buyer to profile or dashboard if exists
+          } else if (role === 'buyer' || role === 'user') {
+            navigate("/dashboard");
           } else {
             navigate("/");
           }

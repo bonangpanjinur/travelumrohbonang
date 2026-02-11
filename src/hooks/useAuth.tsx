@@ -37,36 +37,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return metadataRole;
       }
 
-      // 2. Database Check: Profiles Table (Accurate)
-      const { data, error } = await supabase
-        .from('profiles')
+      // 2. Database Check: user_roles table (Source of Truth)
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
         .select('role')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .maybeSingle();
+      
+      let currentRole = roleData?.role?.toLowerCase() || null;
 
-      if (error) {
-        console.error("Error fetching role from profiles:", error.message);
-      }
-
-      let currentRole = data?.role?.toLowerCase() || null;
-
-      // 3. Fallback: user_roles table
+      // 3. Fallback: profiles table
       if (!currentRole) {
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userId)
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('role' as any) // Cast to any because role might not be in types yet
+          .eq('id', userId)
           .maybeSingle();
         
-        if (roleData) {
-          currentRole = roleData.role.toLowerCase();
+        if (profileData && (profileData as any).role) {
+          currentRole = (profileData as any).role.toLowerCase();
         }
       }
 
       // 4. Final Fallback: RPC (Bypasses RLS)
       if (!currentRole) {
         try {
-          const { data: rpcIsAdmin } = await supabase.rpc('is_admin');
+          const { data: rpcIsAdmin } = await supabase.rpc('is_admin', { _user_id: userId });
           if (rpcIsAdmin) currentRole = 'admin';
         } catch (rpcErr) {
           console.error("RPC is_admin failed:", rpcErr);
@@ -77,15 +73,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const adminStatus = currentRole === 'admin' || currentRole === 'superadmin' || currentRole === 'super_admin';
         setRole(currentRole);
         setIsAdmin(adminStatus);
-        setIsBuyer(!adminStatus);
+        setIsBuyer(currentRole === 'buyer' || currentRole === 'user');
         return currentRole;
       }
 
-      // Default to user
-      setRole('user');
+      // Default to buyer for new users
+      setRole('buyer');
       setIsAdmin(false);
       setIsBuyer(true);
-      return 'user';
+      return 'buyer';
     } catch (err) {
       console.error("Failed to check admin status:", err);
       return null;
