@@ -7,11 +7,9 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
-  userRole: string | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; isAdmin?: boolean }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  refreshAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,96 +19,81 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
 
-  const checkAdminStatus = async (userId: string): Promise<boolean> => {
+  const fetchRole = async (userId: string) => {
     try {
-      console.log("[AuthDebug] Checking admin status for user:", userId);
-      
-      // 1. Try fetching profile directly first (often more reliable than RPC if RLS is set up)
-      const { data: profileData, error: profileError } = await supabase
+      // Step 1.1: Fetch role immediately after session is obtained
+      // Use maybeSingle to avoid errors if profile doesn't exist yet
+      const { data, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', userId)
         .maybeSingle();
 
-      if (profileError) {
-        console.error("[AuthDebug] Error fetching profile:", profileError);
+      if (error) {
+        console.error("Error fetching role:", error.message);
+        return false;
       }
 
-      if (profileData?.role) {
-        const roleStr = String(profileData.role).toLowerCase();
-        setUserRole(profileData.role);
-        const isUserAdmin = roleStr === 'admin' || roleStr === 'superadmin';
-        console.log(`[AuthDebug] Profile found. Role: "${profileData.role}", isAdmin: ${isUserAdmin}`);
-        setIsAdmin(isUserAdmin);
+      if (data?.role) {
+        // Step 1.1: Case-insensitive check
+        const roleLower = data.role.toLowerCase();
+        const isUserAdmin = roleLower === 'admin' || roleLower === 'superadmin';
+        console.log(`User role: ${data.role}, isAdmin: ${isUserAdmin}`);
         return isUserAdmin;
       }
 
-      // 2. Fallback to RPC if profile fetch didn't return a role
-      console.log("[AuthDebug] No role in profile, trying RPC fallback...");
-      const { data: rpcData, error: rpcError } = await supabase.rpc('is_admin', { _user_id: userId });
-      
-      if (!rpcError && rpcData === true) {
-        console.log("[AuthDebug] Admin status confirmed via RPC");
-        setIsAdmin(true);
-        setUserRole('admin (via rpc)');
-        return true;
-      }
-
-      console.warn("[AuthDebug] Access Denied: User has no admin role in database.");
-      setIsAdmin(false);
-      setUserRole('none');
-      return false;
+      // Fallback to RPC if profile fetch returns nothing
+      const { data: rpcData } = await supabase.rpc('is_admin', { _user_id: userId });
+      return rpcData === true;
     } catch (err) {
-      console.error("[AuthDebug] Critical error in checkAdminStatus:", err);
-      setIsAdmin(false);
+      console.error("Failed to check admin status:", err);
       return false;
-    }
-  };
-
-  const refreshAuth = async () => {
-    setLoading(true);
-    try {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        await checkAdminStatus(currentSession.user.id);
-      } else {
-        setIsAdmin(false);
-        setUserRole(null);
-      }
-    } catch (error) {
-      console.error("[AuthDebug] Auth refresh error:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    refreshAuth();
+    const initAuth = async () => {
+      setLoading(true); // Ensure loading is true at start
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+        
+        if (initialSession?.user) {
+          const adminStatus = await fetchRole(initialSession.user.id);
+          setIsAdmin(adminStatus);
+        } else {
+          setIsAdmin(false);
+        }
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+      } finally {
+        // Step 1.1: Only set loading to false after fetchRole is complete
+        setLoading(false);
+      }
+    };
+
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log("[AuthDebug] Auth event:", event);
-        
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        // We set loading for specific events to ensure role is fetched before UI updates
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           setLoading(true);
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          if (currentSession?.user) {
-            await checkAdminStatus(currentSession.user.id);
-          }
-          setLoading(false);
-        } else if (event === 'SIGNED_OUT') {
-          setSession(null);
-          setUser(null);
-          setIsAdmin(false);
-          setUserRole(null);
-          setLoading(false);
         }
+        
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        if (currentSession?.user) {
+          const adminStatus = await fetchRole(currentSession.user.id);
+          setIsAdmin(adminStatus);
+        } else {
+          setIsAdmin(false);
+        }
+        
+        setLoading(false);
       }
     );
 
@@ -123,7 +106,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       let adminStatus = false;
       if (data?.user) {
-        adminStatus = await checkAdminStatus(data.user.id);
+        adminStatus = await fetchRole(data.user.id);
+        setIsAdmin(adminStatus);
       }
       return { error: error as Error | null, isAdmin: adminStatus };
     } finally {
@@ -147,11 +131,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsAdmin(false);
     setUser(null);
     setSession(null);
-    setUserRole(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, userRole, signIn, signUp, signOut, refreshAuth }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
