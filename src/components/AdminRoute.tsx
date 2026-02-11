@@ -1,12 +1,15 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import LoadingSpinner from "@/components/ui/loading-spinner";
 
-export const AdminRoute = () => {
+const AdminRoute = () => {
   const { user, isAdmin, loading } = useAuth();
 
   if (loading) {
-    return <LoadingSpinner fullScreen />;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      </div>
+    );
   }
 
   if (!user) {
