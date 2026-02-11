@@ -262,12 +262,12 @@ const AdminNavigation = () => {
                   </div>
                   <div>
                     <Label>Parent Menu (opsional)</Label>
-                    <Select value={navForm.parent_id} onValueChange={(val) => setNavForm({ ...navForm, parent_id: val })}>
+                    <Select value={navForm.parent_id || undefined} onValueChange={(val) => setNavForm({ ...navForm, parent_id: val === "__none__" ? "" : val })}>
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Pilih parent (kosong = menu utama)" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Tidak ada (Menu Utama)</SelectItem>
+                      <SelectContent className="bg-popover z-50">
+                        <SelectItem value="__none__">Tidak ada (Menu Utama)</SelectItem>
                         {parentNavItems.filter((n) => n.id !== editingNav?.id).map((n) => (
                           <SelectItem key={n.id} value={n.id}>{n.label}</SelectItem>
                         ))}
@@ -387,12 +387,12 @@ const AdminNavigation = () => {
                   </div>
                   <div>
                     <Label>Kategori Utama (kosong = kategori utama)</Label>
-                    <Select value={catForm.parent_id} onValueChange={(val) => setCatForm({ ...catForm, parent_id: val })}>
+                    <Select value={catForm.parent_id || undefined} onValueChange={(val) => setCatForm({ ...catForm, parent_id: val === "__none__" ? "" : val })}>
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Pilih kategori utama" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Tidak ada (Kategori Utama)</SelectItem>
+                      <SelectContent className="bg-popover z-50">
+                        <SelectItem value="__none__">Tidak ada (Kategori Utama)</SelectItem>
                         {parentCategories.filter((c) => c.id !== editingCat?.id).map((c) => (
                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
