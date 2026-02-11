@@ -16,6 +16,7 @@ import {
   HelpCircle,
   MessageCircle,
   BookOpen,
+  Globe,
   LucideIcon
 } from "lucide-react";
 
@@ -31,6 +32,7 @@ export interface PremiumMenuItem {
 }
 
 export const menuItems: MenuItem[] = [
+  { label: "Website Utama", href: "/", icon: Globe },
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Paket", href: "/admin/packages", icon: Package },
   { label: "Keberangkatan", href: "/admin/departures", icon: Calendar },

@@ -35,7 +35,10 @@ const AdminSidebar = ({
       >
         <div className="h-full flex flex-col">
           {/* Logo */}
-          <div className="p-4 border-b border-emerald-light/20 hidden lg:flex items-center gap-2">
+          <Link 
+            to="/" 
+            className="p-4 border-b border-emerald-light/20 hidden lg:flex items-center gap-2 hover:bg-emerald-light/10 transition-colors"
+          >
             {showLogo && (
               branding.logo_url ? (
                 <img 
@@ -61,7 +64,7 @@ const AdminSidebar = ({
                 </span>
               </div>
             )}
-          </div>
+          </Link>
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-4 pt-20 lg:pt-4">
