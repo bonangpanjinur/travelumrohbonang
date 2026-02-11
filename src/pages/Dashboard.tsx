@@ -1,328 +1,222 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion } from "framer-motion";
 import { 
-  Package, 
-  User as UserIcon, 
-  Ticket, 
-  Bell, 
-  ArrowRight, 
-  Calendar,
-  Clock,
-  ShieldCheck,
-  ShoppingBag,
-  CreditCard,
-  MapPin
+  Calendar, 
+  CreditCard, 
+  FileText, 
+  Plane, 
+  User, 
+  CheckCircle2, 
+  Clock, 
+  AlertCircle,
+  LogOut
 } from "lucide-react";
-import { format } from "date-fns";
-import { id as localeId } from "date-fns/locale";
-import LoadingSpinner from "@/components/ui/loading-spinner";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-interface BookingSummary {
-  id: string;
-  booking_code: string;
-  status: string;
-  total_price: number;
-  created_at: string;
-  package: { title: string; image_url: string } | null;
-  departure: { departure_date: string } | null;
-}
+// Mock data untuk simulasi timeline (nanti bisa diganti real data dari booking)
+const steps = [
+  { id: 1, title: "Pendaftaran", status: "completed", icon: User },
+  { id: 2, title: "Pembayaran DP", status: "completed", icon: CreditCard },
+  { id: 3, title: "Upload Dokumen", status: "current", icon: FileText },
+  { id: 4, title: "Proses Visa", status: "upcoming", icon: CheckCircle2 },
+  { id: 5, title: "Pelunasan", status: "upcoming", icon: CreditCard },
+  { id: 6, title: "Keberangkatan", status: "upcoming", icon: Plane },
+];
 
-const UserDashboard = () => {
-  const { user, isAdmin, role, loading: authLoading } = useAuth();
+const Dashboard = () => {
+  const { profile, signOut } = useAuth();
   const navigate = useNavigate();
-  const [recentBookings, setRecentBookings] = useState<BookingSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
-  const [stats, setStats] = useState({ total: 0, paid: 0, pending: 0 });
+  const [activeBooking, setActiveBooking] = useState<any>(null);
+  const [loadingBooking, setLoadingBooking] = useState(true);
 
+  // Simulasi fetch booking terakhir user
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
+    const fetchLastBooking = async () => {
+      if (!profile?.id) return;
+      
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`*, packages(name, departure_date)`)
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch Profile
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .maybeSingle();
-        
-        setProfile(profileData);
-
-        // Fetch Recent Bookings with more details
-        const { data: bookingsData } = await supabase
-          .from("bookings")
-          .select(`
-            id, booking_code, status, total_price, created_at,
-            package:packages(title, image_url),
-            departure:package_departures(departure_date)
-          `)
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-
-        const bookings = (bookingsData as any) || [];
-        setRecentBookings(bookings.slice(0, 3));
-        
-        // Calculate Stats
-        setStats({
-          total: bookings.length,
-          paid: bookings.filter((b: any) => b.status === 'paid').length,
-          pending: bookings.filter((b: any) => b.status === 'waiting_payment' || b.status === 'draft').length
-        });
-
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-      } finally {
-        setLoading(false);
+      if (!error && data) {
+        setActiveBooking(data);
       }
+      setLoadingBooking(false);
     };
 
-    fetchData();
-  }, [user, authLoading, navigate]);
+    fetchLastBooking();
+  }, [profile]);
 
-  if (authLoading || loading) {
-    return <LoadingSpinner fullScreen />;
-  }
-
-  const statusColors: Record<string, string> = {
-    draft: "bg-muted text-muted-foreground",
-    waiting_payment: "bg-warning/10 text-warning border-warning/20",
-    paid: "bg-success/10 text-success border-success/20",
-    cancelled: "bg-destructive/10 text-destructive border-destructive/20",
-  };
-
-  const statusLabels: Record<string, string> = {
-    draft: "Draft",
-    waiting_payment: "Menunggu Pembayaran",
-    paid: "Lunas",
-    cancelled: "Dibatalkan",
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <main className="pt-24 pb-16">
-        <div className="container-custom max-w-6xl">
-          {/* Header Section */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-display font-bold">Dashboard Saya</h1>
-              <p className="text-muted-foreground">Selamat datang kembali, <span className="text-foreground font-medium">{profile?.name || user?.email}</span></p>
-            </div>
-            <div className="flex gap-3">
-              <Link to="/profile">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <UserIcon className="w-4 h-4" /> Edit Profil
-                </Button>
-              </Link>
-              {isAdmin && (
-                <Link to="/admin">
-                  <Button variant="outline" size="sm" className="gap-2 border-gold text-gold hover:bg-gold/10">
-                    <ShieldCheck className="w-4 h-4" /> Panel Admin
-                  </Button>
-                </Link>
+    <div className="min-h-screen bg-gray-50/50 pb-20">
+      {/* Header Area */}
+      <div className="bg-primary text-primary-foreground pt-12 pb-24 px-6 rounded-b-[2.5rem] shadow-lg relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full -ml-10 -mb-10 blur-2xl"></div>
+        
+        <div className="container mx-auto max-w-5xl relative z-10 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2">
+              Assalamu'alaikum, {profile?.full_name?.split(' ')[0] || 'Jamaah'}!
+            </h1>
+            <p className="text-primary-foreground/80 text-lg">
+              Semoga persiapan ibadah Anda dilancarkan.
+            </p>
+          </div>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={handleSignOut}
+            className="hidden md:flex items-center gap-2 hover:bg-white/90"
+          >
+            <LogOut className="h-4 w-4" /> Keluar
+          </Button>
+        </div>
+      </div>
+
+      <div className="container mx-auto max-w-5xl px-4 -mt-16 relative z-20 space-y-8">
+        
+        {/* Status Card Utama */}
+        <Card className="shadow-xl border-none">
+          <CardHeader className="border-b bg-white rounded-t-xl pb-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="text-xl text-primary">Status Perjalanan Anda</CardTitle>
+                <CardDescription>
+                  {activeBooking 
+                    ? `Paket: ${activeBooking.packages?.name}` 
+                    : "Anda belum memilih paket perjalanan."}
+                </CardDescription>
+              </div>
+              {activeBooking && (
+                <div className="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2 border border-blue-100">
+                  <Clock className="h-4 w-4" />
+                  {new Date(activeBooking.packages?.departure_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </div>
               )}
             </div>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <Card className="bg-primary/5 border-primary/10">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <ShoppingBag className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{stats.total}</div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Total Pesanan</div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-success/5 border-success/10">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center text-success">
-                  <CreditCard className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{stats.paid}</div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Sudah Lunas</div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-warning/5 border-warning/10">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center text-warning">
-                  <Clock className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{stats.pending}</div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Menunggu</div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content: Recent Bookings */}
-            <div className="lg:col-span-2 space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold flex items-center gap-2">
-                  <Ticket className="w-5 h-5 text-gold" /> Booking Terbaru
-                </h2>
-                <Link to="/my-bookings">
-                  <Button variant="ghost" size="sm" className="text-gold hover:text-gold/80">
-                    Lihat Semua <ArrowRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </Link>
-              </div>
-
-              {recentBookings.length === 0 ? (
-                <Card className="border-dashed">
-                  <CardContent className="py-12 text-center">
-                    <Package className="w-16 h-16 text-muted/20 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Belum ada pesanan</h3>
-                    <p className="text-muted-foreground mb-6">Mulai perjalanan ibadah Anda dengan memilih paket terbaik kami.</p>
-                    <Link to="/paket">
-                      <Button className="gradient-gold text-primary font-bold">Lihat Paket Umroh</Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  {recentBookings.map((booking, index) => (
-                    <motion.div
-                      key={booking.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                    >
-                      <Card className="overflow-hidden hover:border-gold/30 transition-colors">
-                        <CardContent className="p-0">
-                          <div className="flex flex-col sm:flex-row">
-                            <div className="w-full sm:w-32 h-32 bg-muted relative">
-                              {booking.package?.image_url ? (
-                                <img 
-                                  src={booking.package.image_url} 
-                                  alt={booking.package.title} 
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                                  <Package className="w-8 h-8" />
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1 p-4 flex flex-col justify-between">
-                              <div className="flex justify-between items-start gap-2">
-                                <div>
-                                  <div className="text-xs font-mono text-muted-foreground mb-1">{booking.booking_code}</div>
-                                  <h3 className="font-bold text-lg leading-tight">{booking.package?.title}</h3>
-                                </div>
-                                <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${statusColors[booking.status]}`}>
-                                  {statusLabels[booking.status] || booking.status}
-                                </div>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="w-4 h-4" />
-                                  {booking.departure?.departure_date ? format(new Date(booking.departure.departure_date), "d MMM yyyy", { locale: localeId }) : "TBA"}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <CreditCard className="w-4 h-4" />
-                                  Rp {booking.total_price.toLocaleString("id-ID")}
-                                </div>
-                                <Link to={`/booking/payment/${booking.id}`} className="ml-auto">
-                                  <Button size="sm" variant="outline" className="h-8 text-xs">Detail</Button>
-                                </Link>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
+          </CardHeader>
+          <CardContent className="pt-8 pb-8">
+            {!activeBooking && !loadingBooking ? (
+               <div className="text-center py-8">
+                 <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <Plane className="h-8 w-8 text-gray-400" />
+                 </div>
+                 <h3 className="text-lg font-medium text-gray-900">Belum ada booking aktif</h3>
+                 <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                   Pilih paket Umrah terbaik kami untuk memulai perjalanan spiritual Anda.
+                 </p>
+                 <Button onClick={() => navigate('/paket')} className="bg-primary hover:bg-primary/90">
+                   Lihat Paket Umrah
+                 </Button>
+               </div>
+            ) : (
+              <div className="relative">
+                {/* Mobile Stepper (Vertical) */}
+                <div className="md:hidden space-y-6 pl-4 border-l-2 border-gray-100 ml-3">
+                  {steps.map((step) => (
+                    <div key={step.id} className="relative pl-6">
+                      <div className={`absolute -left-[21px] top-0 w-8 h-8 rounded-full flex items-center justify-center border-2 bg-white
+                        ${step.status === 'completed' ? 'border-green-500 text-green-600' : 
+                          step.status === 'current' ? 'border-primary text-primary animate-pulse' : 'border-gray-200 text-gray-300'}`}>
+                        <step.icon className="h-4 w-4" />
+                      </div>
+                      <h4 className={`font-semibold ${step.status === 'current' ? 'text-primary' : 'text-gray-700'}`}>
+                        {step.title}
+                      </h4>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {step.status === 'completed' ? 'Selesai' : step.status === 'current' ? 'Sedang Diproses' : 'Menunggu'}
+                      </p>
+                      {step.status === 'current' && (
+                        <Button size="sm" className="mt-3 w-full" variant="outline">
+                          Lengkapi Sekarang
+                        </Button>
+                      )}
+                    </div>
                   ))}
                 </div>
-              )}
-            </div>
 
-            {/* Sidebar: Profile & Quick Links */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Informasi Akun</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center text-gold font-bold text-xl">
-                      {profile?.name?.charAt(0).toUpperCase() || "U"}
+                {/* Desktop Stepper (Horizontal) */}
+                <div className="hidden md:flex justify-between relative">
+                  <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-100 -z-10 -mt-8 rounded-full"></div>
+                  {steps.map((step, index) => (
+                    <div key={step.id} className="flex flex-col items-center relative z-10 w-1/6">
+                      <div className={`w-14 h-14 rounded-full flex items-center justify-center border-4 bg-white transition-all duration-300
+                        ${step.status === 'completed' ? 'border-green-500 text-green-600 shadow-green-100' : 
+                          step.status === 'current' ? 'border-primary text-primary shadow-lg scale-110' : 'border-gray-100 text-gray-300'}`}>
+                        <step.icon className="h-6 w-6" />
+                      </div>
+                      <div className="text-center mt-4">
+                        <h4 className={`font-bold text-sm ${step.status === 'current' ? 'text-primary' : 'text-gray-600'}`}>
+                          {step.title}
+                        </h4>
+                        <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block
+                          ${step.status === 'completed' ? 'bg-green-100 text-green-700' : 
+                            step.status === 'current' ? 'bg-blue-100 text-blue-700' : 'text-gray-400'}`}>
+                          {step.status === 'completed' ? 'Selesai' : step.status === 'current' ? 'Proses' : 'Menunggu'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="overflow-hidden">
-                      <div className="font-bold truncate">{profile?.name || "User"}</div>
-                      <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
-                    </div>
-                  </div>
-                  <div className="pt-4 border-t space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4" /> Role
-                      </span>
-                      <span className="font-medium capitalize px-2 py-0.5 bg-accent/10 text-accent rounded text-xs">
-                        {role || "Buyer"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground flex items-center gap-2">
-                        <Calendar className="w-4 h-4" /> Bergabung
-                      </span>
-                      <span className="font-medium">
-                        {profile?.created_at ? format(new Date(profile.created_at), "MMM yyyy", { locale: localeId }) : "-"}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Bantuan Cepat</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    <a href="https://wa.me/628123456789" target="_blank" rel="noreferrer" className="flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors">
-                      <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center text-success">
-                        <Bell className="w-4 h-4" />
-                      </div>
-                      <div className="text-sm font-medium">Hubungi Customer Service</div>
-                    </a>
-                    <Link to="/galeri" className="flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                        <MapPin className="w-4 h-4" />
-                      </div>
-                      <div className="text-sm font-medium">Lihat Dokumentasi Perjalanan</div>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+        {/* Quick Actions Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/my-bookings')}>
+            <CardContent className="p-6 flex items-center space-x-4">
+              <div className="bg-orange-100 p-3 rounded-xl group-hover:bg-orange-200 transition-colors">
+                <FileText className="h-6 w-6 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Riwayat Booking</h3>
+                <p className="text-sm text-gray-500">Lihat semua transaksi</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/profile')}>
+            <CardContent className="p-6 flex items-center space-x-4">
+              <div className="bg-purple-100 p-3 rounded-xl group-hover:bg-purple-200 transition-colors">
+                <User className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Edit Profil</h3>
+                <p className="text-sm text-gray-500">Update data jamaah</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer group border-red-100 bg-red-50/50">
+            <CardContent className="p-6 flex items-center space-x-4">
+              <div className="bg-red-100 p-3 rounded-xl group-hover:bg-red-200 transition-colors">
+                <AlertCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-red-900">Bantuan</h3>
+                <p className="text-sm text-red-500">Hubungi Admin</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </main>
-      <Footer />
+      </div>
     </div>
   );
 };
 
-export default UserDashboard;
+export default Dashboard;
