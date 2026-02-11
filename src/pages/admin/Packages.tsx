@@ -47,6 +47,7 @@ const AdminPackages = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Package | null>(null);
   const [expandedCommission, setExpandedCommission] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
   const [categories, setCategories] = useState<Option[]>([]);
@@ -240,6 +241,40 @@ const AdminPackages = () => {
     setExtraHotels(extraHotels.filter((_, i) => i !== index));
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `package-images/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('cms_images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('cms_images')
+        .getPublicUrl(filePath);
+
+      setForm({ ...form, image_url: publicUrl });
+      toast({ title: "Foto berhasil diunggah!" });
+    } catch (error: any) {
+      console.error("Error uploading image:", error);
+      toast({ 
+        title: "Gagal mengunggah foto", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const makkahHotels = hotels.filter(h => h.city === "Makkah");
   const madinahHotels = hotels.filter(h => h.city === "Madinah");
 
@@ -384,10 +419,41 @@ const AdminPackages = () => {
                 </div>
               </div>
               <div>
-                <Label>URL Gambar Paket</Label>
-                <Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://... atau upload ke CMS Images" className="mt-1" />
+                <Label>Foto Paket</Label>
+                <div className="mt-1 space-y-2">
+                  <Input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleFileUpload} 
+                    disabled={uploading}
+                    className="cursor-pointer"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="h-[1px] flex-1 bg-border" />
+                    <span className="text-[10px] text-muted-foreground uppercase">atau URL</span>
+                    <div className="h-[1px] flex-1 bg-border" />
+                  </div>
+                  <Input 
+                    value={form.image_url} 
+                    onChange={(e) => setForm({ ...form, image_url: e.target.value })} 
+                    placeholder="https://..." 
+                    className="text-sm"
+                  />
+                </div>
+                {uploading && <p className="text-xs text-gold animate-pulse mt-2">Mengunggah...</p>}
                 {form.image_url && (
-                  <img src={form.image_url} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg border border-border" />
+                  <div className="relative mt-2">
+                    <img src={form.image_url} alt="Preview" className="w-full h-32 object-cover rounded-lg border border-border" />
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      size="icon" 
+                      className="absolute top-2 right-2 h-6 w-6"
+                      onClick={() => setForm({ ...form, image_url: "" })}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
                 )}
               </div>
               <div>
