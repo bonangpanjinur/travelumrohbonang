@@ -70,7 +70,6 @@ const Payment = () => {
         setError(null);
         
         // Fetch booking, payments, and bank settings in parallel
-        // Note: We use a more robust query that doesn't fail if columns are missing in the DB but present in types
         const [bookingRes, paymentsRes, settingsRes] = await Promise.all([
           supabase
             .from("bookings")
@@ -95,7 +94,7 @@ const Payment = () => {
         // If the query fails due to missing columns, try a fallback query without those columns
         let finalBookingData = bookingRes.data;
         if (bookingRes.error) {
-          console.warn("Primary query failed, trying fallback:", bookingRes.error);
+          console.warn("Primary booking query failed, trying fallback:", bookingRes.error);
           const fallbackRes = await supabase
             .from("bookings")
             .select(`
@@ -108,6 +107,21 @@ const Payment = () => {
           
           if (fallbackRes.error) throw fallbackRes.error;
           finalBookingData = fallbackRes.data;
+        }
+
+        // Handle potential missing columns in payments table
+        let finalPaymentsData = paymentsRes.data;
+        if (paymentsRes.error) {
+          console.warn("Primary payments query failed, trying fallback:", paymentsRes.error);
+          const fallbackPaymentsRes = await supabase
+            .from("payments")
+            .select("id, amount, status, created_at")
+            .eq("booking_id", bookingId)
+            .order("created_at", { ascending: true });
+          
+          if (!fallbackPaymentsRes.error) {
+            finalPaymentsData = fallbackPaymentsRes.data;
+          }
         }
         
         if (!finalBookingData) throw new Error("Booking tidak ditemukan");
@@ -127,8 +141,8 @@ const Payment = () => {
 
         setBooking(bookingData);
         
-        if (paymentsRes.data) {
-          setExistingPayments(paymentsRes.data as PaymentRecord[]);
+        if (finalPaymentsData) {
+          setExistingPayments(finalPaymentsData as PaymentRecord[]);
         }
         
         if (settingsRes.data && settingsRes.data.length > 0) {
@@ -250,19 +264,29 @@ const Payment = () => {
 
     const paymentAmount = getCurrentPaymentAmount();
     const isFullPayment = paymentOption === "full" || paymentAmount >= remainingAmount;
+    const paymentType = isFullPayment ? "full" : (paidAmount === 0 ? "dp" : "installment");
 
     try {
       // Create payment record
-      const { error: paymentError } = await supabase.from("payments").insert({
+      // We try to insert with payment_type, but if it fails, we try without it
+      const paymentData: any = {
         booking_id: booking.id,
         payment_method: "transfer",
         amount: paymentAmount,
         status: "pending",
         proof_url: proofUrl,
-        payment_type: isFullPayment ? "full" : (paidAmount === 0 ? "dp" : "installment"),
-      });
+        payment_type: paymentType,
+      };
 
-      if (paymentError) throw paymentError;
+      const { error: paymentError } = await supabase.from("payments").insert(paymentData);
+
+      if (paymentError) {
+        console.warn("Primary payment insert failed, trying fallback:", paymentError);
+        // Fallback: remove payment_type if it's the cause of failure
+        const { payment_type, ...fallbackData } = paymentData;
+        const { error: fallbackError } = await supabase.from("payments").insert(fallbackData);
+        if (fallbackError) throw fallbackError;
+      }
 
       // Update booking status
       const { error: bookingError } = await supabase.from("bookings").update({ status: "waiting_payment" }).eq("id", booking.id);
