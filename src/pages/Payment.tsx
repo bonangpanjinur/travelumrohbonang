@@ -52,6 +52,7 @@ const Payment = () => {
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
   const [paymentOption, setPaymentOption] = useState<"dp" | "full">("dp");
+  const [bankAccount, setBankAccount] = useState({ bank: "Bank Mandiri", number: "123-456-7890", name: "PT UmrohPlus Travel" });
 
   useEffect(() => {
     if (!user) {
@@ -60,31 +61,45 @@ const Payment = () => {
     }
 
     const fetchData = async () => {
-      // Fetch booking data
-      const { data: bookingData } = await supabase
-        .from("bookings")
-        .select(`
-          id, booking_code, total_price, status,
-          package:packages(title, minimum_dp, dp_deadline_days, full_deadline_days),
-          departure:package_departures(departure_date)
-        `)
-        .eq("id", bookingId)
-        .eq("user_id", user.id)
-        .single();
+      // Fetch booking, payments, and bank settings in parallel
+      const [bookingRes, paymentsRes, settingsRes] = await Promise.all([
+        supabase
+          .from("bookings")
+          .select(`
+            id, booking_code, total_price, status,
+            package:packages(title, minimum_dp, dp_deadline_days, full_deadline_days),
+            departure:package_departures(departure_date)
+          `)
+          .eq("id", bookingId)
+          .eq("user_id", user.id)
+          .single(),
+        supabase
+          .from("payments")
+          .select("id, amount, status, payment_type, created_at")
+          .eq("booking_id", bookingId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("settings")
+          .select("key, value")
+          .in("key", ["bank_name", "bank_account", "bank_holder"]),
+      ]);
 
-      if (bookingData) {
-        setBooking(bookingData as unknown as BookingData);
+      if (bookingRes.data) {
+        setBooking(bookingRes.data as unknown as BookingData);
       }
-
-      // Fetch existing payments for this booking
-      const { data: paymentsData } = await supabase
-        .from("payments")
-        .select("id, amount, status, payment_type, created_at")
-        .eq("booking_id", bookingId)
-        .order("created_at", { ascending: true });
-
-      if (paymentsData) {
-        setExistingPayments(paymentsData as PaymentRecord[]);
+      if (paymentsRes.data) {
+        setExistingPayments(paymentsRes.data as PaymentRecord[]);
+      }
+      if (settingsRes.data && settingsRes.data.length > 0) {
+        const settings: Record<string, string> = {};
+        settingsRes.data.forEach((s: { key: string; value: string | null }) => {
+          if (s.value) settings[s.key] = s.value;
+        });
+        setBankAccount({
+          bank: settings.bank_name || "Bank Mandiri",
+          number: settings.bank_account || "123-456-7890",
+          name: settings.bank_holder || "PT UmrohPlus Travel",
+        });
       }
 
       setLoading(false);
@@ -222,12 +237,6 @@ const Payment = () => {
       </div>
     );
   }
-
-  const bankAccount = {
-    bank: "Bank Mandiri",
-    number: "123-456-7890",
-    name: "PT UmrohPlus Travel",
-  };
 
   const hasPendingPayment = existingPayments.some(p => p.status === "pending");
 
