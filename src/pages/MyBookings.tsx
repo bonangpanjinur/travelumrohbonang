@@ -7,12 +7,13 @@ import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Calendar, Package, ArrowRight, Printer } from "lucide-react";
+import { Calendar, Package, ArrowRight, Printer, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import InvoiceButton from "@/components/InvoiceButton";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import EmptyState from "@/components/ui/empty-state";
+import { useToast } from "@/hooks/use-toast";
 
 interface BookingItem {
   id: string;
@@ -41,8 +42,10 @@ const statusLabels: Record<string, string> = {
 const MyBookings = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -52,22 +55,36 @@ const MyBookings = () => {
     }
 
     const fetchBookings = async () => {
-      const { data } = await supabase
-        .from("bookings")
-        .select(`
-          id, booking_code, total_price, status, created_at,
-          package:packages(title, slug),
-          departure:package_departures(departure_date)
-        `)
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      try {
+        setLoading(true);
+        setError(null);
+        const { data, error: fetchError } = await supabase
+          .from("bookings")
+          .select(`
+            id, booking_code, total_price, status, created_at,
+            package:packages(title, slug),
+            departure:package_departures(departure_date)
+          `)
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
 
-      setBookings((data as unknown as BookingItem[]) || []);
-      setLoading(false);
+        if (fetchError) throw fetchError;
+        setBookings((data as unknown as BookingItem[]) || []);
+      } catch (err: any) {
+        console.error("Error fetching bookings:", err);
+        setError(err.message || "Gagal memuat data booking");
+        toast({
+          title: "Error",
+          description: "Gagal memuat data booking Anda.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchBookings();
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, toast]);
 
   if (loading || authLoading) {
     return <LoadingSpinner fullScreen />;
@@ -80,7 +97,16 @@ const MyBookings = () => {
         <div className="container-custom max-w-4xl">
           <h1 className="text-2xl md:text-3xl font-display font-bold mb-8">Booking Saya</h1>
 
-          {bookings.length === 0 ? (
+          {error ? (
+            <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-8 text-center">
+              <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-destructive mb-2">Terjadi Kesalahan</h3>
+              <p className="text-muted-foreground mb-6">{error}</p>
+              <Button onClick={() => window.location.reload()} variant="outline">
+                Coba Lagi
+              </Button>
+            </div>
+          ) : bookings.length === 0 ? (
             <EmptyState
               icon={Package}
               title="Belum ada booking"

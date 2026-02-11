@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
-import { Check, Copy, ArrowLeft, CreditCard, Upload, Image, Loader2, Wallet, Clock, AlertTriangle, Printer } from "lucide-react";
+import { Check, Copy, ArrowLeft, CreditCard, Upload, Image, Loader2, Wallet, Clock, AlertTriangle, Printer, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, addDays } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -21,6 +21,7 @@ interface BookingData {
   booking_code: string;
   total_price: number;
   status: string;
+  user_id: string;
   package: { 
     title: string; 
     minimum_dp: number | null;
@@ -41,7 +42,7 @@ interface PaymentRecord {
 const Payment = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [booking, setBooking] = useState<BookingData | null>(null);
@@ -53,60 +54,85 @@ const Payment = () => {
   const [proofPreview, setProofPreview] = useState<string | null>(null);
   const [paymentOption, setPaymentOption] = useState<"dp" | "full">("dp");
   const [bankAccount, setBankAccount] = useState({ bank: "Bank Mandiri", number: "123-456-7890", name: "PT UmrohPlus Travel" });
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
+    
     if (!user) {
       navigate("/auth");
       return;
     }
 
     const fetchData = async () => {
-      // Fetch booking, payments, and bank settings in parallel
-      const [bookingRes, paymentsRes, settingsRes] = await Promise.all([
-        supabase
-          .from("bookings")
-          .select(`
-            id, booking_code, total_price, status,
-            package:packages(title, minimum_dp, dp_deadline_days, full_deadline_days),
-            departure:package_departures(departure_date)
-          `)
-          .eq("id", bookingId)
-          .eq("user_id", user.id)
-          .single(),
-        supabase
-          .from("payments")
-          .select("id, amount, status, payment_type, created_at")
-          .eq("booking_id", bookingId)
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("settings")
-          .select("key, value")
-          .in("key", ["bank_name", "bank_account", "bank_holder"]),
-      ]);
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Fetch booking, payments, and bank settings in parallel
+        const [bookingRes, paymentsRes, settingsRes] = await Promise.all([
+          supabase
+            .from("bookings")
+            .select(`
+              id, booking_code, total_price, status, user_id,
+              package:packages(title, minimum_dp, dp_deadline_days, full_deadline_days),
+              departure:package_departures(departure_date)
+            `)
+            .eq("id", bookingId)
+            .single(),
+          supabase
+            .from("payments")
+            .select("id, amount, status, payment_type, created_at")
+            .eq("booking_id", bookingId)
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("settings")
+            .select("key, value")
+            .in("key", ["bank_name", "bank_account", "bank_holder"]),
+        ]);
 
-      if (bookingRes.data) {
-        setBooking(bookingRes.data as unknown as BookingData);
-      }
-      if (paymentsRes.data) {
-        setExistingPayments(paymentsRes.data as PaymentRecord[]);
-      }
-      if (settingsRes.data && settingsRes.data.length > 0) {
-        const settings: Record<string, string> = {};
-        settingsRes.data.forEach((s: { key: string; value: string | null }) => {
-          if (s.value) settings[s.key] = s.value;
-        });
-        setBankAccount({
-          bank: settings.bank_name || "Bank Mandiri",
-          number: settings.bank_account || "123-456-7890",
-          name: settings.bank_holder || "PT UmrohPlus Travel",
-        });
-      }
+        if (bookingRes.error) throw bookingRes.error;
+        
+        const bookingData = bookingRes.data as unknown as BookingData;
+        
+        // CRITICAL FIX: Verify ownership
+        if (bookingData.user_id !== user.id) {
+          setError("Anda tidak memiliki akses ke data booking ini.");
+          toast({
+            title: "Akses Ditolak",
+            description: "Anda tidak memiliki izin untuk melihat pembayaran ini.",
+            variant: "destructive",
+          });
+          return;
+        }
 
-      setLoading(false);
+        setBooking(bookingData);
+        
+        if (paymentsRes.data) {
+          setExistingPayments(paymentsRes.data as PaymentRecord[]);
+        }
+        
+        if (settingsRes.data && settingsRes.data.length > 0) {
+          const settings: Record<string, string> = {};
+          settingsRes.data.forEach((s: { key: string; value: string | null }) => {
+            if (s.value) settings[s.key] = s.value;
+          });
+          setBankAccount({
+            bank: settings.bank_name || "Bank Mandiri",
+            number: settings.bank_account || "123-456-7890",
+            name: settings.bank_holder || "PT UmrohPlus Travel",
+          });
+        }
+      } catch (err: any) {
+        console.error("Error fetching payment data:", err);
+        setError(err.message || "Gagal memuat data pembayaran");
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
-  }, [bookingId, user, navigate]);
+  }, [bookingId, user, authLoading, navigate, toast]);
 
   // Calculate paid amount and remaining
   const paidAmount = existingPayments
@@ -206,33 +232,48 @@ const Payment = () => {
     const paymentAmount = getCurrentPaymentAmount();
     const isFullPayment = paymentOption === "full" || paymentAmount >= remainingAmount;
 
-    // Create payment record
-    await supabase.from("payments").insert({
-      booking_id: booking.id,
-      payment_method: "transfer",
-      amount: paymentAmount,
-      status: "pending",
-      proof_url: proofUrl,
-      payment_type: isFullPayment ? "full" : (paidAmount === 0 ? "dp" : "installment"),
-    });
+    try {
+      // Create payment record
+      const { error: paymentError } = await supabase.from("payments").insert({
+        booking_id: booking.id,
+        payment_method: "transfer",
+        amount: paymentAmount,
+        status: "pending",
+        proof_url: proofUrl,
+        payment_type: isFullPayment ? "full" : (paidAmount === 0 ? "dp" : "installment"),
+      });
 
-    // Update booking status
-    await supabase.from("bookings").update({ status: "waiting_payment" }).eq("id", booking.id);
+      if (paymentError) throw paymentError;
 
-    toast({ title: "Pembayaran dikonfirmasi!", description: "Menunggu verifikasi admin" });
-    navigate("/my-bookings");
+      // Update booking status
+      const { error: bookingError } = await supabase.from("bookings").update({ status: "waiting_payment" }).eq("id", booking.id);
+      
+      if (bookingError) throw bookingError;
+
+      toast({ title: "Pembayaran dikonfirmasi!", description: "Menunggu verifikasi admin" });
+      navigate("/my-bookings");
+    } catch (err: any) {
+      console.error("Payment confirmation error:", err);
+      toast({
+        title: "Gagal Konfirmasi",
+        description: err.message || "Terjadi kesalahan saat mengonfirmasi pembayaran.",
+        variant: "destructive",
+      });
+    }
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return <LoadingSpinner fullScreen />;
   }
 
-  if (!booking) {
+  if (error || !booking) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <h1 className="text-2xl font-bold mb-4">Booking tidak ditemukan</h1>
-        <Link to="/">
-          <Button>Kembali ke Beranda</Button>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center">
+        <AlertCircle className="w-16 h-16 text-destructive mb-4" />
+        <h1 className="text-2xl font-bold mb-2">{error || "Booking tidak ditemukan"}</h1>
+        <p className="text-muted-foreground mb-6">Silakan periksa kembali data booking Anda atau hubungi admin.</p>
+        <Link to="/my-bookings">
+          <Button className="gradient-gold text-primary">Kembali ke Booking Saya</Button>
         </Link>
       </div>
     );
@@ -281,305 +322,127 @@ const Payment = () => {
                 </Button>
               </div>
 
-              {/* Package Info */}
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Paket</span>
-                  <span className="font-semibold">{booking.package?.title}</span>
+              {/* Progress */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Progres Pembayaran</span>
+                  <span className="font-bold">{Math.round(paymentProgress)}%</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Harga</span>
-                  <span className="font-semibold">Rp {booking.total_price.toLocaleString("id-ID")}</span>
+                <Progress value={paymentProgress} className="h-2" />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Terbayar: Rp {paidAmount.toLocaleString("id-ID")}</span>
+                  <span>Total: Rp {booking.total_price.toLocaleString("id-ID")}</span>
                 </div>
-                {minimumDp > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Minimal DP</span>
-                    <span className="font-semibold text-gold">Rp {minimumDp.toLocaleString("id-ID")}</span>
-                  </div>
-                )}
               </div>
 
-              {/* Deadline Info */}
-              {departureDate && (
-                <div className={`p-4 rounded-xl border ${
-                  (isDpOverdue && paidAmount === 0) || (isFullOverdue && remainingAmount > 0)
-                    ? "border-destructive/50 bg-destructive/5"
-                    : "border-border bg-muted/50"
-                }`}>
-                  <h3 className="font-semibold flex items-center gap-2 mb-3">
-                    <Clock className="w-5 h-5 text-gold" />
-                    Deadline Pembayaran
-                  </h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Tanggal Keberangkatan</span>
-                      <span className="font-semibold">
-                        {format(departureDate, "d MMMM yyyy", { locale: localeId })}
-                      </span>
-                    </div>
-                    {paidAmount === 0 && dpDeadline && (
-                      <div className={`flex justify-between items-center ${
-                        isDpOverdue ? "text-destructive" : daysUntilDpDeadline !== null && daysUntilDpDeadline <= 7 ? "text-yellow-600" : ""
-                      }`}>
-                        <span className="flex items-center gap-1">
-                          {isDpOverdue && <AlertTriangle className="w-4 h-4" />}
-                          Deadline DP
-                        </span>
-                        <span className="font-semibold">
-                          {format(dpDeadline, "d MMMM yyyy", { locale: localeId })}
-                          {daysUntilDpDeadline !== null && (
-                            <span className="ml-1">
-                              ({isDpOverdue ? "Lewat!" : `${daysUntilDpDeadline} hari lagi`})
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    )}
-                    {paidAmount > 0 && remainingAmount > 0 && fullDeadline && (
-                      <div className={`flex justify-between items-center ${
-                        isFullOverdue ? "text-destructive" : daysUntilFullDeadline !== null && daysUntilFullDeadline <= 7 ? "text-yellow-600" : ""
-                      }`}>
-                        <span className="flex items-center gap-1">
-                          {isFullOverdue && <AlertTriangle className="w-4 h-4" />}
-                          Deadline Pelunasan
-                        </span>
-                        <span className="font-semibold">
-                          {format(fullDeadline, "d MMMM yyyy", { locale: localeId })}
-                          {daysUntilFullDeadline !== null && (
-                            <span className="ml-1">
-                              ({isFullOverdue ? "Lewat!" : `${daysUntilFullDeadline} hari lagi`})
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Payment Progress */}
-              {(paidAmount > 0 || pendingAmount > 0) && (
-                <div className="p-4 bg-muted rounded-xl space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Progress Pembayaran</span>
-                    <span className="font-semibold">{paymentProgress.toFixed(0)}%</span>
-                  </div>
-                  <Progress value={paymentProgress} className="h-2" />
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="text-muted-foreground">Sudah Dibayar</div>
-                      <div className="font-semibold text-success">Rp {paidAmount.toLocaleString("id-ID")}</div>
-                    </div>
-                    {pendingAmount > 0 && (
-                      <div>
-                        <div className="text-muted-foreground">Menunggu Verifikasi</div>
-                        <div className="font-semibold text-warning">Rp {pendingAmount.toLocaleString("id-ID")}</div>
-                      </div>
-                    )}
-                    <div>
-                      <div className="text-muted-foreground">Sisa Pembayaran</div>
-                      <div className="font-semibold text-gold">Rp {remainingAmount.toLocaleString("id-ID")}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Payment History */}
-              {existingPayments.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="font-semibold">Riwayat Pembayaran</h3>
-                  <div className="space-y-2">
-                    {existingPayments.map((payment, index) => (
-                      <div key={payment.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg text-sm">
+              {/* Payment Options */}
+              {remainingAmount > 0 && !hasPendingPayment && (
+                <div className="space-y-4">
+                  <h3 className="font-bold">Pilih Opsi Pembayaran</h3>
+                  <RadioGroup value={paymentOption} onValueChange={(v: "dp" | "full") => setPaymentOption(v)} className="grid grid-cols-1 gap-3">
+                    {paidAmount === 0 && minimumDp > 0 && (
+                      <div className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-colors ${paymentOption === "dp" ? "border-gold bg-gold/5" : "border-border"}`}>
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                            payment.status === "paid" ? "bg-success/10 text-success" :
-                            payment.status === "pending" ? "bg-warning/10 text-warning" :
-                            "bg-destructive/10 text-destructive"
-                          }`}>
-                            {index + 1}
-                          </div>
-                          <div>
-                            <div className="font-medium capitalize">
-                              {payment.payment_type === "dp" ? "Down Payment" : 
-                               payment.payment_type === "installment" ? "Cicilan" : "Pelunasan"}
-                            </div>
-                            <div className="text-muted-foreground text-xs">
-                              {new Date(payment.created_at).toLocaleDateString("id-ID")}
-                            </div>
-                          </div>
+                          <RadioGroupItem value="dp" id="dp" />
+                          <Label htmlFor="dp" className="cursor-pointer">
+                            <div className="font-bold">Uang Muka (DP)</div>
+                            <div className="text-xs text-muted-foreground">Minimal pembayaran awal</div>
+                          </Label>
                         </div>
-                        <div className="text-right">
-                          <div className="font-semibold">Rp {payment.amount.toLocaleString("id-ID")}</div>
-                          <div className={`text-xs ${
-                            payment.status === "paid" ? "text-success" :
-                            payment.status === "pending" ? "text-warning" :
-                            "text-destructive"
-                          }`}>
-                            {payment.status === "paid" ? "Terverifikasi" :
-                             payment.status === "pending" ? "Menunggu" : "Ditolak"}
-                          </div>
-                        </div>
+                        <div className="font-bold text-gold">Rp {minimumDp.toLocaleString("id-ID")}</div>
                       </div>
-                    ))}
-                  </div>
+                    )}
+                    <div className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-colors ${paymentOption === "full" ? "border-gold bg-gold/5" : "border-border"}`}>
+                      <div className="flex items-center gap-3">
+                        <RadioGroupItem value="full" id="full" />
+                        <Label htmlFor="full" className="cursor-pointer">
+                          <div className="font-bold">{paidAmount > 0 ? "Pelunasan" : "Bayar Lunas"}</div>
+                          <div className="text-xs text-muted-foreground">Sisa pembayaran yang harus dibayar</div>
+                        </Label>
+                      </div>
+                      <div className="font-bold text-gold">Rp {remainingAmount.toLocaleString("id-ID")}</div>
+                    </div>
+                  </RadioGroup>
                 </div>
               )}
 
-              {/* Show payment form only if no pending payment and remaining > 0 */}
+              {/* Bank Details */}
+              <div className="p-6 border border-dashed border-border rounded-2xl bg-muted/30">
+                <h3 className="text-center text-sm text-muted-foreground mb-4">Transfer ke Rekening:</h3>
+                <div className="text-center space-y-1">
+                  <div className="font-bold text-lg">{bankAccount.bank}</div>
+                  <div className="text-2xl font-mono font-bold text-primary tracking-wider">{bankAccount.number}</div>
+                  <div className="text-sm">a.n {bankAccount.name}</div>
+                </div>
+              </div>
+
+              {/* Upload Proof */}
               {!hasPendingPayment && remainingAmount > 0 && (
-                <>
-                  {/* Payment Option Selection */}
-                  {minimumDp > 0 && paidAmount === 0 && (
-                    <div className="p-4 border border-border rounded-xl space-y-4">
-                      <h3 className="font-semibold flex items-center gap-2">
-                        <CreditCard className="w-5 h-5 text-gold" />
-                        Pilih Jenis Pembayaran
-                      </h3>
-                      <RadioGroup value={paymentOption} onValueChange={(v) => setPaymentOption(v as "dp" | "full")}>
-                        <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:border-gold/50 transition-colors">
-                          <RadioGroupItem value="dp" id="dp" />
-                          <Label htmlFor="dp" className="flex-1 cursor-pointer">
-                            <div className="font-medium">Bayar DP Dulu</div>
-                            <div className="text-sm text-muted-foreground">
-                              Rp {minimumDp.toLocaleString("id-ID")} (minimal)
-                            </div>
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:border-gold/50 transition-colors">
-                          <RadioGroupItem value="full" id="full" />
-                          <Label htmlFor="full" className="flex-1 cursor-pointer">
-                            <div className="font-medium">Bayar Lunas</div>
-                            <div className="text-sm text-muted-foreground">
-                              Rp {remainingAmount.toLocaleString("id-ID")}
-                            </div>
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  )}
-
-                  {/* Amount to Pay */}
-                  <div className="p-4 border-2 border-gold/30 bg-gold/5 rounded-xl">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-lg">Jumlah yang Dibayar</span>
-                      <span className="font-display font-bold text-2xl text-gold">
-                        Rp {getCurrentPaymentAmount().toLocaleString("id-ID")}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Bank Info */}
-                  <div className="p-4 border border-border rounded-xl">
-                    <h3 className="font-bold flex items-center gap-2 mb-3">
-                      <CreditCard className="w-5 h-5 text-gold" />
-                      Transfer ke Rekening
-                    </h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Bank</span>
-                        <span className="font-semibold">{bankAccount.bank}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">No. Rekening</span>
-                        <span className="font-mono font-semibold">{bankAccount.number}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Atas Nama</span>
-                        <span className="font-semibold">{bankAccount.name}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Upload Proof */}
-                  <div className="border-2 border-dashed border-border rounded-xl p-6">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      accept="image/jpeg,image/png,image/webp"
-                      className="hidden"
+                <div className="space-y-4">
+                  <h3 className="font-bold">Upload Bukti Transfer</h3>
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-2xl p-8 text-center cursor-pointer hover:border-gold/50 hover:bg-muted/50 transition-all"
+                  >
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleFileChange} 
+                      className="hidden" 
+                      accept="image/*"
                     />
-                    
                     {proofPreview ? (
-                      <div className="space-y-4">
-                        <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-                          <img src={proofPreview} alt="Bukti pembayaran" className="w-full h-full object-contain" />
+                      <div className="relative aspect-video max-w-xs mx-auto rounded-lg overflow-hidden">
+                        <img src={proofPreview} alt="Preview" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                          <Upload className="w-8 h-8 text-white" />
                         </div>
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={uploading}
-                        >
-                          {uploading ? (
-                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Mengupload...</>
-                          ) : (
-                            <><Image className="w-4 h-4 mr-2" /> Ganti Bukti Pembayaran</>
-                          )}
-                        </Button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploading}
-                        className="w-full text-center"
-                      >
-                        <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center mb-4">
-                          {uploading ? (
-                            <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
-                          ) : (
-                            <Upload className="w-8 h-8 text-muted-foreground" />
-                          )}
+                      <div className="space-y-2">
+                        <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto">
+                          <Image className="w-6 h-6 text-muted-foreground" />
                         </div>
-                        <div className="font-semibold">Upload Bukti Pembayaran</div>
-                        <div className="text-sm text-muted-foreground mt-1">
-                          JPG, PNG, atau WebP (maks. 5MB)
-                        </div>
-                      </button>
+                        <div className="font-medium">Klik untuk upload bukti</div>
+                        <div className="text-xs text-muted-foreground">Format JPG, PNG, atau WebP (Maks. 5MB)</div>
+                      </div>
                     )}
-                  </div>
-
-                  <div className="text-sm text-muted-foreground text-center">
-                    Setelah transfer, upload bukti pembayaran dan klik konfirmasi.
-                    Tim kami akan memverifikasi dalam 1x24 jam.
-                  </div>
-
-                  <Button 
-                    onClick={handleConfirmPayment} 
-                    className="w-full gradient-gold text-primary font-semibold"
-                    disabled={!proofUrl || uploading}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Konfirmasi Pembayaran {paymentOption === "dp" && paidAmount === 0 ? "DP" : ""}
-                  </Button>
-                </>
-              )}
-
-              {/* Message when all paid */}
-              {remainingAmount <= 0 && (
-                <div className="p-6 text-center bg-success/10 rounded-xl">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-success/20 flex items-center justify-center mb-4">
-                    <Check className="w-8 h-8 text-success" />
-                  </div>
-                  <h3 className="font-bold text-lg text-success">Pembayaran Lunas!</h3>
-                  <p className="text-success/80 mt-2">Terima kasih, pembayaran Anda telah selesai.</p>
-                  <div className="mt-4">
-                    <InvoiceButton bookingId={booking.id} variant="default" showLabel />
                   </div>
                 </div>
               )}
 
-              {/* Message when pending */}
-              {hasPendingPayment && remainingAmount > 0 && (
-                <div className="p-6 text-center bg-warning/10 rounded-xl">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-warning/20 flex items-center justify-center mb-4">
-                    <Loader2 className="w-8 h-8 text-warning" />
+              {/* Action Button */}
+              {hasPendingPayment ? (
+                <div className="p-4 bg-warning/10 border border-warning/20 rounded-xl flex items-start gap-3">
+                  <Clock className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-warning">Menunggu Verifikasi</div>
+                    <p className="text-sm text-muted-foreground">Pembayaran Anda sedang diperiksa oleh tim kami. Mohon tunggu 1x24 jam.</p>
                   </div>
-                  <h3 className="font-bold text-lg text-warning">Menunggu Verifikasi</h3>
-                  <p className="text-warning/80 mt-2">
-                    Pembayaran Anda sedang diverifikasi. Silakan cek kembali nanti.
-                  </p>
+                </div>
+              ) : remainingAmount > 0 ? (
+                <Button 
+                  className="w-full gradient-gold text-primary h-12 text-lg font-bold"
+                  disabled={!proofUrl || uploading}
+                  onClick={handleConfirmPayment}
+                >
+                  {uploading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+                  Konfirmasi Pembayaran
+                </Button>
+              ) : (
+                <div className="p-4 bg-success/10 border border-success/20 rounded-xl flex items-start gap-3">
+                  <Check className="w-5 h-5 text-success shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-success">Pembayaran Lunas</div>
+                    <p className="text-sm text-muted-foreground">Terima kasih! Pembayaran Anda telah kami terima dan diverifikasi.</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Invoice Link */}
+              {paidAmount > 0 && (
+                <div className="pt-4 border-t border-border">
+                  <InvoiceButton bookingId={booking.id} className="w-full" />
                 </div>
               )}
             </div>

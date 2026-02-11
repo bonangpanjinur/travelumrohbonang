@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Users, Minus, Plus, Building2, UserCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Users, Minus, Plus, Building2, UserCheck, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -60,7 +60,7 @@ const STEPS = ["Pilih Kamar", "Data Jemaah", "PIC & Konfirmasi"];
 const Booking = () => {
   const { slug, departureId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
   const [step, setStep] = useState(0);
@@ -80,7 +80,14 @@ const Booking = () => {
   const [picAgentId, setPicAgentId] = useState<string>("");
 
   useEffect(() => {
+    if (authLoading) return;
+    
     if (!user) {
+      toast({
+        title: "Login Diperlukan",
+        description: "Silakan login atau register terlebih dahulu untuk melakukan booking.",
+        variant: "destructive",
+      });
       navigate("/auth");
       return;
     }
@@ -120,7 +127,7 @@ const Booking = () => {
     };
 
     fetchData();
-  }, [slug, departureId, user, navigate]);
+  }, [slug, departureId, user, authLoading, navigate, toast]);
 
   const updateRoomQuantity = (roomType: string, delta: number) => {
     setRooms((prev) =>
@@ -197,7 +204,7 @@ const Booking = () => {
         .from("bookings")
         .insert({
           booking_code: bookingCode,
-          user_id: user.id,
+          user_id: user.id, // CRITICAL FIX: Menautkan booking ke user
           package_id: pkg.id,
           departure_id: departure.id,
           total_price: getTotalPrice(),
@@ -249,10 +256,10 @@ const Booking = () => {
     }
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+        <Loader2 className="h-12 w-12 animate-spin text-gold" />
       </div>
     );
   }
@@ -313,60 +320,59 @@ const Booking = () => {
                 {rooms.map((room) => (
                   <div key={room.room_type} className="flex items-center justify-between p-4 border border-border rounded-xl">
                     <div>
-                      <div className="font-semibold">{getRoomLabel(room.room_type)}</div>
-                      <div className="text-sm text-gold font-bold">Rp {room.price.toLocaleString("id-ID")}/orang</div>
+                      <p className="font-bold">{getRoomLabel(room.room_type)}</p>
+                      <p className="text-gold font-semibold">Rp {room.price.toLocaleString("id-ID")}</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Button variant="outline" size="icon" onClick={() => updateRoomQuantity(room.room_type, -1)}>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => updateRoomQuantity(room.room_type, -1)}
+                        className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted"
+                      >
                         <Minus className="w-4 h-4" />
-                      </Button>
-                      <span className="w-8 text-center font-bold">{room.quantity}</span>
-                      <Button variant="outline" size="icon" onClick={() => updateRoomQuantity(room.room_type, 1)}>
+                      </button>
+                      <span className="font-bold w-4 text-center">{room.quantity}</span>
+                      <button
+                        onClick={() => updateRoomQuantity(room.room_type, 1)}
+                        className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted"
+                      >
                         <Plus className="w-4 h-4" />
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 ))}
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Users className="w-5 h-5" />
-                  <span>Total: {getTotalPeople()} jemaah</span>
-                </div>
               </div>
             )}
 
             {step === 1 && (
               <div className="space-y-6">
-                <h2 className="text-xl font-display font-bold">Data Jemaah ({pilgrims.length} orang)</h2>
-                {pilgrims.map((pilgrim, idx) => (
-                  <div key={idx} className="p-4 border border-border rounded-xl space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold">Jemaah {idx + 1}</span>
-                    </div>
+                <h2 className="text-xl font-display font-bold">Data Jemaah</h2>
+                {pilgrims.map((p, i) => (
+                  <div key={i} className="space-y-4 p-4 border border-border rounded-xl">
+                    <p className="font-bold text-gold">Jemaah #{i + 1}</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Nama Lengkap *</Label>
+                      <div className="space-y-2">
+                        <Label>Nama Lengkap (Sesuai Paspor)</Label>
                         <Input
-                          value={pilgrim.name}
+                          value={p.name}
                           onChange={(e) => {
-                            const updated = [...pilgrims];
-                            updated[idx].name = e.target.value;
-                            setPilgrims(updated);
+                            const newPilgrims = [...pilgrims];
+                            newPilgrims[i].name = e.target.value;
+                            setPilgrims(newPilgrims);
                           }}
-                          placeholder="Sesuai KTP/Paspor"
-                          className="mt-1"
+                          placeholder="Contoh: Ahmad Abdullah"
                         />
                       </div>
-                      <div>
-                        <Label>Jenis Kelamin *</Label>
+                      <div className="space-y-2">
+                        <Label>Jenis Kelamin</Label>
                         <Select
-                          value={pilgrim.gender}
-                          onValueChange={(v) => {
-                            const updated = [...pilgrims];
-                            updated[idx].gender = v;
-                            setPilgrims(updated);
+                          value={p.gender}
+                          onValueChange={(val) => {
+                            const newPilgrims = [...pilgrims];
+                            newPilgrims[i].gender = val;
+                            setPilgrims(newPilgrims);
                           }}
                         >
-                          <SelectTrigger className="mt-1">
+                          <SelectTrigger>
                             <SelectValue placeholder="Pilih" />
                           </SelectTrigger>
                           <SelectContent>
@@ -375,30 +381,28 @@ const Booking = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div>
-                        <Label>No. HP</Label>
+                      <div className="space-y-2">
+                        <Label>Nomor NIK (Opsional)</Label>
                         <Input
-                          value={pilgrim.phone}
+                          value={p.nik}
                           onChange={(e) => {
-                            const updated = [...pilgrims];
-                            updated[idx].phone = e.target.value;
-                            setPilgrims(updated);
+                            const newPilgrims = [...pilgrims];
+                            newPilgrims[i].nik = e.target.value;
+                            setPilgrims(newPilgrims);
                           }}
-                          placeholder="08xxxxxxxxxx"
-                          className="mt-1"
+                          placeholder="16 digit NIK"
                         />
                       </div>
-                      <div>
-                        <Label>NIK</Label>
+                      <div className="space-y-2">
+                        <Label>Nomor HP (Opsional)</Label>
                         <Input
-                          value={pilgrim.nik}
+                          value={p.phone}
                           onChange={(e) => {
-                            const updated = [...pilgrims];
-                            updated[idx].nik = e.target.value;
-                            setPilgrims(updated);
+                            const newPilgrims = [...pilgrims];
+                            newPilgrims[i].phone = e.target.value;
+                            setPilgrims(newPilgrims);
                           }}
-                          placeholder="16 digit"
-                          className="mt-1"
+                          placeholder="0812..."
                         />
                       </div>
                     </div>
@@ -409,184 +413,110 @@ const Booking = () => {
 
             {step === 2 && (
               <div className="space-y-6">
-                <h2 className="text-xl font-display font-bold">PIC & Konfirmasi Booking</h2>
+                <h2 className="text-xl font-display font-bold">PIC & Konfirmasi</h2>
                 
-                {/* PIC Selection */}
-                <div className="p-4 border border-border rounded-xl space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <UserCheck className="w-5 h-5 text-gold" />
-                    Pilih Penanggung Jawab (PIC)
-                  </h3>
-                    <RadioGroup value={picType} onValueChange={setPicType} className="space-y-3">
-                    <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:border-gold/50 cursor-pointer">
+                <div className="space-y-4">
+                  <Label>Siapa yang membantu pendaftaran Anda?</Label>
+                  <RadioGroup value={picType} onValueChange={setPicType} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-center space-x-2 border border-border p-4 rounded-xl cursor-pointer hover:border-gold/50">
                       <RadioGroupItem value="pusat" id="pusat" />
-                      <Label htmlFor="pusat" className="flex-1 cursor-pointer">
-                        <span className="font-medium">Kantor Pusat</span>
-                        <span className="block text-sm text-muted-foreground">Booking langsung dari kantor pusat</span>
-                      </Label>
+                      <Label htmlFor="pusat" className="cursor-pointer">Kantor Pusat</Label>
                     </div>
-                    
-                    <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:border-gold/50 cursor-pointer">
+                    <div className="flex items-center space-x-2 border border-border p-4 rounded-xl cursor-pointer hover:border-gold/50">
                       <RadioGroupItem value="branch" id="branch" />
-                      <Label htmlFor="branch" className="flex-1 cursor-pointer">
-                        <span className="font-medium">Cabang</span>
-                        <span className="block text-sm text-muted-foreground">Booking melalui kantor cabang</span>
-                      </Label>
+                      <Label htmlFor="branch" className="cursor-pointer">Cabang</Label>
                     </div>
-                    
-                    <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:border-gold/50 cursor-pointer">
+                    <div className="flex items-center space-x-2 border border-border p-4 rounded-xl cursor-pointer hover:border-gold/50">
                       <RadioGroupItem value="agent" id="agent" />
-                      <Label htmlFor="agent" className="flex-1 cursor-pointer">
-                        <span className="font-medium">Agen</span>
-                        <span className="block text-sm text-muted-foreground">Booking melalui agen travel</span>
-                      </Label>
+                      <Label htmlFor="agent" className="cursor-pointer">Agen</Label>
                     </div>
                   </RadioGroup>
-                  
-                  {picType === "branch" && branches.length > 0 && (
-                    <div className="mt-4">
+
+                  {picType === "branch" && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
                       <Label>Pilih Cabang</Label>
                       <Select value={picBranchId} onValueChange={setPicBranchId}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Pilih cabang" />
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih Cabang" />
                         </SelectTrigger>
                         <SelectContent>
-                          {branches.map((branch) => (
-                            <SelectItem key={branch.id} value={branch.id}>
-                              <div className="flex items-center gap-2">
-                                <Building2 className="w-4 h-4" />
-                                {branch.name}
-                              </div>
-                            </SelectItem>
+                          {branches.map((b) => (
+                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                   )}
-                  
-                  {picType === "agent" && agents.length > 0 && (
-                    <div className="mt-4 space-y-3">
-                      {/* Select agent type: pusat or branch */}
-                      <div>
-                        <Label>Agen Dibawah</Label>
-                        <Select value={selectedAgentType} onValueChange={(v) => { setSelectedAgentType(v); setPicAgentId(""); }}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="Pilih tipe agen" />
+
+                  {picType === "agent" && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                      <div className="space-y-2">
+                        <Label>Filter Agen Berdasarkan</Label>
+                        <Select value={selectedAgentType} onValueChange={setSelectedAgentType}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Semua Agen" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="pusat">
-                              <div className="flex items-center gap-2">
-                                <Building2 className="w-4 h-4" />
-                                Agen Pusat (Langsung)
-                              </div>
-                            </SelectItem>
-                            {branches.map((branch) => (
-                              <SelectItem key={branch.id} value={branch.id}>
-                                <div className="flex items-center gap-2">
-                                  <Building2 className="w-4 h-4" />
-                                  Agen {branch.name}
-                                </div>
-                              </SelectItem>
+                            <SelectItem value="pusat">Agen Pusat</SelectItem>
+                            {branches.map((b) => (
+                              <SelectItem key={b.id} value={b.id}>Agen Cabang {b.name}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
                       
-                      {/* Select specific agent based on type */}
-                      <div>
-                        <Label>Pilih Agen</Label>
+                      <div className="space-y-2">
+                        <Label>Pilih Nama Agen</Label>
                         <Select value={picAgentId} onValueChange={setPicAgentId}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="Pilih agen" />
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih Agen" />
                           </SelectTrigger>
                           <SelectContent>
                             {agents
-                              .filter((agent) => 
-                                selectedAgentType === "pusat" 
-                                  ? agent.branch_id === null 
-                                  : agent.branch_id === selectedAgentType
-                              )
-                              .map((agent) => (
-                                <SelectItem key={agent.id} value={agent.id}>
-                                  <div className="flex items-center gap-2">
-                                    <UserCheck className="w-4 h-4" />
-                                    {agent.name}
-                                  </div>
-                                </SelectItem>
+                              .filter(a => selectedAgentType === "pusat" ? !a.branch_id : a.branch_id === selectedAgentType)
+                              .map((a) => (
+                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                               ))}
-                            {agents.filter((agent) => 
-                              selectedAgentType === "pusat" 
-                                ? agent.branch_id === null 
-                                : agent.branch_id === selectedAgentType
-                            ).length === 0 && (
-                              <div className="p-2 text-sm text-muted-foreground text-center">
-                                Tidak ada agen tersedia
-                              </div>
-                            )}
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
                   )}
                 </div>
-                
-                {/* Booking Summary */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Ringkasan Booking</h3>
-                  <div className="flex justify-between py-2 border-b border-border">
-                    <span className="text-muted-foreground">Paket</span>
-                    <span className="font-semibold">{pkg.title}</span>
+
+                <div className="p-4 bg-muted rounded-xl space-y-2">
+                  <div className="flex justify-between">
+                    <span>Total Jemaah</span>
+                    <span className="font-bold">{getTotalPeople()} Orang</span>
                   </div>
-                  <div className="flex justify-between py-2 border-b border-border">
-                    <span className="text-muted-foreground">Keberangkatan</span>
-                    <span className="font-semibold">{format(new Date(departure.departure_date), "d MMMM yyyy", { locale: localeId })}</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-border">
-                    <span className="text-muted-foreground">Jumlah Jemaah</span>
-                    <span className="font-semibold">{pilgrims.length} orang</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-border">
-                    <span className="text-muted-foreground">PIC</span>
-                    <span className="font-semibold">
-                      {picType === "pusat" ? "Kantor Pusat" : 
-                       picType === "cabang" ? branches.find(b => b.id === picBranchId)?.name || "Cabang" :
-                       agents.find(a => a.id === picAgentId)?.name || "Agen"}
-                    </span>
-                  </div>
-                  {rooms.filter((r) => r.quantity > 0).map((r) => (
-                    <div key={r.room_type} className="flex justify-between py-2 border-b border-border">
-                      <span className="text-muted-foreground">{getRoomLabel(r.room_type)} x{r.quantity} jemaah</span>
-                      <span className="font-semibold">
-                        Rp {(r.quantity * r.price).toLocaleString("id-ID")}
-                      </span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between py-4 bg-primary/5 rounded-xl px-4 mt-4">
-                    <span className="font-bold text-lg">Total Pembayaran</span>
-                    <span className="font-display font-bold text-2xl text-gold">
-                      Rp {getTotalPrice().toLocaleString("id-ID")}
-                    </span>
+                  <div className="flex justify-between text-lg">
+                    <span className="font-bold">Total Harga</span>
+                    <span className="font-bold text-gold">Rp {getTotalPrice().toLocaleString("id-ID")}</span>
                   </div>
                 </div>
               </div>
             )}
-          </motion.div>
 
-          {/* Navigation */}
-          <div className="flex justify-between mt-6">
-            <Button variant="outline" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>
-              <ArrowLeft className="w-4 h-4 mr-2" /> Sebelumnya
-            </Button>
-            {step < STEPS.length - 1 ? (
-              <Button onClick={handleNextStep} className="gradient-gold text-primary">
-                Selanjutnya <ArrowRight className="w-4 h-4 ml-2" />
+            {/* Navigation */}
+            <div className="flex justify-between mt-8">
+              <Button
+                variant="outline"
+                onClick={() => setStep((s) => Math.max(0, s - 1))}
+                disabled={step === 0 || submitting}
+              >
+                Sebelumnya
               </Button>
-            ) : (
-              <Button onClick={handleSubmit} disabled={submitting} className="gradient-gold text-primary">
-                {submitting ? "Memproses..." : "Konfirmasi Booking"}
-              </Button>
-            )}
-          </div>
+              {step < STEPS.length - 1 ? (
+                <Button onClick={handleNextStep} className="gradient-gold text-primary">
+                  Lanjut <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              ) : (
+                <Button onClick={handleSubmit} disabled={submitting} className="gradient-gold text-primary">
+                  {submitting ? "Memproses..." : "Konfirmasi Booking"}
+                </Button>
+              )}
+            </div>
+          </motion.div>
         </div>
       </main>
       <Footer />
