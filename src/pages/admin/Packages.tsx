@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Hotel, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import PackageCommissions from "@/components/admin/PackageCommissions";
 
@@ -32,6 +32,14 @@ interface Package {
 }
 
 interface Option { id: string; name: string; }
+interface HotelOption extends Option { city: string | null; }
+
+interface ExtraHotel {
+  id?: string;
+  hotel_id: string;
+  label: string;
+  sort_order: number;
+}
 
 const AdminPackages = () => {
   const [packages, setPackages] = useState<Package[]>([]);
@@ -42,9 +50,10 @@ const AdminPackages = () => {
   const { toast } = useToast();
 
   const [categories, setCategories] = useState<Option[]>([]);
-  const [hotels, setHotels] = useState<(Option & { city: string | null })[]>([]);
+  const [hotels, setHotels] = useState<HotelOption[]>([]);
   const [airlines, setAirlines] = useState<Option[]>([]);
   const [airports, setAirports] = useState<(Option & { code: string | null })[]>([]);
+  const [extraHotels, setExtraHotels] = useState<ExtraHotel[]>([]);
 
   const [form, setForm] = useState({
     title: "",
@@ -89,6 +98,24 @@ const AdminPackages = () => {
     setLoading(false);
   };
 
+  const fetchExtraHotels = async (packageId: string) => {
+    const { data } = await supabase
+      .from("package_hotels")
+      .select("id, hotel_id, label, sort_order")
+      .eq("package_id", packageId)
+      .order("sort_order");
+    setExtraHotels((data as ExtraHotel[]) || []);
+  };
+
+  // Check if selected category needs extra hotels
+  const selectedCategory = categories.find(c => c.id === form.category_id);
+  const categoryName = selectedCategory?.name?.toLowerCase() || "";
+  const showExtraHotels = categoryName.includes("plus") || categoryName.includes("haji");
+
+  // Hotels not in Makkah/Madinah for extra hotel dropdown
+  const otherHotels = hotels.filter(h => h.city !== "Makkah" && h.city !== "Madinah");
+  const allHotelsForExtra = hotels; // allow any hotel as extra
+
   const buildPayload = () => {
     const payload: Record<string, unknown> = {
       title: form.title,
@@ -108,6 +135,20 @@ const AdminPackages = () => {
     return payload;
   };
 
+  const saveExtraHotels = async (packageId: string) => {
+    // Delete existing and re-insert
+    await supabase.from("package_hotels").delete().eq("package_id", packageId);
+    if (extraHotels.length > 0) {
+      const rows = extraHotels.map((eh, i) => ({
+        package_id: packageId,
+        hotel_id: eh.hotel_id,
+        label: eh.label || null,
+        sort_order: i,
+      }));
+      await supabase.from("package_hotels").insert(rows);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = buildPayload();
@@ -117,16 +158,18 @@ const AdminPackages = () => {
       if (error) {
         toast({ title: "Gagal mengupdate", description: error.message, variant: "destructive" });
       } else {
+        await saveExtraHotels(editing.id);
         toast({ title: "Paket diupdate!" });
         fetchPackages();
         setIsOpen(false);
         resetForm();
       }
     } else {
-      const { error } = await supabase.from("packages").insert(payload as any);
+      const { data, error } = await supabase.from("packages").insert(payload as any).select("id").single();
       if (error) {
         toast({ title: "Gagal membuat paket", description: error.message, variant: "destructive" });
       } else {
+        if (data) await saveExtraHotels(data.id);
         toast({ title: "Paket ditambahkan!" });
         fetchPackages();
         setIsOpen(false);
@@ -135,7 +178,7 @@ const AdminPackages = () => {
     }
   };
 
-  const handleEdit = (pkg: Package) => {
+  const handleEdit = async (pkg: Package) => {
     setEditing(pkg);
     setForm({
       title: pkg.title,
@@ -152,6 +195,7 @@ const AdminPackages = () => {
       airline_id: pkg.airline_id || "",
       airport_id: pkg.airport_id || "",
     });
+    await fetchExtraHotels(pkg.id);
     setIsOpen(true);
   };
 
@@ -168,7 +212,29 @@ const AdminPackages = () => {
 
   const resetForm = () => {
     setEditing(null);
+    setExtraHotels([]);
     setForm({ title: "", slug: "", description: "", package_type: "", duration_days: 9, minimum_dp: 0, dp_deadline_days: 30, full_deadline_days: 7, category_id: "", hotel_makkah_id: "", hotel_madinah_id: "", airline_id: "", airport_id: "" });
+  };
+
+  const addExtraHotel = () => {
+    setExtraHotels([...extraHotels, { hotel_id: "", label: "", sort_order: extraHotels.length }]);
+  };
+
+  const updateExtraHotel = (index: number, field: keyof ExtraHotel, value: string) => {
+    const updated = [...extraHotels];
+    (updated[index] as any)[field] = value;
+    // Auto-fill label with hotel city when hotel is selected
+    if (field === "hotel_id" && value) {
+      const hotel = hotels.find(h => h.id === value);
+      if (hotel && !updated[index].label) {
+        updated[index].label = `Hotel ${hotel.city || "Tambahan"}`;
+      }
+    }
+    setExtraHotels(updated);
+  };
+
+  const removeExtraHotel = (index: number) => {
+    setExtraHotels(extraHotels.filter((_, i) => i !== index));
   };
 
   const makkahHotels = hotels.filter(h => h.city === "Makkah");
@@ -232,6 +298,50 @@ const AdminPackages = () => {
                   </Select>
                 </div>
               </div>
+
+              {/* Extra Hotels - shown when category is Plus or Haji */}
+              {showExtraHotels && (
+                <div className="border border-border rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Hotel className="w-4 h-4 text-gold" />
+                      <Label className="font-semibold">Hotel Tambahan</Label>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={addExtraHotel}>
+                      <Plus className="w-3 h-3 mr-1" /> Tambah
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Tambahkan hotel di kota tujuan lain (misal: Istanbul, Cappadocia, Mina, dll)
+                  </p>
+                  {extraHotels.map((eh, index) => (
+                    <div key={index} className="flex gap-2 items-start">
+                      <div className="flex-1">
+                        <Select value={eh.hotel_id || undefined} onValueChange={(v) => updateExtraHotel(index, "hotel_id", v)}>
+                          <SelectTrigger className="text-sm"><SelectValue placeholder="Pilih Hotel" /></SelectTrigger>
+                          <SelectContent className="bg-popover z-50">
+                            {hotels.filter(h => h.id).map(h => (
+                              <SelectItem key={h.id} value={h.id}>{h.name} - {h.city}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex-1">
+                        <Input
+                          value={eh.label}
+                          onChange={(e) => updateExtraHotel(index, "label", e.target.value)}
+                          placeholder="Label (misal: Hotel Istanbul)"
+                          className="text-sm"
+                        />
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeExtraHotel(index)} className="shrink-0">
+                        <X className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Maskapai</Label>
