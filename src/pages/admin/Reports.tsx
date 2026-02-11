@@ -100,23 +100,36 @@ const AdminReports = () => {
   };
 
   const fetchBookingStats = async (start: Date, end: Date) => {
-    const { data } = await supabase
+    const { data: bookings } = await supabase
       .from("bookings")
-      .select("created_at, total_price, status")
+      .select("id, created_at")
       .gte("created_at", start.toISOString())
       .lte("created_at", end.toISOString())
       .neq("status", "cancelled");
 
-    if (!data) return;
+    const { data: payments } = await supabase
+      .from("payments")
+      .select("amount, paid_at, created_at")
+      .eq("status", "paid")
+      .gte("created_at", start.toISOString())
+      .lte("created_at", end.toISOString());
 
-    // Group by date
-    const grouped = data.reduce((acc: Record<string, { count: number; revenue: number }>, booking) => {
+    if (!bookings) return;
+
+    // Group bookings by date
+    const grouped = bookings.reduce((acc: Record<string, { count: number; revenue: number }>, booking) => {
       const date = format(new Date(booking.created_at), "yyyy-MM-dd");
       if (!acc[date]) acc[date] = { count: 0, revenue: 0 };
       acc[date].count++;
-      acc[date].revenue += booking.total_price || 0;
       return acc;
     }, {});
+
+    // Add revenue from payments to the correct dates
+    (payments || []).forEach(payment => {
+      const date = format(new Date(payment.paid_at || payment.created_at), "yyyy-MM-dd");
+      if (!grouped[date]) grouped[date] = { count: 0, revenue: 0 };
+      grouped[date].revenue += payment.amount || 0;
+    });
 
     const stats = Object.entries(grouped)
       .map(([date, { count, revenue }]) => ({
@@ -130,24 +143,35 @@ const AdminReports = () => {
   };
 
   const fetchPackageStats = async (start: Date, end: Date) => {
-    const { data } = await supabase
+    const { data: bookings } = await supabase
       .from("bookings")
       .select(`
-        total_price,
-        package:packages(title),
-        profile:profiles!bookings_user_id_profiles_fkey(name, email)
+        id,
+        package:packages(title)
       `)
       .gte("created_at", start.toISOString())
       .lte("created_at", end.toISOString())
       .neq("status", "cancelled");
 
-    if (!data) return;
+    if (!bookings) return;
 
-    const grouped = data.reduce((acc: Record<string, { bookings: number; revenue: number }>, booking: any) => {
+    const bookingIds = bookings.map(b => b.id);
+    const { data: payments } = await supabase
+      .from("payments")
+      .select("amount, booking_id")
+      .eq("status", "paid")
+      .in("booking_id", bookingIds);
+
+    const grouped = bookings.reduce((acc: Record<string, { bookings: number; revenue: number }>, booking: any) => {
       const name = booking.package?.title || "Unknown";
       if (!acc[name]) acc[name] = { bookings: 0, revenue: 0 };
       acc[name].bookings++;
-      acc[name].revenue += booking.total_price || 0;
+      
+      // Find payments for this booking
+      const bookingPayments = (payments || []).filter(p => p.booking_id === booking.id);
+      const bookingRevenue = bookingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+      acc[name].revenue += bookingRevenue;
+      
       return acc;
     }, {});
 
@@ -187,7 +211,7 @@ const AdminReports = () => {
     const { data: bookings } = await supabase
       .from("bookings")
       .select(`
-        total_price, pic_id, pic_type
+        id, pic_id, pic_type
       `)
       .eq("pic_type", "agent")
       .gte("created_at", start.toISOString())
@@ -198,6 +222,13 @@ const AdminReports = () => {
       setAgentStats([]);
       return;
     }
+
+    const bookingIds = bookings.map(b => b.id);
+    const { data: payments } = await supabase
+      .from("payments")
+      .select("amount, booking_id")
+      .eq("status", "paid")
+      .in("booking_id", bookingIds);
 
     // Get unique agent IDs
     const agentIds = [...new Set(bookings.map((b) => b.pic_id).filter(Boolean))];
@@ -224,7 +255,12 @@ const AdminReports = () => {
       if (!agentId || !agentMap[agentId]) return acc;
       if (!acc[agentId]) acc[agentId] = { bookings: 0, revenue: 0 };
       acc[agentId].bookings++;
-      acc[agentId].revenue += booking.total_price || 0;
+      
+      // Find payments for this booking
+      const bookingPayments = (payments || []).filter(p => p.booking_id === booking.id);
+      const bookingRevenue = bookingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+      acc[agentId].revenue += bookingRevenue;
+      
       return acc;
     }, {});
 
@@ -244,10 +280,18 @@ const AdminReports = () => {
   const fetchSummary = async (start: Date, end: Date) => {
     const { data: bookings } = await supabase
       .from("bookings")
-      .select("id, total_price")
+      .select("id")
       .gte("created_at", start.toISOString())
       .lte("created_at", end.toISOString())
       .neq("status", "cancelled");
+
+    const bookingIds = bookings?.map(b => b.id) || [];
+    
+    const { data: payments } = await supabase
+      .from("payments")
+      .select("amount")
+      .eq("status", "paid")
+      .in("booking_id", bookingIds);
 
     const { data: pilgrims } = await supabase
       .from("booking_pilgrims")
@@ -257,7 +301,7 @@ const AdminReports = () => {
       .neq("booking.status", "cancelled");
 
     const totalBookings = bookings?.length || 0;
-    const totalRevenue = bookings?.reduce((sum, b) => sum + (b.total_price || 0), 0) || 0;
+    const totalRevenue = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
     const totalPilgrims = pilgrims?.length || 0;
 
     setSummary({
@@ -315,12 +359,11 @@ const AdminReports = () => {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-xl bg-gold/10">
-                <DollarSign className="w-6 h-6 text-gold" />
+                <TrendingUp className="w-6 h-6 text-gold" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Pendapatan</p>
@@ -329,12 +372,11 @@ const AdminReports = () => {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-primary/10">
-                <Users className="w-6 h-6 text-primary" />
+              <div className="p-3 rounded-xl bg-blue-500/10">
+                <Users className="w-6 h-6 text-blue-500" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Jemaah</p>
@@ -343,12 +385,11 @@ const AdminReports = () => {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-accent/10">
-                <TrendingUp className="w-6 h-6 text-accent" />
+              <div className="p-3 rounded-xl bg-emerald-500/10">
+                <DollarSign className="w-6 h-6 text-emerald-500" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Rata-rata Booking</p>
@@ -359,323 +400,182 @@ const AdminReports = () => {
         </Card>
       </div>
 
-      {/* Charts */}
-      <Tabs defaultValue="bookings" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="bookings">Booking</TabsTrigger>
-          <TabsTrigger value="packages">Paket</TabsTrigger>
-          <TabsTrigger value="departures">Keberangkatan</TabsTrigger>
-          <TabsTrigger value="agents">Agen</TabsTrigger>
-          <TabsTrigger value="commissions">Komisi</TabsTrigger>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="bg-muted/50 p-1">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" /> Ikhtisar
+          </TabsTrigger>
+          <TabsTrigger value="packages" className="flex items-center gap-2">
+            <PieChartIcon className="w-4 h-4" /> Paket & Keberangkatan
+          </TabsTrigger>
+          <TabsTrigger value="agents" className="flex items-center gap-2">
+            <Award className="w-4 h-4" /> Agen & Cabang
+          </TabsTrigger>
+          <TabsTrigger value="commissions" className="flex items-center gap-2">
+            <DollarSign className="w-4 h-4" /> Komisi
+          </TabsTrigger>
         </TabsList>
 
-        {/* Booking Stats Tab */}
-        <TabsContent value="bookings" className="space-y-4">
-          <div className="grid lg:grid-cols-2 gap-4">
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-gold" />
-                  Booking per Hari
-                </CardTitle>
+                <CardTitle className="text-lg">Trend Pendapatan</CardTitle>
               </CardHeader>
               <CardContent>
-                {bookingStats.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={bookingStats}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" fontSize={12} />
-                      <YAxis fontSize={12} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="hsl(142, 76%, 36%)" name="Jumlah Booking" radius={[4, 4, 0, 0]} />
-                    </BarChart>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={bookingStats}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
+                        formatter={(value: number) => [formatCurrency(value), "Pendapatan"]}
+                      />
+                      <Line type="monotone" dataKey="revenue" stroke="hsl(45, 93%, 47%)" strokeWidth={3} dot={{ r: 4, fill: "hsl(45, 93%, 47%)" }} activeDot={{ r: 6 }} name="Pendapatan" />
+                    </LineChart>
                   </ResponsiveContainer>
-                ) : (
-                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                    Belum ada data booking
-                  </div>
-                )}
+                </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-gold" />
-                  Pendapatan per Hari
-                </CardTitle>
+                <CardTitle className="text-lg">Trend Booking</CardTitle>
               </CardHeader>
               <CardContent>
-                {bookingStats.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={bookingStats}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" fontSize={12} />
-                      <YAxis fontSize={12} tickFormatter={(v) => `${(v / 1000000).toFixed(0)}jt`} />
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                      <Line 
-                        type="monotone" 
-                        dataKey="revenue" 
-                        stroke="hsl(45, 93%, 47%)" 
-                        strokeWidth={2}
-                        name="Pendapatan"
-                        dot={{ fill: "hsl(45, 93%, 47%)" }}
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={bookingStats}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
                       />
-                    </LineChart>
+                      <Bar dataKey="count" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} name="Jumlah Booking" />
+                    </BarChart>
                   </ResponsiveContainer>
-                ) : (
-                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                    Belum ada data pendapatan
-                  </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        {/* Package Stats Tab */}
-        <TabsContent value="packages" className="space-y-4">
-          <div className="grid lg:grid-cols-2 gap-4">
+        <TabsContent value="packages" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <PieChartIcon className="w-5 h-5 text-gold" />
-                  Paket Terlaris
-                </CardTitle>
+                <CardTitle className="text-lg">Distribusi Paket</CardTitle>
               </CardHeader>
               <CardContent>
-                {packageStats.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={packageStats}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
-                        outerRadius={100}
-                        fill="hsl(var(--accent))"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
                         dataKey="bookings"
-                        nameKey="name"
-                        label={({ name, percent }) => `${name.slice(0, 15)}... (${(percent * 100).toFixed(0)}%)`}
                       >
-                        {packageStats.map((_, index) => (
+                        {packageStats.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number, name: string) => [value, name]} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
+                      />
+                      <Legend />
                     </PieChart>
                   </ResponsiveContainer>
-                ) : (
-                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                    Belum ada data paket
-                  </div>
-                )}
+                </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Award className="w-5 h-5 text-gold" />
-                  Ranking Paket
-                </CardTitle>
+                <CardTitle className="text-lg">Okupansi Keberangkatan</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {packageStats.length > 0 ? (
-                    packageStats.map((pkg, index) => (
-                      <div key={pkg.name} className="flex items-center gap-4">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                          index === 0 ? "bg-accent text-accent-foreground" : 
-                          index === 1 ? "bg-muted text-muted-foreground" : 
-                          index === 2 ? "bg-secondary text-secondary-foreground" : 
-                          "bg-muted text-muted-foreground"
-                        }`}>
-                          {index + 1}
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-semibold">{pkg.name}</div>
-                          <div className="text-sm text-muted-foreground">{pkg.bookings} booking</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold text-gold">{formatCurrency(pkg.revenue)}</div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">Belum ada data</div>
-                  )}
-                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Paket</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead className="text-right">Terisi</TableHead>
+                      <TableHead className="text-right">Sisa</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {departureStats.map((dep) => (
+                      <TableRow key={dep.id}>
+                        <TableCell className="font-medium">{dep.package_title}</TableCell>
+                        <TableCell>{format(new Date(dep.departure_date), "d MMM yyyy")}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={dep.booked / dep.quota > 0.8 ? "destructive" : "secondary"}>
+                            {dep.booked} / {dep.quota}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">{dep.remaining}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        {/* Departure Stats Tab */}
-        <TabsContent value="departures" className="space-y-4">
+        <TabsContent value="agents" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-gold" />
-                Jemaah per Keberangkatan (Upcoming)
-              </CardTitle>
+              <CardTitle className="text-lg">Pendapatan per Agen</CardTitle>
             </CardHeader>
             <CardContent>
-              {departureStats.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Paket</TableHead>
-                        <TableHead>Tanggal</TableHead>
-                        <TableHead className="text-center">Kuota</TableHead>
-                        <TableHead className="text-center">Terisi</TableHead>
-                        <TableHead className="text-center">Sisa</TableHead>
-                        <TableHead className="text-center">Persentase</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {departureStats.map((dep) => {
-                        const percentage = Math.round((dep.booked / dep.quota) * 100);
-                        return (
-                          <TableRow key={dep.id}>
-                            <TableCell className="font-semibold">{dep.package_title}</TableCell>
-                            <TableCell>
-                              {format(new Date(dep.departure_date), "d MMMM yyyy", { locale: localeId })}
-                            </TableCell>
-                            <TableCell className="text-center">{dep.quota}</TableCell>
-                            <TableCell className="text-center font-semibold text-primary">{dep.booked}</TableCell>
-                            <TableCell className="text-center">{dep.remaining}</TableCell>
-                            <TableCell className="text-center">
-                              <Badge variant="outline" className={`
-                                ${percentage >= 80 ? "bg-green-50 text-green-700 border-green-200" :
-                                  percentage >= 50 ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                                  "bg-red-50 text-red-700 border-red-200"}
-                              `}>
-                                {percentage}%
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  Belum ada keberangkatan mendatang
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Departure Chart */}
-          {departureStats.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Visualisasi Pengisian Kuota</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={departureStats} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis 
-                      dataKey="package_title" 
-                      type="category" 
-                      width={150} 
-                      fontSize={12}
-                      tickFormatter={(v) => v.length > 20 ? v.slice(0, 20) + "..." : v}
+              <div className="h-[300px] w-full mb-6">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={agentStats} layout="vertical" margin={{ left: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} width={100} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
+                      formatter={(value: number) => [formatCurrency(value), "Pendapatan"]}
                     />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="booked" stackId="a" fill="hsl(142, 76%, 36%)" name="Terisi" />
-                    <Bar dataKey="remaining" stackId="a" fill="hsl(var(--muted))" name="Sisa" />
+                    <Bar dataKey="revenue" fill="hsl(45, 93%, 47%)" name="Pendapatan" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* Agent Stats Tab */}
-        <TabsContent value="agents" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-gold" />
-                Performa Agen
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {agentStats.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Rank</TableHead>
-                        <TableHead>Nama Agen</TableHead>
-                        <TableHead>Cabang</TableHead>
-                        <TableHead className="text-center">Total Booking</TableHead>
-                        <TableHead className="text-right">Total Pendapatan</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {agentStats.map((agent, index) => (
-                        <TableRow key={agent.id}>
-                          <TableCell>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                              index === 0 ? "bg-accent text-accent-foreground" : 
-                              index === 1 ? "bg-muted text-muted-foreground" : 
-                              index === 2 ? "bg-secondary text-secondary-foreground" : 
-                              "bg-muted text-muted-foreground"
-                            }`}>
-                              {index + 1}
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-semibold">{agent.name}</TableCell>
-                          <TableCell>{agent.branch || "-"}</TableCell>
-                          <TableCell className="text-center">{agent.bookings}</TableCell>
-                          <TableCell className="text-right font-bold text-gold">
-                            {formatCurrency(agent.revenue)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  Belum ada data performa agen
-                </div>
-              )}
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nama Agen</TableHead>
+                    <TableHead>Cabang</TableHead>
+                    <TableHead className="text-right">Total Booking</TableHead>
+                    <TableHead className="text-right">Total Pendapatan</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {agentStats.map((agent) => (
+                    <TableRow key={agent.id}>
+                      <TableCell className="font-medium">{agent.name}</TableCell>
+                      <TableCell>{agent.branch || "-"}</TableCell>
+                      <TableCell className="text-right">{agent.bookings}</TableCell>
+                      <TableCell className="text-right font-bold text-gold">{formatCurrency(agent.revenue)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
-
-          {/* Agent Chart */}
-          {agentStats.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Pendapatan per Agen</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={agentStats}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" fontSize={12} />
-                    <YAxis fontSize={12} tickFormatter={(v) => `${(v / 1000000).toFixed(0)}jt`} />
-                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                    <Bar dataKey="revenue" fill="hsl(45, 93%, 47%)" name="Pendapatan" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
-        {/* Commission Stats Tab */}
-        <TabsContent value="commissions" className="space-y-4">
-          <CommissionReport startDate={getDateRange().start} endDate={getDateRange().end} />
+        <TabsContent value="commissions">
+          <CommissionReport />
         </TabsContent>
       </Tabs>
     </div>

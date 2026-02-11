@@ -70,10 +70,9 @@ const AdminDashboard = () => {
         { count: agents },
         { count: muthawifs },
         { count: pending },
-        { data: paidBookings },
-        { data: waitingBookings },
-        { data: upcomingData },
+        { data: verifiedPayments },
         { data: allBookings },
+        { data: upcomingData },
       ] = await Promise.all([
         supabase.from("packages").select("*", { count: "exact", head: true }),
         supabase.from("package_departures").select("*", { count: "exact", head: true }),
@@ -83,22 +82,27 @@ const AdminDashboard = () => {
         supabase.from("agents").select("*", { count: "exact", head: true }),
         supabase.from("muthawifs").select("*", { count: "exact", head: true }),
         supabase.from("bookings").select("*", { count: "exact", head: true }).eq("status", "waiting_payment"),
-        supabase.from("bookings").select("total_price").eq("status", "paid"),
-        supabase.from("bookings").select("total_price").eq("status", "waiting_payment"),
+        supabase.from("payments").select("amount").eq("status", "paid"),
+        supabase
+          .from("bookings")
+          .select("created_at, total_price, status, package:packages(title), profile:profiles!bookings_user_id_profiles_fkey(name, email)")
+          .gte("created_at", subMonths(new Date(), 6).toISOString()),
         supabase
           .from("package_departures")
           .select("id, departure_date, remaining_quota, quota, package:packages(title)")
           .gte("departure_date", new Date().toISOString().split("T")[0])
           .order("departure_date", { ascending: true })
           .limit(5),
-        supabase
-          .from("bookings")
-          .select("created_at, total_price, status, package:packages(title), profile:profiles!bookings_user_id_profiles_fkey(name, email)")
-          .gte("created_at", subMonths(new Date(), 6).toISOString()),
       ]);
 
-      const revenue = (paidBookings || []).reduce((sum, b) => sum + (b.total_price || 0), 0);
-      const potentialRevenue = (waitingBookings || []).reduce((sum, b) => sum + (b.total_price || 0), 0);
+      // Calculate actual revenue from verified payments
+      const revenue = (verifiedPayments || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+      
+      // Calculate potential revenue: total_price of all non-cancelled bookings minus what's already paid
+      const totalPotential = (allBookings || [])
+        .filter(b => b.status !== "cancelled")
+        .reduce((sum, b) => sum + (b.total_price || 0), 0);
+      const potentialRevenue = Math.max(0, totalPotential - revenue);
 
       setStats({
         totalPackages: packages || 0,
@@ -116,6 +120,13 @@ const AdminDashboard = () => {
       setUpcoming((upcomingData as unknown as UpcomingDeparture[]) || []);
 
       // Process monthly data for last 6 months
+      // For monthly revenue, we ideally need payments with their paid_at date
+      const { data: monthlyPayments } = await supabase
+        .from("payments")
+        .select("amount, paid_at, created_at")
+        .eq("status", "paid")
+        .gte("created_at", subMonths(new Date(), 6).toISOString());
+
       const months: MonthlyData[] = [];
       for (let i = 5; i >= 0; i--) {
         const date = subMonths(new Date(), i);
@@ -127,9 +138,12 @@ const AdminDashboard = () => {
           return bookingDate >= monthStart && bookingDate <= monthEnd;
         });
 
-        const monthRevenue = monthBookings
-          .filter((b: { status: string }) => b.status === "paid")
-          .reduce((sum: number, b: { total_price: number }) => sum + (b.total_price || 0), 0);
+        const monthRevenue = (monthlyPayments || [])
+          .filter((p: { created_at: string, paid_at: string | null }) => {
+            const paymentDate = new Date(p.paid_at || p.created_at);
+            return paymentDate >= monthStart && paymentDate <= monthEnd;
+          })
+          .reduce((sum: number, p: { amount: number }) => sum + (p.amount || 0), 0);
 
         months.push({
           month: format(date, "MMM", { locale: localeId }),
@@ -277,26 +291,26 @@ const AdminDashboard = () => {
           className="bg-card border border-border rounded-xl p-6"
         >
           <h3 className="text-lg font-display font-bold mb-4">Trend Pendapatan (6 Bulan)</h3>
-          <div className="h-64">
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyData}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(38, 75%, 55%)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(38, 75%, 55%)" stopOpacity={0} />
+                    <stop offset="5%" stopColor="hsl(38, 92%, 50%)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(38, 92%, 50%)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="month" fontSize={12} />
-                <YAxis fontSize={12} tickFormatter={(value) => `${value}jt`} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                 <Tooltip
+                  contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
                   formatter={(value: number) => [`Rp ${(value * 1000000).toLocaleString("id-ID")}`, "Pendapatan"]}
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
                 />
                 <Area
                   type="monotone"
                   dataKey="revenue"
-                  stroke="hsl(38, 75%, 55%)"
+                  stroke="hsl(38, 92%, 50%)"
                   strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#colorRevenue)"
@@ -306,114 +320,105 @@ const AdminDashboard = () => {
           </div>
         </motion.div>
 
-        {/* Bookings per Month */}
+        {/* Package Popularity Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           className="bg-card border border-border rounded-xl p-6"
         >
-          <h3 className="text-lg font-display font-bold mb-4">Booking per Bulan</h3>
-          <div className="h-64">
+          <h3 className="text-lg font-display font-bold mb-4">Paket Terpopuler</h3>
+          <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="month" fontSize={12} />
-                <YAxis fontSize={12} />
+              <PieChart>
+                <Pie
+                  data={packagePopularity}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {packagePopularity.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
                 <Tooltip
-                  formatter={(value: number) => [value, "Booking"]}
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                  contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
                 />
-                <Bar dataKey="bookings" fill="hsl(160, 84%, 39%)" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <Legend verticalAlign="bottom" height={36} />
+              </PieChart>
             </ResponsiveContainer>
           </div>
         </motion.div>
       </div>
 
-      {/* Package Popularity & Upcoming Departures */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Package Popularity */}
+      {/* Bottom Row */}
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Upcoming Departures */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-card border border-border rounded-xl p-6"
+          className="lg:col-span-2 bg-card border border-border rounded-xl p-6"
         >
-          <h3 className="text-lg font-display font-bold mb-4">Paket Terpopuler</h3>
-          {packagePopularity.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Belum ada data booking</p>
-          ) : (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={packagePopularity}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {packagePopularity.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number) => [value, "Booking"]}
-                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-display font-bold">Keberangkatan Terdekat</h3>
+            <button className="text-sm text-gold hover:underline">Lihat Semua</button>
+          </div>
+          <div className="space-y-4">
+            {upcoming.map((dep) => (
+              <div key={dep.id} className="flex items-center justify-between p-4 border border-border rounded-xl hover:bg-accent/50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex flex-col items-center justify-center text-primary">
+                    <span className="text-xs font-bold uppercase">{format(new Date(dep.departure_date), "MMM", { locale: localeId })}</span>
+                    <span className="text-lg font-bold leading-none">{format(new Date(dep.departure_date), "dd")}</span>
+                  </div>
+                  <div>
+                    <div className="font-bold">{dep.package?.title}</div>
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Plane className="w-3 h-3" /> {format(new Date(dep.departure_date), "EEEE, d MMMM yyyy", { locale: localeId })}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-bold">{dep.quota - dep.remaining_quota} / {dep.quota}</div>
+                  <div className="text-xs text-muted-foreground">Jamaah Terdaftar</div>
+                </div>
+              </div>
+            ))}
+            {upcoming.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">Tidak ada keberangkatan terdekat</div>
+            )}
+          </div>
         </motion.div>
 
-        {/* Upcoming Departures */}
+        {/* Quick Actions / Recent Activity */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           className="bg-card border border-border rounded-xl p-6"
         >
-          <h2 className="text-lg font-display font-bold mb-4">Keberangkatan Terdekat</h2>
-          {upcoming.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Belum ada jadwal keberangkatan</p>
-          ) : (
-            <div className="space-y-3">
-              {upcoming.map((dep) => {
-                const fillPercent = dep.quota > 0 ? ((dep.quota - dep.remaining_quota) / dep.quota) * 100 : 0;
-                return (
-                  <div key={dep.id} className="p-3 bg-muted rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <div className="font-semibold text-sm">{dep.package?.title || "Paket Umroh"}</div>
-                        <div className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {format(new Date(dep.departure_date), "d MMMM yyyy", { locale: localeId })}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-bold text-gold">{dep.remaining_quota}</div>
-                        <div className="text-xs text-muted-foreground">sisa kursi</div>
-                      </div>
-                    </div>
-                    <div className="w-full bg-border rounded-full h-2">
-                      <div
-                        className="bg-gold h-2 rounded-full transition-all"
-                        style={{ width: `${fillPercent}%` }}
-                      />
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {dep.quota - dep.remaining_quota} / {dep.quota} terisi
-                    </div>
+          <h3 className="text-lg font-display font-bold mb-6">Aktivitas Terbaru</h3>
+          <div className="space-y-6">
+            {(allBookings || []).slice(0, 5).map((b: any, i: number) => (
+              <div key={i} className="flex gap-3">
+                <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${b.status === "paid" ? "bg-emerald-500" : b.status === "waiting_payment" ? "bg-gold" : "bg-muted"}`} />
+                <div>
+                  <div className="text-sm font-medium">
+                    <span className="font-bold">{b.profile?.name || "User"}</span> melakukan booking
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  <div className="text-xs text-muted-foreground">{b.package?.title}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1">{format(new Date(b.created_at), "d MMM, HH:mm")}</div>
+                </div>
+              </div>
+            ))}
+            {(allBookings || []).length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">Belum ada aktivitas</div>
+            )}
+          </div>
         </motion.div>
       </div>
     </div>
