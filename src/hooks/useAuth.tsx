@@ -26,8 +26,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchRole = async (userId: string) => {
     try {
-      // Step 1.1: Fetch role immediately after session is obtained
-      // Use maybeSingle to avoid errors if profile doesn't exist yet
+      // Fetch role from profiles table
       const { data, error } = await supabase
         .from('profiles')
         .select('role')
@@ -35,30 +34,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .maybeSingle();
 
       if (error) {
-        console.error("Error fetching role:", error.message);
-        return false;
+        console.error("Error fetching role from profiles:", error.message);
       }
 
-      if (data?.role) {
-        const roleLower = data.role.toLowerCase();
-        setRole(roleLower);
-        setIsAdmin(roleLower === 'admin' || roleLower === 'superadmin');
-        setIsBuyer(roleLower === 'buyer');
-        return roleLower;
+      let currentRole = data?.role?.toLowerCase() || null;
+
+      // Fallback to user_roles table if not found in profiles
+      if (!currentRole) {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (roleData) {
+          currentRole = roleData.role.toLowerCase();
+        }
       }
 
-      // Fallback to RPC if profile fetch returns nothing
-      const { data: rpcData } = await supabase.rpc('is_admin', { _user_id: userId });
-      return rpcData === true;
+      // Final fallback to RPC
+      if (!currentRole) {
+        const { data: rpcIsAdmin } = await supabase.rpc('is_admin', { _user_id: userId });
+        if (rpcIsAdmin) currentRole = 'admin';
+      }
+
+      if (currentRole) {
+        setRole(currentRole);
+        setIsAdmin(currentRole === 'admin' || currentRole === 'superadmin' || currentRole === 'super_admin');
+        setIsBuyer(currentRole === 'buyer' || currentRole === 'user');
+        return currentRole;
+      }
+
+      setRole('user');
+      setIsAdmin(false);
+      setIsBuyer(true);
+      return 'user';
     } catch (err) {
       console.error("Failed to check admin status:", err);
-      return false;
+      return null;
     }
   };
 
   useEffect(() => {
     const initAuth = async () => {
-      setLoading(true); // Ensure loading is true at start
+      setLoading(true);
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         setSession(initialSession);
@@ -74,7 +93,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } catch (error) {
         console.error("Auth initialization error:", error);
       } finally {
-        // Step 1.1: Only set loading to false after fetchRole is complete
         setLoading(false);
       }
     };
@@ -83,11 +101,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        // We set loading for specific events to ensure role is fetched before UI updates
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           setLoading(true);
         }
         
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          setIsAdmin(false);
+          setIsBuyer(false);
+          setRole(null);
+          setLoading(false);
+          return;
+        }
+
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -116,7 +143,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       return { 
         error: error as Error | null, 
-        isAdmin: userRole === 'admin' || userRole === 'superadmin',
+        isAdmin: userRole === 'admin' || userRole === 'superadmin' || userRole === 'super_admin',
         role: userRole 
       };
     } finally {
@@ -136,12 +163,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setIsAdmin(false);
-    setIsBuyer(false);
-    setRole(null);
-    setUser(null);
-    setSession(null);
+    setLoading(true);
+    try {
+      await supabase.auth.signOut();
+      setIsAdmin(false);
+      setIsBuyer(false);
+      setRole(null);
+      setUser(null);
+      setSession(null);
+    } catch (error) {
+      console.error("Error during sign out:", error);
+    } finally {
+      setLoading(false);
+      // Force redirect to home or login if needed, though usually handled by router
+      window.location.href = '/';
+    }
   };
 
   return (

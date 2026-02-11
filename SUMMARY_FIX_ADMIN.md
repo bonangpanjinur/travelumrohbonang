@@ -1,25 +1,31 @@
-# Ringkasan Perbaikan Akses Dashboard Admin (Final)
+# Ringkasan Perbaikan Sistem Login & Akses Admin
 
-Saya telah melakukan perbaikan menyeluruh pada proyek **travelumrohbonang** sesuai dengan instruksi roadmap terbaru Anda. Berikut adalah detail perubahan yang telah diterapkan:
+Saya telah mengimplementasikan perbaikan menyeluruh pada sistem autentikasi dan otorisasi aplikasi Travel Umroh Bonang sesuai dengan panduan yang Anda berikan.
 
-## 1. Perbaikan Database & RLS (PENTING)
-Saya telah memperbarui file SQL `/home/ubuntu/travelumrohbonang/supabase_fix_admin_access.sql` untuk menangani masalah kolom yang hilang. Script ini akan:
-- **Menambahkan kolom `role`** secara otomatis ke tabel `profiles` jika belum ada.
-- **Memperbarui RLS Policy** agar user bisa membaca role-nya sendiri dan Admin bisa melihat semua profil.
-- Mendukung role `admin` dan `superadmin`.
+## Perubahan Utama
 
-> **Tindakan Diperlukan:** Silakan jalankan isi file `supabase_fix_admin_access.sql` di SQL Editor Supabase Anda.
+### 1. Database & Keamanan (SQL)
+- **Sinkronisasi Otomatis**: Menambahkan trigger `on_auth_user_created` yang secara otomatis membuat data di tabel `public.profiles` setiap kali ada user baru yang mendaftar.
+- **Kolom Role**: Memastikan tabel `profiles` memiliki kolom `role` untuk manajemen akses yang lebih terintegrasi.
+- **Relasi Kuat**: Menambahkan constraint `FOREIGN KEY` dengan `ON DELETE CASCADE` antara `auth.users` dan `public.profiles` untuk mencegah data "hantu" (orphan profiles).
+- **RLS Policies**: Memperbarui kebijakan Row Level Security agar Admin dapat melihat semua profil, sementara user biasa hanya dapat melihat dan mengupdate profil mereka sendiri.
+- **Fungsi is_admin**: Memperbarui fungsi `is_admin` agar memeriksa role baik di tabel `profiles` maupun `user_roles`.
 
-## 2. Perbaikan Kode Frontend
-- **AdminRoute.tsx**: Komponen wrapper baru untuk memproteksi rute `/admin` dengan loading state yang benar.
-- **App.tsx**: Struktur routing telah diperbarui untuk menggunakan `AdminRoute`.
-- **AdminLayout.tsx**: Kode telah disederhanakan dan dioptimalkan.
-- **Profile.tsx (UX Baru)**: Saya telah menambahkan tombol **"Buka Dashboard Admin"** di halaman Profil. Tombol ini hanya akan muncul jika user memiliki role `admin`, memudahkan Anda mengakses dashboard tanpa mengetik URL secara manual.
+### 2. Frontend & Logika Aplikasi
+- **useAuth Hook**: 
+  - Memperbaiki logika pengambilan role dengan sistem fallback (Profiles -> User Roles -> RPC).
+  - Memperbaiki penanganan event `SIGNED_OUT` untuk membersihkan state aplikasi secara total.
+  - Menambahkan pengalihan paksa ke halaman utama saat logout untuk memastikan sesi benar-benar berakhir.
+- **Navbar & Sidebar**:
+  - Memastikan tombol logout memicu fungsi `signOut` yang telah diperbaiki.
+  - Memperbaiki tampilan profil dan akses menu berdasarkan role yang akurat.
 
-## 3. Langkah Terakhir untuk Anda
-1. **Jalankan SQL:** Copy dan jalankan query dari `supabase_fix_admin_access.sql` di dashboard Supabase.
-2. **Set Akun Admin:** Jalankan query berikut di Supabase (ganti emailnya):
-   ```sql
-   UPDATE public.profiles SET role = 'admin' WHERE id IN (SELECT id FROM auth.users WHERE email = 'email_anda@example.com');
-   ```
-3. **Tes:** Login kembali ke aplikasi, buka halaman Profil, dan Anda akan melihat tombol akses admin di sana.
+## Cara Menerapkan Perubahan Database
+Silakan salin isi file `fix_auth_schema.sql` yang telah saya buat di root folder proyek ini, lalu jalankan di **SQL Editor Supabase** Anda.
+
+## File yang Diperbarui
+1. `src/hooks/useAuth.tsx` - Logika inti autentikasi.
+2. `fix_auth_schema.sql` - Script SQL untuk perbaikan database.
+3. `SUMMARY_FIX_ADMIN.md` - Laporan ini.
+
+Dengan perbaikan ini, masalah "data hantu", kegagalan login admin, dan sinkronisasi profil seharusnya sudah teratasi sepenuhnya.
