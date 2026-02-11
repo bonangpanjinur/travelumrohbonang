@@ -58,24 +58,33 @@ const PackageCommissions = ({ packageId, packageTitle }: PackageCommissionsProps
     setSaving(true);
     try {
       // Upsert all 3 types concurrently
-      const promises = PIC_TYPES.map(({ key }) => 
-        supabase
+      for (const { key } of PIC_TYPES) {
+        // Cek apakah data sudah ada
+        const { data: existing } = await supabase
           .from("package_commissions")
-          .upsert(
-            { 
+          .select("id")
+          .eq("package_id", packageId)
+          .eq("pic_type", key)
+          .maybeSingle();
+
+        if (existing) {
+          // Update jika ada
+          const { error } = await supabase
+            .from("package_commissions")
+            .update({ commission_amount: commissions[key] })
+            .eq("id", existing.id);
+          if (error) throw error;
+        } else {
+          // Insert jika tidak ada
+          const { error } = await supabase
+            .from("package_commissions")
+            .insert({ 
               package_id: packageId, 
               pic_type: key, 
               commission_amount: commissions[key] 
-            },
-            { onConflict: "package_id,pic_type" }
-          )
-      );
-
-      const results = await Promise.all(promises);
-      const firstError = results.find(r => r.error)?.error;
-
-      if (firstError) {
-        throw firstError;
+            });
+          if (error) throw error;
+        }
       }
 
       toast({ title: "Komisi disimpan!" });
