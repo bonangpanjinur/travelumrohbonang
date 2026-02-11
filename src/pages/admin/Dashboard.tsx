@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { Package, Calendar, Users, CreditCard, Building2, UserCheck, TrendingUp, Clock, Plane, MapPin, Wallet } from "lucide-react";
+import { Package, Calendar, Users, CreditCard, Building2, UserCheck, TrendingUp, Clock, MapPin, Wallet } from "lucide-react";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from "recharts";
@@ -96,12 +96,12 @@ const AdminDashboard = () => {
       ]);
 
       // Calculate actual revenue from verified payments
-      const revenue = (verifiedPayments || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+      const revenue = (verifiedPayments || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
       
-      // Calculate potential revenue: total_price of all non-cancelled bookings minus what's already paid
+      // Calculate potential revenue: total_price of all active bookings minus what's already paid
       const totalPotential = (allBookings || [])
-        .filter(b => b.status !== "cancelled")
-        .reduce((sum, b) => sum + (b.total_price || 0), 0);
+        .filter(b => b.status !== "cancelled" && b.status !== "failed")
+        .reduce((sum, b) => sum + (Number(b.total_price) || 0), 0);
       const potentialRevenue = Math.max(0, totalPotential - revenue);
 
       setStats({
@@ -120,7 +120,6 @@ const AdminDashboard = () => {
       setUpcoming((upcomingData as unknown as UpcomingDeparture[]) || []);
 
       // Process monthly data for last 6 months
-      // For monthly revenue, we ideally need payments with their paid_at date
       const { data: monthlyPayments } = await supabase
         .from("payments")
         .select("amount, paid_at, created_at")
@@ -143,7 +142,7 @@ const AdminDashboard = () => {
             const paymentDate = new Date(p.paid_at || p.created_at);
             return paymentDate >= monthStart && paymentDate <= monthEnd;
           })
-          .reduce((sum: number, p: { amount: number }) => sum + (p.amount || 0), 0);
+          .reduce((sum: number, p: { amount: number }) => sum + (Number(p.amount) || 0), 0);
 
         months.push({
           month: format(date, "MMM", { locale: localeId }),
@@ -281,54 +280,70 @@ const AdminDashboard = () => {
         </motion.div>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid lg:grid-cols-2 gap-6 mb-8">
-        {/* Revenue Trend Chart */}
+      {/* Charts Section */}
+      <div className="grid lg:grid-cols-2 gap-8 mb-8">
+        {/* Revenue Chart */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
           className="bg-card border border-border rounded-xl p-6"
         >
-          <h3 className="text-lg font-display font-bold mb-4">Trend Pendapatan (6 Bulan)</h3>
-          <div className="h-[300px] w-full">
+          <h3 className="text-lg font-bold mb-6">Pendapatan 6 Bulan Terakhir (Juta Rp)</h3>
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyData}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(38, 92%, 50%)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(38, 92%, 50%)" stopOpacity={0} />
+                    <stop offset="5%" stopColor="hsl(38, 75%, 55%)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="hsl(38, 75%, 55%)" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                <Tooltip
+                <Tooltip 
                   contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
-                  formatter={(value: number) => [`Rp ${(value * 1000000).toLocaleString("id-ID")}`, "Pendapatan"]}
+                  formatter={(value: number) => [`Rp ${value.toLocaleString("id-ID")} Juta`, "Pendapatan"]}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="hsl(38, 92%, 50%)"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorRevenue)"
-                />
+                <Area type="monotone" dataKey="revenue" stroke="hsl(38, 75%, 55%)" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </motion.div>
 
-        {/* Package Popularity Chart */}
+        {/* Booking Chart */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1 }}
           className="bg-card border border-border rounded-xl p-6"
         >
-          <h3 className="text-lg font-display font-bold mb-4">Paket Terpopuler</h3>
-          <div className="h-[300px] w-full">
+          <h3 className="text-lg font-bold mb-6">Tren Booking</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
+                />
+                <Bar dataKey="bookings" fill="hsl(160, 84%, 39%)" radius={[4, 4, 0, 0]} barSize={30} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Popular Packages */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-card border border-border rounded-xl p-6 lg:col-span-1"
+        >
+          <h3 className="text-lg font-bold mb-6">Paket Terpopuler</h3>
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -344,79 +359,54 @@ const AdminDashboard = () => {
                     <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
-                />
-                <Legend verticalAlign="bottom" height={36} />
+                <Tooltip />
+                <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: '12px' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </motion.div>
-      </div>
 
-      {/* Bottom Row */}
-      <div className="grid lg:grid-cols-3 gap-6">
         {/* Upcoming Departures */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="lg:col-span-2 bg-card border border-border rounded-xl p-6"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-card border border-border rounded-xl p-6 lg:col-span-2"
         >
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-display font-bold">Keberangkatan Terdekat</h3>
-            <button className="text-sm text-gold hover:underline">Lihat Semua</button>
+            <h3 className="text-lg font-bold">Keberangkatan Terdekat</h3>
+            <Button variant="ghost" size="sm" className="text-gold" asChild>
+              <a href="/admin/departures">Lihat Semua</a>
+            </Button>
           </div>
           <div className="space-y-4">
-            {upcoming.map((dep) => (
-              <div key={dep.id} className="flex items-center justify-between p-4 border border-border rounded-xl hover:bg-accent/50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex flex-col items-center justify-center text-primary">
-                    <span className="text-xs font-bold uppercase">{format(new Date(dep.departure_date), "MMM", { locale: localeId })}</span>
-                    <span className="text-lg font-bold leading-none">{format(new Date(dep.departure_date), "dd")}</span>
+            {upcoming.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">Tidak ada keberangkatan terdekat</div>
+            ) : (
+              upcoming.map((dep) => (
+                <div key={dep.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-card flex flex-col items-center justify-center border border-border">
+                      <span className="text-xs font-bold text-gold uppercase">{format(new Date(dep.departure_date), "MMM")}</span>
+                      <span className="text-lg font-bold">{format(new Date(dep.departure_date), "d")}</span>
+                    </div>
+                    <div>
+                      <div className="font-semibold">{dep.package?.title || "Paket Umroh"}</div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Plane className="w-3 h-3" /> Keberangkatan: {format(new Date(dep.departure_date), "d MMMM yyyy", { locale: localeId })}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-bold">{dep.package?.title}</div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-2">
-                      <Plane className="w-3 h-3" /> {format(new Date(dep.departure_date), "EEEE, d MMMM yyyy", { locale: localeId })}
+                  <div className="text-right">
+                    <div className="text-sm font-semibold">{dep.remaining_quota} Sisa Kuota</div>
+                    <div className="w-24 h-2 bg-muted rounded-full mt-1 overflow-hidden">
+                      <div 
+                        className="h-full bg-gold" 
+                        style={{ width: `${((dep.quota - dep.remaining_quota) / dep.quota) * 100}%` }}
+                      />
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold">{dep.quota - dep.remaining_quota} / {dep.quota}</div>
-                  <div className="text-xs text-muted-foreground">Jamaah Terdaftar</div>
-                </div>
-              </div>
-            ))}
-            {upcoming.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">Tidak ada keberangkatan terdekat</div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Quick Actions / Recent Activity */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-card border border-border rounded-xl p-6"
-        >
-          <h3 className="text-lg font-display font-bold mb-6">Aktivitas Terbaru</h3>
-          <div className="space-y-6">
-            {(allBookings || []).slice(0, 5).map((b: any, i: number) => (
-              <div key={i} className="flex gap-3">
-                <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${b.status === "paid" ? "bg-emerald-500" : b.status === "waiting_payment" ? "bg-gold" : "bg-muted"}`} />
-                <div>
-                  <div className="text-sm font-medium">
-                    <span className="font-bold">{b.profile?.name || "User"}</span> melakukan booking
-                  </div>
-                  <div className="text-xs text-muted-foreground">{b.package?.title}</div>
-                  <div className="text-[10px] text-muted-foreground mt-1">{format(new Date(b.created_at), "d MMM, HH:mm")}</div>
-                </div>
-              </div>
-            ))}
-            {(allBookings || []).length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">Belum ada aktivitas</div>
+              ))
             )}
           </div>
         </motion.div>
