@@ -25,7 +25,7 @@ import NotFound from "./pages/NotFound";
 
 // Admin
 import AdminLayout from "./components/admin/AdminLayout";
-import { AdminRoute } from "./components/AdminRoute";
+import AdminRoute from "./components/AdminRoute";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminPackages from "./pages/admin/Packages";
 import AdminDepartures from "./pages/admin/Departures";

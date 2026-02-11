@@ -575,7 +575,7 @@ const AdminReports = () => {
         </TabsContent>
 
         <TabsContent value="commissions">
-          <CommissionReport />
+          <CommissionReport startDate={getDateRange().start} endDate={getDateRange().end} />
         </TabsContent>
       </Tabs>
     </div>

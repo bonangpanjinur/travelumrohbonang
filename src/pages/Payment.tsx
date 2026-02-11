@@ -35,7 +35,7 @@ interface PaymentRecord {
   id: string;
   amount: number;
   status: string;
-  payment_type: string;
+  payment_type?: string;
   created_at: string;
 }
 
@@ -92,41 +92,14 @@ const Payment = () => {
         ]);
 
         // If the query fails due to missing columns, try a fallback query without those columns
-        let finalBookingData = bookingRes.data;
-        if (bookingRes.error) {
-          console.warn("Primary booking query failed, trying fallback:", bookingRes.error);
-          const fallbackRes = await supabase
-            .from("bookings")
-            .select(`
-              id, booking_code, total_price, status, user_id,
-              package:packages(title, minimum_dp),
-              departure:package_departures(departure_date)
-            `)
-            .eq("id", bookingId)
-            .single();
-          
-          if (fallbackRes.error) throw fallbackRes.error;
-          finalBookingData = fallbackRes.data;
-        }
+        if (bookingRes.error) throw bookingRes.error;
+        const finalBookingData = bookingRes.data;
 
-        // Handle potential missing columns in payments table
-        let finalPaymentsData = paymentsRes.data;
-        if (paymentsRes.error) {
-          console.warn("Primary payments query failed, trying fallback:", paymentsRes.error);
-          const fallbackPaymentsRes = await supabase
-            .from("payments")
-            .select("id, amount, status, created_at")
-            .eq("booking_id", bookingId)
-            .order("created_at", { ascending: true });
-          
-          if (!fallbackPaymentsRes.error) {
-            finalPaymentsData = fallbackPaymentsRes.data;
-          }
-        }
+        const finalPaymentsData = paymentsRes.data || [];
         
         if (!finalBookingData) throw new Error("Booking tidak ditemukan");
         
-        const bookingData = finalBookingData as unknown as BookingData;
+        const bookingData = finalBookingData as any as BookingData;
         
         // CRITICAL FIX: Verify ownership
         if (bookingData.user_id !== user.id) {
