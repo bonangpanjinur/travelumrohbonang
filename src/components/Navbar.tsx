@@ -153,12 +153,12 @@ const Navbar = () => {
     }
   };
 
-  const displayLinks = navItems.length > 0 ? navItems : [
+  const defaultLinks: NavItem[] = [
     { id: "1", label: "Beranda", url: "/", parent_id: null, sort_order: 1, open_in_new_tab: false },
     { id: "2", label: "Paket Perjalanan", url: "/paket", parent_id: null, sort_order: 2, open_in_new_tab: false },
     { id: "3", label: "Galeri", url: "/galeri", parent_id: null, sort_order: 3, open_in_new_tab: false },
     { id: "4", label: "Blog", url: "/blog", parent_id: null, sort_order: 4, open_in_new_tab: false },
-    ...dynamicPages.map((page, index) => ({
+    ...dynamicPages.map((page, index): NavItem => ({
       id: `dynamic-${index}`,
       label: page.title || page.slug,
       url: `/${page.slug}`,
@@ -167,6 +167,8 @@ const Navbar = () => {
       open_in_new_tab: false
     }))
   ];
+
+  const displayLinks: NavItem[] = navItems.length > 0 ? navItems : defaultLinks;
 
   const renderLogo = () => {
     const showLogo = branding.display_mode === "logo_only" || branding.display_mode === "both";
