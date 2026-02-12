@@ -26,6 +26,7 @@ import NotFound from "./pages/NotFound";
 // Admin
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminRoute from "./components/AdminRoute";
+import AuthRoute from "./components/AuthRoute";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminPackages from "./pages/admin/Packages";
 import AdminDepartures from "./pages/admin/Departures";
@@ -64,11 +65,14 @@ const AppContent = () => {
       <Route path="/auth" element={<Auth />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/booking/:slug/:departureId" element={<Booking />} />
-      <Route path="/booking/payment/:bookingId" element={<Payment />} />
-      <Route path="/my-bookings" element={<MyBookings />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/profile" element={<Profile />} />
+      {/* Protected User Routes */}
+      <Route element={<AuthRoute />}>
+        <Route path="/booking/:slug/:departureId" element={<Booking />} />
+        <Route path="/booking/payment/:bookingId" element={<Payment />} />
+        <Route path="/my-bookings" element={<MyBookings />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
+      </Route>
       <Route path="/galeri" element={<Gallery />} />
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<BlogDetail />} />
