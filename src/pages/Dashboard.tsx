@@ -6,24 +6,81 @@ import {
   CheckCircle2, Clock, AlertCircle, LogOut
 } from "lucide-react";
 import { useNavigate, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 
-const steps = [
-  { id: 1, title: "Pendaftaran", status: "completed", icon: User },
-  { id: 2, title: "Pembayaran DP", status: "completed", icon: CreditCard },
-  { id: 3, title: "Upload Dokumen", status: "current", icon: FileText },
-  { id: 4, title: "Proses Visa", status: "upcoming", icon: CheckCircle2 },
-  { id: 5, title: "Pelunasan", status: "upcoming", icon: CreditCard },
-  { id: 6, title: "Keberangkatan", status: "upcoming", icon: Plane },
-];
+interface StepDef {
+  id: number;
+  title: string;
+  icon: React.ElementType;
+  status: "completed" | "current" | "upcoming";
+}
+
+const getSteps = (booking: any, payments: any[]): StepDef[] => {
+  if (!booking) {
+    return [
+      { id: 1, title: "Pendaftaran", icon: User, status: "upcoming" },
+      { id: 2, title: "Pembayaran DP", icon: CreditCard, status: "upcoming" },
+      { id: 3, title: "Upload Dokumen", icon: FileText, status: "upcoming" },
+      { id: 4, title: "Proses Visa", icon: CheckCircle2, status: "upcoming" },
+      { id: 5, title: "Pelunasan", icon: CreditCard, status: "upcoming" },
+      { id: 6, title: "Keberangkatan", icon: Plane, status: "upcoming" },
+    ];
+  }
+
+  const status = booking.status || "draft";
+  const hasDpPaid = payments.some(p => p.payment_type === "dp" && p.status === "verified");
+  const hasFullPaid = payments.some(p => p.payment_type === "full" && p.status === "verified");
+  const totalVerified = payments.filter(p => p.status === "verified").reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+  const totalPrice = Number(booking.total_price) || 0;
+  const isFullyPaid = totalVerified >= totalPrice && totalPrice > 0;
+
+  // Determine each step status
+  // Step 1: Pendaftaran - completed if booking exists (not draft)
+  const step1: "completed" | "current" | "upcoming" = status !== "draft" ? "completed" : "current";
+
+  // Step 2: Pembayaran DP
+  let step2: "completed" | "current" | "upcoming" = "upcoming";
+  if (hasDpPaid || isFullyPaid) step2 = "completed";
+  else if (step1 === "completed") step2 = "current";
+
+  // Step 3: Upload Dokumen
+  let step3: "completed" | "current" | "upcoming" = "upcoming";
+  if (status === "processing" || status === "confirmed" || status === "completed" || status === "paid") step3 = "completed";
+  else if (step2 === "completed") step3 = "current";
+
+  // Step 4: Proses Visa
+  let step4: "completed" | "current" | "upcoming" = "upcoming";
+  if (status === "confirmed" || status === "completed") step4 = "completed";
+  else if (step3 === "completed") step4 = "current";
+
+  // Step 5: Pelunasan
+  let step5: "completed" | "current" | "upcoming" = "upcoming";
+  if (isFullyPaid || hasFullPaid) step5 = "completed";
+  else if (step4 === "completed") step5 = "current";
+
+  // Step 6: Keberangkatan
+  let step6: "completed" | "current" | "upcoming" = "upcoming";
+  if (status === "completed") step6 = "completed";
+  else if (step5 === "completed") step6 = "current";
+
+  return [
+    { id: 1, title: "Pendaftaran", icon: User, status: step1 },
+    { id: 2, title: "Pembayaran DP", icon: CreditCard, status: step2 },
+    { id: 3, title: "Upload Dokumen", icon: FileText, status: step3 },
+    { id: 4, title: "Proses Visa", icon: CheckCircle2, status: step4 },
+    { id: 5, title: "Pelunasan", icon: CreditCard, status: step5 },
+    { id: 6, title: "Keberangkatan", icon: Plane, status: step6 },
+  ];
+};
 
 const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeBooking, setActiveBooking] = useState<any>(null);
+  const [payments, setPayments] = useState<any[]>([]);
   const [loadingBooking, setLoadingBooking] = useState(true);
   const [userName, setUserName] = useState<string>("");
 
@@ -31,7 +88,6 @@ const Dashboard = () => {
     if (!user) return;
     
     const fetchData = async () => {
-      // Fetch profile name
       const { data: profile } = await supabase
         .from('profiles')
         .select('name')
@@ -40,7 +96,6 @@ const Dashboard = () => {
       
       setUserName(profile?.name || user.user_metadata?.name || user.email || 'Jamaah');
 
-      // Fetch last booking
       const { data: bookingData } = await supabase
         .from('bookings')
         .select(`*, package:packages(title), departure:package_departures(departure_date)`)
@@ -49,12 +104,22 @@ const Dashboard = () => {
         .limit(1)
         .maybeSingle();
 
-      if (bookingData) setActiveBooking(bookingData);
+      if (bookingData) {
+        setActiveBooking(bookingData);
+        // Fetch payments for this booking
+        const { data: paymentData } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('booking_id', bookingData.id);
+        setPayments(paymentData || []);
+      }
       setLoadingBooking(false);
     };
 
     fetchData();
   }, [user]);
+
+  const steps = useMemo(() => getSteps(activeBooking, payments), [activeBooking, payments]);
 
   if (loading) return <LoadingSpinner fullScreen />;
   if (!user) return <Navigate to="/auth" replace />;
@@ -129,6 +194,28 @@ const Dashboard = () => {
                         {step.status === 'completed' ? 'Selesai' : step.status === 'current' ? 'Proses' : 'Menunggu'}
                       </span>
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Mobile steps */}
+            {activeBooking && (
+              <div className="md:hidden space-y-3">
+                {steps.map((step) => (
+                  <div key={step.id} className={`flex items-center gap-3 p-3 rounded-lg ${step.status === 'current' ? 'bg-primary/5 border border-primary/20' : ''}`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0
+                      ${step.status === 'completed' ? 'bg-green-100 text-green-600' : 
+                        step.status === 'current' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground/30'}`}>
+                      <step.icon className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className={`font-semibold text-sm ${step.status === 'current' ? 'text-primary' : 'text-muted-foreground'}`}>{step.title}</h4>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full
+                      ${step.status === 'completed' ? 'bg-green-100 text-green-700' : 
+                        step.status === 'current' ? 'bg-blue-100 text-blue-700' : 'text-muted-foreground/50'}`}>
+                      {step.status === 'completed' ? 'Selesai' : step.status === 'current' ? 'Proses' : 'Menunggu'}
+                    </span>
                   </div>
                 ))}
               </div>

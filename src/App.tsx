@@ -50,6 +50,10 @@ import AdminPilgrims from "./pages/admin/Pilgrims";
 import AdminAgents from "./pages/admin/Agents";
 import AdminMuthawifs from "./pages/admin/Muthawifs";
 import AdminUsers from "./pages/admin/Users";
+import AdminCoupons from "./pages/admin/Coupons";
+import AdminAdvantages from "./pages/admin/Advantages";
+import AdminGuideSteps from "./pages/admin/GuideSteps";
+import AdminServices from "./pages/admin/Services";
 
 const queryClient = new QueryClient();
 
@@ -102,6 +106,10 @@ const AppContent = () => {
           <Route path="pages" element={<AdminPages />} />
           <Route path="navigation" element={<AdminNavigation />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="coupons" element={<AdminCoupons />} />
+          <Route path="advantages" element={<AdminAdvantages />} />
+          <Route path="guide-steps" element={<AdminGuideSteps />} />
+          <Route path="services" element={<AdminServices />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
       </Route>
