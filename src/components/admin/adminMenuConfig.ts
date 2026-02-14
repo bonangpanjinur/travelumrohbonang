@@ -55,6 +55,10 @@ export const menuItems: MenuItem[] = [
   { label: "Blog", href: "/admin/blog", icon: BookOpen },
   { label: "Halaman CMS", href: "/admin/pages", icon: FileText },
   { label: "Navigasi & Kategori", href: "/admin/navigation", icon: Menu },
+  { label: "Kupon", href: "/admin/coupons", icon: Ticket },
+  { label: "Keunggulan", href: "/admin/advantages", icon: Ticket },
+  { label: "Langkah Panduan", href: "/admin/guide-steps", icon: Ticket },
+  { label: "Layanan", href: "/admin/services", icon: Ticket },
   { label: "Manajemen User", href: "/admin/users", icon: Users },
   { label: "Pengaturan", href: "/admin/settings", icon: Settings, roles: ["superadmin", "super_admin"] },
 ];
