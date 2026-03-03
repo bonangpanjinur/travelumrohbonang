@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Users, Building2, Percent, Phone, Search } from "lucide-react";
+import AdminPagination from "@/components/admin/AdminPagination";
+import { useAdminPagination } from "@/hooks/useAdminPagination";
 
 interface Agent {
   id: string;
@@ -154,6 +156,10 @@ const AdminAgents = () => {
     const matchBranch = filterBranch === "all" || agent.branch_id === filterBranch;
     return matchSearch && matchBranch;
   });
+
+  const { page, setPage, totalPages, totalCount, paginatedItems, pageSize, resetPage } = useAdminPagination(filteredAgents);
+
+  useEffect(() => { resetPage(); }, [searchTerm, filterBranch]);
 
   const activeCount = agents.filter(a => a.is_active).length;
   const totalCommission = agents.reduce((sum, a) => sum + (a.commission_percent || 0), 0);
@@ -323,6 +329,7 @@ const AdminAgents = () => {
             : "Belum ada agen terdaftar"}
         </div>
       ) : (
+        <>
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
@@ -337,7 +344,7 @@ const AdminAgents = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAgents.map((agent) => (
+                {paginatedItems.map((agent) => (
                   <TableRow key={agent.id}>
                     <TableCell className="font-semibold">{agent.name}</TableCell>
                     <TableCell>
@@ -385,6 +392,8 @@ const AdminAgents = () => {
             </Table>
           </div>
         </div>
+        <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
+        </>
       )}
     </div>
   );
