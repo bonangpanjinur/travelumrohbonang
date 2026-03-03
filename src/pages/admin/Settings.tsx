@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Image, Globe, Building2, Phone, Palette, ImageIcon, Layout, Check } from "lucide-react";
+import { Save, Image, Globe, Building2, Phone, Palette, ImageIcon, Layout, Check, Banknote, Share2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Json } from "@/integrations/supabase/types";
 import { IconPicker } from "@/components/ui/icon-picker";
@@ -70,6 +70,23 @@ interface TemplateSettings {
   active_template: string;
   color_scheme: string;
   font_style: string;
+}
+
+interface BankSettings {
+  bank_name: string;
+  bank_account: string;
+  bank_holder: string;
+  bank_name_2: string;
+  bank_account_2: string;
+  bank_holder_2: string;
+}
+
+interface SocialSettings {
+  instagram: string;
+  facebook: string;
+  youtube: string;
+  tiktok: string;
+  twitter: string;
 }
 
 // Template definitions
@@ -186,6 +203,23 @@ const defaultTemplate: TemplateSettings = {
   font_style: "classic",
 };
 
+const defaultBank: BankSettings = {
+  bank_name: "",
+  bank_account: "",
+  bank_holder: "",
+  bank_name_2: "",
+  bank_account_2: "",
+  bank_holder_2: "",
+};
+
+const defaultSocial: SocialSettings = {
+  instagram: "",
+  facebook: "",
+  youtube: "",
+  tiktok: "",
+  twitter: "",
+};
+
 const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -198,6 +232,8 @@ const AdminSettings = () => {
   const [seo, setSeo] = useState<SeoSettings>(defaultSeo);
   const [background, setBackground] = useState<BackgroundSettings>(defaultBackground);
   const [template, setTemplate] = useState<TemplateSettings>(defaultTemplate);
+  const [bank, setBank] = useState<BankSettings>(defaultBank);
+  const [social, setSocial] = useState<SocialSettings>(defaultSocial);
 
   useEffect(() => {
     fetchSettings();
@@ -232,6 +268,12 @@ const AdminSettings = () => {
             break;
           case "template":
             setTemplate({ ...defaultTemplate, ...(value as object) });
+            break;
+          case "bank":
+            setBank({ ...defaultBank, ...(value as object) });
+            break;
+          case "social":
+            setSocial({ ...defaultSocial, ...(value as object) });
             break;
         }
       });
@@ -317,6 +359,12 @@ const AdminSettings = () => {
           </TabsTrigger>
           <TabsTrigger value="seo" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Globe className="w-4 h-4 mr-2" /> SEO
+          </TabsTrigger>
+          <TabsTrigger value="bank" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Banknote className="w-4 h-4 mr-2" /> Bank
+          </TabsTrigger>
+          <TabsTrigger value="social" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Share2 className="w-4 h-4 mr-2" /> Sosial Media
           </TabsTrigger>
         </TabsList>
 
@@ -1052,6 +1100,93 @@ const AdminSettings = () => {
             <Button onClick={() => saveSetting("background", "appearance", background)} disabled={saving} className="gradient-gold text-primary">
               <Save className="w-4 h-4 mr-2" />
               {saving ? "Menyimpan..." : "Simpan Background Settings"}
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* Bank Settings */}
+        <TabsContent value="bank">
+          <div className="bg-card border border-border rounded-xl p-6 space-y-6">
+            <h2 className="text-lg font-semibold">Rekening Bank</h2>
+            <p className="text-muted-foreground text-sm">Informasi rekening untuk pembayaran jemaah</p>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4 p-4 border border-border rounded-lg">
+                <h3 className="font-medium">Rekening Utama</h3>
+                <div>
+                  <Label>Nama Bank</Label>
+                  <Input value={bank.bank_name} onChange={(e) => setBank({ ...bank, bank_name: e.target.value })} placeholder="BCA / Mandiri / BNI" className="mt-1" />
+                </div>
+                <div>
+                  <Label>Nomor Rekening</Label>
+                  <Input value={bank.bank_account} onChange={(e) => setBank({ ...bank, bank_account: e.target.value })} placeholder="1234567890" className="mt-1" />
+                </div>
+                <div>
+                  <Label>Atas Nama</Label>
+                  <Input value={bank.bank_holder} onChange={(e) => setBank({ ...bank, bank_holder: e.target.value })} placeholder="PT Travel Umroh" className="mt-1" />
+                </div>
+              </div>
+
+              <div className="space-y-4 p-4 border border-border rounded-lg">
+                <h3 className="font-medium">Rekening Alternatif</h3>
+                <div>
+                  <Label>Nama Bank</Label>
+                  <Input value={bank.bank_name_2} onChange={(e) => setBank({ ...bank, bank_name_2: e.target.value })} placeholder="BSI / Bank Syariah" className="mt-1" />
+                </div>
+                <div>
+                  <Label>Nomor Rekening</Label>
+                  <Input value={bank.bank_account_2} onChange={(e) => setBank({ ...bank, bank_account_2: e.target.value })} className="mt-1" />
+                </div>
+                <div>
+                  <Label>Atas Nama</Label>
+                  <Input value={bank.bank_holder_2} onChange={(e) => setBank({ ...bank, bank_holder_2: e.target.value })} className="mt-1" />
+                </div>
+              </div>
+            </div>
+
+            <Button onClick={() => saveSetting("bank", "general", bank)} disabled={saving} className="gradient-gold text-primary">
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? "Menyimpan..." : "Simpan Rekening Bank"}
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* Social Media Settings */}
+        <TabsContent value="social">
+          <div className="bg-card border border-border rounded-xl p-6 space-y-6">
+            <h2 className="text-lg font-semibold">Sosial Media</h2>
+            <p className="text-muted-foreground text-sm">Link sosial media yang ditampilkan di footer dan halaman kontak</p>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <Label>Instagram</Label>
+                  <Input value={social.instagram} onChange={(e) => setSocial({ ...social, instagram: e.target.value })} placeholder="https://instagram.com/username" className="mt-1" />
+                </div>
+                <div>
+                  <Label>Facebook</Label>
+                  <Input value={social.facebook} onChange={(e) => setSocial({ ...social, facebook: e.target.value })} placeholder="https://facebook.com/page" className="mt-1" />
+                </div>
+                <div>
+                  <Label>YouTube</Label>
+                  <Input value={social.youtube} onChange={(e) => setSocial({ ...social, youtube: e.target.value })} placeholder="https://youtube.com/@channel" className="mt-1" />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <Label>TikTok</Label>
+                  <Input value={social.tiktok} onChange={(e) => setSocial({ ...social, tiktok: e.target.value })} placeholder="https://tiktok.com/@username" className="mt-1" />
+                </div>
+                <div>
+                  <Label>Twitter / X</Label>
+                  <Input value={social.twitter} onChange={(e) => setSocial({ ...social, twitter: e.target.value })} placeholder="https://x.com/username" className="mt-1" />
+                </div>
+              </div>
+            </div>
+
+            <Button onClick={() => saveSetting("social", "general", social)} disabled={saving} className="gradient-gold text-primary">
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? "Menyimpan..." : "Simpan Sosial Media"}
             </Button>
           </div>
         </TabsContent>

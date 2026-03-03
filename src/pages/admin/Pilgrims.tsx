@@ -9,6 +9,8 @@ import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard } from "lucide-re
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
+import AdminPagination from "@/components/admin/AdminPagination";
+import { useAdminPagination } from "@/hooks/useAdminPagination";
 
 interface Pilgrim {
   id: string;
@@ -78,6 +80,10 @@ const AdminPilgrims = () => {
     );
   });
 
+  const { page, setPage, totalPages, totalCount, paginatedItems, pageSize, resetPage } = useAdminPagination(filteredPilgrims);
+
+  useEffect(() => { resetPage(); }, [search]);
+
   const showDetail = (pilgrim: Pilgrim) => {
     setSelectedPilgrim(pilgrim);
     setDetailOpen(true);
@@ -97,7 +103,7 @@ const AdminPilgrims = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-display font-bold">Daftar Jemaah</h1>
-          <p className="text-muted-foreground">Total {pilgrims.length} jemaah terdaftar</p>
+          <p className="text-muted-foreground">Total {filteredPilgrims.length} jemaah ditemukan</p>
         </div>
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -122,6 +128,7 @@ const AdminPilgrims = () => {
           </p>
         </div>
       ) : (
+        <>
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
@@ -137,7 +144,7 @@ const AdminPilgrims = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPilgrims.map((pilgrim) => (
+                {paginatedItems.map((pilgrim) => (
                   <TableRow key={pilgrim.id}>
                     <TableCell>
                       <div>
@@ -183,7 +190,7 @@ const AdminPilgrims = () => {
             </Table>
           </div>
         </div>
-      )}
+        <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
 
       {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
@@ -295,6 +302,8 @@ const AdminPilgrims = () => {
           )}
         </DialogContent>
       </Dialog>
+      </>
+      )}
     </div>
   );
 };
