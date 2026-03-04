@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard } from "lucide-react";
+import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download } from "lucide-react";
+import { exportToCsv } from "@/lib/exportCsv";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -105,6 +107,18 @@ const AdminPilgrims = () => {
           <h1 className="text-2xl font-display font-bold">Daftar Jemaah</h1>
           <p className="text-muted-foreground">Total {filteredPilgrims.length} jemaah ditemukan</p>
         </div>
+        <div className="flex gap-3 items-center">
+          <Button variant="outline" onClick={() => {
+            const headers = ["Nama", "Gender", "NIK", "No. Paspor", "Telepon", "Email", "Kode Booking", "Paket"];
+            const rows = filteredPilgrims.map(p => [
+              p.name, p.gender === "male" ? "L" : p.gender === "female" ? "P" : "-",
+              p.nik || "-", p.passport_number || "-", p.phone || "-", p.email || "-",
+              p.booking?.booking_code || "-", p.booking?.package?.title || "-"
+            ]);
+            exportToCsv("jemaah", headers, rows);
+          }}>
+            <Download className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -114,8 +128,7 @@ const AdminPilgrims = () => {
             className="pl-10"
           />
         </div>
-      </div>
-
+        </div>
       {loading ? (
         <div className="flex justify-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>

@@ -12,6 +12,7 @@ import { Plus, Pencil, Trash2, FileText, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import RichTextEditor from "@/components/ui/rich-text-editor";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 
 interface Page {
   id: string;
@@ -30,6 +31,7 @@ const AdminPages = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Page | null>(null);
   const { toast } = useToast();
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     slug: "",
@@ -124,8 +126,10 @@ const AdminPages = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus halaman ini?")) return;
+    setDeleteTargetId(id);
+  };
 
+  const executeDelete = async (id: string) => {
     const { error } = await supabase.from("pages").delete().eq("id", id);
     if (error) {
       toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
@@ -161,6 +165,7 @@ const AdminPages = () => {
 
   return (
     <div>
+      <DeleteAlertDialog open={!!deleteTargetId} onOpenChange={() => setDeleteTargetId(null)} onConfirm={() => { if (deleteTargetId) executeDelete(deleteTargetId); setDeleteTargetId(null); }} title="Hapus Halaman?" />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
           <FileText className="w-6 h-6 text-gold" />

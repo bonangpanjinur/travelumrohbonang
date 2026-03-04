@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, GripVertical, Calendar, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 
 interface Departure {
   id: string;
@@ -46,6 +47,8 @@ const AdminItineraries = () => {
   const [editingDay, setEditingDay] = useState<ItineraryDay | null>(null);
   const [selectedItinerary, setSelectedItinerary] = useState<Itinerary | null>(null);
   const { toast } = useToast();
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteType, setDeleteType] = useState<"itinerary" | "day">("itinerary");
 
   const [form, setForm] = useState({
     departure_id: "",
@@ -195,28 +198,36 @@ const AdminItineraries = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus itinerary ini?")) return;
-
-    const { error } = await supabase.from("itineraries").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Itinerary dihapus" });
-      fetchData();
-      if (selectedItinerary?.id === id) setSelectedItinerary(null);
-    }
+    setDeleteTargetId(id);
+    setDeleteType("itinerary");
   };
 
   const handleDeleteDay = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus hari ini?")) return;
+    setDeleteTargetId(id);
+    setDeleteType("day");
+  };
 
-    const { error } = await supabase.from("itinerary_days").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
+  const executeDelete = async () => {
+    if (!deleteTargetId) return;
+    if (deleteType === "itinerary") {
+      const { error } = await supabase.from("itineraries").delete().eq("id", deleteTargetId);
+      if (error) {
+        toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Itinerary dihapus" });
+        fetchData();
+        if (selectedItinerary?.id === deleteTargetId) setSelectedItinerary(null);
+      }
     } else {
-      toast({ title: "Hari dihapus" });
-      fetchData();
+      const { error } = await supabase.from("itinerary_days").delete().eq("id", deleteTargetId);
+      if (error) {
+        toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Hari dihapus" });
+        fetchData();
+      }
     }
+    setDeleteTargetId(null);
   };
 
   const resetForm = () => {
@@ -242,6 +253,7 @@ const AdminItineraries = () => {
 
   return (
     <div>
+      <DeleteAlertDialog open={!!deleteTargetId} onOpenChange={() => setDeleteTargetId(null)} onConfirm={() => { executeDelete(); }} title="Hapus data ini?" />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold">Itinerary Builder</h1>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>

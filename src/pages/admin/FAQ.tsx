@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, GripVertical, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 
 interface FAQ {
   id: string;
@@ -35,6 +36,7 @@ interface FAQ {
 const AdminFAQ = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
   const [formData, setFormData] = useState({
     question: "",
@@ -136,6 +138,7 @@ const AdminFAQ = () => {
 
   return (
     <div className="space-y-6">
+      <DeleteAlertDialog open={!!deleteTargetId} onOpenChange={() => setDeleteTargetId(null)} onConfirm={() => { if (deleteTargetId) deleteMutation.mutate(deleteTargetId); setDeleteTargetId(null); }} title="Hapus FAQ?" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Kelola FAQ</h1>
@@ -251,11 +254,7 @@ const AdminFAQ = () => {
                           size="icon"
                           variant="ghost"
                           className="text-destructive"
-                          onClick={() => {
-                            if (confirm("Hapus FAQ ini?")) {
-                              deleteMutation.mutate(faq.id);
-                            }
-                          }}
+                          onClick={() => setDeleteTargetId(faq.id)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

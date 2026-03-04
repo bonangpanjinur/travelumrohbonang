@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Eye, Image, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import RichTextEditor from "@/components/ui/rich-text-editor";
@@ -37,6 +38,7 @@ const AdminBlog = () => {
   const [editing, setEditing] = useState<BlogPost | null>(null);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     title: "",
@@ -143,8 +145,10 @@ const AdminBlog = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus artikel ini?")) return;
+    setDeleteTargetId(id);
+  };
 
+  const executeDelete = async (id: string) => {
     const { error } = await supabase.from("blog_posts").delete().eq("id", id);
     if (error) {
       toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
@@ -188,6 +192,7 @@ const AdminBlog = () => {
 
   return (
     <div>
+      <DeleteAlertDialog open={!!deleteTargetId} onOpenChange={() => setDeleteTargetId(null)} onConfirm={() => { if (deleteTargetId) executeDelete(deleteTargetId); setDeleteTargetId(null); }} title="Hapus Artikel?" />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold">Blog / Artikel</h1>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>

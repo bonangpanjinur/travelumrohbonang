@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Image as ImageIcon, Upload, Loader2, GripVertical, Settings } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 
 interface GalleryItem {
   id: string;
@@ -31,6 +32,7 @@ const AdminGallery = () => {
   const [savingPattern, setSavingPattern] = useState(false);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; imageUrl: string } | null>(null);
 
   const [form, setForm] = useState({
     title: "",
@@ -152,9 +154,13 @@ const AdminGallery = () => {
   };
 
   const handleDelete = async (id: string, imageUrl: string) => {
-    if (!confirm("Yakin ingin menghapus gambar ini?")) return;
+    setDeleteTarget({ id, imageUrl });
+  };
 
-    // Extract filename from URL
+  const executeGalleryDelete = async () => {
+    if (!deleteTarget) return;
+    const { id, imageUrl } = deleteTarget;
+    setDeleteTarget(null);
     const fileName = imageUrl.split("/").pop();
 
     // Delete from storage
@@ -218,6 +224,7 @@ const AdminGallery = () => {
 
   return (
     <div className="space-y-6">
+      <DeleteAlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)} onConfirm={() => executeGalleryDelete()} title="Hapus Gambar?" />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
           <ImageIcon className="w-6 h-6 text-gold" />
