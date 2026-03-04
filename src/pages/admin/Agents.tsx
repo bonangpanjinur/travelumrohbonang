@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Users, Building2, Percent, Phone, Search } from "lucide-react";
 import AdminPagination from "@/components/admin/AdminPagination";
 import { useAdminPagination } from "@/hooks/useAdminPagination";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
+import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
 
 interface Agent {
   id: string;
@@ -37,6 +39,7 @@ const AdminAgents = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBranch, setFilterBranch] = useState<string>("all");
   const { toast } = useToast();
+  const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
 
   const [form, setForm] = useState({
     name: "",
@@ -112,15 +115,12 @@ const AdminAgents = () => {
     setIsOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus agen ini?")) return;
-    
+  const executeDelete = async (id: string) => {
     const { error } = await supabase.from("agents").delete().eq("id", id);
     if (error) {
       toast({ title: "Gagal menghapus agen", description: error.message, variant: "destructive" });
       return;
     }
-    
     toast({ title: "Agen berhasil dihapus" });
     fetchData();
   };
@@ -167,6 +167,7 @@ const AdminAgents = () => {
 
   return (
     <div>
+      <DeleteAlertDialog open={isDeleteOpen} onOpenChange={cancelDelete} onConfirm={() => confirmDelete(executeDelete)} title="Hapus Agen?" />
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-display font-bold">Agen</h1>
@@ -382,7 +383,7 @@ const AdminAgents = () => {
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(agent)}>
                         <Pencil className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(agent.id)}>
+                      <Button variant="ghost" size="icon" onClick={() => requestDelete(agent.id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </TableCell>

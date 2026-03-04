@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 
 interface Airline {
   id: string;
@@ -20,6 +21,7 @@ const AdminAirlines = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Airline | null>(null);
   const { toast } = useToast();
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const [form, setForm] = useState({ name: "", logo_url: "" });
 
@@ -62,7 +64,10 @@ const AdminAirlines = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus?")) return;
+    setDeleteTargetId(id);
+  };
+
+  const executeDelete = async (id: string) => {
     await supabase.from("airlines").delete().eq("id", id);
     toast({ title: "Maskapai dihapus" });
     fetchAirlines();
@@ -75,6 +80,7 @@ const AdminAirlines = () => {
 
   return (
     <div>
+      <DeleteAlertDialog open={!!deleteTargetId} onOpenChange={() => setDeleteTargetId(null)} onConfirm={() => { if (deleteTargetId) executeDelete(deleteTargetId); setDeleteTargetId(null); }} />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold">Maskapai</h1>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>

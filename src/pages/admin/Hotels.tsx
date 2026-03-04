@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Star, Search } from "lucide-react";
 import AdminPagination from "@/components/admin/AdminPagination";
 import { useAdminPagination } from "@/hooks/useAdminPagination";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
+import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
 
 interface Hotel {
   id: string;
@@ -24,6 +26,7 @@ const AdminHotels = () => {
   const [editing, setEditing] = useState<Hotel | null>(null);
   const [search, setSearch] = useState("");
   const { toast } = useToast();
+  const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
 
   const filteredHotels = hotels.filter((h) =>
     h.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -79,8 +82,7 @@ const AdminHotels = () => {
     setIsOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus hotel ini?")) return;
+  const executeDelete = async (id: string) => {
     await supabase.from("hotels").delete().eq("id", id);
     toast({ title: "Hotel dihapus" });
     fetchHotels();
@@ -93,6 +95,7 @@ const AdminHotels = () => {
 
   return (
     <div>
+      <DeleteAlertDialog open={isDeleteOpen} onOpenChange={cancelDelete} onConfirm={() => confirmDelete(executeDelete)} />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold">Hotel</h1>
         <div className="flex gap-3">
@@ -165,7 +168,7 @@ const AdminHotels = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(h)}><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(h.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => requestDelete(h.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                     </TableCell>
                   </TableRow>
                 ))}

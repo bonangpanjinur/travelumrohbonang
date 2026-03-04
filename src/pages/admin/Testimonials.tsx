@@ -12,6 +12,7 @@ import { Plus, Pencil, Trash2, MessageSquare, Star, Upload, Loader2, User } from
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 
 interface Testimonial {
   id: string;
@@ -34,6 +35,7 @@ const AdminTestimonials = () => {
   const [editing, setEditing] = useState<Testimonial | null>(null);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
@@ -173,8 +175,10 @@ const AdminTestimonials = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus testimoni ini?")) return;
+    setDeleteTargetId(id);
+  };
 
+  const executeDelete = async (id: string) => {
     const { error } = await supabase.from("testimonials").delete().eq("id", id);
     if (error) {
       toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
@@ -221,6 +225,7 @@ const AdminTestimonials = () => {
 
   return (
     <div>
+      <DeleteAlertDialog open={!!deleteTargetId} onOpenChange={() => setDeleteTargetId(null)} onConfirm={() => { if (deleteTargetId) executeDelete(deleteTargetId); setDeleteTargetId(null); }} title="Hapus Testimoni?" />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
           <MessageSquare className="w-6 h-6 text-gold" />

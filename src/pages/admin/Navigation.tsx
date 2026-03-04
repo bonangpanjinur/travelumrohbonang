@@ -10,6 +10,7 @@ import { Plus, Pencil, Trash2, GripVertical } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 
 interface NavItem {
   id: string;
@@ -39,6 +40,8 @@ const AdminNavigation = () => {
   const [editingNav, setEditingNav] = useState<NavItem | null>(null);
   const [editingCat, setEditingCat] = useState<Category | null>(null);
   const { toast } = useToast();
+  const [navDeleteId, setNavDeleteId] = useState<string | null>(null);
+  const [catDeleteId, setCatDeleteId] = useState<string | null>(null);
 
   const [navForm, setNavForm] = useState({
     label: "",
@@ -118,7 +121,10 @@ const AdminNavigation = () => {
   };
 
   const handleNavDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus?")) return;
+    setNavDeleteId(id);
+  };
+
+  const executeNavDelete = async (id: string) => {
     const { error } = await supabase.from("navigation_items").delete().eq("id", id);
     if (error) {
       toast({ title: "Gagal menghapus", variant: "destructive" });
@@ -178,7 +184,10 @@ const AdminNavigation = () => {
   };
 
   const handleCatDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus? Sub-kategori juga akan terhapus.")) return;
+    setCatDeleteId(id);
+  };
+
+  const executeCatDelete = async (id: string) => {
     const { error } = await supabase.from("package_categories").delete().eq("id", id);
     if (error) {
       toast({ title: "Gagal menghapus", variant: "destructive" });
@@ -218,6 +227,8 @@ const AdminNavigation = () => {
 
   return (
     <div>
+      <DeleteAlertDialog open={!!navDeleteId} onOpenChange={() => setNavDeleteId(null)} onConfirm={() => { if (navDeleteId) executeNavDelete(navDeleteId); setNavDeleteId(null); }} />
+      <DeleteAlertDialog open={!!catDeleteId} onOpenChange={() => setCatDeleteId(null)} onConfirm={() => { if (catDeleteId) executeCatDelete(catDeleteId); setCatDeleteId(null); }} title="Hapus Kategori?" description="Sub-kategori juga akan terhapus." />
       <h1 className="text-2xl font-display font-bold mb-6">Navigasi & Kategori</h1>
 
       <Tabs defaultValue="navigation" className="space-y-6">

@@ -8,9 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Hotel, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Hotel, X, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import PackageCommissions from "@/components/admin/PackageCommissions";
+import AdminPagination from "@/components/admin/AdminPagination";
+import { useAdminPagination } from "@/hooks/useAdminPagination";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
+import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
 
 interface Package {
   id: string;
@@ -48,7 +52,16 @@ const AdminPackages = () => {
   const [editing, setEditing] = useState<Package | null>(null);
   const [expandedCommission, setExpandedCommission] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [search, setSearch] = useState("");
   const { toast } = useToast();
+  const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
+
+  const filteredPackages = packages.filter((p) =>
+    p.title.toLowerCase().includes(search.toLowerCase()) ||
+    (p.package_type || "").toLowerCase().includes(search.toLowerCase())
+  );
+  const { page, setPage, totalPages, totalCount, paginatedItems, pageSize, resetPage } = useAdminPagination(filteredPackages);
+  useEffect(() => { resetPage(); }, [search]);
 
   const [categories, setCategories] = useState<Option[]>([]);
   const [hotels, setHotels] = useState<HotelOption[]>([]);
@@ -203,8 +216,7 @@ const AdminPackages = () => {
     setIsOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus paket ini?")) return;
+  const executeDelete = async (id: string) => {
     const { error } = await supabase.from("packages").delete().eq("id", id);
     if (error) {
       toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
@@ -280,8 +292,14 @@ const AdminPackages = () => {
 
   return (
     <div>
+      <DeleteAlertDialog open={isDeleteOpen} onOpenChange={cancelDelete} onConfirm={() => confirmDelete(executeDelete)} title="Hapus Paket?" description="Paket yang dihapus tidak dapat dikembalikan." />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold">Paket</h1>
+        <div className="flex gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Cari paket..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 w-64" />
+          </div>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button className="gradient-gold text-primary">
@@ -481,15 +499,17 @@ const AdminPackages = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
         </div>
-      ) : packages.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">Belum ada paket</div>
+      ) : filteredPackages.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground">{search ? "Tidak ditemukan paket" : "Belum ada paket"}</div>
       ) : (
+        <>
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <Table>
             <TableHeader>
@@ -502,7 +522,7 @@ const AdminPackages = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {packages.map((pkg) => (
+              {paginatedItems.map((pkg) => (
                 <React.Fragment key={pkg.id}>
                   <TableRow>
                     <TableCell className="font-semibold">{pkg.title}</TableCell>
@@ -524,7 +544,7 @@ const AdminPackages = () => {
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(pkg)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(pkg.id)}>
+                        <Button variant="ghost" size="icon" onClick={() => requestDelete(pkg.id)}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       </div>
@@ -542,6 +562,8 @@ const AdminPackages = () => {
             </TableBody>
           </Table>
         </div>
+        <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
+        </>
       )}
     </div>
   );

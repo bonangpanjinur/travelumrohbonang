@@ -14,6 +14,7 @@ import EmptyState from "@/components/ui/empty-state";
 import ErrorAlert from "@/components/ui/error-alert";
 import AdminPagination from "@/components/admin/AdminPagination";
 import { useAdminPagination } from "@/hooks/useAdminPagination";
+import ConfirmAlertDialog from "@/components/admin/ConfirmAlertDialog";
 
 interface Payment {
   id: string;
@@ -43,6 +44,7 @@ const AdminPayments = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const { toast } = useToast();
+  const [verifyTarget, setVerifyTarget] = useState<{ payment: Payment; approve: boolean } | null>(null);
 
   const filteredPayments = payments.filter((p) => {
     const matchSearch = !search || p.booking?.booking_code?.toLowerCase().includes(search.toLowerCase());
@@ -76,7 +78,13 @@ const AdminPayments = () => {
   };
 
   const handleVerify = async (payment: Payment, approve: boolean) => {
-    if (!confirm(approve ? "Setujui pembayaran ini?" : "Tolak pembayaran ini?")) return;
+    setVerifyTarget({ payment, approve });
+  };
+
+  const executeVerify = async () => {
+    if (!verifyTarget) return;
+    const { payment, approve } = verifyTarget;
+    setVerifyTarget(null);
     try {
       const { error: paymentError } = await supabase
         .from("payments")
@@ -118,6 +126,7 @@ const AdminPayments = () => {
 
   return (
     <div>
+      <ConfirmAlertDialog open={!!verifyTarget} onOpenChange={() => setVerifyTarget(null)} onConfirm={executeVerify} title={verifyTarget?.approve ? "Setujui Pembayaran?" : "Tolak Pembayaran?"} description={verifyTarget?.approve ? "Pembayaran akan disetujui dan status booking diupdate." : "Pembayaran akan ditolak."} confirmLabel={verifyTarget?.approve ? "Setujui" : "Tolak"} variant={verifyTarget?.approve ? "default" : "destructive"} />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-display font-bold">Verifikasi Pembayaran</h1>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">

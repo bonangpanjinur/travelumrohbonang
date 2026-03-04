@@ -3,7 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import BookingTable, { Booking } from "@/components/admin/BookingTable";
 import BookingFilters from "@/components/admin/BookingFilters";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, Download } from "lucide-react";
+import { exportToCsv } from "@/lib/exportCsv";
 import {
   Pagination,
   PaginationContent,
@@ -73,6 +75,17 @@ const AdminBookings = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-display font-bold">Booking</h1>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => {
+            const headers = ["Kode Booking", "Nama", "Email", "Paket", "Total Harga", "Status", "Tanggal"];
+            const rows = bookings.map(b => [
+              b.booking_code, (b as any).profile?.name || "-", (b as any).profile?.email || "-",
+              (b as any).package?.title || "-", String(b.total_price),
+              b.status || "draft", b.created_at?.slice(0, 10) || ""
+            ]);
+            exportToCsv("bookings", headers, rows);
+          }}>
+            <Download className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input

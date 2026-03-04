@@ -7,9 +7,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Calendar, Users, DollarSign } from "lucide-react";
+import { Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import AdminPagination from "@/components/admin/AdminPagination";
+import { useAdminPagination } from "@/hooks/useAdminPagination";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
+import { useDeleteConfirm } from "@/hooks/useDeleteConfirm";
 
 interface Package {
   id: string;
@@ -49,7 +53,9 @@ const AdminDepartures = () => {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Departure | null>(null);
+  const [search, setSearch] = useState("");
   const { toast } = useToast();
+  const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
 
   const [form, setForm] = useState({
     package_id: "",
@@ -189,12 +195,9 @@ const AdminDepartures = () => {
     setIsOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Yakin ingin menghapus keberangkatan ini?")) return;
-
+  const executeDelete = async (id: string) => {
     await supabase.from("departure_prices").delete().eq("departure_id", id);
     const { error } = await supabase.from("package_departures").delete().eq("id", id);
-
     if (error) {
       toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
     } else {
@@ -202,6 +205,12 @@ const AdminDepartures = () => {
       fetchData();
     }
   };
+
+  const filteredDepartures = departures.filter((d) =>
+    (d.package?.title || "").toLowerCase().includes(search.toLowerCase())
+  );
+  const { page, setPage, totalPages, totalCount, paginatedItems, pageSize, resetPage } = useAdminPagination(filteredDepartures);
+  useEffect(() => { resetPage(); }, [search]);
 
   const resetForm = () => {
     setEditing(null);
@@ -220,8 +229,14 @@ const AdminDepartures = () => {
 
   return (
     <div>
+      <DeleteAlertDialog open={isDeleteOpen} onOpenChange={cancelDelete} onConfirm={() => confirmDelete(executeDelete)} title="Hapus Keberangkatan?" description="Keberangkatan dan harga terkait akan dihapus." />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold">Keberangkatan</h1>
+        <div className="flex gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Cari paket..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 w-64" />
+          </div>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button className="gradient-gold text-primary">
@@ -339,15 +354,17 @@ const AdminDepartures = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
         </div>
-      ) : departures.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">Belum ada keberangkatan</div>
+      ) : filteredDepartures.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground">{search ? "Tidak ditemukan keberangkatan" : "Belum ada keberangkatan"}</div>
       ) : (
+        <>
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <Table>
             <TableHeader>
@@ -361,7 +378,7 @@ const AdminDepartures = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {departures.map((dep) => (
+              {paginatedItems.map((dep) => (
                 <TableRow key={dep.id}>
                   <TableCell className="font-semibold">{dep.package?.title || "-"}</TableCell>
                   <TableCell>
@@ -398,7 +415,7 @@ const AdminDepartures = () => {
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(dep)}>
                         <Pencil className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(dep.id)}>
+                      <Button variant="ghost" size="icon" onClick={() => requestDelete(dep.id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </div>
@@ -408,6 +425,8 @@ const AdminDepartures = () => {
             </TableBody>
           </Table>
         </div>
+        <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
+        </>
       )}
     </div>
   );
