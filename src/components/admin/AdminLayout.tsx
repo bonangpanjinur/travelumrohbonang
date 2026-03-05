@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
+import AdminBreadcrumb from "./AdminBreadcrumb";
 import UpgradeDialog from "./UpgradeDialog";
 import { BrandingSettings, defaultBranding } from "./adminMenuConfig";
 
@@ -59,6 +60,7 @@ const AdminLayout = () => {
       {/* Main Content */}
       <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
         <div className="p-4 lg:p-8">
+          <AdminBreadcrumb />
           <Outlet />
         </div>
       </main>
