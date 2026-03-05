@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download } from "lucide-react";
 import { exportToCsv } from "@/lib/exportCsv";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -56,8 +55,7 @@ const AdminPilgrims = () => {
         booking:bookings(
           id, booking_code, status, total_price,
           package:packages(title),
-          departure:package_departures(departure_date),
-          profile:profiles!bookings_user_id_profiles_fkey(name, email)
+          departure:package_departures(departure_date)
         )
       `)
       .order("created_at", { ascending: false });
@@ -119,19 +117,21 @@ const AdminPilgrims = () => {
           }}>
             <Download className="w-4 h-4 mr-2" /> Export CSV
           </Button>
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Cari nama, NIK, paspor, booking..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari nama, NIK, paspor, booking..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
-        </div>
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       ) : filteredPilgrims.length === 0 ? (
         <div className="text-center py-16">
@@ -142,68 +142,70 @@ const AdminPilgrims = () => {
         </div>
       ) : (
         <>
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama Jemaah</TableHead>
-                  <TableHead>NIK / Paspor</TableHead>
-                  <TableHead>Kontak</TableHead>
-                  <TableHead>Kode Booking</TableHead>
-                  <TableHead>Paket</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedItems.map((pilgrim) => (
-                  <TableRow key={pilgrim.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-semibold">{pilgrim.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {pilgrim.gender === "male" ? "Laki-laki" : pilgrim.gender === "female" ? "Perempuan" : "-"}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <p>NIK: {pilgrim.nik || "-"}</p>
-                        <p>Paspor: {pilgrim.passport_number || "-"}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <p>{pilgrim.phone || "-"}</p>
-                        <p className="text-muted-foreground">{pilgrim.email || "-"}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-mono">
-                        {pilgrim.booking?.booking_code || "-"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <p className="text-sm">{pilgrim.booking?.package?.title || "-"}</p>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(pilgrim.booking?.status)}>
-                        {pilgrim.booking?.status || "draft"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => showDetail(pilgrim)}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nama Jemaah</TableHead>
+                    <TableHead>NIK / Paspor</TableHead>
+                    <TableHead>Kontak</TableHead>
+                    <TableHead>Kode Booking</TableHead>
+                    <TableHead>Paket</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedItems.map((pilgrim) => (
+                    <TableRow key={pilgrim.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-semibold">{pilgrim.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {pilgrim.gender === "male" ? "Laki-laki" : pilgrim.gender === "female" ? "Perempuan" : "-"}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <p>NIK: {pilgrim.nik || "-"}</p>
+                          <p>Paspor: {pilgrim.passport_number || "-"}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <p>{pilgrim.phone || "-"}</p>
+                          <p className="text-muted-foreground">{pilgrim.email || "-"}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-mono">
+                          {pilgrim.booking?.booking_code || "-"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-sm">{pilgrim.booking?.package?.title || "-"}</p>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(pilgrim.booking?.status)}>
+                          {pilgrim.booking?.status || "draft"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => showDetail(pilgrim)}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
-        </div>
-        <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
+          <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
+        </>
+      )}
 
       {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
@@ -213,7 +215,6 @@ const AdminPilgrims = () => {
           </DialogHeader>
           {selectedPilgrim && (
             <div className="space-y-6">
-              {/* Personal Info */}
               <div>
                 <h4 className="font-semibold text-sm text-muted-foreground mb-3">INFORMASI PRIBADI</h4>
                 <div className="space-y-3">
@@ -247,7 +248,6 @@ const AdminPilgrims = () => {
                 </div>
               </div>
 
-              {/* Documents */}
               <div>
                 <h4 className="font-semibold text-sm text-muted-foreground mb-3">DOKUMEN</h4>
                 <div className="space-y-3">
@@ -277,7 +277,6 @@ const AdminPilgrims = () => {
                 </div>
               </div>
 
-              {/* Booking Info */}
               {selectedPilgrim.booking && (
                 <div>
                   <h4 className="font-semibold text-sm text-muted-foreground mb-3">INFORMASI BOOKING</h4>
@@ -315,8 +314,6 @@ const AdminPilgrims = () => {
           )}
         </DialogContent>
       </Dialog>
-      </>
-      )}
     </div>
   );
 };
