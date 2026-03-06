@@ -54,7 +54,7 @@ import AdminCoupons from "./pages/admin/Coupons";
 import AdminAdvantages from "./pages/admin/Advantages";
 import AdminGuideSteps from "./pages/admin/GuideSteps";
 import AdminServices from "./pages/admin/Services";
-
+import AdminPlaceholder from "./pages/admin/Placeholder";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
@@ -111,6 +111,14 @@ const AppContent = () => {
           <Route path="guide-steps" element={<AdminGuideSteps />} />
           <Route path="services" element={<AdminServices />} />
           <Route path="settings" element={<AdminSettings />} />
+          {/* Premium routes */}
+          <Route path="accounting" element={<AdminPlaceholder title="Akuntansi & Keuangan" />} />
+          <Route path="crm" element={<AdminPlaceholder title="CRM & Follow-up" />} />
+          <Route path="payment-gateway" element={<AdminPlaceholder title="Payment Gateway" />} />
+          <Route path="documents" element={<AdminPlaceholder title="Dokumen Jemaah" />} />
+          <Route path="analytics-ai" element={<AdminPlaceholder title="Analitik AI" />} />
+          <Route path="multi-language" element={<AdminPlaceholder title="Multi-Bahasa" />} />
+          <Route path="multi-branch" element={<AdminPlaceholder title="Multi-Cabang Dashboard" />} />
         </Route>
       </Route>
 

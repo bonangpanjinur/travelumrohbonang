@@ -40,6 +40,7 @@ export interface MenuGroup {
 export interface PremiumMenuItem {
   label: string;
   feature: string;
+  href: string;
 }
 
 export const menuGroups: MenuGroup[] = [
@@ -102,13 +103,13 @@ export const menuGroups: MenuGroup[] = [
 export const menuItems: MenuItem[] = menuGroups.flatMap(g => g.items);
 
 export const premiumMenuItems: PremiumMenuItem[] = [
-  { label: "Akuntansi & Keuangan", feature: "Akuntansi & Keuangan" },
-  { label: "CRM & Follow-up", feature: "CRM & Follow-up Otomatis" },
-  { label: "Payment Gateway", feature: "Integrasi Payment Gateway" },
-  { label: "Dokumen Jemaah", feature: "Manajemen Dokumen Jemaah" },
-  { label: "Analitik AI", feature: "Analitik AI" },
-  { label: "Multi-Bahasa", feature: "Multi-Bahasa" },
-  { label: "Multi-Cabang Dashboard", feature: "Multi-Cabang Dashboard" },
+  { label: "Akuntansi & Keuangan", feature: "Akuntansi & Keuangan", href: "/admin/accounting" },
+  { label: "CRM & Follow-up", feature: "CRM & Follow-up Otomatis", href: "/admin/crm" },
+  { label: "Payment Gateway", feature: "Integrasi Payment Gateway", href: "/admin/payment-gateway" },
+  { label: "Dokumen Jemaah", feature: "Manajemen Dokumen Jemaah", href: "/admin/documents" },
+  { label: "Analitik AI", feature: "Analitik AI", href: "/admin/analytics-ai" },
+  { label: "Multi-Bahasa", feature: "Multi-Bahasa", href: "/admin/multi-language" },
+  { label: "Multi-Cabang Dashboard", feature: "Multi-Cabang Dashboard", href: "/admin/multi-branch" },
 ];
 
 export interface BrandingSettings {

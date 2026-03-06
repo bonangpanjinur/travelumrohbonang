@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LogOut, Lock, ChevronDown } from "lucide-react";
+import { LogOut, Lock, ChevronDown, Star } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import AdminBranding from "./AdminBranding";
 import { useState } from "react";
@@ -131,20 +131,44 @@ const AdminSidebar = ({
                 Premium
               </div>
               <ul className="space-y-0.5">
-                {premiumMenuItems.map((item) => (
-                  <li key={item.feature}>
-                    <button
-                      onClick={() => {
-                        onClose();
-                        onPremiumClick(item.feature);
-                      }}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary-foreground/30 hover:bg-primary-foreground/5 hover:text-primary-foreground/50 transition-colors w-full"
-                    >
-                      <Lock className="w-4 h-4 shrink-0" />
-                      {item.label}
-                    </button>
-                  </li>
-                ))}
+                {premiumMenuItems.map((item) => {
+                  const isSuperAdmin = role && ['superadmin', 'super_admin'].includes(role.toLowerCase());
+                  
+                  if (isSuperAdmin) {
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <li key={item.feature}>
+                        <Link
+                          to={item.href}
+                          onClick={onClose}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                            isActive
+                              ? "bg-primary-foreground/15 text-primary-foreground"
+                              : "text-primary-foreground/60 hover:bg-primary-foreground/10 hover:text-primary-foreground/90"
+                          }`}
+                        >
+                          <Star className="w-4 h-4 shrink-0 text-amber-400" />
+                          {item.label}
+                        </Link>
+                      </li>
+                    );
+                  }
+                  
+                  return (
+                    <li key={item.feature}>
+                      <button
+                        onClick={() => {
+                          onClose();
+                          onPremiumClick(item.feature);
+                        }}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary-foreground/30 hover:bg-primary-foreground/5 hover:text-primary-foreground/50 transition-colors w-full"
+                      >
+                        <Lock className="w-4 h-4 shrink-0" />
+                        {item.label}
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </nav>
