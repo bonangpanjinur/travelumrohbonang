@@ -1,11 +1,14 @@
 import { useLocation, Link } from "react-router-dom";
 import { ChevronRight, Home } from "lucide-react";
-import { menuGroups } from "./adminMenuConfig";
+import { menuGroups, premiumMenuItems } from "./adminMenuConfig";
 
 const breadcrumbMap: Record<string, string> = {};
 menuGroups.forEach(g => g.items.forEach(i => {
   breadcrumbMap[i.href] = i.label;
 }));
+premiumMenuItems.forEach(i => {
+  breadcrumbMap[i.href] = i.label;
+});
 
 const AdminBreadcrumb = () => {
   const location = useLocation();
