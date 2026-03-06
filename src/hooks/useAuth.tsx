@@ -24,21 +24,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const checkRole = useCallback(async (userId: string): Promise<string> => {
     try {
-      // Single source of truth: user_roles table via is_admin RPC
-      const { data: adminResult, error } = await supabase.rpc('is_admin', { _user_id: userId });
-      
-      if (!error && adminResult === true) {
-        return 'admin';
-      }
-
-      // Fallback: check user_roles table directly
+      // Check user_roles table directly to get the actual role
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .maybeSingle();
 
-      return roleData?.role || 'buyer';
+      if (roleData?.role) {
+        return roleData.role;
+      }
+
+      // Fallback: check via is_admin RPC
+      const { data: adminResult, error } = await supabase.rpc('is_admin', { _user_id: userId });
+      
+      if (!error && adminResult === true) {
+        return 'admin';
+      }
+
+      return 'buyer';
     } catch (err) {
       console.error("Role check failed:", err);
       return 'buyer';
