@@ -695,6 +695,92 @@ export type Database = {
           },
         ]
       }
+      lead_follow_ups: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          done_at: string | null
+          follow_up_date: string
+          id: string
+          is_done: boolean | null
+          lead_id: string
+          notes: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          done_at?: string | null
+          follow_up_date: string
+          id?: string
+          is_done?: boolean | null
+          lead_id: string
+          notes?: string | null
+          type?: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          done_at?: string | null
+          follow_up_date?: string
+          id?: string
+          is_done?: boolean | null
+          lead_id?: string
+          notes?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_follow_ups_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          package_interest: string | null
+          phone: string | null
+          source: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          package_interest?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          package_interest?: string | null
+          phone?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       muthawifs: {
         Row: {
           created_at: string | null
