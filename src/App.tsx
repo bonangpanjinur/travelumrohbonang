@@ -115,7 +115,7 @@ const AppContent = () => {
           <Route path="settings" element={<AdminSettings />} />
           {/* Premium routes */}
           <Route path="accounting" element={<AdminAccounting />} />
-          <Route path="crm" element={<AdminPlaceholder title="CRM & Follow-up" />} />
+          <Route path="crm" element={<AdminCRM />} />
           <Route path="payment-gateway" element={<AdminPlaceholder title="Payment Gateway" />} />
           <Route path="documents" element={<AdminPlaceholder title="Dokumen Jemaah" />} />
           <Route path="analytics-ai" element={<AdminPlaceholder title="Analitik AI" />} />
