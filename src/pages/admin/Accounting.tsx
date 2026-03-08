@@ -12,7 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, TrendingUp, TrendingDown, Wallet, Search, Pencil, Trash2, ArrowUpDown } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, Search, Pencil, Trash2, ArrowUpDown, BarChart3 } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from "recharts";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
