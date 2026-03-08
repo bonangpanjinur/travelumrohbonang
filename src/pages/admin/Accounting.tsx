@@ -281,6 +281,47 @@ const AdminAccounting = () => {
         </Card>
       </div>
 
+      {/* Monthly Trend Chart */}
+      {transactions.length > 0 && (() => {
+        const monthlyData: Record<string, { month: string; pemasukan: number; pengeluaran: number }> = {};
+        transactions.forEach((t: any) => {
+          const key = t.transaction_date?.substring(0, 7); // YYYY-MM
+          if (!key) return;
+          if (!monthlyData[key]) {
+            const [y, m] = key.split("-");
+            const label = format(new Date(Number(y), Number(m) - 1), "MMM yyyy", { locale: localeId });
+            monthlyData[key] = { month: label, pemasukan: 0, pengeluaran: 0 };
+          }
+          if (t.type === "income") monthlyData[key].pemasukan += Number(t.amount);
+          else monthlyData[key].pengeluaran += Number(t.amount);
+        });
+        const chartData = Object.entries(monthlyData)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([, v]) => v);
+
+        return (
+          <Card>
+            <CardHeader className="flex flex-row items-center gap-2 pb-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              <CardTitle className="text-lg">Tren Pemasukan vs Pengeluaran</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="month" fontSize={12} />
+                  <YAxis fontSize={12} tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}jt`} />
+                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Legend />
+                  <Bar dataKey="pemasukan" name="Pemasukan" fill="hsl(152, 69%, 31%)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="pengeluaran" name="Pengeluaran" fill="hsl(0, 84%, 60%)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
