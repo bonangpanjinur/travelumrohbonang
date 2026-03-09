@@ -1502,6 +1502,147 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_site_packages: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_featured: boolean | null
+          package_id: string
+          sort_order: number | null
+          tenant_site_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_featured?: boolean | null
+          package_id: string
+          sort_order?: number | null
+          tenant_site_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_featured?: boolean | null
+          package_id?: string
+          sort_order?: number | null
+          tenant_site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_site_packages_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_site_packages_tenant_site_id_fkey"
+            columns: ["tenant_site_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_sites: {
+        Row: {
+          about_text: string | null
+          address: string | null
+          agent_id: string | null
+          branch_id: string | null
+          created_at: string | null
+          custom_domain: string | null
+          email: string | null
+          facebook_url: string | null
+          hero_image_url: string | null
+          hero_subtitle: string | null
+          hero_title: string | null
+          id: string
+          instagram_url: string | null
+          is_active: boolean | null
+          logo_url: string | null
+          owner_id: string
+          phone: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          site_name: string
+          subdomain: string
+          tagline: string | null
+          template: string | null
+          updated_at: string | null
+          whatsapp_number: string | null
+        }
+        Insert: {
+          about_text?: string | null
+          address?: string | null
+          agent_id?: string | null
+          branch_id?: string | null
+          created_at?: string | null
+          custom_domain?: string | null
+          email?: string | null
+          facebook_url?: string | null
+          hero_image_url?: string | null
+          hero_subtitle?: string | null
+          hero_title?: string | null
+          id?: string
+          instagram_url?: string | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          owner_id: string
+          phone?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          site_name: string
+          subdomain: string
+          tagline?: string | null
+          template?: string | null
+          updated_at?: string | null
+          whatsapp_number?: string | null
+        }
+        Update: {
+          about_text?: string | null
+          address?: string | null
+          agent_id?: string | null
+          branch_id?: string | null
+          created_at?: string | null
+          custom_domain?: string | null
+          email?: string | null
+          facebook_url?: string | null
+          hero_image_url?: string | null
+          hero_subtitle?: string | null
+          hero_title?: string | null
+          id?: string
+          instagram_url?: string | null
+          is_active?: boolean | null
+          logo_url?: string | null
+          owner_id?: string
+          phone?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          site_name?: string
+          subdomain?: string
+          tagline?: string | null
+          template?: string | null
+          updated_at?: string | null
+          whatsapp_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_sites_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_sites_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       testimonials: {
         Row: {
           content: string

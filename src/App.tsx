@@ -7,6 +7,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { TenantProvider, useTenant } from "@/hooks/useTenant";
 import { useDynamicFavicon } from "@/hooks/useDynamicFavicon";
 import Index from "./pages/Index";
 import Paket from "./pages/Paket";
@@ -23,6 +24,7 @@ import Gallery from "./pages/Gallery";
 import Blog from "./pages/Blog";
 import BlogDetail from "./pages/BlogDetail";
 import DynamicPage from "./pages/DynamicPage";
+import TenantSitePage from "./pages/TenantSite";
 import NotFound from "./pages/NotFound";
 
 // Admin
@@ -63,10 +65,21 @@ import AdminDocuments from "./pages/admin/Documents";
 import AdminPaymentGateway from "./pages/admin/PaymentGateway";
 import AdminAnalyticsAI from "./pages/admin/AnalyticsAI";
 import AdminMultiBranch from "./pages/admin/MultiBranch";
+import AdminTenantSites from "./pages/admin/TenantSites";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   useDynamicFavicon();
+  const { isTenantSite, loading: tenantLoading } = useTenant();
+
+  if (tenantLoading) {
+    return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>;
+  }
+
+  // If this is a tenant subdomain, render the tenant site
+  if (isTenantSite) {
+    return <TenantSitePage />;
+  }
   
   return (
     <Routes>
@@ -89,7 +102,7 @@ const AppContent = () => {
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<BlogDetail />} />
 
-      {/* Step 3.1: Admin Routes protected by AdminRoute */}
+      {/* Admin Routes */}
       <Route element={<AdminRoute />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
@@ -127,12 +140,12 @@ const AppContent = () => {
           <Route path="analytics-ai" element={<AdminAnalyticsAI />} />
           <Route path="multi-language" element={<AdminPlaceholder title="Multi-Bahasa" />} />
           <Route path="multi-branch" element={<AdminMultiBranch />} />
+          <Route path="tenant-sites" element={<AdminTenantSites />} />
         </Route>
       </Route>
 
-      {/* CMS Dynamic Page - must be after all other routes */}
+      {/* CMS Dynamic Page */}
       <Route path="/:slug" element={<DynamicPage />} />
-
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -144,13 +157,15 @@ const App = () => (
       <AuthProvider>
         <LanguageProvider>
           <ThemeProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <AppContent />
-              </BrowserRouter>
-            </TooltipProvider>
+            <TenantProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <AppContent />
+                </BrowserRouter>
+              </TooltipProvider>
+            </TenantProvider>
           </ThemeProvider>
         </LanguageProvider>
       </AuthProvider>

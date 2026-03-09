@@ -128,6 +128,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Manajemen User", href: "/admin/users", icon: Users },
       { label: "Multi-Bahasa", href: "/admin/multi-language", icon: Languages, premium: true, premiumFeature: "Multi-Bahasa" },
       { label: "Multi-Cabang", href: "/admin/multi-branch", icon: GitBranch, premium: true, premiumFeature: "Multi-Cabang Dashboard" },
+      { label: "Tenant Sites", href: "/admin/tenant-sites", icon: Globe, premium: true, premiumFeature: "Multi-Tenant Website" },
       { label: "Pengaturan Umum", href: "/admin/settings", icon: Settings },
     ],
   },
