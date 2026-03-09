@@ -171,10 +171,19 @@ const Booking = () => {
     }
 
     if (step === 1) {
-      // Validate pilgrims
-      const incomplete = pilgrims.some((p) => !p.name || !p.gender);
-      if (incomplete) {
-        toast({ title: "Lengkapi data jemaah (minimal nama dan jenis kelamin)", variant: "destructive" });
+      // Validate pilgrims with zod
+      const errors: Record<number, Record<string, string>> = {};
+      let hasErrors = false;
+      pilgrims.forEach((p, i) => {
+        const result = validatePilgrim(p);
+        if (!result.valid) {
+          errors[i] = result.errors;
+          hasErrors = true;
+        }
+      });
+      setPilgrimErrors(errors);
+      if (hasErrors) {
+        toast({ title: "Periksa kembali data jemaah", description: "Terdapat kesalahan pada form", variant: "destructive" });
         return;
       }
     }
