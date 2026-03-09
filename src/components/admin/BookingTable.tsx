@@ -134,7 +134,7 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
                 </TableRow>
                 {expandedId === b.id && (
                   <TableRow key={`${b.id}-detail`}>
-                    <TableCell colSpan={7} className="bg-muted/30 p-0">
+                    <TableCell colSpan={8} className="bg-muted/30 p-0">
                       <BookingDetailPanel
                         bookingId={b.id}
                         packageId={b.package_id}
