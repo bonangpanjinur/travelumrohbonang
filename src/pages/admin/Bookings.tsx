@@ -23,13 +23,21 @@ const AdminBookings = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [branchFilter, setBranchFilter] = useState("__all__");
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
+    supabase.from("branches").select("id, name").eq("is_active", true).order("name").then(({ data }) => {
+      setBranches(data || []);
+    });
+  }, []);
+
+  useEffect(() => {
     setPage(0);
-  }, [filter, search]);
+  }, [filter, search, branchFilter]);
 
   useEffect(() => {
     fetchBookings();
