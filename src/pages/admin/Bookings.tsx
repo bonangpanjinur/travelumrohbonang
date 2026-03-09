@@ -67,6 +67,12 @@ const AdminBookings = () => {
       query = query.ilike("booking_code", `%${search.trim()}%`);
     }
 
+    if (branchFilter === "__none__") {
+      query = query.is("branch_id", null);
+    } else if (branchFilter !== "__all__") {
+      query = query.eq("branch_id", branchFilter);
+    }
+
     const { data, count } = await query;
     setBookings((data as unknown as Booking[]) || []);
     setTotalCount(count || 0);
