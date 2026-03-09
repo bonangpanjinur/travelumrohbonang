@@ -14,6 +14,7 @@ import { ArrowLeft, ArrowRight, Users, Minus, Plus, Building2, UserCheck, Loader
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { validatePilgrim } from "@/lib/validations";
 
 interface Package {
   id: string;
@@ -70,6 +71,7 @@ const Booking = () => {
   const [pilgrims, setPilgrims] = useState<Pilgrim[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [pilgrimErrors, setPilgrimErrors] = useState<Record<number, Record<string, string>>>({});
   
   // PIC State
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -169,10 +171,19 @@ const Booking = () => {
     }
 
     if (step === 1) {
-      // Validate pilgrims
-      const incomplete = pilgrims.some((p) => !p.name || !p.gender);
-      if (incomplete) {
-        toast({ title: "Lengkapi data jemaah (minimal nama dan jenis kelamin)", variant: "destructive" });
+      // Validate pilgrims with zod
+      const errors: Record<number, Record<string, string>> = {};
+      let hasErrors = false;
+      pilgrims.forEach((p, i) => {
+        const result = validatePilgrim(p);
+        if (!result.valid) {
+          errors[i] = result.errors;
+          hasErrors = true;
+        }
+      });
+      setPilgrimErrors(errors);
+      if (hasErrors) {
+        toast({ title: "Periksa kembali data jemaah", description: "Terdapat kesalahan pada form", variant: "destructive" });
         return;
       }
     }
@@ -347,32 +358,44 @@ const Booking = () => {
               <div className="space-y-6">
                 <h2 className="text-xl font-display font-bold">Data Jemaah</h2>
                 {pilgrims.map((p, i) => (
-                  <div key={i} className="space-y-4 p-4 border border-border rounded-xl">
+                  <div key={i} className={`space-y-4 p-4 border rounded-xl ${pilgrimErrors[i] ? 'border-destructive/50' : 'border-border'}`}>
                     <p className="font-bold text-gold">Jemaah #{i + 1}</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Nama Lengkap (Sesuai Paspor)</Label>
+                        <Label>Nama Lengkap (Sesuai Paspor) *</Label>
                         <Input
                           value={p.name}
                           onChange={(e) => {
                             const newPilgrims = [...pilgrims];
                             newPilgrims[i].name = e.target.value;
                             setPilgrims(newPilgrims);
+                            if (pilgrimErrors[i]?.name) {
+                              const newErrors = { ...pilgrimErrors };
+                              delete newErrors[i]?.name;
+                              setPilgrimErrors(newErrors);
+                            }
                           }}
                           placeholder="Contoh: Ahmad Abdullah"
+                          className={pilgrimErrors[i]?.name ? 'border-destructive' : ''}
                         />
+                        {pilgrimErrors[i]?.name && <p className="text-xs text-destructive">{pilgrimErrors[i].name}</p>}
                       </div>
                       <div className="space-y-2">
-                        <Label>Jenis Kelamin</Label>
+                        <Label>Jenis Kelamin *</Label>
                         <Select
                           value={p.gender}
                           onValueChange={(val) => {
                             const newPilgrims = [...pilgrims];
                             newPilgrims[i].gender = val;
                             setPilgrims(newPilgrims);
+                            if (pilgrimErrors[i]?.gender) {
+                              const newErrors = { ...pilgrimErrors };
+                              delete newErrors[i]?.gender;
+                              setPilgrimErrors(newErrors);
+                            }
                           }}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className={pilgrimErrors[i]?.gender ? 'border-destructive' : ''}>
                             <SelectValue placeholder="Pilih" />
                           </SelectTrigger>
                           <SelectContent>
@@ -380,6 +403,7 @@ const Booking = () => {
                             <SelectItem value="female">Perempuan</SelectItem>
                           </SelectContent>
                         </Select>
+                        {pilgrimErrors[i]?.gender && <p className="text-xs text-destructive">{pilgrimErrors[i].gender}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label>Nomor NIK (Opsional)</Label>
@@ -391,7 +415,9 @@ const Booking = () => {
                             setPilgrims(newPilgrims);
                           }}
                           placeholder="16 digit NIK"
+                          className={pilgrimErrors[i]?.nik ? 'border-destructive' : ''}
                         />
+                        {pilgrimErrors[i]?.nik && <p className="text-xs text-destructive">{pilgrimErrors[i].nik}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label>Nomor HP (Opsional)</Label>
@@ -402,8 +428,10 @@ const Booking = () => {
                             newPilgrims[i].phone = e.target.value;
                             setPilgrims(newPilgrims);
                           }}
-                          placeholder="0812..."
+                          placeholder="08123456789"
+                          className={pilgrimErrors[i]?.phone ? 'border-destructive' : ''}
                         />
+                        {pilgrimErrors[i]?.phone && <p className="text-xs text-destructive">{pilgrimErrors[i].phone}</p>}
                       </div>
                     </div>
                   </div>

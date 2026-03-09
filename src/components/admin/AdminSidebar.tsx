@@ -4,6 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import AdminBranding from "./AdminBranding";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
+import AdminNotificationBell from "./AdminNotificationBell";
 import { useState, useMemo } from "react";
 import { menuGroups, BrandingSettings } from "./adminMenuConfig";
 
@@ -163,7 +165,11 @@ const AdminSidebar = ({
           <div className="p-3 border-t border-primary-foreground/10 space-y-1">
             <div className="flex items-center justify-between px-3 py-1">
               <span className="text-xs text-primary-foreground/40 uppercase tracking-wider">{t("common.language")}</span>
-              <LanguageSwitcher variant="admin" />
+              <div className="flex items-center gap-2">
+                <ThemeToggle variant="admin" />
+                <AdminNotificationBell />
+                <LanguageSwitcher variant="admin" />
+              </div>
             </div>
             <button
               onClick={onLogout}
