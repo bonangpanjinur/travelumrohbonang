@@ -27,10 +27,13 @@ interface Pilgrim {
   gender: string | null;
 }
 
-const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle }: BookingDetailPanelProps) => {
+const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle, branchId, onBranchChange }: BookingDetailPanelProps) => {
   const [pilgrims, setPilgrims] = useState<Pilgrim[]>([]);
   const [commissionRate, setCommissionRate] = useState<number>(0);
   const [picName, setPicName] = useState<string>("-");
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>(branchId || "none");
+  const [savingBranch, setSavingBranch] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
