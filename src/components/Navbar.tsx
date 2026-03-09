@@ -156,11 +156,11 @@ const Navbar = () => {
     }
   };
 
-  const defaultLinks: NavItem[] = [
-    { id: "1", label: "Beranda", url: "/", parent_id: null, sort_order: 1, open_in_new_tab: false },
-    { id: "2", label: "Paket Perjalanan", url: "/paket", parent_id: null, sort_order: 2, open_in_new_tab: false },
-    { id: "3", label: "Galeri", url: "/galeri", parent_id: null, sort_order: 3, open_in_new_tab: false },
-    { id: "4", label: "Blog", url: "/blog", parent_id: null, sort_order: 4, open_in_new_tab: false },
+    const defaultLinks: NavItem[] = [
+    { id: "1", label: t("nav.home"), url: "/", parent_id: null, sort_order: 1, open_in_new_tab: false },
+    { id: "2", label: t("nav.packages"), url: "/paket", parent_id: null, sort_order: 2, open_in_new_tab: false },
+    { id: "3", label: t("nav.gallery"), url: "/galeri", parent_id: null, sort_order: 3, open_in_new_tab: false },
+    { id: "4", label: t("nav.blog"), url: "/blog", parent_id: null, sort_order: 4, open_in_new_tab: false },
     ...dynamicPages.map((page, index): NavItem => ({
       id: `dynamic-${index}`,
       label: page.title || page.slug,
