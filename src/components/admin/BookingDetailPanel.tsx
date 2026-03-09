@@ -37,6 +37,26 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    supabase.from("branches").select("id, name").eq("is_active", true).order("name").then(({ data }) => {
+      setBranches(data || []);
+    });
+  }, []);
+
+  const handleBranchChange = async (value: string) => {
+    setSelectedBranchId(value);
+    setSavingBranch(true);
+    const branchValue = value === "none" ? null : value;
+    const { error } = await supabase.from("bookings").update({ branch_id: branchValue }).eq("id", bookingId);
+    setSavingBranch(false);
+    if (error) {
+      toast.error("Gagal menyimpan cabang");
+    } else {
+      toast.success("Cabang berhasil diupdate");
+      onBranchChange?.();
+    }
+  };
+
+  useEffect(() => {
     const fetchDetails = async () => {
       setLoading(true);
 
