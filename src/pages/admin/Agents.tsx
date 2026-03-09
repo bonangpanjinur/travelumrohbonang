@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Users, Building2, Percent, Phone, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Building2, Percent, Phone, Search, Download } from "lucide-react";
+import { exportToCsv } from "@/lib/exportCsv";
 import AdminPagination from "@/components/admin/AdminPagination";
 import { useAdminPagination } from "@/hooks/useAdminPagination";
 import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
