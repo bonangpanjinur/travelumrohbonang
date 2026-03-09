@@ -60,6 +60,7 @@ import AdminCRM from "./pages/admin/CRM";
 import AdminDocuments from "./pages/admin/Documents";
 import AdminPaymentGateway from "./pages/admin/PaymentGateway";
 import AdminAnalyticsAI from "./pages/admin/AnalyticsAI";
+import AdminMultiBranch from "./pages/admin/MultiBranch";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
