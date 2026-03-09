@@ -10,6 +10,7 @@ import { id as localeId } from "date-fns/locale";
 import { Eye, CheckCircle, XCircle, Image, DollarSign, FileText, Download, ZoomIn, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import LoadingSpinner from "@/components/ui/loading-spinner";
+import { exportToCsv } from "@/lib/exportCsv";
 import EmptyState from "@/components/ui/empty-state";
 import ErrorAlert from "@/components/ui/error-alert";
 import AdminPagination from "@/components/admin/AdminPagination";
@@ -130,6 +131,20 @@ const AdminPayments = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-display font-bold">Verifikasi Pembayaran</h1>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => {
+            const headers = ["Kode Booking", "Tipe", "Jumlah", "Metode", "Status", "Tanggal"];
+            const rows = filteredPayments.map(p => [
+              p.booking?.booking_code || "-",
+              p.payment_type === "dp" ? "DP" : "Pelunasan",
+              String(p.amount),
+              p.payment_method || "-",
+              p.status || "pending",
+              p.created_at?.slice(0, 10) || ""
+            ]);
+            exportToCsv("payments", headers, rows);
+          }}>
+            <Download className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
