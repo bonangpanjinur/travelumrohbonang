@@ -42,7 +42,7 @@ const AdminBookings = () => {
     let query = supabase
       .from("bookings")
       .select(`
-        id, booking_code, total_price, status, created_at, package_id, pic_type, pic_id,
+        id, booking_code, total_price, status, created_at, package_id, pic_type, pic_id, branch_id,
         package:packages(title),
         departure:package_departures(departure_date),
         profile:profiles!bookings_user_id_profiles_fkey(name, email)
