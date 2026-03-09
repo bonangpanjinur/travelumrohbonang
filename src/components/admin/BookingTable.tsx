@@ -94,6 +94,7 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
               <TableHead>Paket</TableHead>
               <TableHead>Keberangkatan</TableHead>
               <TableHead>Total</TableHead>
+              <TableHead>Cabang</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
