@@ -4,6 +4,7 @@ import BookingTable, { Booking } from "@/components/admin/BookingTable";
 import BookingFilters from "@/components/admin/BookingFilters";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Download } from "lucide-react";
 import { exportToCsv } from "@/lib/exportCsv";
 import {
