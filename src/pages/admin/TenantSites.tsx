@@ -153,6 +153,7 @@ const TenantSitesAdmin = () => {
               <DialogTitle>{editId ? "Edit Situs" : "Tambah Situs Baru"}</DialogTitle>
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              {/* Basic Info */}
               <div>
                 <Label>Subdomain *</Label>
                 <Input value={form.subdomain || ""} onChange={e => updateField("subdomain", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="cabang-jakarta" />
@@ -175,6 +176,50 @@ const TenantSitesAdmin = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Custom Domain Section */}
+              <div className="md:col-span-2">
+                <Separator className="my-2" />
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <Globe className="w-4 h-4" /> Custom Domain
+                </Label>
+                <p className="text-xs text-muted-foreground mb-3">Hubungkan domain kustom milik tenant (opsional)</p>
+              </div>
+              <div className="md:col-span-2">
+                <Label>Custom Domain</Label>
+                <Input 
+                  value={form.custom_domain || ""} 
+                  onChange={e => updateField("custom_domain", e.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, "") || null)} 
+                  placeholder="umroh-jakarta.com" 
+                />
+              </div>
+              {form.custom_domain && (
+                <div className="md:col-span-2">
+                  <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                    <AlertDescription>
+                      <p className="font-semibold text-sm mb-2">Instruksi DNS Setup untuk: <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{form.custom_domain}</code></p>
+                      <p className="text-xs text-muted-foreground mb-3">Tenant perlu mengkonfigurasi DNS berikut di registrar domain mereka:</p>
+                      <div className="space-y-2">
+                        <DnsRecordRow type="A" name="@" value="185.158.133.1" />
+                        <DnsRecordRow type="A" name="www" value="185.158.133.1" />
+                        <DnsRecordRow type="CNAME" name="www" value={form.custom_domain || ""} />
+                      </div>
+                      <div className="mt-3 p-2 rounded bg-muted/50 text-xs space-y-1">
+                        <p className="flex items-start gap-1.5"><Info className="w-3 h-3 mt-0.5 shrink-0" /> Propagasi DNS memakan waktu hingga 72 jam.</p>
+                        <p className="flex items-start gap-1.5"><Info className="w-3 h-3 mt-0.5 shrink-0" /> SSL akan otomatis aktif setelah DNS terhubung.</p>
+                        <p className="flex items-start gap-1.5"><Info className="w-3 h-3 mt-0.5 shrink-0" /> Pastikan tidak ada A record lain yang konflik.</p>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+
+              <div className="md:col-span-2">
+                <Separator className="my-2" />
+              </div>
+
+              {/* Branch / Agent */}
               <div>
                 <Label>Cabang</Label>
                 <Select value={form.branch_id || "none"} onValueChange={v => updateField("branch_id", v === "none" ? null : v)}>
@@ -195,6 +240,8 @@ const TenantSitesAdmin = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Colors */}
               <div>
                 <Label>Warna Primer</Label>
                 <div className="flex gap-2 items-center">
@@ -209,6 +256,8 @@ const TenantSitesAdmin = () => {
                   <Input value={form.secondary_color || ""} onChange={e => updateField("secondary_color", e.target.value)} className="flex-1" />
                 </div>
               </div>
+
+              {/* Media */}
               <div className="md:col-span-2">
                 <Label>Logo URL</Label>
                 <Input value={form.logo_url || ""} onChange={e => updateField("logo_url", e.target.value)} placeholder="https://..." />
@@ -229,6 +278,8 @@ const TenantSitesAdmin = () => {
                 <Label>Tentang</Label>
                 <Textarea value={form.about_text || ""} onChange={e => updateField("about_text", e.target.value)} rows={3} />
               </div>
+
+              {/* Contact */}
               <div>
                 <Label>WhatsApp</Label>
                 <Input value={form.whatsapp_number || ""} onChange={e => updateField("whatsapp_number", e.target.value)} placeholder="628xxx" />
