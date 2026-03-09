@@ -24,6 +24,7 @@ import Gallery from "./pages/Gallery";
 import Blog from "./pages/Blog";
 import BlogDetail from "./pages/BlogDetail";
 import DynamicPage from "./pages/DynamicPage";
+import TenantSitePage from "./pages/TenantSite";
 import NotFound from "./pages/NotFound";
 
 // Admin
