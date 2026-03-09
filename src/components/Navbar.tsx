@@ -52,6 +52,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAdmin, signOut } = useAuth();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const fetchNavItems = async () => {
