@@ -363,7 +363,15 @@ const TenantSitesAdmin = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{site.subdomain}</code>
+                      <div className="space-y-1">
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{site.subdomain}</code>
+                        {site.custom_domain && (
+                          <div className="flex items-center gap-1">
+                            <Globe className="w-3 h-3 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">{site.custom_domain}</span>
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {branches.find(b => b.id === site.branch_id)?.name || agents.find(a => a.id === site.agent_id)?.name || "-"}
