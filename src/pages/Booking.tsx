@@ -14,6 +14,7 @@ import { ArrowLeft, ArrowRight, Users, Minus, Plus, Building2, UserCheck, Loader
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { validatePilgrim } from "@/lib/validations";
 
 interface Package {
   id: string;
