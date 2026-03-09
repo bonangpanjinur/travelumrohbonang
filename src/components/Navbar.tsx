@@ -309,7 +309,7 @@ const Navbar = () => {
           ) : (
             <Link to="/auth">
               <Button className="gradient-gold text-primary font-semibold hover:opacity-90 transition-opacity">
-                Masuk / Daftar
+                {t("nav.login")}
               </Button>
             </Link>
           )}
