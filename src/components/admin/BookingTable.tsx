@@ -17,6 +17,7 @@ interface Booking {
   package_id: string | null;
   pic_type: string | null;
   pic_id: string | null;
+  branch_id: string | null;
   package: { title: string } | null;
   departure: { departure_date: string } | null;
   profile: { name: string; email: string } | null;
