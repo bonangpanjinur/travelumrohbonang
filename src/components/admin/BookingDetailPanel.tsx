@@ -128,7 +128,22 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
 
   return (
     <div className="p-4 space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Cabang:</span>
+          <Select value={selectedBranchId} onValueChange={handleBranchChange} disabled={savingBranch}>
+            <SelectTrigger className="w-[200px] h-8 text-sm">
+              <SelectValue placeholder="Pilih Cabang" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">— Tanpa Cabang —</SelectItem>
+              {branches.map((br) => (
+                <SelectItem key={br.id} value={br.id}>{br.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Button size="sm" variant="outline" onClick={handleDownloadInvoice}>
           <FileDown className="w-4 h-4 mr-2" /> Cetak Invoice
         </Button>
