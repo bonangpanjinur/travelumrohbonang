@@ -6,12 +6,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { fetchInvoiceData, generateInvoiceHTML, openInvoicePrintWindow } from "./InvoiceGenerator";
 import { toast } from "sonner";
 
+interface Branch {
+  id: string;
+  name: string;
+}
+
 interface BookingDetailPanelProps {
   bookingId: string;
   packageId: string | null;
   picType: string | null;
   picId: string | null;
   packageTitle: string;
+  branchId?: string | null;
+  onBranchChange?: () => void;
 }
 
 interface Pilgrim {
