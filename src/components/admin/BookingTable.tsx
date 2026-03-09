@@ -30,7 +30,7 @@ interface BookingTableProps {
   onRefresh?: () => void;
 }
 
-const BookingTable = ({ bookings, expandedId, onToggleExpand }: BookingTableProps) => {
+const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: BookingTableProps) => {
   const isMobile = useIsMobile();
 
   if (isMobile) {
