@@ -27,6 +27,7 @@ interface BookingTableProps {
   bookings: Booking[];
   expandedId: string | null;
   onToggleExpand: (id: string) => void;
+  onRefresh?: () => void;
 }
 
 const BookingTable = ({ bookings, expandedId, onToggleExpand }: BookingTableProps) => {
