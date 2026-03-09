@@ -5,6 +5,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+async function getGatewayConfig(supabase: any) {
+  const { data } = await supabase
+    .from('site_settings')
+    .select('value')
+    .eq('key', 'payment_gateway')
+    .eq('category', 'integrations')
+    .maybeSingle();
+  return data?.value || {};
+}
+
+function getMidtransBaseUrl(config: any) {
+  const env = config?.midtrans_environment || 'sandbox';
+  return env === 'production'
+    ? 'https://api.midtrans.com'
+    : 'https://api.sandbox.midtrans.com';
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -15,11 +32,13 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const gatewayConfig = await getGatewayConfig(supabase);
+
     const url = new URL(req.url);
     const gateway = url.searchParams.get('gateway') || 'midtrans';
 
     if (gateway === 'midtrans') {
-      return await handleMidtransCallback(req, supabase);
+      return await handleMidtransCallback(req, supabase, gatewayConfig);
     } else if (gateway === 'xendit') {
       return await handleXenditCallback(req, supabase);
     }
@@ -32,7 +51,7 @@ Deno.serve(async (req) => {
   }
 });
 
-async function handleMidtransCallback(req: Request, supabase: any) {
+async function handleMidtransCallback(req: Request, supabase: any, gatewayConfig: any) {
   const data = await req.json();
   console.log('Midtrans callback:', JSON.stringify(data));
 
@@ -40,11 +59,12 @@ async function handleMidtransCallback(req: Request, supabase: any) {
   const transactionStatus = data.transaction_status;
   const fraudStatus = data.fraud_status;
 
-  // Verify with Midtrans
-  const serverKey = Deno.env.get('MIDTRANS_SERVER_KEY');
+  // Verify with Midtrans using dynamic key
+  const serverKey = gatewayConfig?.midtrans_server_key || Deno.env.get('MIDTRANS_SERVER_KEY');
   if (serverKey) {
+    const baseUrl = getMidtransBaseUrl(gatewayConfig);
     const authHeader = btoa(serverKey + ':');
-    const verifyResponse = await fetch(`https://api.sandbox.midtrans.com/v2/${orderId}/status`, {
+    const verifyResponse = await fetch(`${baseUrl}/v2/${orderId}/status`, {
       headers: { 'Authorization': `Basic ${authHeader}` },
     });
     const verifyData = await verifyResponse.json();
@@ -65,7 +85,6 @@ async function handleMidtransCallback(req: Request, supabase: any) {
     status = 'failed';
   }
 
-  // Update transaction in DB
   const { data: txData } = await supabase
     .from('payment_gateway_transactions')
     .update({
@@ -77,7 +96,6 @@ async function handleMidtransCallback(req: Request, supabase: any) {
     .select('booking_id, payment_id')
     .single();
 
-  // Auto-update payment status if paid
   if (status === 'paid' && txData?.payment_id) {
     await supabase
       .from('payments')
@@ -100,7 +118,6 @@ async function handleXenditCallback(req: Request, supabase: any) {
   const data = await req.json();
   console.log('Xendit callback:', JSON.stringify(data));
 
-  // Xendit sends different callback formats
   const externalId = data.external_id || data.reference_id;
   const xenditStatus = data.status;
 

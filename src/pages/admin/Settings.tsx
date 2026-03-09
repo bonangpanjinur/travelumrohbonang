@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Image, Globe, Building2, Phone, Palette, ImageIcon, Layout, Check, Banknote, Share2 } from "lucide-react";
+import { Save, Image, Globe, Building2, Phone, Palette, ImageIcon, Layout, Check, Banknote, Share2, Wallet, Eye, EyeOff } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Json } from "@/integrations/supabase/types";
 import { IconPicker } from "@/components/ui/icon-picker";
@@ -88,6 +88,18 @@ interface SocialSettings {
   tiktok: string;
   twitter: string;
 }
+
+interface PaymentGatewaySettings {
+  midtrans_enabled: boolean;
+  midtrans_server_key: string;
+  midtrans_client_key: string;
+  midtrans_environment: "sandbox" | "production";
+  xendit_enabled: boolean;
+  xendit_secret_key: string;
+  xendit_environment: "sandbox" | "production";
+  default_gateway: "midtrans" | "xendit";
+}
+
 
 // Template definitions
 const templates = [
@@ -220,6 +232,17 @@ const defaultSocial: SocialSettings = {
   twitter: "",
 };
 
+const defaultPaymentGateway: PaymentGatewaySettings = {
+  midtrans_enabled: false,
+  midtrans_server_key: "",
+  midtrans_client_key: "",
+  midtrans_environment: "sandbox",
+  xendit_enabled: false,
+  xendit_secret_key: "",
+  xendit_environment: "sandbox",
+  default_gateway: "midtrans",
+};
+
 const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -234,6 +257,9 @@ const AdminSettings = () => {
   const [template, setTemplate] = useState<TemplateSettings>(defaultTemplate);
   const [bank, setBank] = useState<BankSettings>(defaultBank);
   const [social, setSocial] = useState<SocialSettings>(defaultSocial);
+  const [paymentGateway, setPaymentGateway] = useState<PaymentGatewaySettings>(defaultPaymentGateway);
+  const [showMidtransKey, setShowMidtransKey] = useState(false);
+  const [showXenditKey, setShowXenditKey] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -274,6 +300,9 @@ const AdminSettings = () => {
             break;
           case "social":
             setSocial({ ...defaultSocial, ...(value as object) });
+            break;
+          case "payment_gateway":
+            setPaymentGateway({ ...defaultPaymentGateway, ...(value as object) });
             break;
         }
       });
@@ -365,6 +394,9 @@ const AdminSettings = () => {
           </TabsTrigger>
           <TabsTrigger value="social" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Share2 className="w-4 h-4 mr-2" /> Sosial Media
+          </TabsTrigger>
+          <TabsTrigger value="payment_gateway" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Wallet className="w-4 h-4 mr-2" /> Payment Gateway
           </TabsTrigger>
         </TabsList>
 
@@ -1187,6 +1219,155 @@ const AdminSettings = () => {
             <Button onClick={() => saveSetting("social", "general", social)} disabled={saving} className="gradient-gold text-primary">
               <Save className="w-4 h-4 mr-2" />
               {saving ? "Menyimpan..." : "Simpan Sosial Media"}
+            </Button>
+          </div>
+        </TabsContent>
+        {/* Payment Gateway Settings */}
+        <TabsContent value="payment_gateway">
+          <div className="bg-card border border-border rounded-xl p-6 space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold">Konfigurasi Payment Gateway</h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                Kelola API key untuk integrasi pembayaran online. Key disimpan terenkripsi di database.
+              </p>
+            </div>
+
+            <div>
+              <Label>Gateway Default</Label>
+              <Select
+                value={paymentGateway.default_gateway}
+                onValueChange={(val: "midtrans" | "xendit") => setPaymentGateway({ ...paymentGateway, default_gateway: val })}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="midtrans">Midtrans</SelectItem>
+                  <SelectItem value="xendit">Xendit</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Midtrans */}
+            <div className="p-4 border border-border rounded-lg space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium">Midtrans</h3>
+                  <p className="text-xs text-muted-foreground">Payment gateway populer di Indonesia</p>
+                </div>
+                <Switch
+                  checked={paymentGateway.midtrans_enabled}
+                  onCheckedChange={(v) => setPaymentGateway({ ...paymentGateway, midtrans_enabled: v })}
+                />
+              </div>
+
+              {paymentGateway.midtrans_enabled && (
+                <div className="space-y-4 pt-2 border-t border-border">
+                  <div>
+                    <Label>Environment</Label>
+                    <Select
+                      value={paymentGateway.midtrans_environment}
+                      onValueChange={(val: "sandbox" | "production") => setPaymentGateway({ ...paymentGateway, midtrans_environment: val })}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
+                        <SelectItem value="production">Production (Live)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Server Key</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        type={showMidtransKey ? "text" : "password"}
+                        value={paymentGateway.midtrans_server_key}
+                        onChange={(e) => setPaymentGateway({ ...paymentGateway, midtrans_server_key: e.target.value })}
+                        placeholder="SB-Mid-server-..."
+                      />
+                      <Button type="button" variant="outline" size="icon" onClick={() => setShowMidtransKey(!showMidtransKey)}>
+                        {showMidtransKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Dapatkan di <a href="https://dashboard.sandbox.midtrans.com/settings/config_info" target="_blank" rel="noopener noreferrer" className="text-primary underline">Midtrans Dashboard</a> → Settings → Access Keys
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Client Key (opsional)</Label>
+                    <Input
+                      value={paymentGateway.midtrans_client_key}
+                      onChange={(e) => setPaymentGateway({ ...paymentGateway, midtrans_client_key: e.target.value })}
+                      placeholder="SB-Mid-client-..."
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Xendit */}
+            <div className="p-4 border border-border rounded-lg space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium">Xendit</h3>
+                  <p className="text-xs text-muted-foreground">Payment gateway modern dengan API simpel</p>
+                </div>
+                <Switch
+                  checked={paymentGateway.xendit_enabled}
+                  onCheckedChange={(v) => setPaymentGateway({ ...paymentGateway, xendit_enabled: v })}
+                />
+              </div>
+
+              {paymentGateway.xendit_enabled && (
+                <div className="space-y-4 pt-2 border-t border-border">
+                  <div>
+                    <Label>Environment</Label>
+                    <Select
+                      value={paymentGateway.xendit_environment}
+                      onValueChange={(val: "sandbox" | "production") => setPaymentGateway({ ...paymentGateway, xendit_environment: val })}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
+                        <SelectItem value="production">Production (Live)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Secret Key</Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        type={showXenditKey ? "text" : "password"}
+                        value={paymentGateway.xendit_secret_key}
+                        onChange={(e) => setPaymentGateway({ ...paymentGateway, xendit_secret_key: e.target.value })}
+                        placeholder="xnd_development_..."
+                      />
+                      <Button type="button" variant="outline" size="icon" onClick={() => setShowXenditKey(!showXenditKey)}>
+                        {showXenditKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Dapatkan di <a href="https://dashboard.xendit.co/settings/developers#api-keys" target="_blank" rel="noopener noreferrer" className="text-primary underline">Xendit Dashboard</a> → Settings → API Keys
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                ⚠️ Pastikan menggunakan mode <strong>Sandbox</strong> untuk testing. Jangan gunakan key Production sampai siap go-live.
+              </p>
+            </div>
+
+            <Button onClick={() => saveSetting("payment_gateway", "integrations", paymentGateway)} disabled={saving} className="gradient-gold text-primary">
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? "Menyimpan..." : "Simpan Konfigurasi Gateway"}
             </Button>
           </div>
         </TabsContent>
