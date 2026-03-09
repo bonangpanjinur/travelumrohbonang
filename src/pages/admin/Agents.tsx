@@ -296,6 +296,16 @@ const AdminAgents = () => {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <Button variant="outline" className="shrink-0" onClick={() => {
+          const headers = ["Nama", "Telepon", "Cabang", "Komisi (%)", "Status"];
+          const rows = filteredAgents.map(a => [
+            a.name, a.phone || "-", a.branch?.name || "-",
+            String(a.commission_percent || 0), a.is_active ? "Aktif" : "Nonaktif"
+          ]);
+          exportToCsv("agents", headers, rows);
+        }}>
+          <Download className="w-4 h-4 mr-2" /> Export CSV
+        </Button>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input

@@ -297,6 +297,16 @@ const AdminPackages = () => {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold">Paket</h1>
         <div className="flex gap-3">
+          <Button variant="outline" onClick={() => {
+            const headers = ["Nama Paket", "Tipe", "Durasi (Hari)", "Min DP", "Status", "Slug"];
+            const rows = filteredPackages.map(p => [
+              p.title, p.package_type || "-", String(p.duration_days),
+              String(p.minimum_dp || 0), p.is_active ? "Aktif" : "Nonaktif", p.slug
+            ]);
+            exportToCsv("packages", headers, rows);
+          }}>
+            <Download className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Cari paket..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 w-64" />
