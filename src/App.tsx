@@ -121,7 +121,7 @@ const AppContent = () => {
           <Route path="crm" element={<AdminCRM />} />
           <Route path="payment-gateway" element={<AdminPaymentGateway />} />
           <Route path="documents" element={<AdminDocuments />} />
-          <Route path="analytics-ai" element={<AdminPlaceholder title="Analitik AI" />} />
+          <Route path="analytics-ai" element={<AdminAnalyticsAI />} />
           <Route path="multi-language" element={<AdminPlaceholder title="Multi-Bahasa" />} />
           <Route path="multi-branch" element={<AdminPlaceholder title="Multi-Cabang Dashboard" />} />
         </Route>
