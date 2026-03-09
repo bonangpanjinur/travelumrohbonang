@@ -41,7 +41,7 @@ const AdminBookings = () => {
 
   useEffect(() => {
     fetchBookings();
-  }, [filter, search, page]);
+  }, [filter, search, page, branchFilter]);
 
   const fetchBookings = async () => {
     setLoading(true);
