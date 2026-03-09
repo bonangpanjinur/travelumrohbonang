@@ -255,8 +255,9 @@ const Navbar = () => {
         </div>
 
         {/* CTA - Simplified */}
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-2">
           <LanguageSwitcher variant="navbar" />
+          <ThemeToggle variant="navbar" />
           {user && <NotificationBell />}
           {user ? (
             <DropdownMenu>
