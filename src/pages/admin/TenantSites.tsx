@@ -101,7 +101,7 @@ const TenantSitesAdmin = () => {
         if (error) throw error;
         toast.success("Situs berhasil diperbarui");
       } else {
-        const { error } = await supabase.from("tenant_sites").insert({ ...form, owner_id: user?.id });
+        const { error } = await supabase.from("tenant_sites").insert({ ...form, owner_id: user?.id } as any);
         if (error) throw error;
         toast.success("Situs berhasil dibuat");
       }

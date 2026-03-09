@@ -7,6 +7,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { TenantProvider, useTenant } from "@/hooks/useTenant";
 import { useDynamicFavicon } from "@/hooks/useDynamicFavicon";
 import Index from "./pages/Index";
 import Paket from "./pages/Paket";
