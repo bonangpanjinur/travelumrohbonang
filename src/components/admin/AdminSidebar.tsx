@@ -1,7 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import { LogOut, Lock, ChevronDown, Star } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/i18n/LanguageContext";
 import AdminBranding from "./AdminBranding";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useState, useMemo } from "react";
 import { menuGroups, BrandingSettings } from "./adminMenuConfig";
 
