@@ -232,6 +232,17 @@ const defaultSocial: SocialSettings = {
   twitter: "",
 };
 
+const defaultPaymentGateway: PaymentGatewaySettings = {
+  midtrans_enabled: false,
+  midtrans_server_key: "",
+  midtrans_client_key: "",
+  midtrans_environment: "sandbox",
+  xendit_enabled: false,
+  xendit_secret_key: "",
+  xendit_environment: "sandbox",
+  default_gateway: "midtrans",
+};
+
 const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
