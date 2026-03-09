@@ -60,6 +60,7 @@ import AdminCRM from "./pages/admin/CRM";
 import AdminDocuments from "./pages/admin/Documents";
 import AdminPaymentGateway from "./pages/admin/PaymentGateway";
 import AdminAnalyticsAI from "./pages/admin/AnalyticsAI";
+import AdminMultiBranch from "./pages/admin/MultiBranch";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
@@ -123,7 +124,7 @@ const AppContent = () => {
           <Route path="documents" element={<AdminDocuments />} />
           <Route path="analytics-ai" element={<AdminAnalyticsAI />} />
           <Route path="multi-language" element={<AdminPlaceholder title="Multi-Bahasa" />} />
-          <Route path="multi-branch" element={<AdminPlaceholder title="Multi-Cabang Dashboard" />} />
+          <Route path="multi-branch" element={<AdminMultiBranch />} />
         </Route>
       </Route>
 

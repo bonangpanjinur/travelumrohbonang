@@ -266,6 +266,7 @@ export type Database = {
       bookings: {
         Row: {
           booking_code: string
+          branch_id: string | null
           created_at: string | null
           departure_id: string | null
           id: string
@@ -279,6 +280,7 @@ export type Database = {
         }
         Insert: {
           booking_code: string
+          branch_id?: string | null
           created_at?: string | null
           departure_id?: string | null
           id?: string
@@ -292,6 +294,7 @@ export type Database = {
         }
         Update: {
           booking_code?: string
+          branch_id?: string | null
           created_at?: string | null
           departure_id?: string | null
           id?: string
@@ -304,6 +307,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_departure_id_fkey"
             columns: ["departure_id"]
