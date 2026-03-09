@@ -4,6 +4,7 @@ import BookingTable, { Booking } from "@/components/admin/BookingTable";
 import BookingFilters from "@/components/admin/BookingFilters";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Download } from "lucide-react";
 import { exportToCsv } from "@/lib/exportCsv";
 import {
@@ -22,17 +23,25 @@ const AdminBookings = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [branchFilter, setBranchFilter] = useState("__all__");
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
+    supabase.from("branches").select("id, name").eq("is_active", true).order("name").then(({ data }) => {
+      setBranches(data || []);
+    });
+  }, []);
+
+  useEffect(() => {
     setPage(0);
-  }, [filter, search]);
+  }, [filter, search, branchFilter]);
 
   useEffect(() => {
     fetchBookings();
-  }, [filter, search, page]);
+  }, [filter, search, page, branchFilter]);
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -56,6 +65,12 @@ const AdminBookings = () => {
 
     if (search.trim()) {
       query = query.ilike("booking_code", `%${search.trim()}%`);
+    }
+
+    if (branchFilter === "__none__") {
+      query = query.is("branch_id", null);
+    } else if (branchFilter !== "__all__") {
+      query = query.eq("branch_id", branchFilter);
     }
 
     const { data, count } = await query;
@@ -95,6 +110,18 @@ const AdminBookings = () => {
               className="pl-9 w-full sm:w-64"
             />
           </div>
+          <Select value={branchFilter} onValueChange={setBranchFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Semua Cabang" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Semua Cabang</SelectItem>
+              <SelectItem value="__none__">Tanpa Cabang</SelectItem>
+              {branches.map((br) => (
+                <SelectItem key={br.id} value={br.id}>{br.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <BookingFilters filter={filter} onFilterChange={setFilter} />
         </div>
       </div>
