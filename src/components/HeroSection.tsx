@@ -172,7 +172,7 @@ const HeroSection = () => {
                   variant="outline"
                   className="border-gold/50 text-gold hover:bg-gold/10 font-semibold text-base px-8"
                 >
-                  {settings.secondary_button_text}
+                  {translated.secondaryBtn || settings.secondary_button_text}
                 </Button>
               </Link>
             )}
