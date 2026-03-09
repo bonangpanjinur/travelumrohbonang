@@ -21,6 +21,7 @@ interface Booking {
   package: { title: string } | null;
   departure: { departure_date: string } | null;
   profile: { name: string; email: string } | null;
+  branch: { name: string } | null;
 }
 
 interface BookingTableProps {
@@ -56,6 +57,7 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
               <MobileCardRow label="Total">
                 <span className="font-semibold">Rp {b.total_price.toLocaleString("id-ID")}</span>
               </MobileCardRow>
+              <MobileCardRow label="Cabang">{b.branch?.name || "—"}</MobileCardRow>
               <div className="flex gap-2 pt-2 border-t border-border">
                 <Button variant="ghost" size="sm" onClick={() => onToggleExpand(b.id)} className="flex-1">
                   {expandedId === b.id ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
@@ -93,6 +95,7 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
               <TableHead>Paket</TableHead>
               <TableHead>Keberangkatan</TableHead>
               <TableHead>Total</TableHead>
+              <TableHead>Cabang</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
@@ -115,6 +118,7 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
                   <TableCell className="font-semibold">
                     Rp {b.total_price.toLocaleString("id-ID")}
                   </TableCell>
+                  <TableCell className="text-sm">{b.branch?.name || <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell>
                     <BookingStatusBadge status={b.status} />
                   </TableCell>
@@ -131,7 +135,7 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
                 </TableRow>
                 {expandedId === b.id && (
                   <TableRow key={`${b.id}-detail`}>
-                    <TableCell colSpan={7} className="bg-muted/30 p-0">
+                    <TableCell colSpan={8} className="bg-muted/30 p-0">
                       <BookingDetailPanel
                         bookingId={b.id}
                         packageId={b.package_id}
