@@ -67,6 +67,24 @@ const emptyForm: Partial<TenantSite> = {
   agent_id: null,
 };
 
+const DnsRecordRow = ({ type, name, value }: { type: string; name: string; value: string }) => {
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Disalin ke clipboard");
+  };
+  return (
+    <div className="flex items-center gap-2 text-xs bg-background rounded px-3 py-2 border border-border">
+      <Badge variant="outline" className="shrink-0 text-[10px]">{type}</Badge>
+      <code className="font-mono shrink-0">{name}</code>
+      <span className="text-muted-foreground">→</span>
+      <code className="font-mono flex-1 truncate">{value}</code>
+      <button onClick={() => copyToClipboard(value)} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors" title="Copy">
+        <Copy className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+};
+
 const TenantSitesAdmin = () => {
   const { user } = useAuth();
   const [sites, setSites] = useState<TenantSite[]>([]);
