@@ -290,7 +290,7 @@ const Navbar = () => {
                     <DropdownMenuItem asChild>
                       <Link to="/admin" className="flex items-center gap-2 cursor-pointer font-medium text-gold hover:text-gold">
                         <LayoutDashboard className="w-4 h-4" />
-                        Dashboard Admin
+                        {t("nav.admin_dashboard")}
                       </Link>
                     </DropdownMenuItem>
                   </>
