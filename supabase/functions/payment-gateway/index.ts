@@ -5,9 +5,26 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Midtrans Sandbox URLs
-const MIDTRANS_BASE_URL = 'https://api.sandbox.midtrans.com';
-const XENDIT_BASE_URL = 'https://api.xendit.co';
+async function getGatewayConfig(supabase: any) {
+  const { data } = await supabase
+    .from('site_settings')
+    .select('value')
+    .eq('key', 'payment_gateway')
+    .eq('category', 'integrations')
+    .maybeSingle();
+  return data?.value || {};
+}
+
+function getMidtransBaseUrl(config: any) {
+  const env = config?.midtrans_environment || 'sandbox';
+  return env === 'production'
+    ? 'https://api.midtrans.com'
+    : 'https://api.sandbox.midtrans.com';
+}
+
+function getXenditBaseUrl() {
+  return 'https://api.xendit.co';
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -19,19 +36,22 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Load gateway config from DB
+    const gatewayConfig = await getGatewayConfig(supabase);
+
     const { action, gateway, booking_id, amount, bank_code, payment_method, customer_name, customer_email, order_id } = await req.json();
 
     if (action === 'create_payment') {
       if (gateway === 'midtrans') {
-        return await createMidtransPayment({ supabase, booking_id, amount, bank_code, payment_method, customer_name, customer_email, order_id });
+        return await createMidtransPayment({ supabase, gatewayConfig, booking_id, amount, bank_code, payment_method, customer_name, customer_email, order_id });
       } else if (gateway === 'xendit') {
-        return await createXenditPayment({ supabase, booking_id, amount, bank_code, payment_method, customer_name, customer_email, order_id });
+        return await createXenditPayment({ supabase, gatewayConfig, booking_id, amount, bank_code, payment_method, customer_name, customer_email, order_id });
       }
       return new Response(JSON.stringify({ error: 'Gateway tidak valid' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     if (action === 'check_status') {
-      return await checkPaymentStatus({ supabase, gateway, gateway_transaction_id: order_id });
+      return await checkPaymentStatus({ supabase, gatewayConfig, gateway, gateway_transaction_id: order_id });
     }
 
     return new Response(JSON.stringify({ error: 'Action tidak valid' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -43,12 +63,14 @@ Deno.serve(async (req) => {
   }
 });
 
-async function createMidtransPayment({ supabase, booking_id, amount, bank_code, payment_method, customer_name, customer_email, order_id }: any) {
-  const serverKey = Deno.env.get('MIDTRANS_SERVER_KEY');
+async function createMidtransPayment({ supabase, gatewayConfig, booking_id, amount, bank_code, payment_method, customer_name, customer_email, order_id }: any) {
+  // Read key from DB config first, fallback to env var
+  const serverKey = gatewayConfig?.midtrans_server_key || Deno.env.get('MIDTRANS_SERVER_KEY');
   if (!serverKey) {
-    return new Response(JSON.stringify({ error: 'MIDTRANS_SERVER_KEY belum dikonfigurasi' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Midtrans Server Key belum dikonfigurasi. Silakan atur di Pengaturan → Payment Gateway.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
+  const baseUrl = getMidtransBaseUrl(gatewayConfig);
   const authHeader = btoa(serverKey + ':');
   const txId = order_id || `TRX-${Date.now()}`;
 
@@ -68,7 +90,7 @@ async function createMidtransPayment({ supabase, booking_id, amount, bank_code, 
     body.bank_transfer = { bank: bank_code || 'bca' };
   }
 
-  const response = await fetch(`${MIDTRANS_BASE_URL}/v2/charge`, {
+  const response = await fetch(`${baseUrl}/v2/charge`, {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
@@ -84,7 +106,6 @@ async function createMidtransPayment({ supabase, booking_id, amount, bank_code, 
     return new Response(JSON.stringify({ error: data.status_message || 'Midtrans error', details: data }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
-  // Extract VA number
   let vaNumber = '';
   if (data.va_numbers && data.va_numbers.length > 0) {
     vaNumber = data.va_numbers[0].va_number;
@@ -92,7 +113,6 @@ async function createMidtransPayment({ supabase, booking_id, amount, bank_code, 
     vaNumber = data.permata_va_number;
   }
 
-  // Save to DB
   const { data: txRecord, error: dbError } = await supabase
     .from('payment_gateway_transactions')
     .insert({
@@ -110,9 +130,7 @@ async function createMidtransPayment({ supabase, booking_id, amount, bank_code, 
     .select()
     .single();
 
-  if (dbError) {
-    console.error('DB error:', dbError);
-  }
+  if (dbError) console.error('DB error:', dbError);
 
   return new Response(JSON.stringify({
     success: true,
@@ -127,12 +145,13 @@ async function createMidtransPayment({ supabase, booking_id, amount, bank_code, 
   }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
-async function createXenditPayment({ supabase, booking_id, amount, bank_code, payment_method, customer_name, customer_email, order_id }: any) {
-  const secretKey = Deno.env.get('XENDIT_SECRET_KEY');
+async function createXenditPayment({ supabase, gatewayConfig, booking_id, amount, bank_code, payment_method, customer_name, customer_email, order_id }: any) {
+  const secretKey = gatewayConfig?.xendit_secret_key || Deno.env.get('XENDIT_SECRET_KEY');
   if (!secretKey) {
-    return new Response(JSON.stringify({ error: 'XENDIT_SECRET_KEY belum dikonfigurasi' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Xendit Secret Key belum dikonfigurasi. Silakan atur di Pengaturan → Payment Gateway.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
+  const baseUrl = getXenditBaseUrl();
   const authHeader = btoa(secretKey + ':');
   const txId = order_id || `TRX-${Date.now()}`;
 
@@ -158,7 +177,6 @@ async function createXenditPayment({ supabase, booking_id, amount, bank_code, pa
       amount: amount,
     };
   } else {
-    // Default to invoice for other methods
     endpoint = '/v2/invoices';
     body = {
       external_id: txId,
@@ -168,7 +186,7 @@ async function createXenditPayment({ supabase, booking_id, amount, bank_code, pa
     };
   }
 
-  const response = await fetch(`${XENDIT_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -186,7 +204,6 @@ async function createXenditPayment({ supabase, booking_id, amount, bank_code, pa
   const vaNumber = data.account_number || data.id || '';
   const expiryTime = data.expiration_date || null;
 
-  // Save to DB
   const { data: txRecord, error: dbError } = await supabase
     .from('payment_gateway_transactions')
     .insert({
@@ -204,9 +221,7 @@ async function createXenditPayment({ supabase, booking_id, amount, bank_code, pa
     .select()
     .single();
 
-  if (dbError) {
-    console.error('DB error:', dbError);
-  }
+  if (dbError) console.error('DB error:', dbError);
 
   return new Response(JSON.stringify({
     success: true,
@@ -221,26 +236,25 @@ async function createXenditPayment({ supabase, booking_id, amount, bank_code, pa
   }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 }
 
-async function checkPaymentStatus({ supabase, gateway, gateway_transaction_id }: any) {
+async function checkPaymentStatus({ supabase, gatewayConfig, gateway, gateway_transaction_id }: any) {
   if (gateway === 'midtrans') {
-    const serverKey = Deno.env.get('MIDTRANS_SERVER_KEY');
+    const serverKey = gatewayConfig?.midtrans_server_key || Deno.env.get('MIDTRANS_SERVER_KEY');
     if (!serverKey) {
-      return new Response(JSON.stringify({ error: 'MIDTRANS_SERVER_KEY belum dikonfigurasi' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'Midtrans Server Key belum dikonfigurasi' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    const baseUrl = getMidtransBaseUrl(gatewayConfig);
     const authHeader = btoa(serverKey + ':');
-    const response = await fetch(`${MIDTRANS_BASE_URL}/v2/${gateway_transaction_id}/status`, {
+    const response = await fetch(`${baseUrl}/v2/${gateway_transaction_id}/status`, {
       headers: { 'Authorization': `Basic ${authHeader}` },
     });
     const data = await response.json();
 
-    // Map Midtrans status
     let status = 'pending';
     if (['capture', 'settlement'].includes(data.transaction_status)) status = 'paid';
     else if (data.transaction_status === 'expire') status = 'expired';
     else if (['deny', 'cancel'].includes(data.transaction_status)) status = 'failed';
 
-    // Update DB
     await supabase
       .from('payment_gateway_transactions')
       .update({ status, callback_data: data, paid_at: status === 'paid' ? new Date().toISOString() : null })
