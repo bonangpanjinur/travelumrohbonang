@@ -70,6 +70,16 @@ const queryClient = new QueryClient();
 
 const AppContent = () => {
   useDynamicFavicon();
+  const { isTenantSite, loading: tenantLoading } = useTenant();
+
+  if (tenantLoading) {
+    return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>;
+  }
+
+  // If this is a tenant subdomain, render the tenant site
+  if (isTenantSite) {
+    return <TenantSitePage />;
+  }
   
   return (
     <Routes>
@@ -92,7 +102,7 @@ const AppContent = () => {
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<BlogDetail />} />
 
-      {/* Step 3.1: Admin Routes protected by AdminRoute */}
+      {/* Admin Routes */}
       <Route element={<AdminRoute />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
@@ -130,12 +140,12 @@ const AppContent = () => {
           <Route path="analytics-ai" element={<AdminAnalyticsAI />} />
           <Route path="multi-language" element={<AdminPlaceholder title="Multi-Bahasa" />} />
           <Route path="multi-branch" element={<AdminMultiBranch />} />
+          <Route path="tenant-sites" element={<AdminTenantSites />} />
         </Route>
       </Route>
 
-      {/* CMS Dynamic Page - must be after all other routes */}
+      {/* CMS Dynamic Page */}
       <Route path="/:slug" element={<DynamicPage />} />
-
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
