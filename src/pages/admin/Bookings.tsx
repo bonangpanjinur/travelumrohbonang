@@ -110,6 +110,18 @@ const AdminBookings = () => {
               className="pl-9 w-full sm:w-64"
             />
           </div>
+          <Select value={branchFilter} onValueChange={setBranchFilter}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Semua Cabang" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Semua Cabang</SelectItem>
+              <SelectItem value="__none__">Tanpa Cabang</SelectItem>
+              {branches.map((br) => (
+                <SelectItem key={br.id} value={br.id}>{br.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <BookingFilters filter={filter} onFilterChange={setFilter} />
         </div>
       </div>
