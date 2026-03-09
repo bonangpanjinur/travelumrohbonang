@@ -277,7 +277,7 @@ const Navbar = () => {
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
                     <LayoutDashboard className="w-4 h-4" />
-                    Dashboard Saya
+                    {t("nav.my_dashboard")}
                   </Link>
                 </DropdownMenuItem>
                 
