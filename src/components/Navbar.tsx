@@ -255,6 +255,7 @@ const Navbar = () => {
 
         {/* CTA - Simplified */}
         <div className="hidden lg:flex items-center gap-3">
+          <LanguageSwitcher variant="navbar" />
           {user && <NotificationBell />}
           {user ? (
             <DropdownMenu>
