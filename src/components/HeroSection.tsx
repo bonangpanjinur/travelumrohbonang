@@ -145,7 +145,7 @@ const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg text-primary-foreground/80 mb-8 max-w-lg"
           >
-            {settings.subtitle}
+            {translated.subtitle || settings.subtitle}
           </motion.p>
 
           <motion.div
