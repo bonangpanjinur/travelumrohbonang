@@ -1,150 +1,124 @@
 
 
-# Rencana Pengembangan Sistem Travel Umroh
+# Analisis Lengkap: Hal yang Masih Kurang
 
-## Bagian 1: Restrukturisasi Sidebar & Menu
+## A. Bug dan Masalah Kritis
 
-### Masalah Saat Ini
-- Hamburger menu di mobile ada di kanan, perlu dipindah ke kiri
-- Kategori menu sudah ada tapi perlu direorganisasi agar lebih terstruktur
-- Premium items terpisah, sebaiknya diintegrasikan ke dalam kategori yang relevan
+### 1. Dashboard Admin: Data Hardcoded dan Tidak Lengkap
+- **Lokasi:** `src/pages/admin/Dashboard.tsx`
+- Grafik "Tren Pendaftaran Jamaah" hanya placeholder (tidak ada data nyata)
+- "Aktivitas Terbaru" menampilkan data dummy statis (hardcoded "Ahmad Fulan", "2 jam yang lalu")
+- Trend teks seperti "+12% bulan ini", "+3 agen baru" juga hardcoded, bukan dari data aktual
+- Tidak ada stat untuk Muthawif, Cabang, Jemaah, atau Total Pendapatan
 
-### Perubahan Sidebar
+### 2. Fasilitas Paket Hardcoded di Frontend
+- **Lokasi:** `src/pages/PackageDetail.tsx` baris 246-262
+- Daftar fasilitas ("Tiket Pesawat PP", "Hotel Dekat Masjidil Haram", dll) di-hardcode
+- Tidak bisa dikustomisasi per paket oleh admin
 
-**Struktur menu baru yang lebih terorganisir:**
+### 3. Halaman User: Route Tanpa Proteksi
+- **Lokasi:** `src/App.tsx` baris 69-71
+- Route `/my-bookings`, `/dashboard`, `/profile` tidak dibungkus dengan proteksi auth
+- User yang belum login bisa mengakses halaman ini (meski masing-masing halaman punya pengecekan sendiri, lebih baik dilindungi di level route)
 
-```text
-UTAMA
-  - Dashboard
-  - Website Utama (link external)
-
-OPERASIONAL
-  - Paket Umroh
-  - Keberangkatan
-  - Itinerary
-  - Booking
-  - Jemaah
-  - Dokumen Jemaah [Premium]
-
-KEUANGAN
-  - Pembayaran
-  - Akuntansi & Keuangan [Premium]
-  - Payment Gateway [Premium]
-  - Laporan
-
-PEMASARAN
-  - CRM & Follow-up [Premium]
-  - Kupon
-  - Analitik AI [Premium]
-
-MASTER DATA
-  - Hotel
-  - Maskapai
-  - Bandara
-  - Cabang
-  - Agen
-  - Muthawif
-
-KONTEN & CMS
-  - Blog
-  - Galeri
-  - Testimoni
-  - FAQ
-  - Halaman CMS
-  - Keunggulan
-  - Langkah Panduan
-  - Layanan
-
-PENGATURAN
-  - Navigasi
-  - Floating Button
-  - Manajemen User
-  - Multi-Bahasa [Premium]
-  - Multi-Cabang [Premium]
-  - Pengaturan Umum
-```
-
-**Perubahan UI:**
-- Pindahkan hamburger icon ke **kiri** di `AdminHeader.tsx` (branding kiri, hamburger tetap kiri sebelum branding)
-- Premium items ditandai badge bintang kecil, bukan di grup terpisah
-- Grup yang tidak memiliki active route default collapsed (kecuali Utama)
-
-### File yang diubah:
-- `src/components/admin/adminMenuConfig.ts` - reorganisasi menu groups, integrasikan premium items
-- `src/components/admin/AdminSidebar.tsx` - render premium badge inline, auto-collapse logic
-- `src/components/admin/AdminHeader.tsx` - pindahkan hamburger ke kiri
+### 4. Dashboard User: Step Status Hardcoded
+- **Lokasi:** `src/pages/Dashboard.tsx` baris 14-21
+- Status step perjalanan (Pendaftaran, Pembayaran DP, Upload Dokumen, dll) semuanya hardcoded
+- Tidak berubah berdasarkan status booking aktual user
 
 ---
 
-## Bagian 2: Roadmap Fitur Premium (4 Phase)
+## B. Fitur yang Belum Ada / Belum Lengkap
 
-### Phase 1 - Foundation (Sudah Ada + Penyempurnaan)
-Fitur yang sudah dibangun, perlu dipoles:
+### 5. Tidak Ada Fitur Export Data
+- Admin tidak bisa export data booking, jemaah, atau laporan ke Excel/CSV
+- Penting untuk operasional travel
 
-1. **Akuntansi & Keuangan** (sudah ada)
-   - Penyempurnaan: export PDF/Excel, kategori custom, rekonsiliasi dengan pembayaran booking
+### 6. Tidak Ada Pencarian Global di Admin
+- Tidak ada fitur search di halaman Booking, Jemaah, Paket, dan lainnya (kecuali Users)
+- Sulit menemukan data spesifik saat jumlah data banyak
 
-2. **CRM & Follow-up** (sudah ada)
-   - Penyempurnaan: integrasi dengan data booking, auto-create lead dari inquiry, dashboard funnel visual
+### 7. Tidak Ada Konfirmasi Dialog untuk Aksi Berbahaya
+- Hapus paket, keberangkatan, dan data lain menggunakan `confirm()` browser bawaan
+- Seharusnya menggunakan AlertDialog yang lebih profesional dan konsisten
 
-### Phase 2 - Dokumen & Pembayaran
-3. **Manajemen Dokumen Jemaah**
-   - Upload & tracking dokumen (paspor, visa, KTP, foto, surat mahram)
-   - Status kelengkapan per jemaah (lengkap/belum)
-   - Notifikasi dokumen expired (paspor < 6 bulan)
-   - Checklist dokumen per paket
-   - Database: tabel `pilgrim_documents` (pilgrim_id, doc_type, file_url, status, expiry_date)
+### 8. Tidak Ada Pagination
+- Semua halaman admin (Booking, Payments, Packages, dll) fetch seluruh data tanpa pagination
+- Bisa menjadi lambat saat data bertambah banyak (limit Supabase 1000 row)
 
-4. **Payment Gateway**
-   - Integrasi Midtrans/Xendit untuk pembayaran online
-   - Auto-update status pembayaran
-   - Generate virtual account
-   - Notifikasi pembayaran otomatis
-   - Database: tabel `payment_gateway_transactions` (payment_id, gateway, va_number, status, callback_data)
+### 9. Admin Dashboard: Tidak Ada Widget Booking Terbaru
+- Tidak menampilkan daftar booking terbaru yang bisa diklik untuk detail
+- Aktivitas terbaru hanya dummy
 
-### Phase 3 - Intelligence & Scale
-5. **Analitik AI**
-   - Dashboard prediktif: tren penjualan, forecasting revenue
-   - Rekomendasi harga paket berdasarkan demand
-   - Analisis konversi lead-to-booking
-   - Ringkasan otomatis performa bulanan (menggunakan Lovable AI / Gemini)
-   - Segmentasi jemaah otomatis
+### 10. Tidak Ada Notifikasi Admin
+- Saat ada booking baru atau pembayaran masuk, admin tidak mendapat notifikasi
+- `NotificationBell` hanya ada untuk user biasa
 
-6. **Multi-Cabang Dashboard**
-   - Dashboard per cabang dengan data terpisah
-   - Perbandingan performa antar cabang
-   - Role `branch_admin` - hanya lihat data cabangnya
-   - Laporan konsolidasi pusat
-   - Database: tambah `branch_id` di tabel-tabel operasional
+### 11. Tidak Ada Validasi Form yang Komprehensif
+- Form booking, pembayaran, dan admin menggunakan validasi minimal
+- Tidak ada validasi format email, nomor telepon, NIK, atau nomor paspor
 
-### Phase 4 - Global & Advanced
-7. **Multi-Bahasa**
-   - Support Bahasa Indonesia, English, Arabic
-   - CMS content multi-language
-   - Tabel `translations` (key, locale, value)
-   - Language switcher di frontend
+### 12. Tidak Ada Fitur Cetak/Download Invoice untuk Admin
+- `InvoiceButton` ada untuk user, tapi admin belum punya fitur cetak invoice massal atau per booking
 
-8. **Fitur Tambahan (Bonus)**
-   - WhatsApp Integration (kirim notifikasi via WA API)
-   - E-Ticket & boarding pass generator
-   - Manasik scheduler (jadwal manasik + absensi)
-   - Customer portal (jemaah bisa track status mandiri)
-   - Rating & review post-trip otomatis
+### 13. Tidak Ada Manajemen Kupon di Admin
+- Tabel `coupons` sudah ada di database, tapi tidak ada halaman admin untuk mengelolanya
+- Tidak ada route `/admin/coupons`
+
+### 14. Tidak Ada Manajemen Advantages/Keunggulan
+- Tabel `advantages` ada di database tapi tidak ada halaman admin
+- Tidak ada route `/admin/advantages`
+
+### 15. Tidak Ada Manajemen Guide Steps
+- Tabel `guide_steps` ada di database tapi tidak ada halaman admin
+- Tidak ada route `/admin/guide-steps`
+
+### 16. Tidak Ada Manajemen Services
+- Tabel `services` ada di database tapi tidak ada halaman admin
+- Tidak ada route `/admin/services`
 
 ---
 
-## Ringkasan Implementasi Sekarang
+## C. Keamanan dan Performa
 
-Yang akan dikerjakan dalam implementasi ini:
+### 17. Route `/my-bookings` dan `/profile` Masih Bisa Diakses
+- Sebelumnya menu dihapus dari navbar, tapi route masih ada
+- User bisa mengakses langsung via URL -- ini mungkin disengaja, tapi perlu dipertimbangkan
 
-1. **Restrukturisasi sidebar** - reorganisasi menu, pindahkan hamburger ke kiri, integrasikan premium items ke dalam kategori
-2. **Update `adminMenuConfig.ts`** - struktur menu baru dengan 7 grup yang lebih logis
-3. **Update `AdminHeader.tsx`** - hamburger di kiri
-4. **Update `AdminSidebar.tsx`** - premium items inline dengan badge, auto-collapse
+### 18. Tidak Ada Rate Limiting pada Upload File
+- Upload bukti pembayaran dan gambar tidak membatasi ukuran atau frekuensi
+- Bisa disalahgunakan untuk mengisi storage
 
-File yang akan diubah:
-- `src/components/admin/adminMenuConfig.ts`
-- `src/components/admin/AdminSidebar.tsx`
-- `src/components/admin/AdminHeader.tsx`
-- `src/components/admin/AdminBreadcrumb.tsx` (update label mapping)
+---
+
+## D. UX/UI
+
+### 19. Tidak Ada Dark Mode Toggle yang Terlihat
+- Package `next-themes` terinstall tapi tidak terlihat ada toggle dark/light mode
+
+### 20. Tidak Ada Breadcrumb di Admin
+- Navigasi admin tidak memiliki breadcrumb untuk menunjukkan posisi halaman saat ini
+
+### 21. Tidak Ada Loading State yang Konsisten
+- Beberapa halaman menggunakan spinner berbeda, beberapa menggunakan `LoadingSpinner`, beberapa inline
+
+---
+
+## Ringkasan Prioritas
+
+| Prioritas | Item | Deskripsi |
+|-----------|------|-----------|
+| Tinggi | #1 | Dashboard admin: ganti data dummy dengan data real |
+| Tinggi | #3 | Proteksi route user dengan auth guard |
+| Tinggi | #8 | Pagination untuk halaman admin |
+| Sedang | #4 | Status perjalanan user dashboard dari data real |
+| Sedang | #6 | Pencarian global di admin |
+| Sedang | #13 | Halaman admin untuk kupon |
+| Sedang | #14-16 | Halaman admin untuk advantages, guide steps, services |
+| Sedang | #5 | Export data ke CSV/Excel |
+| Rendah | #2 | Fasilitas paket dari database |
+| Rendah | #7 | Ganti confirm() dengan AlertDialog |
+| Rendah | #10 | Notifikasi admin |
+| Rendah | #19 | Dark mode toggle |
+| Rendah | #20 | Breadcrumb admin |
 

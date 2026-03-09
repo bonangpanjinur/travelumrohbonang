@@ -1,20 +1,16 @@
 import { useLocation, Link } from "react-router-dom";
 import { ChevronRight, Home } from "lucide-react";
-import { menuGroups, premiumMenuItems } from "./adminMenuConfig";
+import { menuGroups } from "./adminMenuConfig";
 
 const breadcrumbMap: Record<string, string> = {};
 menuGroups.forEach(g => g.items.forEach(i => {
   breadcrumbMap[i.href] = i.label;
 }));
-premiumMenuItems.forEach(i => {
-  breadcrumbMap[i.href] = i.label;
-});
 
 const AdminBreadcrumb = () => {
   const location = useLocation();
   const path = location.pathname;
 
-  // Don't show on admin dashboard index
   if (path === "/admin") return null;
 
   const label = breadcrumbMap[path] || path.split("/").pop()?.replace(/-/g, " ") || "";

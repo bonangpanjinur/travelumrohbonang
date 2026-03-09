@@ -2,12 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { LogOut, Lock, ChevronDown, Star } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import AdminBranding from "./AdminBranding";
-import { useState } from "react";
-import { 
-  menuGroups, 
-  premiumMenuItems, 
-  BrandingSettings 
-} from "./adminMenuConfig";
+import { useState, useMemo } from "react";
+import { menuGroups, BrandingSettings } from "./adminMenuConfig";
 
 interface AdminSidebarProps {
   branding: BrandingSettings;
@@ -28,9 +24,23 @@ const AdminSidebar = ({
   const location = useLocation();
   const showLogo = branding.display_mode === "logo_only" || branding.display_mode === "both";
   const showText = branding.display_mode === "text_only" || branding.display_mode === "both";
+  const isSuperAdmin = role && ['superadmin', 'super_admin'].includes(role.toLowerCase());
 
-  // Track collapsed groups
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  // Auto-collapse: only "Utama" and group with active route are open by default
+  const initialCollapsed = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    menuGroups.forEach((group) => {
+      const hasActive = group.items.some(item => location.pathname === item.href);
+      if (group.label === "Utama" || hasActive) {
+        map[group.label] = false;
+      } else {
+        map[group.label] = true;
+      }
+    });
+    return map;
+  }, []); // only on mount
+
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(initialCollapsed);
 
   const toggleGroup = (label: string) => {
     setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }));
@@ -86,9 +96,6 @@ const AdminSidebar = ({
               });
               if (filteredItems.length === 0) return null;
 
-              // Check if any item in this group is active
-              const hasActiveItem = filteredItems.some(item => location.pathname === item.href);
-
               return (
                 <div key={group.label}>
                   <button
@@ -102,6 +109,26 @@ const AdminSidebar = ({
                     <ul className="space-y-0.5 mb-2">
                       {filteredItems.map((item) => {
                         const isActive = location.pathname === item.href;
+                        const isPremiumLocked = item.premium && !isSuperAdmin;
+
+                        if (isPremiumLocked) {
+                          return (
+                            <li key={item.href}>
+                              <button
+                                onClick={() => {
+                                  onClose();
+                                  onPremiumClick(item.premiumFeature || item.label);
+                                }}
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary-foreground/30 hover:bg-primary-foreground/5 hover:text-primary-foreground/50 transition-colors w-full"
+                              >
+                                <Lock className="w-4 h-4 shrink-0" />
+                                <span className="flex-1 text-left">{item.label}</span>
+                                <Star className="w-3 h-3 shrink-0 text-amber-400/60" />
+                              </button>
+                            </li>
+                          );
+                        }
+
                         return (
                           <li key={item.href}>
                             <Link
@@ -114,7 +141,10 @@ const AdminSidebar = ({
                               }`}
                             >
                               <item.icon className="w-4 h-4 shrink-0" />
-                              {item.label}
+                              <span className="flex-1">{item.label}</span>
+                              {item.premium && (
+                                <Star className="w-3 h-3 shrink-0 text-amber-400" />
+                              )}
                             </Link>
                           </li>
                         );
@@ -124,53 +154,6 @@ const AdminSidebar = ({
                 </div>
               );
             })}
-
-            {/* Premium Menu */}
-            <div>
-              <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-primary-foreground/40 font-semibold">
-                Premium
-              </div>
-              <ul className="space-y-0.5">
-                {premiumMenuItems.map((item) => {
-                  const isSuperAdmin = role && ['superadmin', 'super_admin'].includes(role.toLowerCase());
-                  
-                  if (isSuperAdmin) {
-                    const isActive = location.pathname === item.href;
-                    return (
-                      <li key={item.feature}>
-                        <Link
-                          to={item.href}
-                          onClick={onClose}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                            isActive
-                              ? "bg-primary-foreground/15 text-primary-foreground"
-                              : "text-primary-foreground/60 hover:bg-primary-foreground/10 hover:text-primary-foreground/90"
-                          }`}
-                        >
-                          <Star className="w-4 h-4 shrink-0 text-amber-400" />
-                          {item.label}
-                        </Link>
-                      </li>
-                    );
-                  }
-                  
-                  return (
-                    <li key={item.feature}>
-                      <button
-                        onClick={() => {
-                          onClose();
-                          onPremiumClick(item.feature);
-                        }}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary-foreground/30 hover:bg-primary-foreground/5 hover:text-primary-foreground/50 transition-colors w-full"
-                      >
-                        <Lock className="w-4 h-4 shrink-0" />
-                        {item.label}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
           </nav>
 
           {/* Footer */}
