@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, UserCheck, DollarSign, FileDown } from "lucide-react";
+import { Users, UserCheck, DollarSign, FileDown, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fetchInvoiceData, generateInvoiceHTML, openInvoicePrintWindow } from "./InvoiceGenerator";
 import { toast } from "sonner";
+
+interface Branch {
+  id: string;
+  name: string;
+}
 
 interface BookingDetailPanelProps {
   bookingId: string;
@@ -11,6 +17,8 @@ interface BookingDetailPanelProps {
   picType: string | null;
   picId: string | null;
   packageTitle: string;
+  branchId?: string | null;
+  onBranchChange?: () => void;
 }
 
 interface Pilgrim {
@@ -19,11 +27,34 @@ interface Pilgrim {
   gender: string | null;
 }
 
-const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle }: BookingDetailPanelProps) => {
+const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle, branchId, onBranchChange }: BookingDetailPanelProps) => {
   const [pilgrims, setPilgrims] = useState<Pilgrim[]>([]);
   const [commissionRate, setCommissionRate] = useState<number>(0);
   const [picName, setPicName] = useState<string>("-");
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>(branchId || "none");
+  const [savingBranch, setSavingBranch] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from("branches").select("id, name").eq("is_active", true).order("name").then(({ data }) => {
+      setBranches(data || []);
+    });
+  }, []);
+
+  const handleBranchChange = async (value: string) => {
+    setSelectedBranchId(value);
+    setSavingBranch(true);
+    const branchValue = value === "none" ? null : value;
+    const { error } = await supabase.from("bookings").update({ branch_id: branchValue }).eq("id", bookingId);
+    setSavingBranch(false);
+    if (error) {
+      toast.error("Gagal menyimpan cabang");
+    } else {
+      toast.success("Cabang berhasil diupdate");
+      onBranchChange?.();
+    }
+  };
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -97,7 +128,22 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
 
   return (
     <div className="p-4 space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Cabang:</span>
+          <Select value={selectedBranchId} onValueChange={handleBranchChange} disabled={savingBranch}>
+            <SelectTrigger className="w-[200px] h-8 text-sm">
+              <SelectValue placeholder="Pilih Cabang" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">— Tanpa Cabang —</SelectItem>
+              {branches.map((br) => (
+                <SelectItem key={br.id} value={br.id}>{br.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Button size="sm" variant="outline" onClick={handleDownloadInvoice}>
           <FileDown className="w-4 h-4 mr-2" /> Cetak Invoice
         </Button>

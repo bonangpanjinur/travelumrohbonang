@@ -17,6 +17,7 @@ interface Booking {
   package_id: string | null;
   pic_type: string | null;
   pic_id: string | null;
+  branch_id: string | null;
   package: { title: string } | null;
   departure: { departure_date: string } | null;
   profile: { name: string; email: string } | null;
@@ -26,9 +27,10 @@ interface BookingTableProps {
   bookings: Booking[];
   expandedId: string | null;
   onToggleExpand: (id: string) => void;
+  onRefresh?: () => void;
 }
 
-const BookingTable = ({ bookings, expandedId, onToggleExpand }: BookingTableProps) => {
+const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: BookingTableProps) => {
   const isMobile = useIsMobile();
 
   if (isMobile) {
@@ -69,6 +71,8 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand }: BookingTableProp
                   picType={b.pic_type}
                   picId={b.pic_id}
                   packageTitle={b.package?.title || "-"}
+                  branchId={b.branch_id}
+                  onBranchChange={onRefresh}
                 />
               </div>
             )}
@@ -134,6 +138,8 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand }: BookingTableProp
                         picType={b.pic_type}
                         picId={b.pic_id}
                         packageTitle={b.package?.title || "-"}
+                        branchId={b.branch_id}
+                        onBranchChange={onRefresh}
                       />
                     </TableCell>
                   </TableRow>
