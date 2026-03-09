@@ -134,9 +134,9 @@ const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-4xl sm:text-5xl lg:text-7xl font-display font-bold text-primary-foreground leading-tight mb-6"
           >
-            {settings.title}{" "}
-            <span className="text-gradient-gold">{settings.title_highlight}</span>{" "}
-            Impian Anda
+            {translated.title || settings.title}{" "}
+            <span className="text-gradient-gold">{translated.highlight || settings.title_highlight}</span>{" "}
+            {language === "id" ? "Impian Anda" : "of Your Dreams"}
           </motion.h1>
 
           <motion.p
