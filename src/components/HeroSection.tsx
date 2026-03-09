@@ -160,7 +160,7 @@ const HeroSection = () => {
                   size="lg"
                   className="gradient-gold text-primary font-semibold text-base px-8 hover:opacity-90 transition-opacity"
                 >
-                  {settings.primary_button_text}
+                  {translated.primaryBtn || settings.primary_button_text}
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
