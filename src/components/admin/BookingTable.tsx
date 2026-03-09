@@ -21,6 +21,7 @@ interface Booking {
   package: { title: string } | null;
   departure: { departure_date: string } | null;
   profile: { name: string; email: string } | null;
+  branch: { name: string } | null;
 }
 
 interface BookingTableProps {
