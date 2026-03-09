@@ -301,6 +301,9 @@ const AdminSettings = () => {
           case "social":
             setSocial({ ...defaultSocial, ...(value as object) });
             break;
+          case "payment_gateway":
+            setPaymentGateway({ ...defaultPaymentGateway, ...(value as object) });
+            break;
         }
       });
     }
