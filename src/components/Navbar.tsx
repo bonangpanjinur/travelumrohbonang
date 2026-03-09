@@ -285,7 +285,7 @@ const Navbar = () => {
                   <>
                     <DropdownMenuSeparator />
                     <div className="px-2 py-1.5">
-                      <p className="text-xs font-medium text-gold px-2 py-1 uppercase tracking-wider">Administrasi</p>
+                      <p className="text-xs font-medium text-gold px-2 py-1 uppercase tracking-wider">{t("nav.admin")}</p>
                     </div>
                     <DropdownMenuItem asChild>
                       <Link to="/admin" className="flex items-center gap-2 cursor-pointer font-medium text-gold hover:text-gold">
