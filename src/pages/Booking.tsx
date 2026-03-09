@@ -71,6 +71,7 @@ const Booking = () => {
   const [pilgrims, setPilgrims] = useState<Pilgrim[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [pilgrimErrors, setPilgrimErrors] = useState<Record<number, Record<string, string>>>({});
   
   // PIC State
   const [branches, setBranches] = useState<Branch[]>([]);
