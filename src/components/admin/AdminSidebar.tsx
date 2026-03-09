@@ -23,6 +23,7 @@ const AdminSidebar = ({
   onPremiumClick 
 }: AdminSidebarProps) => {
   const { role } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
   const showLogo = branding.display_mode === "logo_only" || branding.display_mode === "both";
   const showText = branding.display_mode === "text_only" || branding.display_mode === "both";
