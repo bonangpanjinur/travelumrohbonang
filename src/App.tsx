@@ -58,6 +58,7 @@ import AdminPlaceholder from "./pages/admin/Placeholder";
 import AdminAccounting from "./pages/admin/Accounting";
 import AdminCRM from "./pages/admin/CRM";
 import AdminDocuments from "./pages/admin/Documents";
+import AdminPaymentGateway from "./pages/admin/PaymentGateway";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
