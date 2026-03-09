@@ -59,6 +59,7 @@ import AdminAccounting from "./pages/admin/Accounting";
 import AdminCRM from "./pages/admin/CRM";
 import AdminDocuments from "./pages/admin/Documents";
 import AdminPaymentGateway from "./pages/admin/PaymentGateway";
+import AdminAnalyticsAI from "./pages/admin/AnalyticsAI";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
@@ -120,7 +121,7 @@ const AppContent = () => {
           <Route path="crm" element={<AdminCRM />} />
           <Route path="payment-gateway" element={<AdminPaymentGateway />} />
           <Route path="documents" element={<AdminDocuments />} />
-          <Route path="analytics-ai" element={<AdminPlaceholder title="Analitik AI" />} />
+          <Route path="analytics-ai" element={<AdminAnalyticsAI />} />
           <Route path="multi-language" element={<AdminPlaceholder title="Multi-Bahasa" />} />
           <Route path="multi-branch" element={<AdminPlaceholder title="Multi-Cabang Dashboard" />} />
         </Route>
