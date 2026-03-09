@@ -113,6 +113,7 @@ const AdminBookings = () => {
             bookings={bookings}
             expandedId={expandedId}
             onToggleExpand={handleToggleExpand}
+            onRefresh={fetchBookings}
           />
 
           {totalPages > 1 && (
