@@ -257,6 +257,9 @@ const AdminSettings = () => {
   const [template, setTemplate] = useState<TemplateSettings>(defaultTemplate);
   const [bank, setBank] = useState<BankSettings>(defaultBank);
   const [social, setSocial] = useState<SocialSettings>(defaultSocial);
+  const [paymentGateway, setPaymentGateway] = useState<PaymentGatewaySettings>(defaultPaymentGateway);
+  const [showMidtransKey, setShowMidtransKey] = useState(false);
+  const [showXenditKey, setShowXenditKey] = useState(false);
 
   useEffect(() => {
     fetchSettings();
