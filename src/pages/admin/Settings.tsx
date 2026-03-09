@@ -89,6 +89,18 @@ interface SocialSettings {
   twitter: string;
 }
 
+interface PaymentGatewaySettings {
+  midtrans_enabled: boolean;
+  midtrans_server_key: string;
+  midtrans_client_key: string;
+  midtrans_environment: "sandbox" | "production";
+  xendit_enabled: boolean;
+  xendit_secret_key: string;
+  xendit_environment: "sandbox" | "production";
+  default_gateway: "midtrans" | "xendit";
+}
+
+
 // Template definitions
 const templates = [
   {
