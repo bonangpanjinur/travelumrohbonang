@@ -46,6 +46,8 @@ const defaultSettings: HeroSettings = {
 
 const HeroSection = () => {
   const [settings, setSettings] = useState<HeroSettings>(defaultSettings);
+  const { language, translateDynamic } = useLanguage();
+  const [translated, setTranslated] = useState({ title: "", highlight: "", subtitle: "", primaryBtn: "", secondaryBtn: "" });
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -62,6 +64,31 @@ const HeroSection = () => {
 
     fetchSettings();
   }, []);
+
+  // Translate dynamic content when language changes
+  useEffect(() => {
+    const doTranslate = async () => {
+      if (language === "id") {
+        setTranslated({
+          title: settings.title,
+          highlight: settings.title_highlight,
+          subtitle: settings.subtitle,
+          primaryBtn: settings.primary_button_text,
+          secondaryBtn: settings.secondary_button_text,
+        });
+        return;
+      }
+      const [title, highlight, subtitle, primaryBtn, secondaryBtn] = await Promise.all([
+        translateDynamic(settings.title),
+        translateDynamic(settings.title_highlight),
+        translateDynamic(settings.subtitle),
+        translateDynamic(settings.primary_button_text),
+        translateDynamic(settings.secondary_button_text),
+      ]);
+      setTranslated({ title, highlight, subtitle, primaryBtn, secondaryBtn });
+    };
+    doTranslate();
+  }, [language, settings, translateDynamic]);
 
   const backgroundImage = settings.background_url || heroImg;
 
