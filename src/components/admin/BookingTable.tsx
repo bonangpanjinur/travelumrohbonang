@@ -71,6 +71,8 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
                   picType={b.pic_type}
                   picId={b.pic_id}
                   packageTitle={b.package?.title || "-"}
+                  branchId={b.branch_id}
+                  onBranchChange={onRefresh}
                 />
               </div>
             )}
