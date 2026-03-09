@@ -341,7 +341,7 @@ const TenantSitesAdmin = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Situs</TableHead>
-                <TableHead>Subdomain</TableHead>
+                <TableHead>Subdomain / Domain</TableHead>
                 <TableHead>Cabang/Agen</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
