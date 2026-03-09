@@ -4,6 +4,7 @@ import { Menu, X, User, LogOut, ChevronDown, LayoutDashboard, Ticket, UserCircle
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -14,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import NotificationBell from "@/components/NotificationBell";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface NavItem {
   id: string;
@@ -50,6 +52,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAdmin, signOut } = useAuth();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const fetchNavItems = async () => {
@@ -153,11 +156,11 @@ const Navbar = () => {
     }
   };
 
-  const defaultLinks: NavItem[] = [
-    { id: "1", label: "Beranda", url: "/", parent_id: null, sort_order: 1, open_in_new_tab: false },
-    { id: "2", label: "Paket Perjalanan", url: "/paket", parent_id: null, sort_order: 2, open_in_new_tab: false },
-    { id: "3", label: "Galeri", url: "/galeri", parent_id: null, sort_order: 3, open_in_new_tab: false },
-    { id: "4", label: "Blog", url: "/blog", parent_id: null, sort_order: 4, open_in_new_tab: false },
+    const defaultLinks: NavItem[] = [
+    { id: "1", label: t("nav.home"), url: "/", parent_id: null, sort_order: 1, open_in_new_tab: false },
+    { id: "2", label: t("nav.packages"), url: "/paket", parent_id: null, sort_order: 2, open_in_new_tab: false },
+    { id: "3", label: t("nav.gallery"), url: "/galeri", parent_id: null, sort_order: 3, open_in_new_tab: false },
+    { id: "4", label: t("nav.blog"), url: "/blog", parent_id: null, sort_order: 4, open_in_new_tab: false },
     ...dynamicPages.map((page, index): NavItem => ({
       id: `dynamic-${index}`,
       label: page.title || page.slug,
@@ -252,6 +255,7 @@ const Navbar = () => {
 
         {/* CTA - Simplified */}
         <div className="hidden lg:flex items-center gap-3">
+          <LanguageSwitcher variant="navbar" />
           {user && <NotificationBell />}
           {user ? (
             <DropdownMenu>
@@ -268,12 +272,12 @@ const Navbar = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-card border-border z-[120]">
                 <div className="px-2 py-1.5">
-                  <p className="text-xs font-medium text-muted-foreground px-2 py-1 uppercase tracking-wider">Akun Saya</p>
+                  <p className="text-xs font-medium text-muted-foreground px-2 py-1 uppercase tracking-wider">{t("nav.my_account")}</p>
                 </div>
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
                     <LayoutDashboard className="w-4 h-4" />
-                    Dashboard Saya
+                    {t("nav.my_dashboard")}
                   </Link>
                 </DropdownMenuItem>
                 
@@ -281,12 +285,12 @@ const Navbar = () => {
                   <>
                     <DropdownMenuSeparator />
                     <div className="px-2 py-1.5">
-                      <p className="text-xs font-medium text-gold px-2 py-1 uppercase tracking-wider">Administrasi</p>
+                      <p className="text-xs font-medium text-gold px-2 py-1 uppercase tracking-wider">{t("nav.admin")}</p>
                     </div>
                     <DropdownMenuItem asChild>
                       <Link to="/admin" className="flex items-center gap-2 cursor-pointer font-medium text-gold hover:text-gold">
                         <LayoutDashboard className="w-4 h-4" />
-                        Dashboard Admin
+                        {t("nav.admin_dashboard")}
                       </Link>
                     </DropdownMenuItem>
                   </>
@@ -298,14 +302,14 @@ const Navbar = () => {
                   className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="w-4 h-4" />
-                  Keluar
+                  {t("nav.logout")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <Link to="/auth">
               <Button className="gradient-gold text-primary font-semibold hover:opacity-90 transition-opacity">
-                Masuk / Daftar
+                {t("nav.login")}
               </Button>
             </Link>
           )}
@@ -352,29 +356,34 @@ const Navbar = () => {
                   ))}
                 </div>
               ))}
+
+              {/* Mobile Language Switcher */}
+              <div className="px-4 py-2">
+                <LanguageSwitcher variant="navbar" />
+              </div>
               
               {user ? (
                 <div className="pt-4 border-t border-emerald-light/20 mt-2 space-y-1">
-                  <p className="px-4 py-2 text-xs text-primary-foreground/40 uppercase tracking-wider">Akun</p>
+                  <p className="px-4 py-2 text-xs text-primary-foreground/40 uppercase tracking-wider">{t("nav.my_account")}</p>
                   <Link 
                     to="/dashboard" 
                     onClick={() => setIsOpen(false)} 
                     className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg"
                   >
                     <LayoutDashboard className="w-4 h-4" />
-                    Dashboard Saya
+                    {t("nav.my_dashboard")}
                   </Link>
 
                   {isAdmin && (
                     <div className="pt-2 mt-2 border-t border-emerald-light/10">
-                      <p className="px-4 py-2 text-xs text-gold/60 uppercase tracking-wider">Admin</p>
+                      <p className="px-4 py-2 text-xs text-gold/60 uppercase tracking-wider">{t("nav.admin")}</p>
                       <Link 
                         to="/admin" 
                         onClick={() => setIsOpen(false)} 
                         className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gold hover:bg-gold/10 rounded-lg"
                       >
                         <LayoutDashboard className="w-4 h-4" />
-                        Dashboard Admin
+                        {t("nav.admin_dashboard")}
                       </Link>
                     </div>
                   )}
@@ -386,7 +395,7 @@ const Navbar = () => {
                       className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10 px-4"
                     >
                       <LogOut className="w-4 h-4" />
-                      Keluar
+                      {t("nav.logout")}
                     </Button>
                   </div>
                 </div>
@@ -394,7 +403,7 @@ const Navbar = () => {
                 <div className="pt-4 border-t border-emerald-light/20">
                   <Link to="/auth" onClick={() => setIsOpen(false)}>
                     <Button className="w-full gradient-gold text-primary font-semibold">
-                      Masuk / Daftar
+                      {t("nav.login")}
                     </Button>
                   </Link>
                 </div>

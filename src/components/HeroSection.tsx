@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/i18n/LanguageContext";
 import heroImg from "@/assets/hero-umroh.jpg";
 
 interface HeroSettings {
@@ -45,6 +46,8 @@ const defaultSettings: HeroSettings = {
 
 const HeroSection = () => {
   const [settings, setSettings] = useState<HeroSettings>(defaultSettings);
+  const { language, translateDynamic } = useLanguage();
+  const [translated, setTranslated] = useState({ title: "", highlight: "", subtitle: "", primaryBtn: "", secondaryBtn: "" });
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -61,6 +64,31 @@ const HeroSection = () => {
 
     fetchSettings();
   }, []);
+
+  // Translate dynamic content when language changes
+  useEffect(() => {
+    const doTranslate = async () => {
+      if (language === "id") {
+        setTranslated({
+          title: settings.title,
+          highlight: settings.title_highlight,
+          subtitle: settings.subtitle,
+          primaryBtn: settings.primary_button_text,
+          secondaryBtn: settings.secondary_button_text,
+        });
+        return;
+      }
+      const [title, highlight, subtitle, primaryBtn, secondaryBtn] = await Promise.all([
+        translateDynamic(settings.title),
+        translateDynamic(settings.title_highlight),
+        translateDynamic(settings.subtitle),
+        translateDynamic(settings.primary_button_text),
+        translateDynamic(settings.secondary_button_text),
+      ]);
+      setTranslated({ title, highlight, subtitle, primaryBtn, secondaryBtn });
+    };
+    doTranslate();
+  }, [language, settings, translateDynamic]);
 
   const backgroundImage = settings.background_url || heroImg;
 
@@ -106,9 +134,9 @@ const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-4xl sm:text-5xl lg:text-7xl font-display font-bold text-primary-foreground leading-tight mb-6"
           >
-            {settings.title}{" "}
-            <span className="text-gradient-gold">{settings.title_highlight}</span>{" "}
-            Impian Anda
+            {translated.title || settings.title}{" "}
+            <span className="text-gradient-gold">{translated.highlight || settings.title_highlight}</span>{" "}
+            {language === "id" ? "Impian Anda" : "of Your Dreams"}
           </motion.h1>
 
           <motion.p
@@ -117,7 +145,7 @@ const HeroSection = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg text-primary-foreground/80 mb-8 max-w-lg"
           >
-            {settings.subtitle}
+            {translated.subtitle || settings.subtitle}
           </motion.p>
 
           <motion.div
@@ -132,7 +160,7 @@ const HeroSection = () => {
                   size="lg"
                   className="gradient-gold text-primary font-semibold text-base px-8 hover:opacity-90 transition-opacity"
                 >
-                  {settings.primary_button_text}
+                  {translated.primaryBtn || settings.primary_button_text}
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
@@ -144,7 +172,7 @@ const HeroSection = () => {
                   variant="outline"
                   className="border-gold/50 text-gold hover:bg-gold/10 font-semibold text-base px-8"
                 >
-                  {settings.secondary_button_text}
+                  {translated.secondaryBtn || settings.secondary_button_text}
                 </Button>
               </Link>
             )}

@@ -1,7 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import { LogOut, Lock, ChevronDown, Star } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/i18n/LanguageContext";
 import AdminBranding from "./AdminBranding";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useState, useMemo } from "react";
 import { menuGroups, BrandingSettings } from "./adminMenuConfig";
 
@@ -21,6 +23,7 @@ const AdminSidebar = ({
   onPremiumClick 
 }: AdminSidebarProps) => {
   const { role } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
   const showLogo = branding.display_mode === "logo_only" || branding.display_mode === "both";
   const showText = branding.display_mode === "text_only" || branding.display_mode === "both";
@@ -157,13 +160,17 @@ const AdminSidebar = ({
           </nav>
 
           {/* Footer */}
-          <div className="p-3 border-t border-primary-foreground/10">
+          <div className="p-3 border-t border-primary-foreground/10 space-y-1">
+            <div className="flex items-center justify-between px-3 py-1">
+              <span className="text-xs text-primary-foreground/40 uppercase tracking-wider">{t("common.language")}</span>
+              <LanguageSwitcher variant="admin" />
+            </div>
             <button
               onClick={onLogout}
               className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium text-primary-foreground/60 hover:bg-primary-foreground/10 hover:text-destructive transition-colors"
             >
               <LogOut className="w-4 h-4" />
-              Keluar
+              {t("nav.logout")}
             </button>
           </div>
         </div>
