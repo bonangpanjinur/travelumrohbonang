@@ -395,6 +395,9 @@ const AdminSettings = () => {
           <TabsTrigger value="social" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Share2 className="w-4 h-4 mr-2" /> Sosial Media
           </TabsTrigger>
+          <TabsTrigger value="payment_gateway" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Wallet className="w-4 h-4 mr-2" /> Payment Gateway
+          </TabsTrigger>
         </TabsList>
 
         {/* Template Settings */}
