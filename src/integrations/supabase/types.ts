@@ -1179,6 +1179,78 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_gateway_transactions: {
+        Row: {
+          amount: number
+          bank_code: string | null
+          booking_id: string | null
+          callback_data: Json | null
+          created_at: string | null
+          created_by: string | null
+          expiry_time: string | null
+          gateway: string
+          gateway_transaction_id: string | null
+          id: string
+          paid_at: string | null
+          payment_id: string | null
+          payment_method: string | null
+          status: string
+          updated_at: string | null
+          va_number: string | null
+        }
+        Insert: {
+          amount?: number
+          bank_code?: string | null
+          booking_id?: string | null
+          callback_data?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          expiry_time?: string | null
+          gateway: string
+          gateway_transaction_id?: string | null
+          id?: string
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string | null
+          va_number?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_code?: string | null
+          booking_id?: string | null
+          callback_data?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          expiry_time?: string | null
+          gateway?: string
+          gateway_transaction_id?: string | null
+          id?: string
+          paid_at?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string | null
+          va_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_gateway_transactions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_gateway_transactions_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
