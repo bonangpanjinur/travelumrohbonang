@@ -58,7 +58,6 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
                 <span className="font-semibold">Rp {b.total_price.toLocaleString("id-ID")}</span>
               </MobileCardRow>
               <MobileCardRow label="Cabang">{b.branch?.name || "—"}</MobileCardRow>
-              </MobileCardRow>
               <div className="flex gap-2 pt-2 border-t border-border">
                 <Button variant="ghost" size="sm" onClick={() => onToggleExpand(b.id)} className="flex-1">
                   {expandedId === b.id ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
