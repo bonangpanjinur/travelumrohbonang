@@ -65,6 +65,7 @@ import AdminDocuments from "./pages/admin/Documents";
 import AdminPaymentGateway from "./pages/admin/PaymentGateway";
 import AdminAnalyticsAI from "./pages/admin/AnalyticsAI";
 import AdminMultiBranch from "./pages/admin/MultiBranch";
+import AdminTenantSites from "./pages/admin/TenantSites";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
