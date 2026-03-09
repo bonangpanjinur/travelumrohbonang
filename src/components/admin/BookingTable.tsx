@@ -117,6 +117,7 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
                   <TableCell className="font-semibold">
                     Rp {b.total_price.toLocaleString("id-ID")}
                   </TableCell>
+                  <TableCell className="text-sm">{b.branch?.name || <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell>
                     <BookingStatusBadge status={b.status} />
                   </TableCell>
