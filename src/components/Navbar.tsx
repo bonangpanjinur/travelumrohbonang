@@ -272,7 +272,7 @@ const Navbar = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-card border-border z-[120]">
                 <div className="px-2 py-1.5">
-                  <p className="text-xs font-medium text-muted-foreground px-2 py-1 uppercase tracking-wider">Akun Saya</p>
+                  <p className="text-xs font-medium text-muted-foreground px-2 py-1 uppercase tracking-wider">{t("nav.my_account")}</p>
                 </div>
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
