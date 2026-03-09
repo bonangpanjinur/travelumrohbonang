@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import NotificationBell from "@/components/NotificationBell";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface NavItem {
   id: string;
