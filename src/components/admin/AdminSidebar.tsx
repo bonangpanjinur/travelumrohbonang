@@ -4,6 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
 import AdminBranding from "./AdminBranding";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
+import AdminNotificationBell from "./AdminNotificationBell";
 import { useState, useMemo } from "react";
 import { menuGroups, BrandingSettings } from "./adminMenuConfig";
 
