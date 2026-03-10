@@ -10,12 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Globe, ExternalLink, Copy, Info, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, Globe, ExternalLink, Copy, Info, CheckCircle2, AlertTriangle, Package } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
+import TenantPackageManager from "@/components/admin/TenantPackageManager";
 
 interface TenantSite {
   id: string;
