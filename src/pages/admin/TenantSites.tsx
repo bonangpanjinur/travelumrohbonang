@@ -400,6 +400,9 @@ const TenantSitesAdmin = () => {
                         <Button variant="ghost" size="icon" onClick={() => window.open(`/?tenant=${site.subdomain}`, "_blank")}>
                           <ExternalLink className="w-4 h-4" />
                         </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setSelectedTenantForPackages(site); setActiveTab("packages"); }}>
+                          <Package className="w-4 h-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(site)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
