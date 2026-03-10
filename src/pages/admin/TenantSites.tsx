@@ -419,6 +419,40 @@ const TenantSitesAdmin = () => {
         </CardContent>
       </Card>
 
+        </TabsContent>
+
+        <TabsContent value="packages">
+          {sites.length === 0 ? (
+            <Card><CardContent className="py-8 text-center text-muted-foreground">Buat situs tenant terlebih dahulu</CardContent></Card>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <Label>Pilih Tenant</Label>
+                <Select
+                  value={selectedTenantForPackages?.id || ""}
+                  onValueChange={v => setSelectedTenantForPackages(sites.find(s => s.id === v) || null)}
+                >
+                  <SelectTrigger className="max-w-sm">
+                    <SelectValue placeholder="Pilih tenant..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sites.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.site_name} ({s.subdomain})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedTenantForPackages && (
+                <TenantPackageManager
+                  tenantSiteId={selectedTenantForPackages.id}
+                  tenantName={selectedTenantForPackages.site_name}
+                />
+              )}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
       <DeleteAlertDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
