@@ -166,6 +166,16 @@ const TenantSitesAdmin = () => {
           <h1 className="text-2xl font-bold">Multi-Tenant Sites</h1>
           <p className="text-muted-foreground">Kelola website cabang & agen</p>
         </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="sites"><Globe className="w-4 h-4 mr-1.5" />Daftar Situs</TabsTrigger>
+          <TabsTrigger value="packages"><Package className="w-4 h-4 mr-1.5" />Kelola Paket</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="sites">
+        <div className="flex justify-end mb-4">
         <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditId(null); setForm(emptyForm); } }}>
           <DialogTrigger asChild>
             <Button><Plus className="w-4 h-4 mr-2" /> Tambah Situs</Button>
