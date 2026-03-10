@@ -97,6 +97,8 @@ const TenantSitesAdmin = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedTenantForPackages, setSelectedTenantForPackages] = useState<TenantSite | null>(null);
+  const [activeTab, setActiveTab] = useState("sites");
 
   const fetchAll = async () => {
     const [sitesRes, branchesRes, agentsRes] = await Promise.all([
