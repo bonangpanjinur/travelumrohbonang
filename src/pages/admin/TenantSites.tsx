@@ -10,12 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Globe, ExternalLink, Copy, Info, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, Globe, ExternalLink, Copy, Info, CheckCircle2, AlertTriangle, Package } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
+import TenantPackageManager from "@/components/admin/TenantPackageManager";
 
 interface TenantSite {
   id: string;
@@ -95,6 +97,8 @@ const TenantSitesAdmin = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedTenantForPackages, setSelectedTenantForPackages] = useState<TenantSite | null>(null);
+  const [activeTab, setActiveTab] = useState("sites");
 
   const fetchAll = async () => {
     const [sitesRes, branchesRes, agentsRes] = await Promise.all([
@@ -162,6 +166,16 @@ const TenantSitesAdmin = () => {
           <h1 className="text-2xl font-bold">Multi-Tenant Sites</h1>
           <p className="text-muted-foreground">Kelola website cabang & agen</p>
         </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="sites"><Globe className="w-4 h-4 mr-1.5" />Daftar Situs</TabsTrigger>
+          <TabsTrigger value="packages"><Package className="w-4 h-4 mr-1.5" />Kelola Paket</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="sites">
+        <div className="flex justify-end mb-4">
         <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditId(null); setForm(emptyForm); } }}>
           <DialogTrigger asChild>
             <Button><Plus className="w-4 h-4 mr-2" /> Tambah Situs</Button>
@@ -386,6 +400,9 @@ const TenantSitesAdmin = () => {
                         <Button variant="ghost" size="icon" onClick={() => window.open(`/?tenant=${site.subdomain}`, "_blank")}>
                           <ExternalLink className="w-4 h-4" />
                         </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setSelectedTenantForPackages(site); setActiveTab("packages"); }}>
+                          <Package className="w-4 h-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(site)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -401,6 +418,40 @@ const TenantSitesAdmin = () => {
           </Table>
         </CardContent>
       </Card>
+
+        </TabsContent>
+
+        <TabsContent value="packages">
+          {sites.length === 0 ? (
+            <Card><CardContent className="py-8 text-center text-muted-foreground">Buat situs tenant terlebih dahulu</CardContent></Card>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <Label>Pilih Tenant</Label>
+                <Select
+                  value={selectedTenantForPackages?.id || ""}
+                  onValueChange={v => setSelectedTenantForPackages(sites.find(s => s.id === v) || null)}
+                >
+                  <SelectTrigger className="max-w-sm">
+                    <SelectValue placeholder="Pilih tenant..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sites.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.site_name} ({s.subdomain})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedTenantForPackages && (
+                <TenantPackageManager
+                  tenantSiteId={selectedTenantForPackages.id}
+                  tenantName={selectedTenantForPackages.site_name}
+                />
+              )}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <DeleteAlertDialog
         open={!!deleteId}
