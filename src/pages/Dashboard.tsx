@@ -189,8 +189,8 @@ const Dashboard = () => {
                     <div className="text-center mt-4">
                       <h4 className={`font-bold text-sm ${step.status === 'current' ? 'text-primary' : 'text-muted-foreground'}`}>{step.title}</h4>
                       <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block
-                        ${step.status === 'completed' ? 'bg-green-100 text-green-700' : 
-                          step.status === 'current' ? 'bg-blue-100 text-blue-700' : 'text-muted-foreground/50'}`}>
+                        ${step.status === 'completed' ? 'bg-success/10 text-success' : 
+                          step.status === 'current' ? 'bg-info/10 text-info' : 'text-muted-foreground/50'}`}>
                         {step.status === 'completed' ? 'Selesai' : step.status === 'current' ? 'Proses' : 'Menunggu'}
                       </span>
                     </div>
