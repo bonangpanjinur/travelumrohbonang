@@ -114,7 +114,7 @@ const Footer = () => {
             </p>
             <div className="flex gap-3 mt-6">
               {[Instagram, Facebook, Youtube].map((Icon, i) => (
-                <a key={i} href="#" className="w-10 h-10 rounded-lg bg-emerald-light/30 flex items-center justify-center hover:bg-gold/20 transition-colors">
+                <a key={i} href="#" className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center hover:bg-gold/20 transition-colors">
                   <Icon className="w-5 h-5 text-gold-light" />
                 </a>
               ))}
