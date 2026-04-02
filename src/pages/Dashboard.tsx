@@ -182,7 +182,7 @@ const Dashboard = () => {
                 {steps.map((step) => (
                   <div key={step.id} className="flex flex-col items-center relative z-10 w-1/6">
                     <div className={`w-14 h-14 rounded-full flex items-center justify-center border-4 bg-card transition-all duration-300
-                      ${step.status === 'completed' ? 'border-green-500 text-green-600' : 
+                      ${step.status === 'completed' ? 'border-success text-success' : 
                         step.status === 'current' ? 'border-primary text-primary shadow-lg scale-110' : 'border-muted text-muted-foreground/30'}`}>
                       <step.icon className="h-6 w-6" />
                     </div>
