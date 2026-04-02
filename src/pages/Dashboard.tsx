@@ -159,7 +159,7 @@ const Dashboard = () => {
                 </CardDescription>
               </div>
               {activeBooking?.departure?.departure_date && (
-                <div className="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2 border border-blue-100">
+                <div className="bg-info/10 text-info px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2 border border-info/20">
                   <Clock className="h-4 w-4" />
                   {new Date(activeBooking.departure.departure_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </div>

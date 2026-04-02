@@ -325,7 +325,7 @@ const AdminMultiBranch = () => {
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
                                 {Number(convRate) >= 70 ? (
-                                  <ArrowUpRight className="w-3 h-3 text-emerald-500" />
+                                  <ArrowUpRight className="w-3 h-3 text-success" />
                                 ) : Number(convRate) >= 40 ? (
                                   <Minus className="w-3 h-3 text-amber-500" />
                                 ) : (

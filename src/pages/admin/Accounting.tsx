@@ -380,7 +380,7 @@ const AdminAccounting = () => {
                       <TableCell>{t.category}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{t.description || "-"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{t.reference_number || "-"}</TableCell>
-                      <TableCell className={`text-right font-semibold whitespace-nowrap ${t.type === "income" ? "text-emerald-600" : "text-destructive"}`}>
+                      <TableCell className={`text-right font-semibold whitespace-nowrap ${t.type === "income" ? "text-success" : "text-destructive"}`}>
                         {t.type === "income" ? "+" : "-"}{formatCurrency(Number(t.amount))}
                       </TableCell>
                       <TableCell>
