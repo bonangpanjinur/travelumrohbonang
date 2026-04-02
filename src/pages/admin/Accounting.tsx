@@ -274,7 +274,7 @@ const AdminAccounting = () => {
             <Wallet className="w-4 h-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <p className={`text-2xl font-bold ${balance >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+            <p className={`text-2xl font-bold ${balance >= 0 ? "text-success" : "text-destructive"}`}>
               {formatCurrency(balance)}
             </p>
           </CardContent>
