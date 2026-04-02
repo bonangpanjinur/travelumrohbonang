@@ -159,7 +159,7 @@ const Dashboard = () => {
                 </CardDescription>
               </div>
               {activeBooking?.departure?.departure_date && (
-                <div className="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2 border border-blue-100">
+                <div className="bg-info/10 text-info px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2 border border-info/20">
                   <Clock className="h-4 w-4" />
                   {new Date(activeBooking.departure.departure_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </div>
@@ -182,15 +182,15 @@ const Dashboard = () => {
                 {steps.map((step) => (
                   <div key={step.id} className="flex flex-col items-center relative z-10 w-1/6">
                     <div className={`w-14 h-14 rounded-full flex items-center justify-center border-4 bg-card transition-all duration-300
-                      ${step.status === 'completed' ? 'border-green-500 text-green-600' : 
+                      ${step.status === 'completed' ? 'border-success text-success' : 
                         step.status === 'current' ? 'border-primary text-primary shadow-lg scale-110' : 'border-muted text-muted-foreground/30'}`}>
                       <step.icon className="h-6 w-6" />
                     </div>
                     <div className="text-center mt-4">
                       <h4 className={`font-bold text-sm ${step.status === 'current' ? 'text-primary' : 'text-muted-foreground'}`}>{step.title}</h4>
                       <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block
-                        ${step.status === 'completed' ? 'bg-green-100 text-green-700' : 
-                          step.status === 'current' ? 'bg-blue-100 text-blue-700' : 'text-muted-foreground/50'}`}>
+                        ${step.status === 'completed' ? 'bg-success/10 text-success' : 
+                          step.status === 'current' ? 'bg-info/10 text-info' : 'text-muted-foreground/50'}`}>
                         {step.status === 'completed' ? 'Selesai' : step.status === 'current' ? 'Proses' : 'Menunggu'}
                       </span>
                     </div>
@@ -204,7 +204,7 @@ const Dashboard = () => {
                 {steps.map((step) => (
                   <div key={step.id} className={`flex items-center gap-3 p-3 rounded-lg ${step.status === 'current' ? 'bg-primary/5 border border-primary/20' : ''}`}>
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0
-                      ${step.status === 'completed' ? 'bg-green-100 text-green-600' : 
+                      ${step.status === 'completed' ? 'bg-success/10 text-success' : 
                         step.status === 'current' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground/30'}`}>
                       <step.icon className="h-5 w-5" />
                     </div>
@@ -212,8 +212,8 @@ const Dashboard = () => {
                       <h4 className={`font-semibold text-sm ${step.status === 'current' ? 'text-primary' : 'text-muted-foreground'}`}>{step.title}</h4>
                     </div>
                     <span className={`text-xs px-2 py-0.5 rounded-full
-                      ${step.status === 'completed' ? 'bg-green-100 text-green-700' : 
-                        step.status === 'current' ? 'bg-blue-100 text-blue-700' : 'text-muted-foreground/50'}`}>
+                      ${step.status === 'completed' ? 'bg-success/10 text-success' : 
+                        step.status === 'current' ? 'bg-info/10 text-info' : 'text-muted-foreground/50'}`}>
                       {step.status === 'completed' ? 'Selesai' : step.status === 'current' ? 'Proses' : 'Menunggu'}
                     </span>
                   </div>

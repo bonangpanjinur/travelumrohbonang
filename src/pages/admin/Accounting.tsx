@@ -253,10 +253,10 @@ const AdminAccounting = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Pemasukan</CardTitle>
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
+            <TrendingUp className="w-4 h-4 text-success" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalIncome)}</p>
+            <p className="text-2xl font-bold text-success">{formatCurrency(totalIncome)}</p>
           </CardContent>
         </Card>
         <Card>
@@ -274,7 +274,7 @@ const AdminAccounting = () => {
             <Wallet className="w-4 h-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <p className={`text-2xl font-bold ${balance >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+            <p className={`text-2xl font-bold ${balance >= 0 ? "text-success" : "text-destructive"}`}>
               {formatCurrency(balance)}
             </p>
           </CardContent>
@@ -313,7 +313,7 @@ const AdminAccounting = () => {
                   <YAxis fontSize={12} tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}jt`} />
                   <Tooltip formatter={(value: number) => formatCurrency(value)} />
                   <Legend />
-                  <Bar dataKey="pemasukan" name="Pemasukan" fill="hsl(152, 69%, 31%)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="pemasukan" name="Pemasukan" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="pengeluaran" name="Pengeluaran" fill="hsl(0, 84%, 60%)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -373,14 +373,14 @@ const AdminAccounting = () => {
                         {format(new Date(t.transaction_date), "dd MMM yyyy", { locale: localeId })}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={t.type === "income" ? "default" : "destructive"} className={t.type === "income" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : ""}>
+                        <Badge variant={t.type === "income" ? "default" : "destructive"} className={t.type === "income" ? "bg-success/10 text-success hover:bg-success/10" : ""}>
                           {t.type === "income" ? "Masuk" : "Keluar"}
                         </Badge>
                       </TableCell>
                       <TableCell>{t.category}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{t.description || "-"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{t.reference_number || "-"}</TableCell>
-                      <TableCell className={`text-right font-semibold whitespace-nowrap ${t.type === "income" ? "text-emerald-600" : "text-destructive"}`}>
+                      <TableCell className={`text-right font-semibold whitespace-nowrap ${t.type === "income" ? "text-success" : "text-destructive"}`}>
                         {t.type === "income" ? "+" : "-"}{formatCurrency(Number(t.amount))}
                       </TableCell>
                       <TableCell>

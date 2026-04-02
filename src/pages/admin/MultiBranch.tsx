@@ -231,8 +231,8 @@ const AdminMultiBranch = () => {
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <SummaryCard icon={ShoppingBag} label="Total Booking" value={totals.totalBookings} />
-            <SummaryCard icon={CreditCard} label="Lunas" value={totals.paidBookings} color="text-emerald-600" />
-            <SummaryCard icon={DollarSign} label="Revenue" value={`Rp ${totals.revenue.toLocaleString("id-ID")}`} color="text-emerald-600" />
+            <SummaryCard icon={CreditCard} label="Lunas" value={totals.paidBookings} color="text-success" />
+            <SummaryCard icon={DollarSign} label="Revenue" value={`Rp ${totals.revenue.toLocaleString("id-ID")}`} color="text-success" />
             <SummaryCard icon={CreditCard} label="Pending" value={totals.pendingPayments} color="text-amber-600" />
             <SummaryCard icon={Users} label="Jemaah" value={totals.pilgrims} />
             <SummaryCard icon={Building2} label="Agen" value={totals.agents} />
@@ -325,7 +325,7 @@ const AdminMultiBranch = () => {
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
                                 {Number(convRate) >= 70 ? (
-                                  <ArrowUpRight className="w-3 h-3 text-emerald-500" />
+                                  <ArrowUpRight className="w-3 h-3 text-success" />
                                 ) : Number(convRate) >= 40 ? (
                                   <Minus className="w-3 h-3 text-amber-500" />
                                 ) : (

@@ -21,7 +21,7 @@ const LanguageSwitcher = ({ variant = "navbar" }: { variant?: "navbar" | "admin"
           size="sm"
           className={
             isNavbar
-              ? "text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 gap-1.5 px-2"
+              ? "text-primary-foreground/80 hover:text-gold hover:bg-primary-foreground/10 gap-1.5 px-2"
               : "gap-1.5 px-2"
           }
         >

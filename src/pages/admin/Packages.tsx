@@ -540,7 +540,7 @@ const AdminPackages = () => {
                     <TableCell>{pkg.package_type || "-"}</TableCell>
                     <TableCell>{pkg.duration_days} hari</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${pkg.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
+                      <span className={`px-2 py-1 rounded-full text-xs ${pkg.is_active ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
                         {pkg.is_active ? "Aktif" : "Nonaktif"}
                       </span>
                     </TableCell>

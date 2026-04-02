@@ -26,7 +26,7 @@ import { useAdminPagination } from "@/hooks/useAdminPagination";
 const leadStatuses = [
   { value: "new", label: "Baru", color: "bg-blue-100 text-blue-700" },
   { value: "contacted", label: "Sudah Dihubungi", color: "bg-yellow-100 text-yellow-700" },
-  { value: "interested", label: "Tertarik", color: "bg-emerald-100 text-emerald-700" },
+  { value: "interested", label: "Tertarik", color: "bg-success/10 text-success" },
   { value: "negotiation", label: "Negosiasi", color: "bg-purple-100 text-purple-700" },
   { value: "converted", label: "Booking", color: "bg-primary/20 text-primary" },
   { value: "lost", label: "Lost", color: "bg-destructive/20 text-destructive" },
@@ -376,7 +376,7 @@ const AdminCRM = () => {
         <Card>
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <CheckCircle2 className="w-4 h-4 text-success" />
               <span className="text-xs text-muted-foreground">Tertarik</span>
             </div>
             <p className="text-2xl font-bold mt-1">{stats.interested}</p>
