@@ -253,10 +253,10 @@ const AdminAccounting = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Pemasukan</CardTitle>
-            <TrendingUp className="w-4 h-4 text-emerald-500" />
+            <TrendingUp className="w-4 h-4 text-success" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalIncome)}</p>
+            <p className="text-2xl font-bold text-success">{formatCurrency(totalIncome)}</p>
           </CardContent>
         </Card>
         <Card>
