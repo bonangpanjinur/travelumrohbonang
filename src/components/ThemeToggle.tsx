@@ -26,7 +26,7 @@ const ThemeToggle = ({ variant = "navbar" }: ThemeToggleProps) => {
       variant="ghost"
       size="icon"
       onClick={toggleTheme}
-      className="text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20"
+      className="text-primary-foreground/80 hover:text-gold hover:bg-primary-foreground/10"
       title={theme === "dark" ? "Light Mode" : "Dark Mode"}
     >
       {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}

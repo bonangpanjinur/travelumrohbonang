@@ -115,7 +115,6 @@ const Navbar = () => {
     fetchDynamicPages();
   }, []);
 
-  // Fetch user profile when user changes
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!user) {
@@ -143,7 +142,6 @@ const Navbar = () => {
     fetchUserProfile();
   }, [user]);
 
-  // Close mobile menu on route change
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
@@ -210,9 +208,8 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-[100] bg-primary/95 backdrop-blur-md border-b border-emerald-light/20">
+    <nav className="fixed top-0 left-0 right-0 z-[100] bg-primary/95 backdrop-blur-md border-b border-primary-foreground/10">
       <div className="container-custom flex items-center justify-between h-16 md:h-20 px-4 sm:px-6 lg:px-8">
-        {/* Logo */}
         {renderLogo()}
 
         {/* Desktop Nav */}
@@ -224,8 +221,8 @@ const Navbar = () => {
                 target={link.open_in_new_tab ? "_blank" : undefined}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-1 ${
                   location.pathname === link.url
-                    ? "text-gold bg-emerald-light/30"
-                    : "text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20"
+                    ? "text-gold bg-primary-foreground/10"
+                    : "text-primary-foreground/80 hover:text-gold hover:bg-primary-foreground/10"
                 }`}
               >
                 {link.label}
@@ -254,7 +251,7 @@ const Navbar = () => {
           ))}
         </div>
 
-        {/* CTA - Simplified */}
+        {/* CTA */}
         <div className="hidden lg:flex items-center gap-2">
           <LanguageSwitcher variant="navbar" />
           <ThemeToggle variant="navbar" />
@@ -262,7 +259,7 @@ const Navbar = () => {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 p-1">
+                <Button variant="ghost" className="flex items-center gap-2 text-primary-foreground/80 hover:text-gold hover:bg-primary-foreground/10 p-1">
                   <Avatar className="w-8 h-8">
                     <AvatarImage src={userProfile?.avatar_url} alt={userProfile?.name} />
                     <AvatarFallback className="bg-gold/20 text-gold text-sm">
@@ -334,7 +331,7 @@ const Navbar = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-primary border-t border-emerald-light/20 overflow-hidden z-[100]"
+            className="lg:hidden bg-primary border-t border-primary-foreground/10 overflow-hidden z-[100]"
           >
             <div className="px-4 py-4 space-y-1 max-h-[80vh] overflow-y-auto">
               {displayLinks.map((link) => (
@@ -342,7 +339,7 @@ const Navbar = () => {
                   <Link
                     to={link.url}
                     onClick={() => setIsOpen(false)}
-                    className="block px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg transition-colors"
+                    className="block px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-primary-foreground/10 rounded-lg transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -359,25 +356,24 @@ const Navbar = () => {
                 </div>
               ))}
 
-              {/* Mobile Language Switcher */}
               <div className="px-4 py-2">
                 <LanguageSwitcher variant="navbar" />
               </div>
               
               {user ? (
-                <div className="pt-4 border-t border-emerald-light/20 mt-2 space-y-1">
+                <div className="pt-4 border-t border-primary-foreground/10 mt-2 space-y-1">
                   <p className="px-4 py-2 text-xs text-primary-foreground/40 uppercase tracking-wider">{t("nav.my_account")}</p>
                   <Link 
                     to="/dashboard" 
                     onClick={() => setIsOpen(false)} 
-                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-emerald-light/20 rounded-lg"
+                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-primary-foreground/10 rounded-lg"
                   >
                     <LayoutDashboard className="w-4 h-4" />
                     {t("nav.my_dashboard")}
                   </Link>
 
                   {isAdmin && (
-                    <div className="pt-2 mt-2 border-t border-emerald-light/10">
+                    <div className="pt-2 mt-2 border-t border-primary-foreground/5">
                       <p className="px-4 py-2 text-xs text-gold/60 uppercase tracking-wider">{t("nav.admin")}</p>
                       <Link 
                         to="/admin" 
@@ -390,7 +386,7 @@ const Navbar = () => {
                     </div>
                   )}
                   
-                  <div className="pt-2 mt-2 border-t border-emerald-light/20">
+                  <div className="pt-2 mt-2 border-t border-primary-foreground/10">
                     <Button 
                       onClick={handleLogout} 
                       variant="ghost" 
@@ -402,7 +398,7 @@ const Navbar = () => {
                   </div>
                 </div>
               ) : (
-                <div className="pt-4 border-t border-emerald-light/20">
+                <div className="pt-4 border-t border-primary-foreground/10">
                   <Link to="/auth" onClick={() => setIsOpen(false)}>
                     <Button className="w-full gradient-gold text-primary font-semibold">
                       {t("nav.login")}

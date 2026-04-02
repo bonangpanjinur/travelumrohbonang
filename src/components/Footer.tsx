@@ -171,7 +171,7 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-emerald-light/20 text-center text-sm text-primary-foreground/40">
+        <div className="mt-12 pt-8 border-t border-primary-foreground/10 text-center text-sm text-primary-foreground/40">
           © 2025 {branding.company_name} {branding.tagline}. Seluruh hak dilindungi.
         </div>
       </div>
