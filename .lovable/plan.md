@@ -1,124 +1,82 @@
 
 
-# Analisis Lengkap: Hal yang Masih Kurang
+# Rencana: Tema Warna Merah & Sistem Tema Global
 
-## A. Bug dan Masalah Kritis
+## Masalah Saat Ini
 
-### 1. Dashboard Admin: Data Hardcoded dan Tidak Lengkap
-- **Lokasi:** `src/pages/admin/Dashboard.tsx`
-- Grafik "Tren Pendaftaran Jamaah" hanya placeholder (tidak ada data nyata)
-- "Aktivitas Terbaru" menampilkan data dummy statis (hardcoded "Ahmad Fulan", "2 jam yang lalu")
-- Trend teks seperti "+12% bulan ini", "+3 agen baru" juga hardcoded, bukan dari data aktual
-- Tidak ada stat untuk Muthawif, Cabang, Jemaah, atau Total Pendapatan
+1. **Tema warna sekarang** menggunakan Brown/Gold (hue 25-38) — bukan merah
+2. **Hardcoded color references** tersebar di banyak file: `emerald-light`, `emerald-500`, `green-500`, dll. — ini bukan dari CSS variables, jadi tidak ikut berubah saat tema diganti
+3. **Sistem tema hanya light/dark** — tidak mendukung color scheme switching (misal merah, biru, hijau)
 
-### 2. Fasilitas Paket Hardcoded di Frontend
-- **Lokasi:** `src/pages/PackageDetail.tsx` baris 246-262
-- Daftar fasilitas ("Tiket Pesawat PP", "Hotel Dekat Masjidil Haram", dll) di-hardcode
-- Tidak bisa dikustomisasi per paket oleh admin
+## Rencana Perbaikan
 
-### 3. Halaman User: Route Tanpa Proteksi
-- **Lokasi:** `src/App.tsx` baris 69-71
-- Route `/my-bookings`, `/dashboard`, `/profile` tidak dibungkus dengan proteksi auth
-- User yang belum login bisa mengakses halaman ini (meski masing-masing halaman punya pengecekan sendiri, lebih baik dilindungi di level route)
+### Step 1: Ubah Skema Warna ke Merah-Gold
 
-### 4. Dashboard User: Step Status Hardcoded
-- **Lokasi:** `src/pages/Dashboard.tsx` baris 14-21
-- Status step perjalanan (Pendaftaran, Pembayaran DP, Upload Dokumen, dll) semuanya hardcoded
-- Tidak berubah berdasarkan status booking aktual user
+Update `src/index.css` — ganti semua HSL values:
 
----
+| Token | Sekarang (Brown) | Baru (Merah) |
+|-------|-----------------|--------------|
+| `--primary` (light) | `25 35% 18%` (coklat gelap) | `0 65% 25%` (maroon/merah gelap) |
+| `--primary` (dark) | `38 75% 55%` (gold) | `0 70% 55%` (merah terang) |
+| `--accent` | `38 75% 55%` (gold) | `38 75% 55%` (gold — tetap sebagai aksen) |
+| `--sidebar-*` | brown tones | red-maroon tones |
+| `--elegant-black*` | brown-black | red-black (hue 0-5) |
+| `--card`, `--background` | warm brown cream | warm red-tinted cream |
 
-## B. Fitur yang Belum Ada / Belum Lengkap
+Palet identitas: **Merah Maroon + Gold** — khas travel umroh premium.
 
-### 5. Tidak Ada Fitur Export Data
-- Admin tidak bisa export data booking, jemaah, atau laporan ke Excel/CSV
-- Penting untuk operasional travel
+### Step 2: Bersihkan Hardcoded Colors
 
-### 6. Tidak Ada Pencarian Global di Admin
-- Tidak ada fitur search di halaman Booking, Jemaah, Paket, dan lainnya (kecuali Users)
-- Sulit menemukan data spesifik saat jumlah data banyak
+Cari dan ganti semua hardcoded Tailwind colors yang tidak mengikuti tema:
 
-### 7. Tidak Ada Konfirmasi Dialog untuk Aksi Berbahaya
-- Hapus paket, keberangkatan, dan data lain menggunakan `confirm()` browser bawaan
-- Seharusnya menggunakan AlertDialog yang lebih profesional dan konsisten
+| Hardcoded | Ganti ke |
+|-----------|----------|
+| `emerald-light/20` | `primary-foreground/20` atau `accent/20` |
+| `border-emerald-light` | `border-primary-foreground/20` |
+| `bg-emerald-light/30` | `bg-accent/30` |
+| `text-emerald-500/600` | `text-success` (untuk status) |
+| `text-green-500/600` | `text-success` |
+| `bg-green-100` | `bg-success/10` |
 
-### 8. Tidak Ada Pagination
-- Semua halaman admin (Booking, Payments, Packages, dll) fetch seluruh data tanpa pagination
-- Bisa menjadi lambat saat data bertambah banyak (limit Supabase 1000 row)
+**File yang perlu diupdate** (~6 file):
+- `src/components/Navbar.tsx` — banyak `emerald-light` references
+- `src/components/Footer.tsx`
+- `src/components/ThemeToggle.tsx`
+- `src/components/NotificationBell.tsx`
+- `src/components/LanguageSwitcher.tsx`
+- `src/pages/Dashboard.tsx` — `green-500`, `green-100`
 
-### 9. Admin Dashboard: Tidak Ada Widget Booking Terbaru
-- Tidak menampilkan daftar booking terbaru yang bisa diklik untuk detail
-- Aktivitas terbaru hanya dummy
+### Step 3: Tambah Kemampuan Color Scheme Global (Opsional/Future)
 
-### 10. Tidak Ada Notifikasi Admin
-- Saat ada booking baru atau pembayaran masuk, admin tidak mendapat notifikasi
-- `NotificationBell` hanya ada untuk user biasa
+Extend `ThemeProvider` agar mendukung `colorScheme` selain `light/dark`:
 
-### 11. Tidak Ada Validasi Form yang Komprehensif
-- Form booking, pembayaran, dan admin menggunakan validasi minimal
-- Tidak ada validasi format email, nomor telepon, NIK, atau nomor paspor
+```text
+ThemeProvider
+├── mode: "light" | "dark"
+└── colorScheme: "red" | "brown" | "blue" | "green"
+```
 
-### 12. Tidak Ada Fitur Cetak/Download Invoice untuk Admin
-- `InvoiceButton` ada untuk user, tapi admin belum punya fitur cetak invoice massal atau per booking
+Setiap `colorScheme` = set CSS variables berbeda yang di-apply via class `.theme-red`, `.theme-brown`, dll. Ini memungkinkan owner travel mengganti warna brand dari admin settings.
 
-### 13. Tidak Ada Manajemen Kupon di Admin
-- Tabel `coupons` sudah ada di database, tapi tidak ada halaman admin untuk mengelolanya
-- Tidak ada route `/admin/coupons`
+**Untuk saat ini**: fokus ke Step 1 & 2 (tema merah fixed). Step 3 bisa ditambahkan nanti.
 
-### 14. Tidak Ada Manajemen Advantages/Keunggulan
-- Tabel `advantages` ada di database tapi tidak ada halaman admin
-- Tidak ada route `/admin/advantages`
+## File yang Akan Diubah
 
-### 15. Tidak Ada Manajemen Guide Steps
-- Tabel `guide_steps` ada di database tapi tidak ada halaman admin
-- Tidak ada route `/admin/guide-steps`
+1. **`src/index.css`** — ubah semua CSS variables ke palet merah-maroon
+2. **`src/components/Navbar.tsx`** — ganti ~15 hardcoded `emerald-light` references
+3. **`src/components/Footer.tsx`** — ganti `emerald-light` references
+4. **`src/components/ThemeToggle.tsx`** — ganti `emerald-light`
+5. **`src/components/NotificationBell.tsx`** — ganti `emerald-light`
+6. **`src/components/LanguageSwitcher.tsx`** — ganti `emerald-light`
+7. **`src/pages/Dashboard.tsx`** — ganti `green-*` ke semantic tokens
+8. **`src/pages/admin/MultiBranch.tsx`** — ganti `emerald-*` ke semantic tokens
+9. **`src/pages/admin/Accounting.tsx`** — ganti `emerald-*` ke semantic tokens
+10. **`tailwind.config.ts`** — hapus `emeraldBlack` references jika ada, pastikan `elegantBlack` rename sesuai
 
-### 16. Tidak Ada Manajemen Services
-- Tabel `services` ada di database tapi tidak ada halaman admin
-- Tidak ada route `/admin/services`
+## Hasil Akhir
 
----
-
-## C. Keamanan dan Performa
-
-### 17. Route `/my-bookings` dan `/profile` Masih Bisa Diakses
-- Sebelumnya menu dihapus dari navbar, tapi route masih ada
-- User bisa mengakses langsung via URL -- ini mungkin disengaja, tapi perlu dipertimbangkan
-
-### 18. Tidak Ada Rate Limiting pada Upload File
-- Upload bukti pembayaran dan gambar tidak membatasi ukuran atau frekuensi
-- Bisa disalahgunakan untuk mengisi storage
-
----
-
-## D. UX/UI
-
-### 19. Tidak Ada Dark Mode Toggle yang Terlihat
-- Package `next-themes` terinstall tapi tidak terlihat ada toggle dark/light mode
-
-### 20. Tidak Ada Breadcrumb di Admin
-- Navigasi admin tidak memiliki breadcrumb untuk menunjukkan posisi halaman saat ini
-
-### 21. Tidak Ada Loading State yang Konsisten
-- Beberapa halaman menggunakan spinner berbeda, beberapa menggunakan `LoadingSpinner`, beberapa inline
-
----
-
-## Ringkasan Prioritas
-
-| Prioritas | Item | Deskripsi |
-|-----------|------|-----------|
-| Tinggi | #1 | Dashboard admin: ganti data dummy dengan data real |
-| Tinggi | #3 | Proteksi route user dengan auth guard |
-| Tinggi | #8 | Pagination untuk halaman admin |
-| Sedang | #4 | Status perjalanan user dashboard dari data real |
-| Sedang | #6 | Pencarian global di admin |
-| Sedang | #13 | Halaman admin untuk kupon |
-| Sedang | #14-16 | Halaman admin untuk advantages, guide steps, services |
-| Sedang | #5 | Export data ke CSV/Excel |
-| Rendah | #2 | Fasilitas paket dari database |
-| Rendah | #7 | Ganti confirm() dengan AlertDialog |
-| Rendah | #10 | Notifikasi admin |
-| Rendah | #19 | Dark mode toggle |
-| Rendah | #20 | Breadcrumb admin |
+- Tema identik **merah maroon + gold** di seluruh aplikasi
+- Tidak ada lagi hardcoded color yang "bocor" saat tema berubah
+- Dark mode tetap berfungsi dengan palet merah
+- Fondasi siap untuk multi-color-scheme di masa depan
 
