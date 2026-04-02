@@ -1,10 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 
 const statusColors: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-800",
-  waiting_payment: "bg-yellow-100 text-yellow-800",
-  paid: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
+  draft: "bg-muted text-muted-foreground",
+  waiting_payment: "bg-warning/10 text-warning",
+  paid: "bg-success/10 text-success",
+  cancelled: "bg-destructive/10 text-destructive",
 };
 
 const statusLabels: Record<string, string> = {

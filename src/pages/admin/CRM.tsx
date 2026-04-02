@@ -376,7 +376,7 @@ const AdminCRM = () => {
         <Card>
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <CheckCircle2 className="w-4 h-4 text-success" />
               <span className="text-xs text-muted-foreground">Tertarik</span>
             </div>
             <p className="text-2xl font-bold mt-1">{stats.interested}</p>

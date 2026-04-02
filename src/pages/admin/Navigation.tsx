@@ -455,7 +455,7 @@ const AdminNavigation = () => {
                     <TableCell className="text-muted-foreground text-sm">{cat.description || "-"}</TableCell>
                     <TableCell>{getCategoryParentName(cat.parent_id)}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${cat.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
+                      <span className={`px-2 py-1 rounded-full text-xs ${cat.is_active ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
                         {cat.is_active ? "Aktif" : "Nonaktif"}
                       </span>
                     </TableCell>
