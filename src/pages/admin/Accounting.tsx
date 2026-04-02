@@ -373,7 +373,7 @@ const AdminAccounting = () => {
                         {format(new Date(t.transaction_date), "dd MMM yyyy", { locale: localeId })}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={t.type === "income" ? "default" : "destructive"} className={t.type === "income" ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : ""}>
+                        <Badge variant={t.type === "income" ? "default" : "destructive"} className={t.type === "income" ? "bg-success/10 text-success hover:bg-success/10" : ""}>
                           {t.type === "income" ? "Masuk" : "Keluar"}
                         </Badge>
                       </TableCell>
