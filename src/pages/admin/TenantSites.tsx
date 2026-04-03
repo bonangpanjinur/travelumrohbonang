@@ -205,6 +205,7 @@ const TenantSitesAdmin = () => {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="classic">Classic</SelectItem>
+                    <SelectItem value="modern">Modern</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
