@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import SEO from "@/components/SEO";
 import TenantClassicTemplate from "@/components/tenant/TenantClassicTemplate";
 import TenantModernTemplate from "@/components/tenant/TenantModernTemplate";
+import TenantPremiumTemplate from "@/components/tenant/TenantPremiumTemplate";
 
 interface PackageData {
   id: string;
