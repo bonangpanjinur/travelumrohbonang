@@ -206,6 +206,7 @@ const TenantSitesAdmin = () => {
                   <SelectContent>
                     <SelectItem value="classic">Classic</SelectItem>
                     <SelectItem value="modern">Modern</SelectItem>
+                    <SelectItem value="premium">Premium ✨</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
