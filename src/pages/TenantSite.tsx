@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import SEO from "@/components/SEO";
 import TenantClassicTemplate from "@/components/tenant/TenantClassicTemplate";
 import TenantModernTemplate from "@/components/tenant/TenantModernTemplate";
+import TenantPremiumTemplate from "@/components/tenant/TenantPremiumTemplate";
 
 interface PackageData {
   id: string;
@@ -52,7 +53,9 @@ const TenantSite = () => {
         title={`${tenant.site_name} - ${tenant.tagline}`}
         description={tenant.about_text?.slice(0, 160) || `${tenant.site_name} - ${tenant.tagline}`}
       />
-      {tenant.template === "modern" ? (
+      {tenant.template === "premium" ? (
+        <TenantPremiumTemplate tenant={tenant} packages={packages} />
+      ) : tenant.template === "modern" ? (
         <TenantModernTemplate tenant={tenant} packages={packages} />
       ) : (
         <TenantClassicTemplate tenant={tenant} packages={packages} />
