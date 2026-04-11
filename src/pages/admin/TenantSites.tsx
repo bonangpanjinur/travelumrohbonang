@@ -469,6 +469,14 @@ const TenantSitesAdmin = () => {
         title="Hapus Situs?"
         description="Situs tenant ini akan dihapus secara permanen."
       />
+
+      <UpgradeDialog
+        open={!!upgradeTarget}
+        onOpenChange={o => !o && setUpgradeTarget(null)}
+        featureName="Upgrade Template"
+        tenantSiteId={upgradeTarget?.id}
+        currentTemplate={upgradeTarget?.template}
+      />
     </div>
   );
 };
