@@ -12,12 +12,13 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Globe, ExternalLink, Copy, Info, CheckCircle2, AlertTriangle, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Globe, ExternalLink, Copy, Info, CheckCircle2, AlertTriangle, Package, Crown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 import TenantPackageManager from "@/components/admin/TenantPackageManager";
+import UpgradeDialog from "@/components/admin/UpgradeDialog";
 
 interface TenantSite {
   id: string;
@@ -99,6 +100,7 @@ const TenantSitesAdmin = () => {
   const [loading, setLoading] = useState(false);
   const [selectedTenantForPackages, setSelectedTenantForPackages] = useState<TenantSite | null>(null);
   const [activeTab, setActiveTab] = useState("sites");
+  const [upgradeTarget, setUpgradeTarget] = useState<TenantSite | null>(null);
 
   const fetchAll = async () => {
     const [sitesRes, branchesRes, agentsRes] = await Promise.all([
