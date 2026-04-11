@@ -12,12 +12,13 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Globe, ExternalLink, Copy, Info, CheckCircle2, AlertTriangle, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Globe, ExternalLink, Copy, Info, CheckCircle2, AlertTriangle, Package, Crown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 import TenantPackageManager from "@/components/admin/TenantPackageManager";
+import UpgradeDialog from "@/components/admin/UpgradeDialog";
 
 interface TenantSite {
   id: string;
@@ -99,6 +100,7 @@ const TenantSitesAdmin = () => {
   const [loading, setLoading] = useState(false);
   const [selectedTenantForPackages, setSelectedTenantForPackages] = useState<TenantSite | null>(null);
   const [activeTab, setActiveTab] = useState("sites");
+  const [upgradeTarget, setUpgradeTarget] = useState<TenantSite | null>(null);
 
   const fetchAll = async () => {
     const [sitesRes, branchesRes, agentsRes] = await Promise.all([
@@ -405,6 +407,11 @@ const TenantSitesAdmin = () => {
                         <Button variant="ghost" size="icon" onClick={() => { setSelectedTenantForPackages(site); setActiveTab("packages"); }}>
                           <Package className="w-4 h-4" />
                         </Button>
+                        {site.template === "classic" && (
+                          <Button variant="ghost" size="icon" className="text-primary" onClick={() => setUpgradeTarget(site)} title="Upgrade Template">
+                            <Crown className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(site)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -461,6 +468,14 @@ const TenantSitesAdmin = () => {
         onConfirm={handleDelete}
         title="Hapus Situs?"
         description="Situs tenant ini akan dihapus secara permanen."
+      />
+
+      <UpgradeDialog
+        open={!!upgradeTarget}
+        onOpenChange={o => !o && setUpgradeTarget(null)}
+        featureName="Upgrade Template"
+        tenantSiteId={upgradeTarget?.id}
+        currentTemplate={upgradeTarget?.template}
       />
     </div>
   );
