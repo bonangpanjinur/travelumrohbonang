@@ -1502,6 +1502,95 @@ export type Database = {
         }
         Relationships: []
       }
+      template_pricing: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          price: number
+          template_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          price?: number
+          template_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          price?: number
+          template_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      template_upgrade_orders: {
+        Row: {
+          admin_notes: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string | null
+          current_template: string
+          id: string
+          notes: string | null
+          price: number
+          proof_url: string | null
+          requested_by: string
+          status: string
+          target_template: string
+          tenant_site_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string | null
+          current_template: string
+          id?: string
+          notes?: string | null
+          price?: number
+          proof_url?: string | null
+          requested_by: string
+          status?: string
+          target_template: string
+          tenant_site_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string | null
+          current_template?: string
+          id?: string
+          notes?: string | null
+          price?: number
+          proof_url?: string | null
+          requested_by?: string
+          status?: string
+          target_template?: string
+          tenant_site_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_upgrade_orders_tenant_site_id_fkey"
+            columns: ["tenant_site_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_site_packages: {
         Row: {
           created_at: string | null
