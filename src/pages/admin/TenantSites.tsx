@@ -407,6 +407,11 @@ const TenantSitesAdmin = () => {
                         <Button variant="ghost" size="icon" onClick={() => { setSelectedTenantForPackages(site); setActiveTab("packages"); }}>
                           <Package className="w-4 h-4" />
                         </Button>
+                        {site.template === "classic" && (
+                          <Button variant="ghost" size="icon" className="text-primary" onClick={() => setUpgradeTarget(site)} title="Upgrade Template">
+                            <Crown className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(site)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
