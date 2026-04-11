@@ -66,6 +66,7 @@ import AdminPaymentGateway from "./pages/admin/PaymentGateway";
 import AdminAnalyticsAI from "./pages/admin/AnalyticsAI";
 import AdminMultiBranch from "./pages/admin/MultiBranch";
 import AdminTenantSites from "./pages/admin/TenantSites";
+import AdminTemplateUpgrades from "./pages/admin/TemplateUpgrades";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
@@ -141,6 +142,7 @@ const AppContent = () => {
           <Route path="multi-language" element={<AdminPlaceholder title="Multi-Bahasa" />} />
           <Route path="multi-branch" element={<AdminMultiBranch />} />
           <Route path="tenant-sites" element={<AdminTenantSites />} />
+          <Route path="template-upgrades" element={<AdminTemplateUpgrades />} />
         </Route>
       </Route>
 

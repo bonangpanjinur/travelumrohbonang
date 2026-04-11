@@ -108,7 +108,7 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
           </DialogHeader>
           <div className="flex flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Tutup</Button>
-            <Button asChild className="w-full sm:w-auto bg-green-600 hover:bg-green-700">
+            <Button asChild className="w-full sm:w-auto bg-success hover:bg-success/90">
               <a href={waLink} target="_blank" rel="noopener noreferrer">Hubungi via WhatsApp</a>
             </Button>
           </div>
