@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Crown, ArrowRight, Upload, Loader2 } from "lucide-react";
+import { Crown, ArrowRight, Upload, Loader2, ImageIcon, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -34,18 +33,22 @@ const templateLabel = (t: string) => {
 
 const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentTemplate }: UpgradeDialogProps) => {
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [pricing, setPricing] = useState<PricingInfo[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [proofUrl, setProofUrl] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setSubmitted(false);
     setSelectedTemplate(null);
-    setProofUrl("");
+    setProofFile(null);
+    setProofPreview(null);
     setNotes("");
 
     supabase
@@ -63,10 +66,62 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
 
   const selectedPricing = pricing.find(p => p.template_name === selectedTemplate);
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Hanya file gambar yang diperbolehkan");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ukuran file maksimal 5MB");
+      return;
+    }
+
+    setProofFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setProofPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const removeFile = () => {
+    setProofFile(null);
+    setProofPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const uploadProof = async (): Promise<string | null> => {
+    if (!proofFile || !user) return null;
+    setUploading(true);
+    try {
+      const ext = proofFile.name.split(".").pop() || "jpg";
+      const path = `upgrade-proofs/${user.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("payment-proofs").upload(path, proofFile);
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(path);
+      return urlData.publicUrl;
+    } catch (err: any) {
+      toast.error("Gagal upload bukti: " + err.message);
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!selectedTemplate || !tenantSiteId || !user) return;
     setLoading(true);
     try {
+      let proofUrl: string | null = null;
+      if (proofFile) {
+        proofUrl = await uploadProof();
+        if (!proofUrl && proofFile) {
+          setLoading(false);
+          return; // upload failed
+        }
+      }
+
       const { error } = await supabase.from("template_upgrade_orders").insert({
         tenant_site_id: tenantSiteId,
         requested_by: user.id,
@@ -74,7 +129,7 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
         target_template: selectedTemplate,
         price: selectedPricing?.price || 0,
         status: proofUrl ? "paid" : "pending",
-        proof_url: proofUrl || null,
+        proof_url: proofUrl,
         notes: notes || null,
       });
       if (error) throw error;
@@ -177,15 +232,37 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
 
             {selectedTemplate && (
               <>
-                {/* Payment proof */}
+                {/* Payment proof upload */}
                 <div>
-                  <Label>Bukti Transfer (URL gambar)</Label>
-                  <Input
-                    value={proofUrl}
-                    onChange={e => setProofUrl(e.target.value)}
-                    placeholder="https://... (opsional, bisa dikirim nanti)"
+                  <Label>Bukti Transfer (opsional)</Label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Upload bukti ke hosting gambar lalu paste URL-nya</p>
+
+                  {proofPreview ? (
+                    <div className="relative mt-2 rounded-lg border border-border overflow-hidden">
+                      <img src={proofPreview} alt="Bukti transfer" className="w-full max-h-48 object-contain bg-muted" />
+                      <button
+                        onClick={removeFile}
+                        className="absolute top-2 right-2 p-1 rounded-full bg-background/80 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="mt-2 w-full flex flex-col items-center gap-2 py-6 rounded-lg border-2 border-dashed border-border hover:border-primary/50 transition-colors text-muted-foreground hover:text-foreground"
+                    >
+                      <ImageIcon className="w-8 h-8" />
+                      <span className="text-sm">Klik untuk upload bukti transfer</span>
+                      <span className="text-xs">JPG, PNG, maks 5MB</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* Notes */}
@@ -199,9 +276,9 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
                   />
                 </div>
 
-                <Button onClick={handleSubmit} disabled={loading} className="w-full">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
-                  {proofUrl ? "Kirim Pengajuan + Bukti" : "Kirim Pengajuan"}
+                <Button onClick={handleSubmit} disabled={loading || uploading} className="w-full">
+                  {(loading || uploading) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
+                  {uploading ? "Mengupload bukti..." : proofFile ? "Kirim Pengajuan + Bukti" : "Kirim Pengajuan"}
                 </Button>
               </>
             )}
