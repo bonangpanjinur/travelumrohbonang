@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -31,6 +31,8 @@ const templateLabel = (t: string) => {
   return "Classic";
 };
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
 const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentTemplate }: UpgradeDialogProps) => {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,6 +44,7 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -50,6 +53,7 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
     setProofFile(null);
     setProofPreview(null);
     setNotes("");
+    setIsDragging(false);
 
     supabase
       .from("template_pricing")
@@ -66,24 +70,45 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
 
   const selectedPricing = pricing.find(p => p.template_name === selectedTemplate);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
       toast.error("Hanya file gambar yang diperbolehkan");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > MAX_FILE_SIZE) {
       toast.error("Ukuran file maksimal 5MB");
       return;
     }
-
     setProofFile(file);
     const reader = new FileReader();
     reader.onload = (ev) => setProofPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
+  }, []);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
   };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
+  }, [processFile]);
 
   const removeFile = () => {
     setProofFile(null);
@@ -118,7 +143,7 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
         proofUrl = await uploadProof();
         if (!proofUrl && proofFile) {
           setLoading(false);
-          return; // upload failed
+          return;
         }
       }
 
@@ -232,7 +257,7 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
 
             {selectedTemplate && (
               <>
-                {/* Payment proof upload */}
+                {/* Payment proof upload with drag-and-drop */}
                 <div>
                   <Label>Bukti Transfer (opsional)</Label>
                   <input
@@ -256,10 +281,19 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
                   ) : (
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="mt-2 w-full flex flex-col items-center gap-2 py-6 rounded-lg border-2 border-dashed border-border hover:border-primary/50 transition-colors text-muted-foreground hover:text-foreground"
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`mt-2 w-full flex flex-col items-center gap-2 py-6 rounded-lg border-2 border-dashed transition-colors ${
+                        isDragging
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                      }`}
                     >
-                      <ImageIcon className="w-8 h-8" />
-                      <span className="text-sm">Klik untuk upload bukti transfer</span>
+                      <ImageIcon className={`w-8 h-8 ${isDragging ? "animate-bounce" : ""}`} />
+                      <span className="text-sm">
+                        {isDragging ? "Lepas file di sini..." : "Klik atau seret file ke sini"}
+                      </span>
                       <span className="text-xs">JPG, PNG, maks 5MB</span>
                     </button>
                   )}
