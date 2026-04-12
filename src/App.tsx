@@ -25,6 +25,7 @@ import Blog from "./pages/Blog";
 import BlogDetail from "./pages/BlogDetail";
 import DynamicPage from "./pages/DynamicPage";
 import TenantSitePage from "./pages/TenantSite";
+import MyUpgrades from "./pages/MyUpgrades";
 import NotFound from "./pages/NotFound";
 
 // Admin
@@ -98,6 +99,7 @@ const AppContent = () => {
         <Route path="/my-bookings" element={<MyBookings />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/my-upgrades" element={<MyUpgrades />} />
       </Route>
       <Route path="/galeri" element={<Gallery />} />
       <Route path="/blog" element={<Blog />} />
