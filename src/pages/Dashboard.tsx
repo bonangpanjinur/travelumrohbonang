@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Calendar, CreditCard, FileText, Plane, User, 
-  CheckCircle2, Clock, AlertCircle, LogOut
+  CheckCircle2, Clock, AlertCircle, LogOut, Crown
 } from "lucide-react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
@@ -243,6 +243,17 @@ const Dashboard = () => {
               <div>
                 <h3 className="font-semibold">Edit Profil</h3>
                 <p className="text-sm text-muted-foreground">Update data jamaah</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/my-upgrades')}>
+            <CardContent className="p-6 flex items-center space-x-4">
+              <div className="bg-amber-100 p-3 rounded-xl group-hover:bg-amber-200 transition-colors">
+                <Crown className="h-6 w-6 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Riwayat Upgrade</h3>
+                <p className="text-sm text-muted-foreground">Status pengajuan template</p>
               </div>
             </CardContent>
           </Card>
