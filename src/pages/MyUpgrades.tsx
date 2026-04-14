@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Crown, ExternalLink, Clock, CheckCircle, XCircle, Loader2, Upload, Image, X } from "lucide-react";
+import { ArrowLeft, Crown, ExternalLink, Clock, CheckCircle, XCircle, Loader2, Upload, Image, X, Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import ConfirmAlertDialog from "@/components/admin/ConfirmAlertDialog";
 
 interface UpgradeOrder {
   id: string;
