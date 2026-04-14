@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Crown, ExternalLink, Clock, CheckCircle, XCircle, Loader2, Upload, Image, X } from "lucide-react";
+import { ArrowLeft, Crown, ExternalLink, Clock, CheckCircle, XCircle, Loader2, Upload, Image, X, Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import ConfirmAlertDialog from "@/components/admin/ConfirmAlertDialog";
 
 interface UpgradeOrder {
   id: string;
@@ -37,6 +38,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   paid: { label: "Menunggu Konfirmasi", variant: "secondary", icon: Clock },
   confirmed: { label: "Dikonfirmasi", variant: "default", icon: CheckCircle },
   rejected: { label: "Ditolak", variant: "destructive", icon: XCircle },
+  cancelled: { label: "Dibatalkan", variant: "destructive", icon: Ban },
 };
 
 const MyUpgrades = () => {
@@ -47,7 +49,8 @@ const MyUpgrades = () => {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
-
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const fetchOrders = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
@@ -142,6 +145,26 @@ const MyUpgrades = () => {
     const file = e.target.files?.[0];
     if (file) handleUploadProof(orderId, file);
     e.target.value = "";
+  };
+
+  const handleCancel = async () => {
+    if (!cancelId || !user) return;
+    setCancelling(true);
+    try {
+      const { error } = await supabase
+        .from("template_upgrade_orders")
+        .update({ status: "cancelled" })
+        .eq("id", cancelId)
+        .eq("requested_by", user.id);
+      if (error) throw error;
+      toast.success("Pengajuan upgrade berhasil dibatalkan");
+      fetchOrders();
+    } catch (err: any) {
+      toast.error("Gagal membatalkan: " + (err.message || "Terjadi kesalahan"));
+    } finally {
+      setCancelling(false);
+      setCancelId(null);
+    }
   };
 
   return (
@@ -278,6 +301,20 @@ const MyUpgrades = () => {
                         })}
                       </p>
                     )}
+
+                    {order.status === "pending" && (
+                      <div className="pt-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setCancelId(order.id)}
+                        >
+                          <Ban className="w-3.5 h-3.5 mr-1" />
+                          Batalkan Pengajuan
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -296,6 +333,16 @@ const MyUpgrades = () => {
           const orderId = fileInputRef.current?.getAttribute("data-order-id");
           if (orderId) handleFileSelect(orderId)(e);
         }}
+      />
+
+      <ConfirmAlertDialog
+        open={!!cancelId}
+        onOpenChange={(open) => { if (!open) setCancelId(null); }}
+        onConfirm={handleCancel}
+        title="Batalkan Pengajuan Upgrade?"
+        description="Pengajuan upgrade yang dibatalkan tidak dapat dikembalikan. Anda harus membuat pengajuan baru jika ingin upgrade lagi."
+        confirmLabel={cancelling ? "Membatalkan..." : "Ya, Batalkan"}
+        variant="destructive"
       />
 
       <Footer />
