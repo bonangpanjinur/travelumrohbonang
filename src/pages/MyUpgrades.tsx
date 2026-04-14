@@ -191,16 +191,24 @@ const MyUpgrades = () => {
               { value: "confirmed", label: "Dikonfirmasi" },
               { value: "cancelled", label: "Dibatalkan" },
               { value: "rejected", label: "Ditolak" },
-            ].map((f) => (
-              <Button
-                key={f.value}
-                variant={statusFilter === f.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStatusFilter(f.value)}
-              >
-                {f.label}
-              </Button>
-            ))}
+            ].map((f) => {
+              const count = f.value === "all" ? orders.length : orders.filter((o) => o.status === f.value).length;
+              return (
+                <Button
+                  key={f.value}
+                  variant={statusFilter === f.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStatusFilter(f.value)}
+                >
+                  {f.label}
+                  {count > 0 && (
+                    <Badge variant={statusFilter === f.value ? "secondary" : "outline"} className="ml-1.5 px-1.5 py-0 text-xs min-w-[1.25rem] justify-center">
+                      {count}
+                    </Badge>
+                  )}
+                </Button>
+              );
+            })}
           </div>
         )}
 
