@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Crown, ExternalLink, Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Crown, ExternalLink, Clock, CheckCircle, XCircle, Loader2, Upload, Image, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -43,20 +44,105 @@ const MyUpgrades = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<UpgradeOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const fetchOrders = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("template_upgrade_orders")
+      .select("*, tenant_sites(site_name, subdomain)")
+      .eq("requested_by", user.id)
+      .order("created_at", { ascending: false });
+    if (data) setOrders(data as unknown as UpgradeOrder[]);
+    setLoading(false);
+  }, [user]);
 
   useEffect(() => {
-    if (!user) return;
-    const fetchOrders = async () => {
-      const { data } = await supabase
-        .from("template_upgrade_orders")
-        .select("*, tenant_sites(site_name, subdomain)")
-        .eq("requested_by", user.id)
-        .order("created_at", { ascending: false });
-      if (data) setOrders(data as unknown as UpgradeOrder[]);
-      setLoading(false);
-    };
     fetchOrders();
-  }, [user]);
+  }, [fetchOrders]);
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("my-upgrades")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "template_upgrade_orders",
+          filter: `requested_by=eq.${user.id}`,
+        },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchOrders]);
+
+  const handleUploadProof = async (orderId: string, file: File) => {
+    if (!user) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Hanya file gambar yang diperbolehkan");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Ukuran file maksimal 5MB");
+      return;
+    }
+
+    setUploadingId(orderId);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `upgrade-proofs/${user.id}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("payment-proofs")
+        .upload(path, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("payment-proofs")
+        .getPublicUrl(path);
+
+      const { error: updateError } = await supabase
+        .from("template_upgrade_orders")
+        .update({ proof_url: urlData.publicUrl, status: "paid" })
+        .eq("id", orderId)
+        .eq("requested_by", user.id);
+
+      if (updateError) throw updateError;
+
+      toast.success("Bukti transfer berhasil diupload!");
+      fetchOrders();
+    } catch (err: any) {
+      toast.error("Gagal upload: " + (err.message || "Terjadi kesalahan"));
+    } finally {
+      setUploadingId(null);
+      setDragOverId(null);
+    }
+  };
+
+  const handleDrop = (orderId: string) => (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverId(null);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleUploadProof(orderId, file);
+  };
+
+  const handleFileSelect = (orderId: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleUploadProof(orderId, file);
+    e.target.value = "";
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -94,6 +180,10 @@ const MyUpgrades = () => {
             {orders.map((order) => {
               const sc = statusConfig[order.status] || statusConfig.pending;
               const StatusIcon = sc.icon;
+              const canUpload = order.status === "pending" && !order.proof_url;
+              const isUploading = uploadingId === order.id;
+              const isDragOver = dragOverId === order.id;
+
               return (
                 <Card key={order.id} className="overflow-hidden">
                   <CardHeader className="pb-3">
@@ -134,6 +224,41 @@ const MyUpgrades = () => {
                       </a>
                     )}
 
+                    {/* Upload area for pending orders without proof */}
+                    {canUpload && (
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setDragOverId(order.id); }}
+                        onDragLeave={() => setDragOverId(null)}
+                        onDrop={handleDrop(order.id)}
+                        className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${
+                          isDragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50"
+                        }`}
+                        onClick={() => {
+                          if (!isUploading) {
+                            fileInputRef.current?.setAttribute("data-order-id", order.id);
+                            fileInputRef.current?.click();
+                          }
+                        }}
+                      >
+                        {isUploading ? (
+                          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Mengupload...
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-1">
+                            <Upload className="w-6 h-6 text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground">
+                              Klik atau drag file bukti transfer di sini
+                            </p>
+                            <p className="text-xs text-muted-foreground/60">
+                              Gambar, maks 5MB
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {order.notes && (
                       <p className="text-xs text-muted-foreground">
                         <span className="font-medium">Catatan Anda:</span> {order.notes}
@@ -147,7 +272,7 @@ const MyUpgrades = () => {
                     )}
 
                     {order.confirmed_at && (
-                      <p className="text-xs text-success">
+                      <p className="text-xs text-green-600">
                         Dikonfirmasi pada {new Date(order.confirmed_at).toLocaleDateString("id-ID", {
                           day: "numeric", month: "long", year: "numeric"
                         })}
@@ -160,6 +285,19 @@ const MyUpgrades = () => {
           </div>
         )}
       </div>
+
+      {/* Hidden file input shared across cards */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const orderId = fileInputRef.current?.getAttribute("data-order-id");
+          if (orderId) handleFileSelect(orderId)(e);
+        }}
+      />
+
       <Footer />
     </div>
   );
