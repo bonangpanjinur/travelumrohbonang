@@ -147,6 +147,26 @@ const MyUpgrades = () => {
     e.target.value = "";
   };
 
+  const handleCancel = async () => {
+    if (!cancelId || !user) return;
+    setCancelling(true);
+    try {
+      const { error } = await supabase
+        .from("template_upgrade_orders")
+        .update({ status: "cancelled" })
+        .eq("id", cancelId)
+        .eq("requested_by", user.id);
+      if (error) throw error;
+      toast.success("Pengajuan upgrade berhasil dibatalkan");
+      fetchOrders();
+    } catch (err: any) {
+      toast.error("Gagal membatalkan: " + (err.message || "Terjadi kesalahan"));
+    } finally {
+      setCancelling(false);
+      setCancelId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
