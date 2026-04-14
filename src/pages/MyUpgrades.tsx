@@ -51,6 +51,7 @@ const MyUpgrades = () => {
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const fetchOrders = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
@@ -181,6 +182,28 @@ const MyUpgrades = () => {
           </div>
         </div>
 
+        {!loading && orders.length > 0 && (
+          <div className="flex gap-2 mb-4 flex-wrap">
+            {[
+              { value: "all", label: "Semua" },
+              { value: "pending", label: "Pending" },
+              { value: "paid", label: "Menunggu Konfirmasi" },
+              { value: "confirmed", label: "Dikonfirmasi" },
+              { value: "cancelled", label: "Dibatalkan" },
+              { value: "rejected", label: "Ditolak" },
+            ].map((f) => (
+              <Button
+                key={f.value}
+                variant={statusFilter === f.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStatusFilter(f.value)}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -200,7 +223,9 @@ const MyUpgrades = () => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {orders.map((order) => {
+            {orders
+              .filter((o) => statusFilter === "all" || o.status === statusFilter)
+              .map((order) => {
               const sc = statusConfig[order.status] || statusConfig.pending;
               const StatusIcon = sc.icon;
               const canUpload = order.status === "pending" && !order.proof_url;
