@@ -49,7 +49,8 @@ const MyUpgrades = () => {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
-
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const fetchOrders = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
