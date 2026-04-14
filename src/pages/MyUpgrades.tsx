@@ -38,6 +38,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   paid: { label: "Menunggu Konfirmasi", variant: "secondary", icon: Clock },
   confirmed: { label: "Dikonfirmasi", variant: "default", icon: CheckCircle },
   rejected: { label: "Ditolak", variant: "destructive", icon: XCircle },
+  cancelled: { label: "Dibatalkan", variant: "destructive", icon: Ban },
 };
 
 const MyUpgrades = () => {
