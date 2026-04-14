@@ -301,6 +301,20 @@ const MyUpgrades = () => {
                         })}
                       </p>
                     )}
+
+                    {order.status === "pending" && (
+                      <div className="pt-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setCancelId(order.id)}
+                        >
+                          <Ban className="w-3.5 h-3.5 mr-1" />
+                          Batalkan Pengajuan
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -319,6 +333,16 @@ const MyUpgrades = () => {
           const orderId = fileInputRef.current?.getAttribute("data-order-id");
           if (orderId) handleFileSelect(orderId)(e);
         }}
+      />
+
+      <ConfirmAlertDialog
+        open={!!cancelId}
+        onOpenChange={(open) => { if (!open) setCancelId(null); }}
+        onConfirm={handleCancel}
+        title="Batalkan Pengajuan Upgrade?"
+        description="Pengajuan upgrade yang dibatalkan tidak dapat dikembalikan. Anda harus membuat pengajuan baru jika ingin upgrade lagi."
+        confirmLabel={cancelling ? "Membatalkan..." : "Ya, Batalkan"}
+        variant="destructive"
       />
 
       <Footer />
