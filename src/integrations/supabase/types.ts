@@ -272,6 +272,7 @@ export type Database = {
           id: string
           notes: string | null
           package_id: string | null
+          payment_scheme: string | null
           pic_id: string | null
           pic_type: string | null
           status: string | null
@@ -286,6 +287,7 @@ export type Database = {
           id?: string
           notes?: string | null
           package_id?: string | null
+          payment_scheme?: string | null
           pic_id?: string | null
           pic_type?: string | null
           status?: string | null
@@ -300,6 +302,7 @@ export type Database = {
           id?: string
           notes?: string | null
           package_id?: string | null
+          payment_scheme?: string | null
           pic_id?: string | null
           pic_type?: string | null
           status?: string | null
@@ -512,6 +515,65 @@ export type Database = {
           },
         ]
       }
+      flight_details: {
+        Row: {
+          airline: string | null
+          arrival_airport: string | null
+          arrival_time: string | null
+          created_at: string | null
+          departure_airport: string | null
+          departure_id: string
+          departure_time: string | null
+          flight_number: string | null
+          flight_type: string
+          gate: string | null
+          id: string
+          notes: string | null
+          terminal: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          airline?: string | null
+          arrival_airport?: string | null
+          arrival_time?: string | null
+          created_at?: string | null
+          departure_airport?: string | null
+          departure_id: string
+          departure_time?: string | null
+          flight_number?: string | null
+          flight_type?: string
+          gate?: string | null
+          id?: string
+          notes?: string | null
+          terminal?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          airline?: string | null
+          arrival_airport?: string | null
+          arrival_time?: string | null
+          created_at?: string | null
+          departure_airport?: string | null
+          departure_id?: string
+          departure_time?: string | null
+          flight_number?: string | null
+          flight_type?: string
+          gate?: string | null
+          id?: string
+          notes?: string | null
+          terminal?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flight_details_departure_id_fkey"
+            columns: ["departure_id"]
+            isOneToOne: false
+            referencedRelation: "package_departures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       floating_buttons: {
         Row: {
           created_at: string | null
@@ -631,6 +693,63 @@ export type Database = {
           star?: number | null
         }
         Relationships: []
+      }
+      installment_schedules: {
+        Row: {
+          amount: number
+          booking_id: string
+          created_at: string | null
+          due_date: string
+          id: string
+          installment_number: number
+          notes: string | null
+          paid_at: string | null
+          payment_id: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number
+          booking_id: string
+          created_at?: string | null
+          due_date: string
+          id?: string
+          installment_number: number
+          notes?: string | null
+          paid_at?: string | null
+          payment_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          installment_number?: number
+          notes?: string | null
+          paid_at?: string | null
+          payment_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installment_schedules_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installment_schedules_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       itineraries: {
         Row: {
