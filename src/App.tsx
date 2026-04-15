@@ -26,6 +26,7 @@ import BlogDetail from "./pages/BlogDetail";
 import DynamicPage from "./pages/DynamicPage";
 import TenantSitePage from "./pages/TenantSite";
 import MyUpgrades from "./pages/MyUpgrades";
+import MyDocuments from "./pages/MyDocuments";
 import NotFound from "./pages/NotFound";
 
 // Admin
@@ -68,6 +69,8 @@ import AdminAnalyticsAI from "./pages/admin/AnalyticsAI";
 import AdminMultiBranch from "./pages/admin/MultiBranch";
 import AdminTenantSites from "./pages/admin/TenantSites";
 import AdminTemplateUpgrades from "./pages/admin/TemplateUpgrades";
+import AdminInstallments from "./pages/admin/Installments";
+import AdminManifest from "./pages/admin/Manifest";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
@@ -100,6 +103,7 @@ const AppContent = () => {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/my-upgrades" element={<MyUpgrades />} />
+        <Route path="/my-documents" element={<MyDocuments />} />
       </Route>
       <Route path="/galeri" element={<Gallery />} />
       <Route path="/blog" element={<Blog />} />
@@ -145,6 +149,8 @@ const AppContent = () => {
           <Route path="multi-branch" element={<AdminMultiBranch />} />
           <Route path="tenant-sites" element={<AdminTenantSites />} />
           <Route path="template-upgrades" element={<AdminTemplateUpgrades />} />
+          <Route path="installments" element={<AdminInstallments />} />
+          <Route path="manifest" element={<AdminManifest />} />
         </Route>
       </Route>
 
