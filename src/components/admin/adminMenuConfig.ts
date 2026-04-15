@@ -28,6 +28,8 @@ import {
   Languages,
   GitBranch,
   ArrowUpCircle,
+  ClipboardList,
+  Receipt,
   LucideIcon
 } from "lucide-react";
 
@@ -77,6 +79,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Itinerary", href: "/admin/itineraries", icon: MapPin },
       { label: "Booking", href: "/admin/bookings", icon: Ticket },
       { label: "Jemaah", href: "/admin/pilgrims", icon: Users },
+      { label: "Manifest", href: "/admin/manifest", icon: ClipboardList },
       { label: "Dokumen Jemaah", href: "/admin/documents", icon: FileCheck, premium: true, premiumFeature: "Manajemen Dokumen Jemaah" },
     ],
   },
@@ -84,6 +87,7 @@ export const menuGroups: MenuGroup[] = [
     label: "Keuangan",
     items: [
       { label: "Pembayaran", href: "/admin/payments", icon: CreditCard },
+      { label: "Cicilan", href: "/admin/installments", icon: Receipt },
       { label: "Akuntansi & Keuangan", href: "/admin/accounting", icon: BarChart3, premium: true, premiumFeature: "Akuntansi & Keuangan" },
       { label: "Payment Gateway", href: "/admin/payment-gateway", icon: Wallet, premium: true, premiumFeature: "Integrasi Payment Gateway" },
       { label: "Laporan", href: "/admin/reports", icon: FileText },
