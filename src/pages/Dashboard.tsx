@@ -287,6 +287,32 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
+          {isAgent && (
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer group border-primary/20 bg-primary/5" onClick={() => navigate('/agent-portal')}>
+              <CardContent className="p-6 flex items-center space-x-4">
+                <div className="bg-primary/10 p-3 rounded-xl group-hover:bg-primary/20 transition-colors">
+                  <Briefcase className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Portal Agen</h3>
+                  <p className="text-sm text-muted-foreground">Referral & komisi</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {hasBranch && (
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer group border-info/20 bg-info/5" onClick={() => navigate('/branch-dashboard')}>
+              <CardContent className="p-6 flex items-center space-x-4">
+                <div className="bg-info/10 p-3 rounded-xl group-hover:bg-info/20 transition-colors">
+                  <Building2 className="h-6 w-6 text-info" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Dashboard Cabang</h3>
+                  <p className="text-sm text-muted-foreground">Kelola cabang Anda</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <Card className="hover:shadow-lg transition-shadow cursor-pointer group border-destructive/20 bg-destructive/5" onClick={handleSignOut}>
             <CardContent className="p-6 flex items-center space-x-4">
               <div className="bg-red-100 p-3 rounded-xl group-hover:bg-red-200 transition-colors">
