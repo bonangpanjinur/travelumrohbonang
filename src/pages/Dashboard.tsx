@@ -92,11 +92,19 @@ const Dashboard = () => {
     const fetchData = async () => {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('name')
+        .select('name, branch_id')
         .eq('id', user.id)
         .maybeSingle();
       
       setUserName(profile?.name || user.user_metadata?.name || user.email || 'Jamaah');
+      setHasBranch(!!profile?.branch_id);
+
+      const { data: agentRow } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      setIsAgent(!!agentRow);
 
       const { data: bookingData } = await supabase
         .from('bookings')
