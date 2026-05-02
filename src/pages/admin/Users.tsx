@@ -139,6 +139,10 @@ const AdminUsers = () => {
       case "superadmin":
       case "super_admin":
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100"><Shield className="w-3 h-3 mr-1" />{role}</Badge>;
+      case "branch_manager":
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100"><Shield className="w-3 h-3 mr-1" />Branch Manager</Badge>;
+      case "agent":
+        return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100"><Shield className="w-3 h-3 mr-1" />Agent</Badge>;
       default:
         return <Badge variant="secondary"><User className="w-3 h-3 mr-1" />{role}</Badge>;
     }
