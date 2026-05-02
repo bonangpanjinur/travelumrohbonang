@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Calendar, CreditCard, FileText, Plane, User, 
-  CheckCircle2, Clock, AlertCircle, LogOut, Crown, Upload
+  CheckCircle2, Clock, AlertCircle, LogOut, Crown, Upload, Briefcase, Building2
 } from "lucide-react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
