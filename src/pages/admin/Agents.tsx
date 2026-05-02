@@ -80,13 +80,25 @@ const AdminAgents = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const payload = {
+    const payload: any = {
       name: form.name,
       phone: form.phone || null,
+      email: form.email || null,
+      referral_code: form.referral_code || null,
       branch_id: form.branch_id || null,
       commission_percent: form.commission_percent || 0,
-      is_active: form.is_active
+      is_active: form.is_active,
     };
+
+    // Try to find a user account by email and link it
+    if (form.email) {
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", form.email)
+        .maybeSingle();
+      if (userProfile?.id) payload.user_id = userProfile.id;
+    }
 
     if (editing) {
       const { error } = await supabase.from("agents").update(payload).eq("id", editing.id);
@@ -114,9 +126,11 @@ const AdminAgents = () => {
     setForm({
       name: agent.name,
       phone: agent.phone || "",
+      email: agent.email || "",
+      referral_code: agent.referral_code || "",
       branch_id: agent.branch_id || "",
       commission_percent: agent.commission_percent || 0,
-      is_active: agent.is_active
+      is_active: agent.is_active,
     });
     setIsOpen(true);
   };
@@ -150,9 +164,11 @@ const AdminAgents = () => {
     setForm({
       name: "",
       phone: "",
+      email: "",
+      referral_code: "",
       branch_id: "",
       commission_percent: 0,
-      is_active: true
+      is_active: true,
     });
   };
 
