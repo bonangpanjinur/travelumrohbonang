@@ -27,19 +27,18 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [branches, setBranches] = useState<BranchOption[]>([]);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch profiles
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, name, email, phone, created_at")
+        .select("id, name, email, phone, created_at, branch_id")
         .order("created_at", { ascending: false });
 
       if (profilesError) throw profilesError;
 
-      // Fetch all roles
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role");
@@ -49,12 +48,19 @@ const AdminUsers = () => {
       const roleMap = new Map<string, string>();
       roles?.forEach((r) => roleMap.set(r.user_id, r.role));
 
-      const combined: UserWithRole[] = (profiles || []).map((p) => ({
+      const combined: UserWithRole[] = (profiles || []).map((p: any) => ({
         ...p,
         role: roleMap.get(p.id) || "buyer",
       }));
 
       setUsers(combined);
+
+      const { data: branchData } = await supabase
+        .from("branches")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      setBranches(branchData || []);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({ title: "Gagal memuat data user", variant: "destructive" });
