@@ -27,6 +27,8 @@ import DynamicPage from "./pages/DynamicPage";
 import TenantSitePage from "./pages/TenantSite";
 import MyUpgrades from "./pages/MyUpgrades";
 import MyDocuments from "./pages/MyDocuments";
+import AgentPortal from "./pages/AgentPortal";
+import BranchDashboard from "./pages/BranchDashboard";
 import NotFound from "./pages/NotFound";
 
 // Admin
@@ -104,6 +106,8 @@ const AppContent = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/my-upgrades" element={<MyUpgrades />} />
         <Route path="/my-documents" element={<MyDocuments />} />
+        <Route path="/agent-portal" element={<AgentPortal />} />
+        <Route path="/branch-dashboard" element={<BranchDashboard />} />
       </Route>
       <Route path="/galeri" element={<Gallery />} />
       <Route path="/blog" element={<Blog />} />

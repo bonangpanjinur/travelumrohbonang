@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Calendar, CreditCard, FileText, Plane, User, 
-  CheckCircle2, Clock, AlertCircle, LogOut, Crown, Upload
+  CheckCircle2, Clock, AlertCircle, LogOut, Crown, Upload, Briefcase, Building2
 } from "lucide-react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
@@ -83,6 +83,8 @@ const Dashboard = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [loadingBooking, setLoadingBooking] = useState(true);
   const [userName, setUserName] = useState<string>("");
+  const [isAgent, setIsAgent] = useState(false);
+  const [hasBranch, setHasBranch] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -90,11 +92,19 @@ const Dashboard = () => {
     const fetchData = async () => {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('name')
+        .select('name, branch_id')
         .eq('id', user.id)
         .maybeSingle();
       
       setUserName(profile?.name || user.user_metadata?.name || user.email || 'Jamaah');
+      setHasBranch(!!profile?.branch_id);
+
+      const { data: agentRow } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      setIsAgent(!!agentRow);
 
       const { data: bookingData } = await supabase
         .from('bookings')
@@ -277,6 +287,32 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
+          {isAgent && (
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer group border-primary/20 bg-primary/5" onClick={() => navigate('/agent-portal')}>
+              <CardContent className="p-6 flex items-center space-x-4">
+                <div className="bg-primary/10 p-3 rounded-xl group-hover:bg-primary/20 transition-colors">
+                  <Briefcase className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Portal Agen</h3>
+                  <p className="text-sm text-muted-foreground">Referral & komisi</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {hasBranch && (
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer group border-info/20 bg-info/5" onClick={() => navigate('/branch-dashboard')}>
+              <CardContent className="p-6 flex items-center space-x-4">
+                <div className="bg-info/10 p-3 rounded-xl group-hover:bg-info/20 transition-colors">
+                  <Building2 className="h-6 w-6 text-info" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Dashboard Cabang</h3>
+                  <p className="text-sm text-muted-foreground">Kelola cabang Anda</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <Card className="hover:shadow-lg transition-shadow cursor-pointer group border-destructive/20 bg-destructive/5" onClick={handleSignOut}>
             <CardContent className="p-6 flex items-center space-x-4">
               <div className="bg-red-100 p-3 rounded-xl group-hover:bg-red-200 transition-colors">

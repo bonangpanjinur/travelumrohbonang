@@ -17,26 +17,28 @@ interface UserWithRole {
   phone: string | null;
   created_at: string | null;
   role: string;
+  branch_id: string | null;
 }
+
+interface BranchOption { id: string; name: string; }
 
 const AdminUsers = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [branches, setBranches] = useState<BranchOption[]>([]);
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch profiles
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, name, email, phone, created_at")
+        .select("id, name, email, phone, created_at, branch_id")
         .order("created_at", { ascending: false });
 
       if (profilesError) throw profilesError;
 
-      // Fetch all roles
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role");
@@ -46,12 +48,19 @@ const AdminUsers = () => {
       const roleMap = new Map<string, string>();
       roles?.forEach((r) => roleMap.set(r.user_id, r.role));
 
-      const combined: UserWithRole[] = (profiles || []).map((p) => ({
+      const combined: UserWithRole[] = (profiles || []).map((p: any) => ({
         ...p,
         role: roleMap.get(p.id) || "buyer",
       }));
 
       setUsers(combined);
+
+      const { data: branchData } = await supabase
+        .from("branches")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      setBranches(branchData || []);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({ title: "Gagal memuat data user", variant: "destructive" });
@@ -100,6 +109,24 @@ const AdminUsers = () => {
     }
   };
 
+  const handleBranchChange = async (userId: string, branchId: string) => {
+    setUpdatingId(userId);
+    try {
+      const newBranch = branchId === "__none__" ? null : branchId;
+      const { error } = await supabase
+        .from("profiles")
+        .update({ branch_id: newBranch })
+        .eq("id", userId);
+      if (error) throw error;
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, branch_id: newBranch } : u)));
+      toast({ title: "Cabang berhasil diubah" });
+    } catch (error: any) {
+      toast({ title: "Gagal mengubah cabang", description: error.message, variant: "destructive" });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const filteredUsers = users.filter(
     (u) =>
       u.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -112,6 +139,10 @@ const AdminUsers = () => {
       case "superadmin":
       case "super_admin":
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100"><Shield className="w-3 h-3 mr-1" />{role}</Badge>;
+      case "branch_manager":
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100"><Shield className="w-3 h-3 mr-1" />Branch Manager</Badge>;
+      case "agent":
+        return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100"><Shield className="w-3 h-3 mr-1" />Agent</Badge>;
       default:
         return <Badge variant="secondary"><User className="w-3 h-3 mr-1" />{role}</Badge>;
     }
@@ -155,13 +186,14 @@ const AdminUsers = () => {
                     <TableHead>Telepon</TableHead>
                     <TableHead>Terdaftar</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Cabang</TableHead>
                     <TableHead>Ubah Role</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         Tidak ada user ditemukan
                       </TableCell>
                     </TableRow>
@@ -179,15 +211,34 @@ const AdminUsers = () => {
                         <TableCell>{roleBadge(user.role)}</TableCell>
                         <TableCell>
                           <Select
+                            value={user.branch_id || "__none__"}
+                            onValueChange={(val) => handleBranchChange(user.id, val)}
+                            disabled={updatingId === user.id}
+                          >
+                            <SelectTrigger className="w-40">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">— Tanpa Cabang —</SelectItem>
+                              {branches.map((b) => (
+                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select
                             value={user.role}
                             onValueChange={(val) => handleRoleChange(user.id, val)}
                             disabled={updatingId === user.id}
                           >
-                            <SelectTrigger className="w-32">
+                            <SelectTrigger className="w-40">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="buyer">Buyer</SelectItem>
+                              <SelectItem value="agent">Agent</SelectItem>
+                              <SelectItem value="branch_manager">Branch Manager</SelectItem>
                               <SelectItem value="admin">Admin</SelectItem>
                               <SelectItem value="super_admin">Super Admin</SelectItem>
                             </SelectContent>

@@ -1,0 +1,292 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Briefcase, Users, DollarSign, TrendingUp, Copy, Check, ExternalLink, ShoppingBag } from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { id as localeId } from "date-fns/locale";
+import SEO from "@/components/SEO";
+
+type AgentRow = {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  commission_percent: number;
+  referral_code: string | null;
+  branch_id: string | null;
+};
+
+const AgentPortal = () => {
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const [agent, setAgent] = useState<AgentRow | null>(null);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    loadData();
+  }, [user, authLoading]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const { data: agentData, error: agentErr } = await supabase
+        .from("agents")
+        .select("*")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+
+      if (agentErr) throw agentErr;
+      setAgent(agentData as any);
+
+      if (agentData) {
+        const { data: bookingData } = await supabase
+          .from("bookings")
+          .select("id, booking_code, total_price, status, created_at, packages(title)")
+          .eq("agent_id", agentData.id)
+          .order("created_at", { ascending: false });
+        setBookings(bookingData || []);
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Gagal memuat data agen");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const referralUrl = agent?.referral_code
+    ? `${window.location.origin}/?ref=${agent.referral_code}`
+    : "";
+
+  const copyReferral = () => {
+    if (!referralUrl) return;
+    navigator.clipboard.writeText(referralUrl);
+    setCopied(true);
+    toast.success("Link referral disalin");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Stats
+  const paidBookings = bookings.filter((b) => b.status === "paid");
+  const totalRevenue = paidBookings.reduce((s, b) => s + (Number(b.total_price) || 0), 0);
+  const totalCommission = totalRevenue * ((agent?.commission_percent || 0) / 100);
+  const pendingCount = bookings.filter((b) => b.status === "pending" || b.status === "waiting_payment").length;
+
+  if (loading || authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (!agent) {
+    return (
+      <div className="min-h-screen bg-muted/30 p-6">
+        <div className="max-w-2xl mx-auto pt-20">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Briefcase className="w-6 h-6 text-primary" />
+                Portal Agen
+              </CardTitle>
+              <CardDescription>
+                Akun Anda belum terdaftar sebagai agen.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Hubungi admin untuk pendaftaran agen, atau kembali ke dashboard.
+              </p>
+              <Button onClick={() => navigate("/dashboard")}>Kembali ke Dashboard</Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <SEO title="Portal Agen" description="Dashboard agen — referral, performa, dan komisi" />
+      <div className="min-h-screen bg-muted/30 p-4 lg:p-6">
+        <div className="max-w-6xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <Briefcase className="w-7 h-7 text-primary" />
+                Portal Agen
+              </h1>
+              <p className="text-muted-foreground">
+                Selamat datang, <span className="font-medium text-foreground">{agent.name}</span>
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => navigate("/dashboard")}>
+              Dashboard Utama
+            </Button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard icon={ShoppingBag} label="Total Booking" value={bookings.length} />
+            <StatCard icon={Users} label="Lunas" value={paidBookings.length} color="text-success" />
+            <StatCard
+              icon={DollarSign}
+              label="Total Revenue"
+              value={`Rp ${totalRevenue.toLocaleString("id-ID")}`}
+              color="text-success"
+            />
+            <StatCard
+              icon={TrendingUp}
+              label={`Komisi (${agent.commission_percent}%)`}
+              value={`Rp ${totalCommission.toLocaleString("id-ID")}`}
+              color="text-primary"
+            />
+          </div>
+
+          {/* Referral */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Link Referral Anda</CardTitle>
+              <CardDescription>
+                Bagikan link ini ke calon jemaah. Setiap booking yang masuk dari link ini akan tercatat sebagai referral Anda.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {agent.referral_code ? (
+                <div className="flex gap-2">
+                  <Input value={referralUrl} readOnly className="font-mono text-sm" />
+                  <Button variant="outline" size="icon" onClick={copyReferral}>
+                    {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                  <Button variant="outline" size="icon" asChild>
+                    <a href={referralUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Kode referral belum diatur. Hubungi admin untuk mengaktifkan.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Bookings List */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Daftar Booking Referral</CardTitle>
+              <CardDescription>
+                {bookings.length} booking · {pendingCount} menunggu pembayaran
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kode</TableHead>
+                      <TableHead>Paket</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead className="text-right">Nilai</TableHead>
+                      <TableHead className="text-right">Komisi</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bookings.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          Belum ada booking referral
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      bookings.map((b) => {
+                        const commission = b.status === "paid"
+                          ? (Number(b.total_price) || 0) * (agent.commission_percent / 100)
+                          : 0;
+                        return (
+                          <TableRow key={b.id}>
+                            <TableCell className="font-mono text-xs">{b.booking_code}</TableCell>
+                            <TableCell className="text-sm">{b.packages?.title || "-"}</TableCell>
+                            <TableCell className="text-sm">
+                              {format(new Date(b.created_at), "dd MMM yyyy", { locale: localeId })}
+                            </TableCell>
+                            <TableCell className="text-right text-sm">
+                              Rp {Number(b.total_price).toLocaleString("id-ID")}
+                            </TableCell>
+                            <TableCell className="text-right text-sm font-medium text-primary">
+                              {commission > 0 ? `Rp ${commission.toLocaleString("id-ID")}` : "-"}
+                            </TableCell>
+                            <TableCell>
+                              <StatusBadge status={b.status} />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </>
+  );
+};
+
+const StatCard = ({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: any;
+  label: string;
+  value: string | number;
+  color?: string;
+}) => (
+  <Card>
+    <CardContent className="p-4 flex items-center gap-3">
+      <div className="p-2 rounded-lg bg-muted">
+        <Icon className={`w-5 h-5 ${color || "text-foreground"}`} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground truncate">{label}</p>
+        <p className={`text-base font-bold truncate ${color || ""}`}>{value}</p>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const StatusBadge = ({ status }: { status: string }) => {
+  const map: Record<string, { label: string; variant: any }> = {
+    paid: { label: "Lunas", variant: "default" },
+    pending: { label: "Pending", variant: "secondary" },
+    waiting_payment: { label: "Menunggu Bayar", variant: "secondary" },
+    cancelled: { label: "Batal", variant: "destructive" },
+    draft: { label: "Draft", variant: "outline" },
+    confirmed: { label: "Konfirmasi", variant: "default" },
+  };
+  const cfg = map[status] || { label: status, variant: "outline" };
+  return <Badge variant={cfg.variant} className="text-xs">{cfg.label}</Badge>;
+};
+
+export default AgentPortal;
