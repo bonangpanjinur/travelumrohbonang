@@ -83,6 +83,8 @@ const Dashboard = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [loadingBooking, setLoadingBooking] = useState(true);
   const [userName, setUserName] = useState<string>("");
+  const [isAgent, setIsAgent] = useState(false);
+  const [hasBranch, setHasBranch] = useState(false);
 
   useEffect(() => {
     if (!user) return;
