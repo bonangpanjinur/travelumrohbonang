@@ -46,28 +46,37 @@ export type Database = {
           branch_id: string | null
           commission_percent: number | null
           created_at: string | null
+          email: string | null
           id: string
           is_active: boolean | null
           name: string
           phone: string | null
+          referral_code: string | null
+          user_id: string | null
         }
         Insert: {
           branch_id?: string | null
           commission_percent?: number | null
           created_at?: string | null
+          email?: string | null
           id?: string
           is_active?: boolean | null
           name: string
           phone?: string | null
+          referral_code?: string | null
+          user_id?: string | null
         }
         Update: {
           branch_id?: string | null
           commission_percent?: number | null
           created_at?: string | null
+          email?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           phone?: string | null
+          referral_code?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -265,6 +274,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          agent_id: string | null
           booking_code: string
           branch_id: string | null
           created_at: string | null
@@ -280,6 +290,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          agent_id?: string | null
           booking_code: string
           branch_id?: string | null
           created_at?: string | null
@@ -295,6 +306,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          agent_id?: string | null
           booking_code?: string
           branch_id?: string | null
           created_at?: string | null
@@ -1489,6 +1501,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          branch_id: string | null
           created_at: string | null
           email: string
           id: string
@@ -1497,6 +1510,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          branch_id?: string | null
           created_at?: string | null
           email: string
           id: string
@@ -1505,6 +1519,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          branch_id?: string | null
           created_at?: string | null
           email?: string
           id?: string
@@ -1920,6 +1935,8 @@ export type Database = {
     }
     Functions: {
       generate_booking_code: { Args: never; Returns: string }
+      get_agent_id_for_user: { Args: { _user_id: string }; Returns: string }
+      get_user_branch_id: { Args: { _user_id: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
