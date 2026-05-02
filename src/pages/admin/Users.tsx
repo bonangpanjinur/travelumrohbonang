@@ -17,7 +17,10 @@ interface UserWithRole {
   phone: string | null;
   created_at: string | null;
   role: string;
+  branch_id: string | null;
 }
+
+interface BranchOption { id: string; name: string; }
 
 const AdminUsers = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
