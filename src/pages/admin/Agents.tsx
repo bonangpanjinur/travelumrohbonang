@@ -226,7 +226,30 @@ const AdminAgents = () => {
                   className="mt-1" 
                 />
               </div>
-              
+
+              <div>
+                <Label>Email (untuk login portal agen)</Label>
+                <Input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="agen@email.com"
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Jika email cocok dengan akun terdaftar, agen akan otomatis bisa akses Portal Agen.
+                </p>
+              </div>
+
+              <div>
+                <Label>Kode Referral</Label>
+                <Input
+                  value={form.referral_code}
+                  onChange={(e) => setForm({ ...form, referral_code: e.target.value.toUpperCase().replace(/\s/g, "") })}
+                  placeholder="AGEN001"
+                  className="mt-1 font-mono"
+                />
+              </div>
               <div>
                 <Label>Cabang</Label>
                 <Select 
