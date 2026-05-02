@@ -20,6 +20,9 @@ interface Agent {
   id: string;
   name: string;
   phone: string | null;
+  email: string | null;
+  referral_code: string | null;
+  user_id: string | null;
   branch_id: string | null;
   commission_percent: number | null;
   is_active: boolean;
@@ -45,9 +48,11 @@ const AdminAgents = () => {
   const [form, setForm] = useState({
     name: "",
     phone: "",
+    email: "",
+    referral_code: "",
     branch_id: "",
     commission_percent: 0,
-    is_active: true
+    is_active: true,
   });
 
   useEffect(() => {
