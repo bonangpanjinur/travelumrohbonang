@@ -211,15 +211,34 @@ const AdminUsers = () => {
                         <TableCell>{roleBadge(user.role)}</TableCell>
                         <TableCell>
                           <Select
+                            value={user.branch_id || "__none__"}
+                            onValueChange={(val) => handleBranchChange(user.id, val)}
+                            disabled={updatingId === user.id}
+                          >
+                            <SelectTrigger className="w-40">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">— Tanpa Cabang —</SelectItem>
+                              {branches.map((b) => (
+                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select
                             value={user.role}
                             onValueChange={(val) => handleRoleChange(user.id, val)}
                             disabled={updatingId === user.id}
                           >
-                            <SelectTrigger className="w-32">
+                            <SelectTrigger className="w-40">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="buyer">Buyer</SelectItem>
+                              <SelectItem value="agent">Agent</SelectItem>
+                              <SelectItem value="branch_manager">Branch Manager</SelectItem>
                               <SelectItem value="admin">Admin</SelectItem>
                               <SelectItem value="super_admin">Super Admin</SelectItem>
                             </SelectContent>
