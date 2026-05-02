@@ -109,6 +109,24 @@ const AdminUsers = () => {
     }
   };
 
+  const handleBranchChange = async (userId: string, branchId: string) => {
+    setUpdatingId(userId);
+    try {
+      const newBranch = branchId === "__none__" ? null : branchId;
+      const { error } = await supabase
+        .from("profiles")
+        .update({ branch_id: newBranch })
+        .eq("id", userId);
+      if (error) throw error;
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, branch_id: newBranch } : u)));
+      toast({ title: "Cabang berhasil diubah" });
+    } catch (error: any) {
+      toast({ title: "Gagal mengubah cabang", description: error.message, variant: "destructive" });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const filteredUsers = users.filter(
     (u) =>
       u.name.toLowerCase().includes(search.toLowerCase()) ||
