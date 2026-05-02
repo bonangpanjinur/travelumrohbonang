@@ -186,6 +186,7 @@ const AdminUsers = () => {
                     <TableHead>Telepon</TableHead>
                     <TableHead>Terdaftar</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Cabang</TableHead>
                     <TableHead>Ubah Role</TableHead>
                   </TableRow>
                 </TableHeader>
