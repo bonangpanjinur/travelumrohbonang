@@ -234,12 +234,17 @@ const AgentPortal = () => {
 
           {/* Profil Agen */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <User className="w-4 h-4 text-primary" />
-                Profil Agen
-              </CardTitle>
-              <CardDescription>Informasi akun keagenan Anda</CardDescription>
+            <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <User className="w-4 h-4 text-primary" />
+                  Profil Agen
+                </CardTitle>
+                <CardDescription>Informasi akun keagenan Anda</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={openEdit}>
+                <Pencil className="w-3.5 h-3.5 mr-1.5" /> Edit
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
