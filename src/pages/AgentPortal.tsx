@@ -7,11 +7,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Briefcase, Users, DollarSign, TrendingUp, Copy, Check, ExternalLink, ShoppingBag, User, Mail, Phone, Building2, Percent } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Briefcase, Users, DollarSign, TrendingUp, Copy, Check, ExternalLink, ShoppingBag, User, Mail, Phone, Building2, Percent, Pencil, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { z } from "zod";
 import SEO from "@/components/SEO";
+
+const profileSchema = z.object({
+  name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100, "Nama maksimal 100 karakter"),
+  email: z.string().trim().email("Email tidak valid").max(255).or(z.literal("")),
+  phone: z.string().trim().max(20, "Telepon maksimal 20 karakter").regex(/^[0-9+\-\s()]*$/, "Telepon hanya boleh angka").or(z.literal("")),
+  branch_id: z.string().nullable(),
+});
 
 type AgentRow = {
   id: string;
