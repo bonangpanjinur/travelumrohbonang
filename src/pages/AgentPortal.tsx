@@ -410,9 +410,13 @@ const AgentPortal = () => {
                   id="agent-phone"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  onBlur={(e) => setForm({ ...form, phone: normalizePhone(e.target.value) })}
                   maxLength={20}
-                  placeholder="08xxx"
+                  placeholder="08123456789"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Akan disimpan dalam format internasional (+62…)
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label>Cabang</Label>
