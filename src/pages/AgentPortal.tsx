@@ -7,11 +7,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Briefcase, Users, DollarSign, TrendingUp, Copy, Check, ExternalLink, ShoppingBag, User, Mail, Phone, Building2, Percent } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Briefcase, Users, DollarSign, TrendingUp, Copy, Check, ExternalLink, ShoppingBag, User, Mail, Phone, Building2, Percent, Pencil, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { z } from "zod";
 import SEO from "@/components/SEO";
+
+const profileSchema = z.object({
+  name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100, "Nama maksimal 100 karakter"),
+  email: z.string().trim().email("Email tidak valid").max(255).or(z.literal("")),
+  phone: z.string().trim().max(20, "Telepon maksimal 20 karakter").regex(/^[0-9+\-\s()]*$/, "Telepon hanya boleh angka").or(z.literal("")),
+  branch_id: z.string().nullable(),
+});
 
 type AgentRow = {
   id: string;
@@ -28,9 +39,13 @@ const AgentPortal = () => {
   const navigate = useNavigate();
   const [agent, setAgent] = useState<AgentRow | null>(null);
   const [branchName, setBranchName] = useState<string | null>(null);
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", phone: "", branch_id: "__none__" });
 
   useEffect(() => {
     if (authLoading) return;
@@ -39,6 +54,8 @@ const AgentPortal = () => {
       return;
     }
     loadData();
+    supabase.from("branches").select("id, name").eq("is_active", true).order("name")
+      .then(({ data }) => setBranches(data || []));
   }, [user, authLoading]);
 
   const loadData = async () => {
@@ -88,6 +105,52 @@ const AgentPortal = () => {
     setCopied(true);
     toast.success("Link referral disalin");
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const openEdit = () => {
+    if (!agent) return;
+    setForm({
+      name: agent.name || "",
+      email: agent.email || "",
+      phone: agent.phone || "",
+      branch_id: agent.branch_id || "__none__",
+    });
+    setEditOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!agent) return;
+    const parsed = profileSchema.safeParse({
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      branch_id: form.branch_id === "__none__" ? null : form.branch_id,
+    });
+    if (!parsed.success) {
+      toast.error(parsed.error.errors[0]?.message || "Input tidak valid");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("agents")
+        .update({
+          name: parsed.data.name,
+          email: parsed.data.email || null,
+          phone: parsed.data.phone || null,
+          branch_id: parsed.data.branch_id,
+        })
+        .eq("id", agent.id);
+      if (error) throw error;
+      toast.success("Profil berhasil diperbarui");
+      setEditOpen(false);
+      await loadData();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Gagal menyimpan profil");
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Stats
@@ -171,12 +234,17 @@ const AgentPortal = () => {
 
           {/* Profil Agen */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <User className="w-4 h-4 text-primary" />
-                Profil Agen
-              </CardTitle>
-              <CardDescription>Informasi akun keagenan Anda</CardDescription>
+            <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <User className="w-4 h-4 text-primary" />
+                  Profil Agen
+                </CardTitle>
+                <CardDescription>Informasi akun keagenan Anda</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={openEdit}>
+                <Pencil className="w-3.5 h-3.5 mr-1.5" /> Edit
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -283,6 +351,69 @@ const AgentPortal = () => {
             </CardContent>
           </Card>
         </div>
+
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Profil Agen</DialogTitle>
+              <DialogDescription>Perbarui informasi keagenan Anda</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="agent-name">Nama *</Label>
+                <Input
+                  id="agent-name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  maxLength={100}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="agent-email">Email</Label>
+                <Input
+                  id="agent-email"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  maxLength={255}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="agent-phone">Telepon</Label>
+                <Input
+                  id="agent-phone"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  maxLength={20}
+                  placeholder="08xxx"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Cabang</Label>
+                <Select value={form.branch_id} onValueChange={(v) => setForm({ ...form, branch_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Pusat / Tanpa Cabang</SelectItem>
+                    {branches.map((br) => (
+                      <SelectItem key={br.id} value={br.id}>{br.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditOpen(false)} disabled={saving}>
+                Batal
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Simpan
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );
