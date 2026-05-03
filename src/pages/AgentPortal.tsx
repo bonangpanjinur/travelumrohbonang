@@ -27,6 +27,7 @@ const AgentPortal = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [agent, setAgent] = useState<AgentRow | null>(null);
+  const [branchName, setBranchName] = useState<string | null>(null);
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
