@@ -39,9 +39,13 @@ const AgentPortal = () => {
   const navigate = useNavigate();
   const [agent, setAgent] = useState<AgentRow | null>(null);
   const [branchName, setBranchName] = useState<string | null>(null);
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", phone: "", branch_id: "__none__" });
 
   useEffect(() => {
     if (authLoading) return;
@@ -50,6 +54,8 @@ const AgentPortal = () => {
       return;
     }
     loadData();
+    supabase.from("branches").select("id, name").eq("is_active", true).order("name")
+      .then(({ data }) => setBranches(data || []));
   }, [user, authLoading]);
 
   const loadData = async () => {
