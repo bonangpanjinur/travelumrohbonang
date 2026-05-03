@@ -325,4 +325,24 @@ const StatusBadge = ({ status }: { status: string }) => {
   return <Badge variant={cfg.variant} className="text-xs">{cfg.label}</Badge>;
 };
 
+const ProfileField = ({
+  icon: Icon,
+  label,
+  value,
+  mono,
+}: {
+  icon: any;
+  label: string;
+  value: string;
+  mono?: boolean;
+}) => (
+  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/40 border border-border">
+    <Icon className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+    <div className="min-w-0 flex-1">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`text-sm font-medium truncate ${mono ? "font-mono" : ""}`}>{value}</p>
+    </div>
+  </div>
+);
+
 export default AgentPortal;
