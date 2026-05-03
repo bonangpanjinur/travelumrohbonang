@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Briefcase, Users, DollarSign, TrendingUp, Copy, Check, ExternalLink, ShoppingBag } from "lucide-react";
+import { Briefcase, Users, DollarSign, TrendingUp, Copy, Check, ExternalLink, ShoppingBag, User, Mail, Phone, Building2, Percent } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -27,6 +27,7 @@ const AgentPortal = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [agent, setAgent] = useState<AgentRow | null>(null);
+  const [branchName, setBranchName] = useState<string | null>(null);
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -53,6 +54,15 @@ const AgentPortal = () => {
       setAgent(agentData as any);
 
       if (agentData) {
+        if (agentData.branch_id) {
+          const { data: br } = await supabase
+            .from("branches")
+            .select("name")
+            .eq("id", agentData.branch_id)
+            .maybeSingle();
+          setBranchName(br?.name || null);
+        }
+
         const { data: bookingData } = await supabase
           .from("bookings")
           .select("id, booking_code, total_price, status, created_at, packages(title)")
@@ -158,6 +168,32 @@ const AgentPortal = () => {
               color="text-primary"
             />
           </div>
+
+          {/* Profil Agen */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <User className="w-4 h-4 text-primary" />
+                Profil Agen
+              </CardTitle>
+              <CardDescription>Informasi akun keagenan Anda</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ProfileField icon={User} label="Nama" value={agent.name} />
+                <ProfileField icon={Mail} label="Email" value={agent.email || "-"} />
+                <ProfileField icon={Phone} label="Telepon" value={agent.phone || "-"} />
+                <ProfileField icon={Building2} label="Cabang" value={branchName || "Pusat / Tanpa Cabang"} />
+                <ProfileField icon={Percent} label="Komisi" value={`${agent.commission_percent}%`} />
+                <ProfileField
+                  icon={Briefcase}
+                  label="Kode Referral"
+                  value={agent.referral_code || "Belum diatur"}
+                  mono
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Referral */}
           <Card>
@@ -288,5 +324,25 @@ const StatusBadge = ({ status }: { status: string }) => {
   const cfg = map[status] || { label: status, variant: "outline" };
   return <Badge variant={cfg.variant} className="text-xs">{cfg.label}</Badge>;
 };
+
+const ProfileField = ({
+  icon: Icon,
+  label,
+  value,
+  mono,
+}: {
+  icon: any;
+  label: string;
+  value: string;
+  mono?: boolean;
+}) => (
+  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/40 border border-border">
+    <Icon className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+    <div className="min-w-0 flex-1">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`text-sm font-medium truncate ${mono ? "font-mono" : ""}`}>{value}</p>
+    </div>
+  </div>
+);
 
 export default AgentPortal;
