@@ -149,7 +149,7 @@ const AgentPortal = () => {
     const parsed = profileSchema.safeParse({
       name: form.name,
       email: form.email,
-      phone: form.phone,
+      phone: normalizePhone(form.phone),
       branch_id: form.branch_id === "__none__" ? null : form.branch_id,
     });
     if (!parsed.success) {
