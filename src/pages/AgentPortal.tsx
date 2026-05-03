@@ -54,6 +54,15 @@ const AgentPortal = () => {
       setAgent(agentData as any);
 
       if (agentData) {
+        if (agentData.branch_id) {
+          const { data: br } = await supabase
+            .from("branches")
+            .select("name")
+            .eq("id", agentData.branch_id)
+            .maybeSingle();
+          setBranchName(br?.name || null);
+        }
+
         const { data: bookingData } = await supabase
           .from("bookings")
           .select("id, booking_code, total_price, status, created_at, packages(title)")
