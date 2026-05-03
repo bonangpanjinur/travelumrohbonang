@@ -17,10 +17,36 @@ import { id as localeId } from "date-fns/locale";
 import { z } from "zod";
 import SEO from "@/components/SEO";
 
+/**
+ * Normalisasi nomor telepon ke format E.164 Indonesia (+62xxx).
+ * - Hapus spasi, tanda hubung, kurung
+ * - Awalan 0 → +62
+ * - Awalan 62 (tanpa +) → +62
+ * - Awalan 8 → +628
+ * - Sudah +62 → biarkan
+ */
+const normalizePhone = (raw: string): string => {
+  const cleaned = raw.replace(/[\s\-().]/g, "");
+  if (!cleaned) return "";
+  if (cleaned.startsWith("+62")) return "+" + cleaned.slice(1).replace(/\D/g, "");
+  const digits = cleaned.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("62")) return "+" + digits;
+  if (digits.startsWith("0")) return "+62" + digits.slice(1);
+  if (digits.startsWith("8")) return "+62" + digits;
+  return "+" + digits;
+};
+
 const profileSchema = z.object({
   name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100, "Nama maksimal 100 karakter"),
   email: z.string().trim().email("Email tidak valid").max(255).or(z.literal("")),
-  phone: z.string().trim().max(20, "Telepon maksimal 20 karakter").regex(/^[0-9+\-\s()]*$/, "Telepon hanya boleh angka").or(z.literal("")),
+  phone: z
+    .string()
+    .trim()
+    .refine(
+      (v) => v === "" || /^\+62\d{8,13}$/.test(v),
+      "Nomor telepon tidak valid (gunakan format Indonesia, mis. 081234567890)"
+    ),
   branch_id: z.string().nullable(),
 });
 
@@ -123,7 +149,7 @@ const AgentPortal = () => {
     const parsed = profileSchema.safeParse({
       name: form.name,
       email: form.email,
-      phone: form.phone,
+      phone: normalizePhone(form.phone),
       branch_id: form.branch_id === "__none__" ? null : form.branch_id,
     });
     if (!parsed.success) {
@@ -384,9 +410,13 @@ const AgentPortal = () => {
                   id="agent-phone"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  onBlur={(e) => setForm({ ...form, phone: normalizePhone(e.target.value) })}
                   maxLength={20}
-                  placeholder="08xxx"
+                  placeholder="08123456789"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Akan disimpan dalam format internasional (+62…)
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label>Cabang</Label>
