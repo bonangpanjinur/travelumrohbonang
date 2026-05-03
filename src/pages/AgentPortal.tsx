@@ -351,6 +351,69 @@ const AgentPortal = () => {
             </CardContent>
           </Card>
         </div>
+
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Profil Agen</DialogTitle>
+              <DialogDescription>Perbarui informasi keagenan Anda</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="agent-name">Nama *</Label>
+                <Input
+                  id="agent-name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  maxLength={100}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="agent-email">Email</Label>
+                <Input
+                  id="agent-email"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  maxLength={255}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="agent-phone">Telepon</Label>
+                <Input
+                  id="agent-phone"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  maxLength={20}
+                  placeholder="08xxx"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Cabang</Label>
+                <Select value={form.branch_id} onValueChange={(v) => setForm({ ...form, branch_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Pusat / Tanpa Cabang</SelectItem>
+                    {branches.map((br) => (
+                      <SelectItem key={br.id} value={br.id}>{br.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditOpen(false)} disabled={saving}>
+                Batal
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Simpan
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );
