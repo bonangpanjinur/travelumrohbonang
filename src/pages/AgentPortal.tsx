@@ -107,6 +107,52 @@ const AgentPortal = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const openEdit = () => {
+    if (!agent) return;
+    setForm({
+      name: agent.name || "",
+      email: agent.email || "",
+      phone: agent.phone || "",
+      branch_id: agent.branch_id || "__none__",
+    });
+    setEditOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!agent) return;
+    const parsed = profileSchema.safeParse({
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      branch_id: form.branch_id === "__none__" ? null : form.branch_id,
+    });
+    if (!parsed.success) {
+      toast.error(parsed.error.errors[0]?.message || "Input tidak valid");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("agents")
+        .update({
+          name: parsed.data.name,
+          email: parsed.data.email || null,
+          phone: parsed.data.phone || null,
+          branch_id: parsed.data.branch_id,
+        })
+        .eq("id", agent.id);
+      if (error) throw error;
+      toast.success("Profil berhasil diperbarui");
+      setEditOpen(false);
+      await loadData();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Gagal menyimpan profil");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Stats
   const paidBookings = bookings.filter((b) => b.status === "paid");
   const totalRevenue = paidBookings.reduce((s, b) => s + (Number(b.total_price) || 0), 0);
