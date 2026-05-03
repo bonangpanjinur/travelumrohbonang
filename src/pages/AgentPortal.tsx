@@ -169,6 +169,32 @@ const AgentPortal = () => {
             />
           </div>
 
+          {/* Profil Agen */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <User className="w-4 h-4 text-primary" />
+                Profil Agen
+              </CardTitle>
+              <CardDescription>Informasi akun keagenan Anda</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ProfileField icon={User} label="Nama" value={agent.name} />
+                <ProfileField icon={Mail} label="Email" value={agent.email || "-"} />
+                <ProfileField icon={Phone} label="Telepon" value={agent.phone || "-"} />
+                <ProfileField icon={Building2} label="Cabang" value={branchName || "Pusat / Tanpa Cabang"} />
+                <ProfileField icon={Percent} label="Komisi" value={`${agent.commission_percent}%`} />
+                <ProfileField
+                  icon={Briefcase}
+                  label="Kode Referral"
+                  value={agent.referral_code || "Belum diatur"}
+                  mono
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Referral */}
           <Card>
             <CardHeader className="pb-2">
