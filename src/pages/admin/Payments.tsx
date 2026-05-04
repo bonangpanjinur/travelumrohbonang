@@ -166,7 +166,7 @@ const AdminPayments = () => {
       </div>
 
       {/* Image Preview Dialog */}
-      <Dialog open={imageOpen} onOpenChange={(open) => { setImageOpen(open); setZoomLevel(1); }}>
+      <Dialog open={imageOpen} onOpenChange={(open) => { setImageOpen(open); setZoomLevel(1); if (!open) setProofViewUrl(null); }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
