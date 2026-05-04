@@ -40,6 +40,7 @@ const AdminPayments = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [proofViewUrl, setProofViewUrl] = useState<string | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [search, setSearch] = useState("");
@@ -165,7 +166,7 @@ const AdminPayments = () => {
       </div>
 
       {/* Image Preview Dialog */}
-      <Dialog open={imageOpen} onOpenChange={(open) => { setImageOpen(open); setZoomLevel(1); }}>
+      <Dialog open={imageOpen} onOpenChange={(open) => { setImageOpen(open); setZoomLevel(1); if (!open) setProofViewUrl(null); }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -176,7 +177,11 @@ const AdminPayments = () => {
           {selectedPayment?.proof_url && (
             <div className="space-y-4">
               <div className="relative overflow-auto max-h-[60vh] bg-muted rounded-lg">
-                <img src={selectedPayment.proof_url} alt="Bukti pembayaran" className="w-full transition-transform duration-200 cursor-zoom-in" style={{ transform: `scale(${zoomLevel})`, transformOrigin: "top left" }} onClick={handleZoom} />
+                {proofViewUrl ? (
+                  <img src={proofViewUrl} alt="Bukti pembayaran" className="w-full transition-transform duration-200 cursor-zoom-in" style={{ transform: `scale(${zoomLevel})`, transformOrigin: "top left" }} onClick={handleZoom} />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground text-sm">Memuat bukti…</div>
+                )}
                 <Button variant="secondary" size="sm" className="absolute top-2 right-2" onClick={handleZoom}>
                   <ZoomIn className="w-4 h-4 mr-1" />{Math.round(zoomLevel * 100)}%
                 </Button>
@@ -189,8 +194,8 @@ const AdminPayments = () => {
               </div>
               {selectedPayment.status === "pending" && (
                 <div className="flex justify-end gap-3">
-                  <Button variant="outline" asChild>
-                    <a href={selectedPayment.proof_url} download target="_blank" rel="noopener noreferrer"><Download className="w-4 h-4 mr-2" /> Download</a>
+                  <Button variant="outline" asChild disabled={!proofViewUrl}>
+                    <a href={proofViewUrl || "#"} download target="_blank" rel="noopener noreferrer"><Download className="w-4 h-4 mr-2" /> Download</a>
                   </Button>
                   <Button variant="outline" className="border-destructive/50 text-destructive hover:bg-destructive/10" onClick={() => { handleVerify(selectedPayment, false); setImageOpen(false); }}>
                     <XCircle className="w-4 h-4 mr-2" /> Tolak
@@ -239,7 +244,7 @@ const AdminPayments = () => {
                       <TableCell className="capitalize">{payment.payment_method || "-"}</TableCell>
                       <TableCell>
                         {payment.proof_url ? (
-                          <Button variant="ghost" size="sm" onClick={() => { setSelectedPayment(payment); setImageOpen(true); }} className="text-info hover:text-info/80">
+                          <Button variant="ghost" size="sm" onClick={async () => { setSelectedPayment(payment); setProofViewUrl(null); setImageOpen(true); const { getProofSignedUrl } = await import("@/lib/paymentProofs"); setProofViewUrl(await getProofSignedUrl(payment.proof_url)); }} className="text-info hover:text-info/80">
                             <Image className="w-4 h-4 mr-1" /> Lihat
                           </Button>
                         ) : <span className="text-muted-foreground text-sm">Tidak ada</span>}

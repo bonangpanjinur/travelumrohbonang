@@ -66,6 +66,7 @@ const TemplateUpgradesAdmin = () => {
   const [pricing, setPricing] = useState<TemplatePricing[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<UpgradeOrder | null>(null);
+  const [proofViewUrl, setProofViewUrl] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState("");
   const [confirmAction, setConfirmAction] = useState<{ order: UpgradeOrder; action: "confirmed" | "rejected" } | null>(null);
   const [editPricing, setEditPricing] = useState<TemplatePricing | null>(null);
@@ -219,7 +220,7 @@ const TemplateUpgradesAdmin = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(order)} title="Detail">
+                            <Button variant="ghost" size="icon" onClick={async () => { setSelectedOrder(order); setProofViewUrl(null); if (order.proof_url) { const { getProofSignedUrl } = await import("@/lib/paymentProofs"); setProofViewUrl(await getProofSignedUrl(order.proof_url)); } }} title="Detail">
                               <Eye className="w-4 h-4" />
                             </Button>
                             {(order.status === "pending" || order.status === "paid") && (
@@ -283,7 +284,7 @@ const TemplateUpgradesAdmin = () => {
       </Tabs>
 
       {/* Order Detail Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={o => !o && setSelectedOrder(null)}>
+      <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setProofViewUrl(null); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Detail Pengajuan Upgrade</DialogTitle>
@@ -325,7 +326,11 @@ const TemplateUpgradesAdmin = () => {
               {selectedOrder.proof_url && (
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Bukti Transfer</p>
-                  <img src={selectedOrder.proof_url} alt="Bukti Transfer" className="w-full max-h-64 object-contain rounded border" />
+                  {proofViewUrl ? (
+                    <img src={proofViewUrl} alt="Bukti Transfer" className="w-full max-h-64 object-contain rounded border" />
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Memuat bukti…</p>
+                  )}
                 </div>
               )}
               {selectedOrder.admin_notes && (
