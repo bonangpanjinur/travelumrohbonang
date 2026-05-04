@@ -16,26 +16,7 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { z } from "zod";
 import SEO from "@/components/SEO";
-
-/**
- * Normalisasi nomor telepon ke format E.164 Indonesia (+62xxx).
- * - Hapus spasi, tanda hubung, kurung
- * - Awalan 0 → +62
- * - Awalan 62 (tanpa +) → +62
- * - Awalan 8 → +628
- * - Sudah +62 → biarkan
- */
-const normalizePhone = (raw: string): string => {
-  const cleaned = raw.replace(/[\s\-().]/g, "");
-  if (!cleaned) return "";
-  if (cleaned.startsWith("+62")) return "+" + cleaned.slice(1).replace(/\D/g, "");
-  const digits = cleaned.replace(/\D/g, "");
-  if (!digits) return "";
-  if (digits.startsWith("62")) return "+" + digits;
-  if (digits.startsWith("0")) return "+62" + digits.slice(1);
-  if (digits.startsWith("8")) return "+62" + digits;
-  return "+" + digits;
-};
+import { normalizePhone, PHONE_REGEX } from "@/lib/phone";
 
 const profileSchema = z.object({
   name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100, "Nama maksimal 100 karakter"),
@@ -44,8 +25,8 @@ const profileSchema = z.object({
     .string()
     .trim()
     .refine(
-      (v) => v === "" || /^\+62\d{8,13}$/.test(v),
-      "Nomor telepon tidak valid (gunakan format Indonesia, mis. 081234567890)"
+      (v) => v === "" || PHONE_REGEX.test(v),
+      "Nomor telepon tidak valid. Gunakan nomor seluler Indonesia (+62 8xx, total 10–13 digit setelah +62)."
     ),
   branch_id: z.string().nullable(),
 });
@@ -414,9 +395,19 @@ const AgentPortal = () => {
                   maxLength={20}
                   placeholder="08123456789"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Akan disimpan dalam format internasional (+62…)
-                </p>
+                {(() => {
+                  const preview = normalizePhone(form.phone);
+                  if (!form.phone.trim()) return (
+                    <p className="text-xs text-muted-foreground">Akan disimpan dalam format internasional (+62…)</p>
+                  );
+                  const valid = PHONE_REGEX.test(preview);
+                  return (
+                    <p className={`text-xs font-mono ${valid ? "text-success" : "text-destructive"}`}>
+                      {valid ? "✓ " : "✗ "}{preview || "(kosong)"}
+                      {!valid && <span className="font-sans ml-1">— format belum valid</span>}
+                    </p>
+                  );
+                })()}
               </div>
               <div className="space-y-1.5">
                 <Label>Cabang</Label>

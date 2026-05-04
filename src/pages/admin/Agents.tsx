@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Users, Building2, Percent, Phone, Search, Download } from "lucide-react";
 import { exportToCsv } from "@/lib/exportCsv";
+import { normalizePhone } from "@/lib/phone";
 import AdminPagination from "@/components/admin/AdminPagination";
 import { useAdminPagination } from "@/hooks/useAdminPagination";
 import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
@@ -173,8 +174,13 @@ const AdminAgents = () => {
   };
 
   const filteredAgents = agents.filter((agent) => {
-    const matchSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (agent.phone?.toLowerCase().includes(searchTerm.toLowerCase()));
+    const term = searchTerm.trim().toLowerCase();
+    const normalizedTerm = normalizePhone(searchTerm).toLowerCase();
+    const agentPhoneNorm = normalizePhone(agent.phone || "").toLowerCase();
+    const matchSearch = !term ||
+      agent.name.toLowerCase().includes(term) ||
+      (agent.phone?.toLowerCase().includes(term)) ||
+      (normalizedTerm && agentPhoneNorm.includes(normalizedTerm));
     const matchBranch = filterBranch === "all" || agent.branch_id === filterBranch;
     return matchSearch && matchBranch;
   });
