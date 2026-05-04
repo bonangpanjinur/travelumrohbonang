@@ -326,7 +326,11 @@ const TemplateUpgradesAdmin = () => {
               {selectedOrder.proof_url && (
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Bukti Transfer</p>
-                  <img src={selectedOrder.proof_url} alt="Bukti Transfer" className="w-full max-h-64 object-contain rounded border" />
+                  {proofViewUrl ? (
+                    <img src={proofViewUrl} alt="Bukti Transfer" className="w-full max-h-64 object-contain rounded border" />
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Memuat bukti…</p>
+                  )}
                 </div>
               )}
               {selectedOrder.admin_notes && (
