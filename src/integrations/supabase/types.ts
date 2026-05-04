@@ -1939,6 +1939,7 @@ export type Database = {
       get_user_branch_id: { Args: { _user_id: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      normalize_phone_id: { Args: { raw: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
