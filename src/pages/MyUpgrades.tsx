@@ -265,15 +265,19 @@ const MyUpgrades = () => {
                     </div>
 
                     {order.proof_url && (
-                      <a
-                        href={order.proof_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const { getProofSignedUrl } = await import("@/lib/paymentProofs");
+                          const url = await getProofSignedUrl(order.proof_url);
+                          if (url) window.open(url, "_blank", "noopener,noreferrer");
+                          else toast.error("Gagal memuat bukti transfer");
+                        }}
                         className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                       >
                         <ExternalLink className="w-3 h-3" />
                         Lihat Bukti Transfer
-                      </a>
+                      </button>
                     )}
 
                     {/* Upload area for pending orders without proof */}
