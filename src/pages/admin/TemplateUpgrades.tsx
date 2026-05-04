@@ -220,7 +220,7 @@ const TemplateUpgradesAdmin = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(order)} title="Detail">
+                            <Button variant="ghost" size="icon" onClick={async () => { setSelectedOrder(order); setProofViewUrl(null); if (order.proof_url) { const { getProofSignedUrl } = await import("@/lib/paymentProofs"); setProofViewUrl(await getProofSignedUrl(order.proof_url)); } }} title="Detail">
                               <Eye className="w-4 h-4" />
                             </Button>
                             {(order.status === "pending" || order.status === "paid") && (
