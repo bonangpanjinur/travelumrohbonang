@@ -40,6 +40,7 @@ const AdminPayments = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [proofViewUrl, setProofViewUrl] = useState<string | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [search, setSearch] = useState("");
