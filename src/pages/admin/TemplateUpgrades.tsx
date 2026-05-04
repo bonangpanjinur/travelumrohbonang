@@ -284,7 +284,7 @@ const TemplateUpgradesAdmin = () => {
       </Tabs>
 
       {/* Order Detail Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={o => !o && setSelectedOrder(null)}>
+      <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setProofViewUrl(null); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Detail Pengajuan Upgrade</DialogTitle>
