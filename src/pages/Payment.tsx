@@ -213,23 +213,21 @@ const Payment = () => {
     reader.onload = () => setProofPreview(reader.result as string);
     reader.readAsDataURL(file);
 
-    setUploading(true);
-    const fileName = `${booking.booking_code}-${Date.now()}.${file.name.split(".").pop()}`;
-    
-    const { data, error } = await supabase.storage
-      .from("payment-proofs")
-      .upload(fileName, file, { upsert: true });
-
-    if (error) {
-      toast({ title: "Gagal upload", description: error.message, variant: "destructive" });
-      setUploading(false);
+    if (!user) {
+      toast({ title: "Anda harus login", variant: "destructive" });
       return;
     }
-
-    const { data: { publicUrl } } = supabase.storage.from("payment-proofs").getPublicUrl(data.path);
-    setProofUrl(publicUrl);
-    setUploading(false);
-    toast({ title: "Bukti pembayaran berhasil diupload!" });
+    setUploading(true);
+    try {
+      const { uploadPaymentProof } = await import("@/lib/paymentProofs");
+      const path = await uploadPaymentProof(user.id, file, booking.booking_code);
+      setProofUrl(path);
+      toast({ title: "Bukti pembayaran berhasil diupload!" });
+    } catch (error: any) {
+      toast({ title: "Gagal upload", description: error.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleConfirmPayment = async () => {
