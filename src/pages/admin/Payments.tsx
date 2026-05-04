@@ -177,7 +177,11 @@ const AdminPayments = () => {
           {selectedPayment?.proof_url && (
             <div className="space-y-4">
               <div className="relative overflow-auto max-h-[60vh] bg-muted rounded-lg">
-                <img src={selectedPayment.proof_url} alt="Bukti pembayaran" className="w-full transition-transform duration-200 cursor-zoom-in" style={{ transform: `scale(${zoomLevel})`, transformOrigin: "top left" }} onClick={handleZoom} />
+                {proofViewUrl ? (
+                  <img src={proofViewUrl} alt="Bukti pembayaran" className="w-full transition-transform duration-200 cursor-zoom-in" style={{ transform: `scale(${zoomLevel})`, transformOrigin: "top left" }} onClick={handleZoom} />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground text-sm">Memuat bukti…</div>
+                )}
                 <Button variant="secondary" size="sm" className="absolute top-2 right-2" onClick={handleZoom}>
                   <ZoomIn className="w-4 h-4 mr-1" />{Math.round(zoomLevel * 100)}%
                 </Button>
