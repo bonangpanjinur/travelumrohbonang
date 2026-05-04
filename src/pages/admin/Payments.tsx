@@ -244,7 +244,7 @@ const AdminPayments = () => {
                       <TableCell className="capitalize">{payment.payment_method || "-"}</TableCell>
                       <TableCell>
                         {payment.proof_url ? (
-                          <Button variant="ghost" size="sm" onClick={() => { setSelectedPayment(payment); setImageOpen(true); }} className="text-info hover:text-info/80">
+                          <Button variant="ghost" size="sm" onClick={async () => { setSelectedPayment(payment); setProofViewUrl(null); setImageOpen(true); const { getProofSignedUrl } = await import("@/lib/paymentProofs"); setProofViewUrl(await getProofSignedUrl(payment.proof_url)); }} className="text-info hover:text-info/80">
                             <Image className="w-4 h-4 mr-1" /> Lihat
                           </Button>
                         ) : <span className="text-muted-foreground text-sm">Tidak ada</span>}
