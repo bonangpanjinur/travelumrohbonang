@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Users, Building2, Percent, Phone, Search, Download } from "lucide-react";
 import { exportToCsv } from "@/lib/exportCsv";
+import { normalizePhone } from "@/lib/phone";
 import AdminPagination from "@/components/admin/AdminPagination";
 import { useAdminPagination } from "@/hooks/useAdminPagination";
 import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
