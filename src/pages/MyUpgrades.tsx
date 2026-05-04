@@ -105,7 +105,7 @@ const MyUpgrades = () => {
     setUploadingId(orderId);
     try {
       const ext = file.name.split(".").pop() || "jpg";
-      const path = `upgrade-proofs/${user.id}/${Date.now()}.${ext}`;
+      const path = `${user.id}/upgrade-${orderId}-${Date.now()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("payment-proofs")
@@ -113,13 +113,9 @@ const MyUpgrades = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from("payment-proofs")
-        .getPublicUrl(path);
-
       const { error: updateError } = await supabase
         .from("template_upgrade_orders")
-        .update({ proof_url: urlData.publicUrl, status: "paid" })
+        .update({ proof_url: path, status: "paid" })
         .eq("id", orderId)
         .eq("requested_by", user.id);
 
