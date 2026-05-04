@@ -121,11 +121,10 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
     setUploading(true);
     try {
       const ext = proofFile.name.split(".").pop() || "jpg";
-      const path = `upgrade-proofs/${user.id}/${Date.now()}.${ext}`;
+      const path = `${user.id}/upgrade-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("payment-proofs").upload(path, proofFile);
       if (error) throw error;
-      const { data: urlData } = supabase.storage.from("payment-proofs").getPublicUrl(path);
-      return urlData.publicUrl;
+      return path;
     } catch (err: any) {
       toast.error("Gagal upload bukti: " + err.message);
       return null;
