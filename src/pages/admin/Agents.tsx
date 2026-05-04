@@ -174,8 +174,13 @@ const AdminAgents = () => {
   };
 
   const filteredAgents = agents.filter((agent) => {
-    const matchSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (agent.phone?.toLowerCase().includes(searchTerm.toLowerCase()));
+    const term = searchTerm.trim().toLowerCase();
+    const normalizedTerm = normalizePhone(searchTerm).toLowerCase();
+    const agentPhoneNorm = normalizePhone(agent.phone || "").toLowerCase();
+    const matchSearch = !term ||
+      agent.name.toLowerCase().includes(term) ||
+      (agent.phone?.toLowerCase().includes(term)) ||
+      (normalizedTerm && agentPhoneNorm.includes(normalizedTerm));
     const matchBranch = filterBranch === "all" || agent.branch_id === filterBranch;
     return matchSearch && matchBranch;
   });
