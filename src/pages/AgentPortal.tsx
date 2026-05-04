@@ -395,9 +395,19 @@ const AgentPortal = () => {
                   maxLength={20}
                   placeholder="08123456789"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Akan disimpan dalam format internasional (+62…)
-                </p>
+                {(() => {
+                  const preview = normalizePhone(form.phone);
+                  if (!form.phone.trim()) return (
+                    <p className="text-xs text-muted-foreground">Akan disimpan dalam format internasional (+62…)</p>
+                  );
+                  const valid = PHONE_REGEX.test(preview);
+                  return (
+                    <p className={`text-xs font-mono ${valid ? "text-success" : "text-destructive"}`}>
+                      {valid ? "✓ " : "✗ "}{preview || "(kosong)"}
+                      {!valid && <span className="font-sans ml-1">— format belum valid</span>}
+                    </p>
+                  );
+                })()}
               </div>
               <div className="space-y-1.5">
                 <Label>Cabang</Label>
