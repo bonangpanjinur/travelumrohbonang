@@ -183,12 +183,17 @@ const AdminPayments = () => {
           {selectedPayment?.proof_url && (
             <div className="space-y-4">
               <div className="relative overflow-auto max-h-[60vh] bg-muted rounded-lg">
-                {proofViewUrl ? (
+                {proofLoading ? (
+                  <div className="p-8 flex items-center justify-center gap-2 text-muted-foreground text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Memuat bukti…</div>
+                ) : proofError ? (
+                  <div className="p-8 flex flex-col items-center gap-2 text-destructive text-sm">
+                    <AlertCircle className="w-5 h-5" /> {proofError}
+                    <Button variant="outline" size="sm" onClick={reloadProof}><RefreshCw className="w-3.5 h-3.5 mr-1" /> Coba lagi</Button>
+                  </div>
+                ) : proofViewUrl ? (
                   <img src={proofViewUrl} alt="Bukti pembayaran" className="w-full transition-transform duration-200 cursor-zoom-in" style={{ transform: `scale(${zoomLevel})`, transformOrigin: "top left" }} onClick={handleZoom} />
-                ) : (
-                  <div className="p-8 text-center text-muted-foreground text-sm">Memuat bukti…</div>
-                )}
-                <Button variant="secondary" size="sm" className="absolute top-2 right-2" onClick={handleZoom}>
+                ) : null}
+                <Button variant="secondary" size="sm" className="absolute top-2 right-2" onClick={handleZoom} disabled={!proofViewUrl}>
                   <ZoomIn className="w-4 h-4 mr-1" />{Math.round(zoomLevel * 100)}%
                 </Button>
               </div>
