@@ -13,8 +13,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Check, X, Eye, Crown, Settings, ArrowUpCircle } from "lucide-react";
+import { Check, X, Eye, Crown, Settings, ArrowUpCircle, Loader2, AlertCircle, RefreshCw, Download } from "lucide-react";
 import ConfirmAlertDialog from "@/components/admin/ConfirmAlertDialog";
+import { useProofUrl } from "@/hooks/useProofUrl";
 
 interface UpgradeOrder {
   id: string;
@@ -66,7 +67,11 @@ const TemplateUpgradesAdmin = () => {
   const [pricing, setPricing] = useState<TemplatePricing[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<UpgradeOrder | null>(null);
-  const [proofViewUrl, setProofViewUrl] = useState<string | null>(null);
+  const { url: proofViewUrl, loading: proofLoading, error: proofError, reload: reloadProof } = useProofUrl(
+    selectedOrder?.proof_url ?? null,
+    !!selectedOrder,
+    "admin/template-upgrades"
+  );
   const [adminNotes, setAdminNotes] = useState("");
   const [confirmAction, setConfirmAction] = useState<{ order: UpgradeOrder; action: "confirmed" | "rejected" } | null>(null);
   const [editPricing, setEditPricing] = useState<TemplatePricing | null>(null);
@@ -220,7 +225,7 @@ const TemplateUpgradesAdmin = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={async () => { setSelectedOrder(order); setProofViewUrl(null); if (order.proof_url) { const { getProofSignedUrl } = await import("@/lib/paymentProofs"); setProofViewUrl(await getProofSignedUrl(order.proof_url)); } }} title="Detail">
+                            <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(order)} title="Detail">
                               <Eye className="w-4 h-4" />
                             </Button>
                             {(order.status === "pending" || order.status === "paid") && (
@@ -284,7 +289,7 @@ const TemplateUpgradesAdmin = () => {
       </Tabs>
 
       {/* Order Detail Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setProofViewUrl(null); } }}>
+      <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) setSelectedOrder(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Detail Pengajuan Upgrade</DialogTitle>
@@ -325,12 +330,28 @@ const TemplateUpgradesAdmin = () => {
               )}
               {selectedOrder.proof_url && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Bukti Transfer</p>
-                  {proofViewUrl ? (
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm text-muted-foreground">Bukti Transfer</p>
+                    {proofViewUrl ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={proofViewUrl} download target="_blank" rel="noopener noreferrer"><Download className="w-3.5 h-3.5 mr-1" /> Download</a>
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" disabled>
+                        {proofLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1" />} Download
+                      </Button>
+                    )}
+                  </div>
+                  {proofLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground p-4 border rounded justify-center"><Loader2 className="w-4 h-4 animate-spin" /> Memuat bukti…</div>
+                  ) : proofError ? (
+                    <div className="flex flex-col items-center gap-2 text-xs text-destructive p-4 border rounded">
+                      <AlertCircle className="w-5 h-5" /> {proofError}
+                      <Button variant="outline" size="sm" onClick={reloadProof}><RefreshCw className="w-3 h-3 mr-1" /> Coba lagi</Button>
+                    </div>
+                  ) : proofViewUrl ? (
                     <img src={proofViewUrl} alt="Bukti Transfer" className="w-full max-h-64 object-contain rounded border" />
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Memuat bukti…</p>
-                  )}
+                  ) : null}
                 </div>
               )}
               {selectedOrder.admin_notes && (

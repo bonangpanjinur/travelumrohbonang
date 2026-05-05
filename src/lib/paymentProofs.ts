@@ -1,33 +1,85 @@
 import { supabase } from "@/integrations/supabase/client";
 
 const BUCKET = "payment-proofs";
+const DEFAULT_TTL = 300; // 5 menit
+// Refresh sedikit lebih awal supaya URL tidak basi di tengah jalan
+const SAFETY_WINDOW = 15; // detik
+
+interface CacheEntry {
+  url: string;
+  expiresAt: number; // epoch ms
+}
+
+const cache = new Map<string, CacheEntry>();
+
+/** Ekstrak path relatif dari URL publik lama atau path tersimpan. */
+function resolvePath(stored: string): string {
+  if (!stored.startsWith("http")) return stored;
+  const marker = `/${BUCKET}/`;
+  const idx = stored.indexOf(marker);
+  if (idx === -1) return stored;
+  return stored.slice(idx + marker.length);
+}
+
+async function logAccess(path: string, context?: string) {
+  try {
+    const { data } = await supabase.auth.getUser();
+    const uid = data.user?.id;
+    if (!uid) return;
+    await supabase.from("payment_proof_access_logs").insert({
+      user_id: uid,
+      proof_path: path,
+      context: context ?? null,
+      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+    });
+  } catch (e) {
+    // jangan blokir UX karena gagal log
+    console.warn("logAccess failed", e);
+  }
+}
 
 /**
- * Bucket payment-proofs sekarang privat. URL publik tidak akan bekerja —
- * gunakan signed URL berdurasi pendek.
- *
- * Field DB `proof_url` bisa berisi:
- * - path relatif baru (mis. "<user_id>/file.jpg") → buat signed URL
- * - URL publik lama (https://…) → fallback: ekstrak path setelah "/payment-proofs/"
+ * Bucket payment-proofs privat → gunakan signed URL berdurasi pendek.
+ * Hasil di-cache sampai sisa waktu < SAFETY_WINDOW.
  */
 export async function getProofSignedUrl(
   stored: string | null | undefined,
-  expiresIn = 300
+  expiresIn: number = DEFAULT_TTL,
+  options: { context?: string; skipLog?: boolean } = {}
 ): Promise<string | null> {
   if (!stored) return null;
-  let path = stored;
-  if (stored.startsWith("http")) {
-    const marker = `/${BUCKET}/`;
-    const idx = stored.indexOf(marker);
-    if (idx === -1) return stored; // tidak bisa diparse, pakai apa adanya
-    path = stored.slice(idx + marker.length);
+  const path = resolvePath(stored);
+  if (!path) return null;
+
+  const now = Date.now();
+  const cached = cache.get(path);
+  if (cached && cached.expiresAt - now > SAFETY_WINDOW * 1000) {
+    if (!options.skipLog) void logAccess(path, options.context);
+    return cached.url;
   }
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, expiresIn);
-  if (error) {
-    console.warn("getProofSignedUrl failed", error.message);
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(path, expiresIn);
+
+  if (error || !data?.signedUrl) {
+    console.warn("getProofSignedUrl failed", error?.message);
+    cache.delete(path);
     return null;
   }
+
+  cache.set(path, {
+    url: data.signedUrl,
+    expiresAt: now + expiresIn * 1000,
+  });
+
+  if (!options.skipLog) void logAccess(path, options.context);
   return data.signedUrl;
+}
+
+/** Bersihkan cache (mis. saat logout / unit test). */
+export function clearProofUrlCache() {
+  cache.clear();
 }
 
 /** Upload bukti bayar ke folder pengguna (sesuai RLS). Mengembalikan path tersimpan. */

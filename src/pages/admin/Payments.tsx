@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Eye, CheckCircle, XCircle, Image, DollarSign, FileText, Download, ZoomIn, Search } from "lucide-react";
+import { Eye, CheckCircle, XCircle, Image, DollarSign, FileText, Download, ZoomIn, Search, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import LoadingSpinner from "@/components/ui/loading-spinner";
+import { useProofUrl } from "@/hooks/useProofUrl";
 import { exportToCsv } from "@/lib/exportCsv";
 import EmptyState from "@/components/ui/empty-state";
 import ErrorAlert from "@/components/ui/error-alert";
@@ -40,13 +41,18 @@ const AdminPayments = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [proofViewUrl, setProofViewUrl] = useState<string | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const { toast } = useToast();
   const [verifyTarget, setVerifyTarget] = useState<{ payment: Payment; approve: boolean } | null>(null);
+
+  const { url: proofViewUrl, loading: proofLoading, error: proofError, reload: reloadProof } = useProofUrl(
+    selectedPayment?.proof_url ?? null,
+    imageOpen,
+    "admin/payments"
+  );
 
   const filteredPayments = payments.filter((p) => {
     const matchSearch = !search || p.booking?.booking_code?.toLowerCase().includes(search.toLowerCase());
@@ -166,7 +172,7 @@ const AdminPayments = () => {
       </div>
 
       {/* Image Preview Dialog */}
-      <Dialog open={imageOpen} onOpenChange={(open) => { setImageOpen(open); setZoomLevel(1); if (!open) setProofViewUrl(null); }}>
+      <Dialog open={imageOpen} onOpenChange={(open) => { setImageOpen(open); setZoomLevel(1); }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -177,12 +183,17 @@ const AdminPayments = () => {
           {selectedPayment?.proof_url && (
             <div className="space-y-4">
               <div className="relative overflow-auto max-h-[60vh] bg-muted rounded-lg">
-                {proofViewUrl ? (
+                {proofLoading ? (
+                  <div className="p-8 flex items-center justify-center gap-2 text-muted-foreground text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Memuat bukti…</div>
+                ) : proofError ? (
+                  <div className="p-8 flex flex-col items-center gap-2 text-destructive text-sm">
+                    <AlertCircle className="w-5 h-5" /> {proofError}
+                    <Button variant="outline" size="sm" onClick={reloadProof}><RefreshCw className="w-3.5 h-3.5 mr-1" /> Coba lagi</Button>
+                  </div>
+                ) : proofViewUrl ? (
                   <img src={proofViewUrl} alt="Bukti pembayaran" className="w-full transition-transform duration-200 cursor-zoom-in" style={{ transform: `scale(${zoomLevel})`, transformOrigin: "top left" }} onClick={handleZoom} />
-                ) : (
-                  <div className="p-8 text-center text-muted-foreground text-sm">Memuat bukti…</div>
-                )}
-                <Button variant="secondary" size="sm" className="absolute top-2 right-2" onClick={handleZoom}>
+                ) : null}
+                <Button variant="secondary" size="sm" className="absolute top-2 right-2" onClick={handleZoom} disabled={!proofViewUrl}>
                   <ZoomIn className="w-4 h-4 mr-1" />{Math.round(zoomLevel * 100)}%
                 </Button>
               </div>
@@ -194,9 +205,15 @@ const AdminPayments = () => {
               </div>
               {selectedPayment.status === "pending" && (
                 <div className="flex justify-end gap-3">
-                  <Button variant="outline" asChild disabled={!proofViewUrl}>
-                    <a href={proofViewUrl || "#"} download target="_blank" rel="noopener noreferrer"><Download className="w-4 h-4 mr-2" /> Download</a>
-                  </Button>
+                  {proofViewUrl ? (
+                    <Button variant="outline" asChild>
+                      <a href={proofViewUrl} download target="_blank" rel="noopener noreferrer"><Download className="w-4 h-4 mr-2" /> Download</a>
+                    </Button>
+                  ) : (
+                    <Button variant="outline" disabled>
+                      {proofLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />} Download
+                    </Button>
+                  )}
                   <Button variant="outline" className="border-destructive/50 text-destructive hover:bg-destructive/10" onClick={() => { handleVerify(selectedPayment, false); setImageOpen(false); }}>
                     <XCircle className="w-4 h-4 mr-2" /> Tolak
                   </Button>
@@ -244,7 +261,7 @@ const AdminPayments = () => {
                       <TableCell className="capitalize">{payment.payment_method || "-"}</TableCell>
                       <TableCell>
                         {payment.proof_url ? (
-                          <Button variant="ghost" size="sm" onClick={async () => { setSelectedPayment(payment); setProofViewUrl(null); setImageOpen(true); const { getProofSignedUrl } = await import("@/lib/paymentProofs"); setProofViewUrl(await getProofSignedUrl(payment.proof_url)); }} className="text-info hover:text-info/80">
+                          <Button variant="ghost" size="sm" onClick={() => { setSelectedPayment(payment); setImageOpen(true); }} className="text-info hover:text-info/80">
                             <Image className="w-4 h-4 mr-1" /> Lihat
                           </Button>
                         ) : <span className="text-muted-foreground text-sm">Tidak ada</span>}
