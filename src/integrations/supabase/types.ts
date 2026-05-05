@@ -1392,6 +1392,36 @@ export type Database = {
           },
         ]
       }
+      payment_proof_access_logs: {
+        Row: {
+          context: string | null
+          created_at: string
+          id: string
+          ip: string | null
+          proof_path: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          ip?: string | null
+          proof_path: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          ip?: string | null
+          proof_path?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
