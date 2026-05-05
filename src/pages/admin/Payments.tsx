@@ -41,13 +41,18 @@ const AdminPayments = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [proofViewUrl, setProofViewUrl] = useState<string | null>(null);
   const [imageOpen, setImageOpen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const { toast } = useToast();
   const [verifyTarget, setVerifyTarget] = useState<{ payment: Payment; approve: boolean } | null>(null);
+
+  const { url: proofViewUrl, loading: proofLoading, error: proofError, reload: reloadProof } = useProofUrl(
+    selectedPayment?.proof_url ?? null,
+    imageOpen,
+    "admin/payments"
+  );
 
   const filteredPayments = payments.filter((p) => {
     const matchSearch = !search || p.booking?.booking_code?.toLowerCase().includes(search.toLowerCase());
