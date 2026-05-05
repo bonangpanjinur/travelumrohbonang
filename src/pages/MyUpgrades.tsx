@@ -268,16 +268,26 @@ const MyUpgrades = () => {
                     {order.proof_url && (
                       <button
                         type="button"
+                        disabled={openingProofId === order.id}
                         onClick={async () => {
-                          const { getProofSignedUrl } = await import("@/lib/paymentProofs");
-                          const url = await getProofSignedUrl(order.proof_url);
-                          if (url) window.open(url, "_blank", "noopener,noreferrer");
-                          else toast.error("Gagal memuat bukti transfer");
+                          setOpeningProofId(order.id);
+                          try {
+                            const { getProofSignedUrl } = await import("@/lib/paymentProofs");
+                            const url = await getProofSignedUrl(order.proof_url, 300, { context: "my-upgrades" });
+                            if (url) window.open(url, "_blank", "noopener,noreferrer");
+                            else toast.error("Gagal memuat bukti transfer");
+                          } finally {
+                            setOpeningProofId(null);
+                          }
                         }}
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-60 disabled:cursor-wait"
                       >
-                        <ExternalLink className="w-3 h-3" />
-                        Lihat Bukti Transfer
+                        {openingProofId === order.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <ExternalLink className="w-3 h-3" />
+                        )}
+                        {openingProofId === order.id ? "Memuat…" : "Lihat Bukti Transfer"}
                       </button>
                     )}
 
