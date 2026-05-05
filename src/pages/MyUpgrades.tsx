@@ -52,6 +52,7 @@ const MyUpgrades = () => {
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [openingProofId, setOpeningProofId] = useState<string | null>(null);
   const fetchOrders = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
