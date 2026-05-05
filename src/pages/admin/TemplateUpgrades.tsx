@@ -67,7 +67,11 @@ const TemplateUpgradesAdmin = () => {
   const [pricing, setPricing] = useState<TemplatePricing[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<UpgradeOrder | null>(null);
-  const [proofViewUrl, setProofViewUrl] = useState<string | null>(null);
+  const { url: proofViewUrl, loading: proofLoading, error: proofError, reload: reloadProof } = useProofUrl(
+    selectedOrder?.proof_url ?? null,
+    !!selectedOrder,
+    "admin/template-upgrades"
+  );
   const [adminNotes, setAdminNotes] = useState("");
   const [confirmAction, setConfirmAction] = useState<{ order: UpgradeOrder; action: "confirmed" | "rejected" } | null>(null);
   const [editPricing, setEditPricing] = useState<TemplatePricing | null>(null);
