@@ -92,6 +92,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Akuntansi & Keuangan", href: "/admin/accounting", icon: BarChart3, premium: true, premiumFeature: "Akuntansi & Keuangan" },
       { label: "Payment Gateway", href: "/admin/payment-gateway", icon: Wallet, premium: true, premiumFeature: "Integrasi Payment Gateway" },
       { label: "Laporan", href: "/admin/reports", icon: FileText },
+      { label: "Histori Akses Bukti", href: "/admin/proof-access-logs", icon: ShieldCheck },
     ],
   },
   {
