@@ -73,6 +73,7 @@ import AdminTenantSites from "./pages/admin/TenantSites";
 import AdminTemplateUpgrades from "./pages/admin/TemplateUpgrades";
 import AdminInstallments from "./pages/admin/Installments";
 import AdminManifest from "./pages/admin/Manifest";
+import AdminProofAccessLogs from "./pages/admin/PaymentProofAccessLogs";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
@@ -155,6 +156,7 @@ const AppContent = () => {
           <Route path="template-upgrades" element={<AdminTemplateUpgrades />} />
           <Route path="installments" element={<AdminInstallments />} />
           <Route path="manifest" element={<AdminManifest />} />
+          <Route path="proof-access-logs" element={<AdminProofAccessLogs />} />
         </Route>
       </Route>
 
