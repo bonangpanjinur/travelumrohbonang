@@ -330,12 +330,28 @@ const TemplateUpgradesAdmin = () => {
               )}
               {selectedOrder.proof_url && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Bukti Transfer</p>
-                  {proofViewUrl ? (
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-sm text-muted-foreground">Bukti Transfer</p>
+                    {proofViewUrl ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={proofViewUrl} download target="_blank" rel="noopener noreferrer"><Download className="w-3.5 h-3.5 mr-1" /> Download</a>
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" disabled>
+                        {proofLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1" />} Download
+                      </Button>
+                    )}
+                  </div>
+                  {proofLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground p-4 border rounded justify-center"><Loader2 className="w-4 h-4 animate-spin" /> Memuat bukti…</div>
+                  ) : proofError ? (
+                    <div className="flex flex-col items-center gap-2 text-xs text-destructive p-4 border rounded">
+                      <AlertCircle className="w-5 h-5" /> {proofError}
+                      <Button variant="outline" size="sm" onClick={reloadProof}><RefreshCw className="w-3 h-3 mr-1" /> Coba lagi</Button>
+                    </div>
+                  ) : proofViewUrl ? (
                     <img src={proofViewUrl} alt="Bukti Transfer" className="w-full max-h-64 object-contain rounded border" />
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Memuat bukti…</p>
-                  )}
+                  ) : null}
                 </div>
               )}
               {selectedOrder.admin_notes && (
