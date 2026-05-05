@@ -30,6 +30,7 @@ import {
   ArrowUpCircle,
   ClipboardList,
   Receipt,
+  ShieldCheck,
   LucideIcon
 } from "lucide-react";
 
