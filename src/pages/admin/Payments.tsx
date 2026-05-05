@@ -205,9 +205,15 @@ const AdminPayments = () => {
               </div>
               {selectedPayment.status === "pending" && (
                 <div className="flex justify-end gap-3">
-                  <Button variant="outline" asChild disabled={!proofViewUrl}>
-                    <a href={proofViewUrl || "#"} download target="_blank" rel="noopener noreferrer"><Download className="w-4 h-4 mr-2" /> Download</a>
-                  </Button>
+                  {proofViewUrl ? (
+                    <Button variant="outline" asChild>
+                      <a href={proofViewUrl} download target="_blank" rel="noopener noreferrer"><Download className="w-4 h-4 mr-2" /> Download</a>
+                    </Button>
+                  ) : (
+                    <Button variant="outline" disabled>
+                      {proofLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />} Download
+                    </Button>
+                  )}
                   <Button variant="outline" className="border-destructive/50 text-destructive hover:bg-destructive/10" onClick={() => { handleVerify(selectedPayment, false); setImageOpen(false); }}>
                     <XCircle className="w-4 h-4 mr-2" /> Tolak
                   </Button>
