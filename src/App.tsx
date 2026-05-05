@@ -156,6 +156,7 @@ const AppContent = () => {
           <Route path="template-upgrades" element={<AdminTemplateUpgrades />} />
           <Route path="installments" element={<AdminInstallments />} />
           <Route path="manifest" element={<AdminManifest />} />
+          <Route path="proof-access-logs" element={<AdminProofAccessLogs />} />
         </Route>
       </Route>
 
