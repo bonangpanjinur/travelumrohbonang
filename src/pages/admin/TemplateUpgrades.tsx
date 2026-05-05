@@ -13,8 +13,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Check, X, Eye, Crown, Settings, ArrowUpCircle } from "lucide-react";
+import { Check, X, Eye, Crown, Settings, ArrowUpCircle, Loader2, AlertCircle, RefreshCw, Download } from "lucide-react";
 import ConfirmAlertDialog from "@/components/admin/ConfirmAlertDialog";
+import { useProofUrl } from "@/hooks/useProofUrl";
 
 interface UpgradeOrder {
   id: string;
