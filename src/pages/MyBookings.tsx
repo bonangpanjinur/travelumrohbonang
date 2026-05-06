@@ -63,7 +63,7 @@ const MyBookings = () => {
         const { data, error: fetchError } = await supabase
           .from("bookings")
           .select(`
-            id, booking_code, total_price, status, created_at,
+            id, booking_code, total_price, status, created_at, departure_id,
             package:packages(title, slug),
             departure:package_departures(departure_date)
           `)
