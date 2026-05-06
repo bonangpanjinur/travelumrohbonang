@@ -167,6 +167,30 @@ const MyBookings = () => {
                       </div>
                     </div>
                   </div>
+                  {b.departure_id && (
+                    <div className="mt-4 pt-4 border-t border-border">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpanded(expanded === b.id ? null : b.id)
+                        }
+                        className="text-sm font-medium text-primary hover:text-gold transition-colors flex items-center gap-1"
+                      >
+                        <MapPin className="w-4 h-4" />
+                        {expanded === b.id ? "Sembunyikan" : "Lihat"} Itinerary
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform ${
+                            expanded === b.id ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+                      {expanded === b.id && (
+                        <div className="mt-4">
+                          <BookingItinerary departureId={b.departure_id} />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>
