@@ -154,8 +154,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     window.location.href = '/auth';
   };
 
+  const refreshRole = useCallback(async () => {
+    if (!user) return;
+    const r = await checkRole(user.id);
+    updateRole(r);
+  }, [user, checkRole, updateRole]);
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, role, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, role, refreshRole, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
