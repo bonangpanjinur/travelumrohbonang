@@ -170,7 +170,14 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="container mx-auto max-w-5xl px-4 -mt-16 relative z-20 space-y-8">
+      <div className="container mx-auto max-w-5xl px-4 -mt-16 relative z-20 space-y-6">
+        <AdminBanner />
+        {activeBooking?.status === "completed" && (
+          <TestimonialForm
+            bookingId={activeBooking.id}
+            packageTitle={activeBooking.package?.title}
+          />
+        )}
         <Card className="shadow-xl border-none">
           <CardHeader className="border-b bg-card rounded-t-xl pb-4">
             <div className="flex justify-between items-center">
