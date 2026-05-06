@@ -10,6 +10,9 @@ import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import LoadingSpinner from "@/components/ui/loading-spinner";
+import AdminBanner from "@/components/dashboard/AdminBanner";
+import RecentNotifications from "@/components/dashboard/RecentNotifications";
+import TestimonialForm from "@/components/dashboard/TestimonialForm";
 
 interface StepDef {
   id: number;
