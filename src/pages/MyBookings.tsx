@@ -7,13 +7,14 @@ import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Calendar, Package, ArrowRight, Printer, AlertCircle } from "lucide-react";
+import { Calendar, Package, ArrowRight, Printer, AlertCircle, MapPin, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import InvoiceButton from "@/components/InvoiceButton";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import EmptyState from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
+import BookingItinerary from "@/components/booking/BookingItinerary";
 
 interface BookingItem {
   id: string;
