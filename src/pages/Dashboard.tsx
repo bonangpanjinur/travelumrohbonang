@@ -252,6 +252,8 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
+        <RecentNotifications />
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/my-bookings')}>
             <CardContent className="p-6 flex items-center space-x-4">
