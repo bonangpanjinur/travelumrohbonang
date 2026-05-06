@@ -1528,6 +1528,42 @@ export type Database = {
           },
         ]
       }
+      pilgrim_testimonials: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          is_published: boolean
+          message: string | null
+          photo_url: string | null
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          message?: string | null
+          photo_url?: string | null
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          message?: string | null
+          photo_url?: string | null
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

@@ -10,6 +10,9 @@ import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import LoadingSpinner from "@/components/ui/loading-spinner";
+import AdminBanner from "@/components/dashboard/AdminBanner";
+import RecentNotifications from "@/components/dashboard/RecentNotifications";
+import TestimonialForm from "@/components/dashboard/TestimonialForm";
 
 interface StepDef {
   id: number;
@@ -167,7 +170,14 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="container mx-auto max-w-5xl px-4 -mt-16 relative z-20 space-y-8">
+      <div className="container mx-auto max-w-5xl px-4 -mt-16 relative z-20 space-y-6">
+        <AdminBanner />
+        {activeBooking?.status === "completed" && (
+          <TestimonialForm
+            bookingId={activeBooking.id}
+            packageTitle={activeBooking.package?.title}
+          />
+        )}
         <Card className="shadow-xl border-none">
           <CardHeader className="border-b bg-card rounded-t-xl pb-4">
             <div className="flex justify-between items-center">
@@ -241,6 +251,8 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        <RecentNotifications />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/my-bookings')}>

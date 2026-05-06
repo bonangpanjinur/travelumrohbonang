@@ -8,6 +8,7 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   role: string | null;
+  refreshRole: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null; isAdmin?: boolean }>;
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -153,8 +154,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     window.location.href = '/auth';
   };
 
+  const refreshRole = useCallback(async () => {
+    if (!user) return;
+    const r = await checkRole(user.id);
+    updateRole(r);
+  }, [user, checkRole, updateRole]);
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, role, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, role, refreshRole, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
