@@ -22,6 +22,7 @@ interface BookingItem {
   total_price: number;
   status: string;
   created_at: string;
+  departure_id: string | null;
   package: { title: string; slug: string } | null;
   departure: { departure_date: string } | null;
 }
