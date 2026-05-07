@@ -74,6 +74,14 @@ import AdminTemplateUpgrades from "./pages/admin/TemplateUpgrades";
 import AdminInstallments from "./pages/admin/Installments";
 import AdminManifest from "./pages/admin/Manifest";
 import AdminProofAccessLogs from "./pages/admin/PaymentProofAccessLogs";
+import AdminAgentWithdrawals from "./pages/admin/AgentWithdrawals";
+import AdminRefunds from "./pages/admin/Refunds";
+import AdminAuditLogs from "./pages/admin/AuditLogs";
+import AdminRoleManagement from "./pages/admin/RoleManagement";
+import AdminChats from "./pages/admin/Chats";
+import AgentCommissions from "./pages/AgentCommissions";
+import RefundRequest from "./pages/RefundRequest";
+import ETicket from "./pages/ETicket";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
@@ -108,6 +116,9 @@ const AppContent = () => {
         <Route path="/my-upgrades" element={<MyUpgrades />} />
         <Route path="/my-documents" element={<MyDocuments />} />
         <Route path="/agent-portal" element={<AgentPortal />} />
+        <Route path="/agent-commissions" element={<AgentCommissions />} />
+        <Route path="/refund-request" element={<RefundRequest />} />
+        <Route path="/e-ticket/:bookingId" element={<ETicket />} />
         <Route path="/branch-dashboard" element={<BranchDashboard />} />
       </Route>
       <Route path="/galeri" element={<Gallery />} />
@@ -157,6 +168,11 @@ const AppContent = () => {
           <Route path="installments" element={<AdminInstallments />} />
           <Route path="manifest" element={<AdminManifest />} />
           <Route path="proof-access-logs" element={<AdminProofAccessLogs />} />
+          <Route path="agent-withdrawals" element={<AdminAgentWithdrawals />} />
+          <Route path="refunds" element={<AdminRefunds />} />
+          <Route path="audit-logs" element={<AdminAuditLogs />} />
+          <Route path="role-management" element={<AdminRoleManagement />} />
+          <Route path="chats" element={<AdminChats />} />
         </Route>
       </Route>
 

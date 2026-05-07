@@ -31,6 +31,7 @@ import {
   ClipboardList,
   Receipt,
   ShieldCheck,
+  ShieldAlert,
   LucideIcon
 } from "lucide-react";
 
@@ -93,6 +94,14 @@ export const menuGroups: MenuGroup[] = [
       { label: "Payment Gateway", href: "/admin/payment-gateway", icon: Wallet, premium: true, premiumFeature: "Integrasi Payment Gateway" },
       { label: "Laporan", href: "/admin/reports", icon: FileText },
       { label: "Histori Akses Bukti", href: "/admin/proof-access-logs", icon: ShieldCheck },
+      { label: "Pencairan Komisi Agen", href: "/admin/agent-withdrawals", icon: Wallet },
+      { label: "Refund Jamaah", href: "/admin/refunds", icon: Receipt },
+    ],
+  },
+  {
+    label: "Komunikasi",
+    items: [
+      { label: "Chat Jamaah", href: "/admin/chats", icon: MessageCircle },
     ],
   },
   {
@@ -137,6 +146,8 @@ export const menuGroups: MenuGroup[] = [
       { label: "Multi-Cabang", href: "/admin/multi-branch", icon: GitBranch, premium: true, premiumFeature: "Multi-Cabang Dashboard" },
       { label: "Tenant Sites", href: "/admin/tenant-sites", icon: Globe, premium: true, premiumFeature: "Multi-Tenant Website" },
       { label: "Upgrade Template", href: "/admin/template-upgrades", icon: ArrowUpCircle, premium: true, premiumFeature: "Upgrade Template Billing" },
+      { label: "Audit Logs", href: "/admin/audit-logs", icon: ShieldAlert },
+      { label: "Manajemen Role", href: "/admin/role-management", icon: ShieldCheck },
       { label: "Pengaturan Umum", href: "/admin/settings", icon: Settings },
     ],
   },

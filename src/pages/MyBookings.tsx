@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Calendar, Package, ArrowRight, Printer, AlertCircle, MapPin, ChevronDown } from "lucide-react";
+import { Calendar, Package, ArrowRight, Printer, AlertCircle, MapPin, ChevronDown, Ticket, MessageCircle, Receipt } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import InvoiceButton from "@/components/InvoiceButton";
@@ -15,6 +15,7 @@ import LoadingSpinner from "@/components/ui/loading-spinner";
 import EmptyState from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import BookingItinerary from "@/components/booking/BookingItinerary";
+import ChatBox from "@/components/chat/ChatBox";
 
 interface BookingItem {
   id: string;
@@ -49,6 +50,7 @@ const MyBookings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -151,12 +153,15 @@ const MyBookings = () => {
                           Rp {b.total_price.toLocaleString("id-ID")}
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        {/* Invoice Button - show for all statuses except draft */}
+                      <div className="flex gap-2 flex-wrap">
                         {b.status !== "draft" && (
                           <InvoiceButton bookingId={b.id} />
                         )}
-                        {/* Payment Button - show for draft and waiting_payment */}
+                        {b.status === "paid" && (
+                          <Link to={`/e-ticket/${b.id}`}>
+                            <Button size="sm" variant="outline"><Ticket className="w-4 h-4 mr-1" />E-Ticket</Button>
+                          </Link>
+                        )}
                         {(b.status === "draft" || b.status === "waiting_payment") && (
                           <Link to={`/booking/payment/${b.id}`}>
                             <Button size="sm" className="gradient-gold text-primary">
@@ -190,6 +195,17 @@ const MyBookings = () => {
                         </div>
                       )}
                     </div>
+                  )}
+                  <div className="mt-3 pt-3 border-t border-border flex gap-2 flex-wrap text-xs">
+                    <Link to="/refund-request" className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary">
+                      <Receipt className="w-3.5 h-3.5" />Ajukan Refund
+                    </Link>
+                    <button type="button" onClick={() => setChatOpen(chatOpen === b.id ? null : b.id)} className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary">
+                      <MessageCircle className="w-3.5 h-3.5" />{chatOpen === b.id ? "Tutup" : "Buka"} Chat CS
+                    </button>
+                  </div>
+                  {chatOpen === b.id && (
+                    <div className="mt-3"><ChatBox bookingId={b.id} /></div>
                   )}
                 </motion.div>
               ))}

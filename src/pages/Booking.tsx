@@ -210,6 +210,25 @@ const Booking = () => {
         finalPicId = picAgentId;
       }
 
+      // Attach agent_id from referral code if present
+      let agentIdFromRef: string | null = null;
+      try {
+        const { getStoredReferral, clearStoredReferral } = await import("@/lib/audit");
+        const ref = getStoredReferral();
+        if (ref) {
+          const { data: ag } = await supabase
+            .from("agents")
+            .select("id")
+            .eq("referral_code", ref)
+            .eq("is_active", true)
+            .maybeSingle();
+          if (ag?.id) {
+            agentIdFromRef = ag.id;
+            clearStoredReferral();
+          }
+        }
+      } catch (e) { console.warn("referral attach failed", e); }
+
       // Create booking
       const { data: booking, error: bookingError } = await supabase
         .from("bookings")
@@ -222,6 +241,7 @@ const Booking = () => {
           status: "draft",
           pic_type: finalPicType,
           pic_id: finalPicId,
+          agent_id: agentIdFromRef,
         })
         .select()
         .single();
