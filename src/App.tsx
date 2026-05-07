@@ -116,6 +116,9 @@ const AppContent = () => {
         <Route path="/my-upgrades" element={<MyUpgrades />} />
         <Route path="/my-documents" element={<MyDocuments />} />
         <Route path="/agent-portal" element={<AgentPortal />} />
+        <Route path="/agent-commissions" element={<AgentCommissions />} />
+        <Route path="/refund-request" element={<RefundRequest />} />
+        <Route path="/e-ticket/:bookingId" element={<ETicket />} />
         <Route path="/branch-dashboard" element={<BranchDashboard />} />
       </Route>
       <Route path="/galeri" element={<Gallery />} />
