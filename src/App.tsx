@@ -74,6 +74,14 @@ import AdminTemplateUpgrades from "./pages/admin/TemplateUpgrades";
 import AdminInstallments from "./pages/admin/Installments";
 import AdminManifest from "./pages/admin/Manifest";
 import AdminProofAccessLogs from "./pages/admin/PaymentProofAccessLogs";
+import AdminAgentWithdrawals from "./pages/admin/AgentWithdrawals";
+import AdminRefunds from "./pages/admin/Refunds";
+import AdminAuditLogs from "./pages/admin/AuditLogs";
+import AdminRoleManagement from "./pages/admin/RoleManagement";
+import AdminChats from "./pages/admin/Chats";
+import AgentCommissions from "./pages/AgentCommissions";
+import RefundRequest from "./pages/RefundRequest";
+import ETicket from "./pages/ETicket";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
