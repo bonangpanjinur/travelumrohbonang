@@ -152,12 +152,15 @@ const MyBookings = () => {
                           Rp {b.total_price.toLocaleString("id-ID")}
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        {/* Invoice Button - show for all statuses except draft */}
+                      <div className="flex gap-2 flex-wrap">
                         {b.status !== "draft" && (
                           <InvoiceButton bookingId={b.id} />
                         )}
-                        {/* Payment Button - show for draft and waiting_payment */}
+                        {b.status === "paid" && (
+                          <Link to={`/e-ticket/${b.id}`}>
+                            <Button size="sm" variant="outline"><Ticket className="w-4 h-4 mr-1" />E-Ticket</Button>
+                          </Link>
+                        )}
                         {(b.status === "draft" || b.status === "waiting_payment") && (
                           <Link to={`/booking/payment/${b.id}`}>
                             <Button size="sm" className="gradient-gold text-primary">
