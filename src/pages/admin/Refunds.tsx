@@ -71,12 +71,11 @@ const AdminRefunds = () => {
               </TableRow></TableHeader>
               <TableBody>
                 {items.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Belum ada pengajuan</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Belum ada pengajuan</TableCell></TableRow>
                 ) : items.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="text-sm">{format(new Date(r.created_at), "dd MMM yyyy HH:mm", { locale: localeId })}</TableCell>
                     <TableCell className="font-mono text-xs">{r.bookings?.booking_code}</TableCell>
-                    <TableCell className="text-sm">{r.profiles?.name || r.profiles?.email || "-"}</TableCell>
                     <TableCell className="text-right font-bold">Rp {Number(r.amount).toLocaleString("id-ID")}</TableCell>
                     <TableCell><Badge className={statusColors[r.status]}>{r.status}</Badge></TableCell>
                     <TableCell><Button size="sm" variant="outline" onClick={() => { setSelected(r); setAdminNotes(r.admin_notes || ""); }}>Detail</Button></TableCell>
