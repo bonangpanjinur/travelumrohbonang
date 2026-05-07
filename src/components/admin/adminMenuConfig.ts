@@ -101,6 +101,8 @@ export const menuGroups: MenuGroup[] = [
     label: "Komunikasi",
     items: [
       { label: "Chat Jamaah", href: "/admin/chats", icon: MessageCircle },
+    ],
+  },
   {
     label: "Pemasaran",
     items: [
