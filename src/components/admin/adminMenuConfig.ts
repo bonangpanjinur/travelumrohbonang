@@ -93,8 +93,14 @@ export const menuGroups: MenuGroup[] = [
       { label: "Payment Gateway", href: "/admin/payment-gateway", icon: Wallet, premium: true, premiumFeature: "Integrasi Payment Gateway" },
       { label: "Laporan", href: "/admin/reports", icon: FileText },
       { label: "Histori Akses Bukti", href: "/admin/proof-access-logs", icon: ShieldCheck },
+      { label: "Pencairan Komisi Agen", href: "/admin/agent-withdrawals", icon: Wallet },
+      { label: "Refund Jamaah", href: "/admin/refunds", icon: Receipt },
     ],
   },
+  {
+    label: "Komunikasi",
+    items: [
+      { label: "Chat Jamaah", href: "/admin/chats", icon: MessageCircle },
   {
     label: "Pemasaran",
     items: [
