@@ -216,9 +216,14 @@ const AgentPortal = () => {
                 Selamat datang, <span className="font-medium text-foreground">{agent.name}</span>
               </p>
             </div>
-            <Button variant="outline" onClick={() => navigate("/dashboard")}>
-              Dashboard Utama
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => navigate("/agent-commissions")}>
+                Komisi & Pencairan
+              </Button>
+              <Button variant="outline" onClick={() => navigate("/dashboard")}>
+                Dashboard Utama
+              </Button>
+            </div>
           </div>
 
           {/* Stats */}
