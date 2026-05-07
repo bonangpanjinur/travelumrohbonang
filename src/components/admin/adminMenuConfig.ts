@@ -31,6 +31,7 @@ import {
   ClipboardList,
   Receipt,
   ShieldCheck,
+  ShieldAlert,
   LucideIcon
 } from "lucide-react";
 
