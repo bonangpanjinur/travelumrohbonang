@@ -16,6 +16,8 @@ import FloatingButtons from "@/components/FloatingButtons";
 import SEO from "@/components/SEO";
 
 const Index = () => {
+  useEffect(() => { captureReferralFromUrl(); }, []);
+
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
