@@ -41,6 +41,93 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_commissions: {
+        Row: {
+          agent_id: string
+          amount: number
+          booking_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          amount?: number
+          booking_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          amount?: number
+          booking_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      agent_withdrawals: {
+        Row: {
+          account_holder: string
+          admin_notes: string | null
+          agent_id: string
+          amount: number
+          bank_account: string
+          bank_name: string
+          created_at: string
+          id: string
+          notes: string | null
+          processed_at: string | null
+          processed_by: string | null
+          proof_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_holder: string
+          admin_notes?: string | null
+          agent_id: string
+          amount: number
+          bank_account: string
+          bank_name: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          proof_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_holder?: string
+          admin_notes?: string | null
+          agent_id?: string
+          amount?: number
+          bank_account?: string
+          bank_name?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          proof_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       agents: {
         Row: {
           branch_id: string | null
@@ -130,6 +217,42 @@ export type Database = {
           created_at?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          ip: string | null
+          metadata: Json | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          ip?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -376,6 +499,36 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           phone?: string | null
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          sender_id: string
+          sender_role: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          sender_id: string
+          sender_role?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          sender_id?: string
+          sender_role?: string
         }
         Relationships: []
       }
@@ -1594,6 +1747,57 @@ export type Database = {
         }
         Relationships: []
       }
+      refund_requests: {
+        Row: {
+          account_holder: string | null
+          admin_notes: string | null
+          amount: number
+          bank_account: string | null
+          bank_name: string | null
+          booking_id: string
+          created_at: string
+          id: string
+          processed_at: string | null
+          processed_by: string | null
+          reason: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_holder?: string | null
+          admin_notes?: string | null
+          amount?: number
+          bank_account?: string | null
+          bank_name?: string | null
+          booking_id: string
+          created_at?: string
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_holder?: string | null
+          admin_notes?: string | null
+          amount?: number
+          bank_account?: string | null
+          bank_name?: string | null
+          booking_id?: string
+          created_at?: string
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sections: {
         Row: {
           created_at: string | null
@@ -1842,6 +2046,7 @@ export type Database = {
           created_at: string | null
           custom_domain: string | null
           email: string | null
+          enabled_modules: Json | null
           facebook_url: string | null
           hero_image_url: string | null
           hero_subtitle: string | null
@@ -1869,6 +2074,7 @@ export type Database = {
           created_at?: string | null
           custom_domain?: string | null
           email?: string | null
+          enabled_modules?: Json | null
           facebook_url?: string | null
           hero_image_url?: string | null
           hero_subtitle?: string | null
@@ -1896,6 +2102,7 @@ export type Database = {
           created_at?: string | null
           custom_domain?: string | null
           email?: string | null
+          enabled_modules?: Json | null
           facebook_url?: string | null
           hero_image_url?: string | null
           hero_subtitle?: string | null

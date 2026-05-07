@@ -1,61 +1,63 @@
+## Tahap 2 — Fitur Lanjutan per Role
 
-# Tahap 1 — Fix Akses Super Admin & Fitur Jamaah Prioritas
+Tahap 2 mencakup fitur yang ditunda dari Tahap 1. Karena lingkupnya besar, saya bagi menjadi **5 modul** yang dikerjakan berurutan dalam sesi ini.
 
-Catatan: Akun login Anda saat ini (`bpanjinur63@gmail.com`, user_id `37ad3abe…`) **sudah** punya role `super_admin` di database. Jika tetap tidak bisa masuk `/admin`, kemungkinan besar masalah cache role di sesi browser. Plan ini akan menambah tombol "Buka Admin Dashboard" + indikator role agar Anda langsung bisa masuk.
+---
 
-## A. Fix Akses Admin / Super Admin
+### Modul 1 — Agen (Agent)
+**Tujuan:** agen punya tools mandiri untuk tracking & cair komisi.
 
-1. **Migrasi SQL — backfill `user_roles`**
-   - Sisipkan role `buyer` untuk semua user di `auth.users` yang belum punya entri di `user_roles`
-   - Update trigger `handle_new_user()` agar setiap signup baru otomatis insert ke `user_roles` (default `buyer`) selain ke `profiles`
-2. **Banner "Mode Admin"** di `/dashboard`
-   - Bila `isAdmin === true`, tampilkan card menonjol di atas: "Anda login sebagai Super Admin → Buka Admin Dashboard"
-3. **Indikator role di Navbar** (badge kecil di samping nama)
-4. **Tombol "Refresh Role"** di Dashboard untuk paksa re-fetch role bila terjadi cache stale
+1. **Tabel baru `agent_commissions`** (sudah ada `package_commissions` global; ini per booking)
+   - Kolom: `agent_id`, `booking_id`, `amount`, `status` (`pending`/`approved`/`paid`), `paid_at`
+   - Trigger: saat booking `status='paid'` & `agent_id` not null → insert baris `pending`
+2. **Tabel baru `agent_withdrawals`**
+   - Kolom: `agent_id`, `amount`, `bank_name`, `bank_account`, `status` (`requested`/`approved`/`rejected`/`paid`), `proof_url`, `notes`, `processed_by`, `processed_at`
+3. **Halaman `/agent` (AgentPortal sudah ada)** — tambahkan:
+   - Card "Saldo Komisi" (sum `approved` - sum `paid`)
+   - Tabel daftar komisi per booking + status
+   - Form "Request Pencairan" → insert ke `agent_withdrawals`
+   - Card "Link Referral" dengan tombol copy `https://site/?ref={referral_code}`
+4. **Halaman admin baru `/admin/agent-withdrawals`** untuk approve/reject + upload bukti transfer
+5. **Tracking referral**: simpan `?ref=` ke localStorage saat landing, attach ke booking saat checkout (di `Booking.tsx`)
 
-## B. Fitur Jamaah Prioritas (4 item)
+### Modul 2 — Branch Manager
+1. **Halaman `/branch/finance`** (BranchDashboard sudah ada) — tambahkan tab "Keuangan Cabang":
+   - Filter `branch_id = get_user_branch_id(auth.uid())` otomatis
+   - Total revenue, total komisi, total booking, breakdown per bulan (chart)
+2. **Tab "Booking Cabang"** dengan filter otomatis cabang
 
-1. **Notifikasi terbaru di Dashboard jamaah**
-   - Card baru di Dashboard menampilkan 5 notifikasi terbaru dari tabel `notifications` (filter `user_id = auth.uid()`)
-   - Klik notifikasi → tandai `is_read = true` + navigate ke booking terkait bila ada
-   
-2. **Download Invoice PDF dari sisi jamaah**
-   - Reuse `InvoiceGenerator.ts` yang sudah ada di admin
-   - Tambah tombol "Download Invoice" di kartu booking pada `/my-bookings` dan `/dashboard`
-   - Pastikan RLS sudah cukup (jamaah hanya bisa fetch booking miliknya — sudah ada)
-   
-3. **Itinerary harian di detail booking jamaah**
-   - Di `/my-bookings`, expand booking → tampilkan tab/section "Itinerary"
-   - Query `itineraries` + `itinerary_days` berdasarkan `departure_id` booking
-   - Tampilkan timeline per hari (day_number, title, description, image)
-   
-4. **Form rating & testimoni otomatis muncul setelah selesai**
-   - Tabel baru `pilgrim_testimonials` (booking_id, user_id, rating 1-5, message, photo_url, is_published default false, created_at)
-   - RLS: user insert/select milik sendiri; admin manage all; public select hanya `is_published = true`
-   - Card di Dashboard jamaah: jika ada booking dengan `status = completed` dan belum ada testimoni → tampilkan form (rating bintang + textarea + upload foto opsional ke bucket `testimonials`)
-   - Setelah submit: toast success + entry menunggu approval admin
+### Modul 3 — Jamaah (lanjutan)
+1. **E-ticket / Manifest digital**
+   - Halaman baru `/my-bookings/:id/eticket` → render kartu boarding visual + QR code (data: booking_code) menggunakan lib `qrcode.react` 
+   - Tombol "E-Ticket" di MyBookings (status `paid`)
+2. **Refund Request**
+   - Tabel baru `refund_requests` (`booking_id`, `user_id`, `reason`, `amount`, `status`, `processed_by`, `notes`)
+   - Form di MyBookings untuk booking `paid` & belum berangkat
+   - Halaman admin `/admin/refunds` untuk approve/reject
 
-## C. File yang Akan Dibuat / Diubah
+### Modul 4 — Admin & Super Admin
+1. **Tabel baru `audit_logs`** (`user_id`, `action`, `entity_type`, `entity_id`, `metadata jsonb`, `ip`)
+2. **Helper `logAudit()`** dipanggil di mutation kritis (delete booking, approve refund, withdraw, dll)
+3. **Halaman `/admin/audit-logs`** dengan filter user/action/tanggal
+4. **Halaman `/admin/role-management`** (super_admin only) — list user + dropdown ubah role
+5. **Modul aktif/non-aktif per tenant** — sudah ada `tenant_sites`, tambah kolom `enabled_modules jsonb` + UI toggle di TenantSites detail
 
-**Database (1 migrasi):**
-- Backfill `user_roles`, update `handle_new_user`, create `pilgrim_testimonials` + RLS
+### Modul 5 — Komunikasi
+1. **Chat CS sederhana**
+   - Tabel `chat_messages` (`booking_id`, `sender_id`, `sender_role`, `message`, `is_read`)
+   - Widget chat di MyBookings detail + admin panel di `/admin/chats`
+   - Realtime via Supabase channel
 
-**Frontend baru:**
-- `src/components/dashboard/AdminBanner.tsx`
-- `src/components/dashboard/RecentNotifications.tsx`
-- `src/components/dashboard/TestimonialForm.tsx`
-- `src/components/booking/BookingItinerary.tsx`
-- `src/components/booking/DownloadInvoiceButton.tsx`
+---
 
-**Frontend diubah:**
-- `src/pages/Dashboard.tsx` — sisip 3 komponen baru
-- `src/pages/MyBookings.tsx` — tombol Download Invoice + expandable Itinerary
-- `src/components/Navbar.tsx` — badge role
-- `src/hooks/useAuth.tsx` — ekspor fungsi `refreshRole()` agar bisa dipanggil dari UI
-- `src/integrations/supabase/types.ts` — auto-update setelah migrasi
+### Yang TIDAK termasuk Tahap 2 (Tahap 3 nanti)
+- Impersonate user (kompleks, butuh service-role edge function)
+- Leaderboard agen kompetitif (gamification)
+- Multi-currency / split payment
 
-## D. Yang TIDAK Termasuk Tahap 1
+---
 
-Tahap 2 (sesi terpisah): fitur agen (referral link, withdraw komisi, leaderboard), laporan keuangan per cabang, audit trail global super admin, impersonate user, e-ticket QR, refund request, chat CS.
+### Strategi Eksekusi
+Saya kerjakan **modul 1 → 2 → 3 → 4 → 5** berurutan dalam satu sesi ini. Setiap modul = 1 migration + komponen frontend terkait. Setelah semua selesai, saya tampilkan ringkasan + lokasi menu baru.
 
-Setelah Anda approve, saya langsung jalankan migrasi + implementasi semua di atas.
+**Konfirmasi:** Approve untuk mulai eksekusi semua 5 modul, atau pilih subset modul tertentu saja?
