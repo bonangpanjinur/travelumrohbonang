@@ -195,6 +195,17 @@ const MyBookings = () => {
                       )}
                     </div>
                   )}
+                  <div className="mt-3 pt-3 border-t border-border flex gap-2 flex-wrap text-xs">
+                    <Link to="/refund-request" className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary">
+                      <Receipt className="w-3.5 h-3.5" />Ajukan Refund
+                    </Link>
+                    <button type="button" onClick={() => setChatOpen(chatOpen === b.id ? null : b.id)} className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary">
+                      <MessageCircle className="w-3.5 h-3.5" />{chatOpen === b.id ? "Tutup" : "Buka"} Chat CS
+                    </button>
+                  </div>
+                  {chatOpen === b.id && (
+                    <div className="mt-3"><ChatBox bookingId={b.id} /></div>
+                  )}
                 </motion.div>
               ))}
             </div>
