@@ -168,6 +168,11 @@ const AppContent = () => {
           <Route path="installments" element={<AdminInstallments />} />
           <Route path="manifest" element={<AdminManifest />} />
           <Route path="proof-access-logs" element={<AdminProofAccessLogs />} />
+          <Route path="agent-withdrawals" element={<AdminAgentWithdrawals />} />
+          <Route path="refunds" element={<AdminRefunds />} />
+          <Route path="audit-logs" element={<AdminAuditLogs />} />
+          <Route path="role-management" element={<AdminRoleManagement />} />
+          <Route path="chats" element={<AdminChats />} />
         </Route>
       </Route>
 
