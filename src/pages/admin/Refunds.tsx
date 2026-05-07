@@ -66,7 +66,7 @@ const AdminRefunds = () => {
           {loading ? <div className="p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div> : (
             <Table>
               <TableHeader><TableRow>
-                <TableHead>Tanggal</TableHead><TableHead>Booking</TableHead><TableHead>Pengaju</TableHead>
+                <TableHead>Tanggal</TableHead><TableHead>Booking</TableHead>
                 <TableHead className="text-right">Nominal</TableHead><TableHead>Status</TableHead><TableHead></TableHead>
               </TableRow></TableHeader>
               <TableBody>
