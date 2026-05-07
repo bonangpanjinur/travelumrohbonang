@@ -31,7 +31,7 @@ const AdminRefunds = () => {
   const load = async () => {
     setLoading(true);
     const { data } = await supabase.from("refund_requests")
-      .select("*, bookings(booking_code, total_price), profiles!refund_requests_user_id_fkey(name, email)")
+      .select("*, bookings(booking_code, total_price)")
       .order("created_at", { ascending: false });
     setItems(data || []);
     setLoading(false);
