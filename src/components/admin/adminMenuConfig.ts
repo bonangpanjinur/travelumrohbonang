@@ -145,6 +145,8 @@ export const menuGroups: MenuGroup[] = [
       { label: "Multi-Cabang", href: "/admin/multi-branch", icon: GitBranch, premium: true, premiumFeature: "Multi-Cabang Dashboard" },
       { label: "Tenant Sites", href: "/admin/tenant-sites", icon: Globe, premium: true, premiumFeature: "Multi-Tenant Website" },
       { label: "Upgrade Template", href: "/admin/template-upgrades", icon: ArrowUpCircle, premium: true, premiumFeature: "Upgrade Template Billing" },
+      { label: "Audit Logs", href: "/admin/audit-logs", icon: ShieldAlert },
+      { label: "Manajemen Role", href: "/admin/role-management", icon: ShieldCheck },
       { label: "Pengaturan Umum", href: "/admin/settings", icon: Settings },
     ],
   },
