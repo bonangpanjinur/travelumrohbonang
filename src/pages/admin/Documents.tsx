@@ -152,9 +152,9 @@ const Documents = () => {
         .upload(filePath, file);
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("pilgrim-documents")
-        .getPublicUrl(filePath);
+      // pilgrim-documents is PRIVATE; persist only the storage path. View
+      // actions generate short-lived signed URLs and log access.
+      const publicUrl = filePath;
 
       // Check if doc record exists
       const { data: existing } = await supabase
