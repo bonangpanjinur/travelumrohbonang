@@ -185,6 +185,17 @@ const MyBookings = () => {
                             </Button>
                           </Link>
                         )}
+                        {b.status !== "draft" && b.status !== "cancelled" && (
+                          <Link to={`/contract/${b.id}`}>
+                            <Button size="sm" variant={signedMap[b.id] ? "outline" : "secondary"}>
+                              {signedMap[b.id] ? (
+                                <><CheckCircle2 className="w-4 h-4 mr-1 text-success" />Kontrak Ditandatangani</>
+                              ) : (
+                                <><PenLine className="w-4 h-4 mr-1" />Tanda Tangan Kontrak</>
+                              )}
+                            </Button>
+                          </Link>
+                        )}
                       </div>
                     </div>
                   </div>
