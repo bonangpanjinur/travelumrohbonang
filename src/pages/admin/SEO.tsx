@@ -19,7 +19,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { DeleteAlertDialog } from "@/components/admin/DeleteAlertDialog";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 
 interface SeoOverride {
   id: string;
@@ -92,7 +92,7 @@ const AdminSEO = () => {
     setSavingDefaults(true);
     const { error } = await supabase
       .from("site_settings")
-      .upsert({ key: "seo", category: "general", value: defaults as unknown as Record<string, unknown> }, { onConflict: "key" });
+      .upsert([{ key: "seo", category: "general", value: defaults as unknown as Record<string, unknown> }], { onConflict: "key" });
     setSavingDefaults(false);
     if (error) toast.error(error.message);
     else toast.success("Default SEO disimpan");
