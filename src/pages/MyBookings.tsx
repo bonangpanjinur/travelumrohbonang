@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Calendar, Package, ArrowRight, Printer, AlertCircle, MapPin, ChevronDown, Ticket, MessageCircle, Receipt } from "lucide-react";
+import { Calendar, Package, ArrowRight, Printer, AlertCircle, MapPin, ChevronDown, Ticket, MessageCircle, Receipt, PenLine, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import InvoiceButton from "@/components/InvoiceButton";
