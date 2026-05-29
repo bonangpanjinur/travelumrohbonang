@@ -73,6 +73,12 @@ const Gallery = () => {
         title="Galeri Perjalanan"
         description="Galeri foto perjalanan umroh bersama UmrohPlus. Lihat momen-momen indah jamaah kami di Tanah Suci Makkah dan Madinah."
       />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Beranda", url: "/" },
+          { name: "Galeri", url: "/gallery" },
+        ]}
+      />
 
       <Navbar />
 
