@@ -26,7 +26,7 @@ export default function AdminReviews() {
   const approve = async (id: string, val: boolean) => {
     const { error } = await supabase.from("package_reviews").update({ is_approved: val }).eq("id", id);
     if (error) return toast.error(error.message);
-    await logAudit(val ? "approve_review" : "unapprove_review", "review", id);
+    await logAudit({ action: val ? "approve_review" : "unapprove_review", entityType: "review", entityId: id });
     toast.success(val ? "Disetujui" : "Disembunyikan");
     refresh();
   };
