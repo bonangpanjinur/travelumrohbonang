@@ -32,6 +32,7 @@ interface SeoOverride {
   keywords: string | null;
 }
 
+
 interface SeoDefaults {
   default_title_suffix: string;
   default_description: string;
@@ -92,7 +93,8 @@ const AdminSEO = () => {
     setSavingDefaults(true);
     const { error } = await supabase
       .from("site_settings")
-      .upsert([{ key: "seo", category: "general", value: defaults as unknown as Record<string, unknown> }], { onConflict: "key" });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .upsert([{ key: "seo", category: "general", value: defaults as any }], { onConflict: "key" });
     setSavingDefaults(false);
     if (error) toast.error(error.message);
     else toast.success("Default SEO disimpan");
