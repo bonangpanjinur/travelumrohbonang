@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
 import { Camera } from "lucide-react";
 import SEO from "@/components/SEO";
+import BreadcrumbJsonLd from "@/components/BreadcrumbJsonLd";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface GalleryItem {
