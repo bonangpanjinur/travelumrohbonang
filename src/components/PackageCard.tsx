@@ -38,6 +38,7 @@ interface PackageCardProps {
 }
 
 const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps) => {
+  const { format: formatPrice } = useCurrency();
   // Calculate lowest price from departures if available
   const getLowestPrice = () => {
     if (pkg.lowestPrice !== undefined) return pkg.lowestPrice;
