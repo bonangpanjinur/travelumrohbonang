@@ -79,9 +79,12 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
       <div className="relative h-48 overflow-hidden">
         <img
           src={pkg.image_url || "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=600&q=80"}
-          alt={pkg.title}
+          alt={`${pkg.title} - paket umroh ${categoryName}`}
           className="w-full h-full object-cover"
           loading="lazy"
+          decoding="async"
+          width={600}
+          height={400}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
         <div className="absolute bottom-3 left-4">
