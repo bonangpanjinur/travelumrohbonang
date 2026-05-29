@@ -86,6 +86,10 @@ import ETicket from "./pages/ETicket";
 import AdminLeaderboard from "./pages/admin/Leaderboard";
 import AdminCurrencies from "./pages/admin/Currencies";
 import { CurrencyProvider } from "@/hooks/useCurrency";
+import Wishlist from "./pages/Wishlist";
+import Compare from "./pages/Compare";
+import AdminReviews from "./pages/admin/Reviews";
+import AdminLoyalty from "./pages/admin/Loyalty";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
@@ -109,6 +113,7 @@ const AppContent = () => {
       <Route path="/" element={<Index />} />
       <Route path="/paket" element={<Paket />} />
       <Route path="/paket/:slug" element={<PackageDetail />} />
+      <Route path="/bandingkan" element={<Compare />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
@@ -117,6 +122,7 @@ const AppContent = () => {
         <Route path="/booking/:slug/:departureId" element={<Booking />} />
         <Route path="/booking/payment/:bookingId" element={<Payment />} />
         <Route path="/my-bookings" element={<MyBookings />} />
+        <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/my-upgrades" element={<MyUpgrades />} />
@@ -181,6 +187,8 @@ const AppContent = () => {
           <Route path="chats" element={<AdminChats />} />
           <Route path="leaderboard" element={<AdminLeaderboard />} />
           <Route path="currencies" element={<AdminCurrencies />} />
+          <Route path="reviews" element={<AdminReviews />} />
+          <Route path="loyalty" element={<AdminLoyalty />} />
         </Route>
       </Route>
 

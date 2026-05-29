@@ -10,6 +10,10 @@ import { Calendar, Star, Users, Plane, Hotel, MapPin, ArrowRight, Check } from "
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import SEO from "@/components/SEO";
+import WishlistButton from "@/components/WishlistButton";
+import PackageReviews from "@/components/PackageReviews";
+import InstallmentCalculator from "@/components/InstallmentCalculator";
+import StickyMobileCTA from "@/components/StickyMobileCTA";
 
 interface Package {
   id: string;
@@ -144,13 +148,16 @@ const PackageDetail = () => {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/50 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-8">
-            <div className="container-custom">
-              <span className="bg-gold text-primary text-xs font-bold px-3 py-1 rounded-full">
-                {pkg.category?.name || pkg.package_type}
-              </span>
-              <h1 className="text-3xl md:text-5xl font-display font-bold text-primary-foreground mt-4">
-                {pkg.title}
-              </h1>
+            <div className="container-custom flex items-end justify-between gap-4">
+              <div>
+                <span className="bg-gold text-primary text-xs font-bold px-3 py-1 rounded-full">
+                  {pkg.category?.name || pkg.package_type}
+                </span>
+                <h1 className="text-3xl md:text-5xl font-display font-bold text-primary-foreground mt-4">
+                  {pkg.title}
+                </h1>
+              </div>
+              <WishlistButton packageId={pkg.id} variant="outline" />
             </div>
           </div>
         </div>
@@ -260,6 +267,14 @@ const PackageDetail = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Calculator */}
+              <InstallmentCalculator defaultPrice={
+                departures.length ? Math.min(...departures.flatMap(d => d.prices.map(p => p.price))) : 30000000
+              } />
+
+              {/* Reviews */}
+              <PackageReviews packageId={pkg.id} packageTitle={pkg.title} />
             </div>
 
             {/* Sidebar - Booking */}
@@ -324,6 +339,11 @@ const PackageDetail = () => {
           </div>
         </div>
       </main>
+      <StickyMobileCTA
+        price={selectedDep ? getLowestPrice(selectedDep.prices) : (departures[0] ? getLowestPrice(departures[0].prices) : undefined)}
+        onBook={handleBookNow}
+        disabled={!selectedDeparture}
+      />
       <Footer />
     </div>
   );

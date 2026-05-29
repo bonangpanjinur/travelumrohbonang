@@ -338,6 +338,34 @@ const Profile = () => {
               </Button>
             </CardContent>
           </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Privasi & Data Pribadi</CardTitle>
+              <CardDescription>Unduh salinan data pribadi Anda sesuai UU PDP.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session) return;
+                  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-user-data`, {
+                    headers: { Authorization: `Bearer ${session.access_token}` },
+                  });
+                  if (!res.ok) { toast.error("Gagal mengunduh data"); return; }
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url; a.download = `my-data-${user?.id}.json`; a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success("Data berhasil diunduh");
+                }}
+              >
+                Unduh Data Saya (JSON)
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </main>
 

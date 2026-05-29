@@ -112,6 +112,8 @@ export const menuGroups: MenuGroup[] = [
       { label: "CRM & Follow-up", href: "/admin/crm", icon: MessageCircle, premium: true, premiumFeature: "CRM & Follow-up Otomatis" },
       { label: "Kupon", href: "/admin/coupons", icon: Ticket },
       { label: "Leaderboard Agen", href: "/admin/leaderboard", icon: Trophy },
+      { label: "Ulasan Paket", href: "/admin/reviews", icon: Star },
+      { label: "Poin Loyalitas", href: "/admin/loyalty", icon: Coins },
       { label: "Analitik AI", href: "/admin/analytics-ai", icon: BrainCircuit, premium: true, premiumFeature: "Analitik AI" },
     ],
   },
