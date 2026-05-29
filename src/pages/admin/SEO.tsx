@@ -58,6 +58,36 @@ const AdminSEO = () => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [auditRunning, setAuditRunning] = useState(false);
+  const [auditFindings, setAuditFindings] = useState<Array<{ id: string; path: string; issue: string; severity: string; created_at: string }>>([]);
+
+  const loadAudit = async () => {
+    const { data } = await supabase
+      .from("seo_audit_results")
+      .select("id,path,issue,severity,created_at")
+      .order("severity", { ascending: true })
+      .order("path", { ascending: true })
+      .limit(500);
+    setAuditFindings((data as typeof auditFindings) || []);
+  };
+
+  const runAudit = async () => {
+    setAuditRunning(true);
+    try {
+      const { error } = await supabase.functions.invoke("seo-audit", { body: {} });
+      if (error) throw error;
+      toast.success("Audit SEO selesai");
+      await loadAudit();
+    } catch (e) {
+      toast.error("Gagal menjalankan audit: " + (e as Error).message);
+    } finally {
+      setAuditRunning(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAudit();
+  }, []);
   const [sitemapInfo, setSitemapInfo] = useState<{ count: number; lastFetched: string } | null>(null);
 
   const loadAll = async () => {
