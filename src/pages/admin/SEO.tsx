@@ -168,10 +168,11 @@ const AdminSEO = () => {
       </div>
 
       <Tabs defaultValue="defaults" className="w-full">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full md:w-auto">
+        <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full md:w-auto">
           <TabsTrigger value="defaults">Default</TabsTrigger>
           <TabsTrigger value="overrides">Override Halaman</TabsTrigger>
           <TabsTrigger value="sitemap">Sitemap & Robots</TabsTrigger>
+          <TabsTrigger value="audit">Audit</TabsTrigger>
           <TabsTrigger value="tools">Tools</TabsTrigger>
         </TabsList>
 
