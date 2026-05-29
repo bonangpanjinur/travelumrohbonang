@@ -54,6 +54,8 @@ const Paket = () => {
   const [selectedAirport, setSelectedAirport] = useState(searchParams.get("bandara") || "all");
   const [selectedHotelStar, setSelectedHotelStar] = useState(searchParams.get("bintang") || "all");
   const [selectedMonth, setSelectedMonth] = useState(searchParams.get("bulan") || "all");
+  const [selectedPriceRange, setSelectedPriceRange] = useState(searchParams.get("harga") || "all");
+  const [selectedDuration, setSelectedDuration] = useState(searchParams.get("durasi") || "all");
   
   // Filter options
   const [categories, setCategories] = useState<Category[]>([]);
