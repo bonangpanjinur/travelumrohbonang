@@ -120,6 +120,14 @@ const SEO = ({
       {noIndex && <meta name="robots" content="noindex, nofollow" />}
       <link rel="canonical" href={currentUrl} />
 
+      {/* hreflang — points back to the same tenant origin so each domain is
+          authoritative for its own language variants and ranking signals
+          stay scoped per tenant. */}
+      <link rel="alternate" hrefLang="id" href={currentUrl} />
+      <link rel="alternate" hrefLang="en" href={currentUrl} />
+      <link rel="alternate" hrefLang="x-default" href={currentUrl} />
+
+
       {/* Open Graph */}
       <meta property="og:type" content={type} />
       <meta property="og:title" content={fullTitle} />
