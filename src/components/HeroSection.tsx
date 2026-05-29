@@ -98,9 +98,13 @@ const HeroSection = () => {
       <div className="absolute inset-0">
         <img
           src={backgroundImage}
-          alt="Masjidil Haram, Makkah"
+          alt="Masjidil Haram, Makkah - tujuan utama perjalanan umroh"
           className="w-full h-full object-cover"
           loading="eager"
+          decoding="async"
+          fetchPriority="high"
+          width={1920}
+          height={1080}
         />
         <div 
           className="absolute inset-0 bg-gradient-to-r from-primary via-primary/80 to-primary/50"
