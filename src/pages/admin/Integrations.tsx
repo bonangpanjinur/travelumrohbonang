@@ -242,7 +242,17 @@ const Integrations = () => {
                     </div>
                   );
                 })}
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => openTest(p)}
+                    disabled={!row.is_active || !row.config?.api_key}
+                    title={!row.is_active ? "Aktifkan dulu" : !row.config?.api_key ? "Isi API key dulu" : "Kirim pesan uji"}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Uji Kirim
+                  </Button>
                   <Button onClick={() => save(p)} disabled={saving === p}>
                     {saving === p && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Simpan
