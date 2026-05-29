@@ -71,6 +71,12 @@ const Blog = () => {
         title="Blog"
         description="Artikel dan tips seputar ibadah umroh, panduan perjalanan, dan informasi terkini dari UmrohPlus Travel."
       />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Beranda", url: "/" },
+          { name: "Blog", url: "/blog" },
+        ]}
+      />
       
       <Navbar />
       <main className="pt-20">
