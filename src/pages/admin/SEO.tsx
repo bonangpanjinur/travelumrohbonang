@@ -57,6 +57,7 @@ const AdminSEO = () => {
   const [editing, setEditing] = useState<SeoOverride | null>(null);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [sitemapInfo, setSitemapInfo] = useState<{ count: number; lastFetched: string } | null>(null);
 
   const loadAll = async () => {
@@ -293,16 +294,13 @@ const AdminSEO = () => {
                             >
                               Edit
                             </Button>
-                            <DeleteAlertDialog
-                              trigger={
-                                <Button size="sm" variant="ghost">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              }
-                              title="Hapus override?"
-                              description={`Override untuk ${o.path} akan dihapus.`}
-                              onConfirm={() => deleteOverride(o.id)}
-                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setDeleteId(o.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
