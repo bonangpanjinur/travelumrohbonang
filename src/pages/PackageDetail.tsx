@@ -20,6 +20,7 @@ import RelatedPackages from "@/components/RelatedPackages";
 import RelatedArticles from "@/components/RelatedArticles";
 import { lookupSlugRedirect, buildRedirectPath } from "@/lib/slugRedirect";
 import { useTenant } from "@/hooks/useTenant";
+import PromoPdfButton from "@/components/PromoPdfButton";
 
 interface Package {
   id: string;
