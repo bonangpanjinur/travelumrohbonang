@@ -119,7 +119,7 @@ const AdminFAQ = () => {
   });
 
   const resetForm = () => {
-    setFormData({ question: "", answer: "", sort_order: faqs.length });
+    setFormData({ question: "", answer: "", sort_order: faqs.length, scope: "general", package_id: null });
     setEditingFaq(null);
     setIsDialogOpen(false);
   };
@@ -130,6 +130,8 @@ const AdminFAQ = () => {
       question: faq.question,
       answer: faq.answer,
       sort_order: faq.sort_order,
+      scope: faq.scope ?? "general",
+      package_id: faq.package_id ?? null,
     });
     setIsDialogOpen(true);
   };
