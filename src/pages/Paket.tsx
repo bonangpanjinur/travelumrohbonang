@@ -540,6 +540,11 @@ const Paket = () => {
             </div>
           </div>
         </BackgroundPattern>
+        <PageFAQ
+          scopes={["paket"]}
+          title="FAQ Paket Umroh"
+          description="Pertanyaan umum seputar pilihan paket, harga, dan jadwal keberangkatan umroh."
+        />
       </main>
       <Footer />
     </div>
