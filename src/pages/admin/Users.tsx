@@ -25,11 +25,37 @@ interface UserWithRole {
 interface BranchOption { id: string; name: string; }
 
 const AdminUsers = () => {
+  const { role } = useAuth();
+  const isSuperAdmin = role === "super_admin" || role === "superadmin";
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [impersonateUser, setImpersonateUser] = useState<UserWithRole | null>(null);
+  const [impersonating, setImpersonating] = useState(false);
+
+  const handleImpersonate = async () => {
+    if (!impersonateUser) return;
+    setImpersonating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-impersonate", {
+        body: { target_user_id: impersonateUser.id, redirect_to: `${window.location.origin}/dashboard` },
+      });
+      if (error) throw error;
+      if (data?.action_link) {
+        window.open(data.action_link, "_blank");
+        toast({ title: "Link impersonate dibuka di tab baru" });
+      } else {
+        throw new Error("Tidak menerima action link");
+      }
+    } catch (e: any) {
+      toast({ title: "Gagal impersonate", description: e.message, variant: "destructive" });
+    } finally {
+      setImpersonating(false);
+      setImpersonateUser(null);
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
