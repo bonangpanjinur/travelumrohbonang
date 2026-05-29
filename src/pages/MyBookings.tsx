@@ -75,7 +75,22 @@ const MyBookings = () => {
           .order("created_at", { ascending: false });
 
         if (fetchError) throw fetchError;
-        setBookings((data as unknown as BookingItem[]) || []);
+        const list = (data as unknown as BookingItem[]) || [];
+        setBookings(list);
+
+        if (list.length > 0) {
+          const ids = list.map((b) => b.id);
+          const { data: contracts } = await supabase
+            .from("contracts")
+            .select("booking_id, signed_at")
+            .in("booking_id", ids)
+            .eq("user_id", user.id);
+          const map: Record<string, boolean> = {};
+          (contracts ?? []).forEach((c: any) => {
+            if (c.signed_at) map[c.booking_id] = true;
+          });
+          setSignedMap(map);
+        }
       } catch (err: any) {
         console.error("Error fetching bookings:", err);
         setError(err.message || "Gagal memuat data booking");
