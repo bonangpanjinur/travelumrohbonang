@@ -145,6 +145,64 @@ const Auth = () => {
     }
   };
 
+  const verifyTwoFA = async () => {
+    if (!twoFA) return;
+    const codeRaw = twoFA.code.trim().toUpperCase();
+    if (!codeRaw) return;
+    setTwoFALoading(true);
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const uid = authData.user?.id;
+      if (!uid) throw new Error("Sesi tidak valid");
+
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("totp_secret, totp_backup_codes")
+        .eq("id", uid)
+        .maybeSingle();
+
+      if (!prof?.totp_secret) throw new Error("Konfigurasi 2FA tidak ditemukan");
+
+      let ok = false;
+      // Try TOTP first (6-digit numeric)
+      if (/^\d{6}$/.test(codeRaw)) {
+        const totp = new OTPAuth.TOTP({
+          secret: OTPAuth.Secret.fromBase32(prof.totp_secret),
+          algorithm: "SHA1",
+          digits: 6,
+          period: 30,
+        });
+        ok = totp.validate({ token: codeRaw, window: 1 }) !== null;
+      }
+
+      // Fallback: backup code
+      if (!ok && Array.isArray(prof.totp_backup_codes) && prof.totp_backup_codes.includes(codeRaw)) {
+        const remaining = (prof.totp_backup_codes as string[]).filter((c) => c !== codeRaw);
+        await supabase.from("profiles").update({ totp_backup_codes: remaining }).eq("id", uid);
+        ok = true;
+      }
+
+      if (!ok) {
+        toast({ title: "Kode 2FA salah", description: "Periksa kembali kode dari authenticator.", variant: "destructive" });
+        return;
+      }
+
+      toast({ title: "Berhasil masuk!", description: "Verifikasi 2FA sukses." });
+      const target = twoFA.redirect;
+      setTwoFA(null);
+      navigate(target);
+    } catch (err) {
+      toast({ title: "Gagal verifikasi", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const cancelTwoFA = async () => {
+    setTwoFA(null);
+    await signOut();
+  };
+
   return (
     <>
       <SEO title={isLogin ? "Masuk" : "Daftar Akun"} description="Login atau daftar akun untuk mengelola booking umroh Anda." noIndex />
