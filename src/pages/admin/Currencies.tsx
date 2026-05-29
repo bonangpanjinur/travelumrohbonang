@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { DeleteAlertDialog } from "@/components/admin/DeleteAlertDialog";
+import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 import { toast } from "@/hooks/use-toast";
 import { Coins, Plus, Pencil, Trash2 } from "lucide-react";
 import { useCurrency, Currency } from "@/hooks/useCurrency";
