@@ -356,6 +356,17 @@ const PackageDetail = () => {
           title={`FAQ ${pkg.title}`}
           description="Pertanyaan jamaah tentang paket ini: jadwal, fasilitas, hotel, hingga pembayaran."
         />
+        <RelatedPackages
+          excludeId={pkg.id}
+          categoryId={pkg.category_id}
+          heading={`Paket ${pkg.category?.name || "Umroh"} Lainnya`}
+          intro={`Bandingkan dengan paket ${pkg.category?.name || "umroh"} lain dari kami: hotel, maskapai, dan jadwal keberangkatan yang fleksibel.`}
+        />
+        <RelatedArticles
+          category={pkg.category?.name || null}
+          heading="Panduan & Artikel Umroh Terkait"
+          intro="Pelajari tips persiapan, tata cara, dan informasi penting sebelum berangkat umroh."
+        />
       </main>
       <StickyMobileCTA
         price={selectedDep ? getLowestPrice(selectedDep.prices) : (departures[0] ? getLowestPrice(departures[0].prices) : undefined)}
