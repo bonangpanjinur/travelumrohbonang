@@ -27,6 +27,7 @@ interface Package {
   package_type: string;
   image_url: string;
   duration_days: number;
+  category_id: string | null;
   category: { name: string } | null;
   hotel_makkah: { name: string; star: number } | null;
   hotel_madinah: { name: string; star: number } | null;
