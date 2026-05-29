@@ -17,6 +17,7 @@ const ISSUER = "Umroh Gateway";
 const Account2FA = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { settings: authSettings, loading: settingsLoading } = useAuthSettings();
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [secret, setSecret] = useState<string | null>(null);
