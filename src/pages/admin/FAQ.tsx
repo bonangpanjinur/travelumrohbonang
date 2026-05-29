@@ -31,17 +31,27 @@ interface FAQ {
   answer: string;
   sort_order: number;
   is_active: boolean;
+  scope: "general" | "paket" | "package";
+  package_id: string | null;
 }
+
+const SCOPE_OPTIONS: { value: FAQ["scope"]; label: string }[] = [
+  { value: "general", label: "Umum (semua halaman)" },
+  { value: "paket", label: "Halaman Daftar Paket (/paket)" },
+  { value: "package", label: "Halaman Detail Paket" },
+];
 
 const AdminFAQ = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{ question: string; answer: string; sort_order: number; scope: FAQ["scope"]; package_id: string | null }>({
     question: "",
     answer: "",
     sort_order: 0,
+    scope: "general",
+    package_id: null,
   });
 
   const { data: faqs = [], isLoading } = useQuery({
