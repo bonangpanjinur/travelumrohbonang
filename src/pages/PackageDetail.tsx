@@ -148,13 +148,16 @@ const PackageDetail = () => {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/50 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-8">
-            <div className="container-custom">
-              <span className="bg-gold text-primary text-xs font-bold px-3 py-1 rounded-full">
-                {pkg.category?.name || pkg.package_type}
-              </span>
-              <h1 className="text-3xl md:text-5xl font-display font-bold text-primary-foreground mt-4">
-                {pkg.title}
-              </h1>
+            <div className="container-custom flex items-end justify-between gap-4">
+              <div>
+                <span className="bg-gold text-primary text-xs font-bold px-3 py-1 rounded-full">
+                  {pkg.category?.name || pkg.package_type}
+                </span>
+                <h1 className="text-3xl md:text-5xl font-display font-bold text-primary-foreground mt-4">
+                  {pkg.title}
+                </h1>
+              </div>
+              <WishlistButton packageId={pkg.id} variant="outline" />
             </div>
           </div>
         </div>
