@@ -187,6 +187,8 @@ const AppContent = () => {
           <Route path="chats" element={<AdminChats />} />
           <Route path="leaderboard" element={<AdminLeaderboard />} />
           <Route path="currencies" element={<AdminCurrencies />} />
+          <Route path="reviews" element={<AdminReviews />} />
+          <Route path="loyalty" element={<AdminLoyalty />} />
         </Route>
       </Route>
 
