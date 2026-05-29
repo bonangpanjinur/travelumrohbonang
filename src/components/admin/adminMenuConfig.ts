@@ -34,6 +34,8 @@ import {
   ShieldAlert,
   Trophy,
   Coins,
+  KeyRound,
+  Lock,
   LucideIcon
 } from "lucide-react";
 
@@ -159,6 +161,8 @@ export const menuGroups: MenuGroup[] = [
       { label: "Slug Redirects (SEO)", href: "/admin/slug-redirects", icon: ShieldAlert },
       { label: "Manajemen Role", href: "/admin/role-management", icon: ShieldCheck },
       { label: "Mata Uang", href: "/admin/currencies", icon: Coins },
+      { label: "Integrasi & API Keys", href: "/admin/integrations", icon: KeyRound, roles: ["super_admin"] },
+      { label: "Pengaturan Login (2FA)", href: "/admin/login-settings", icon: Lock },
       { label: "Pengaturan Umum", href: "/admin/settings", icon: Settings },
     ],
   },
