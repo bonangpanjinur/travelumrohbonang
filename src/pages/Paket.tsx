@@ -353,6 +353,37 @@ const Paket = () => {
         </Select>
       </div>
 
+      {/* Price Range */}
+      <div>
+        <Label className="text-sm font-medium mb-2 block">Rentang Harga</Label>
+        <Select value={selectedPriceRange} onValueChange={setSelectedPriceRange}>
+          <SelectTrigger><SelectValue placeholder="Semua Harga" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Harga</SelectItem>
+            <SelectItem value="0-25000000">{"< Rp 25 jt"}</SelectItem>
+            <SelectItem value="25000000-35000000">Rp 25 – 35 jt</SelectItem>
+            <SelectItem value="35000000-50000000">Rp 35 – 50 jt</SelectItem>
+            <SelectItem value="50000000-max">{"> Rp 50 jt"}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Duration */}
+      <div>
+        <Label className="text-sm font-medium mb-2 block">Durasi</Label>
+        <Select value={selectedDuration} onValueChange={setSelectedDuration}>
+          <SelectTrigger><SelectValue placeholder="Semua Durasi" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Durasi</SelectItem>
+            <SelectItem value="0-9">≤ 9 hari</SelectItem>
+            <SelectItem value="10-12">10 – 12 hari</SelectItem>
+            <SelectItem value="13-15">13 – 15 hari</SelectItem>
+            <SelectItem value="16-max">{"> 15 hari"}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+
       {activeFilterCount > 0 && (
         <Button variant="outline" onClick={clearAllFilters} className="w-full">
           <X className="w-4 h-4 mr-2" />
