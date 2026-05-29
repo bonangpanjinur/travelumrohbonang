@@ -1,13 +1,20 @@
 import { supabase } from "@/integrations/supabase/client";
+import { captureException } from "@/lib/sentry";
 
 interface LogPayload {
   message: string;
   stack?: string;
   level?: "error" | "warn" | "info";
   context?: Record<string, unknown>;
+  error?: unknown;
 }
 
-export async function logError({ message, stack, level = "error", context }: LogPayload) {
+export async function logError({ message, stack, level = "error", context, error }: LogPayload) {
+  // Forward to Sentry (no-op if DSN not configured)
+  if (level === "error") {
+    captureException(error ?? new Error(message), context);
+  }
+
   try {
     const { data: { user } } = await supabase.auth.getUser();
     await supabase.from("error_logs").insert({
