@@ -104,6 +104,8 @@ const Auth = () => {
   };
 
   return (
+    <>
+      <SEO title={isLogin ? "Masuk" : "Daftar Akun"} description="Login atau daftar akun untuk mengelola booking umroh Anda." noIndex />
     <div className="min-h-screen flex items-center justify-center bg-background islamic-pattern px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
