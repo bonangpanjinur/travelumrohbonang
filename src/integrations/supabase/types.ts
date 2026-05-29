@@ -481,27 +481,63 @@ export type Database = {
       branches: {
         Row: {
           address: string | null
+          city: string | null
+          country: string | null
           created_at: string | null
+          description: string | null
+          email: string | null
           id: string
+          image_url: string | null
           is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          map_url: string | null
           name: string
+          opening_hours: string | null
           phone: string | null
+          postal_code: string | null
+          region: string | null
+          slug: string | null
         }
         Insert: {
           address?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string | null
+          description?: string | null
+          email?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          map_url?: string | null
           name: string
+          opening_hours?: string | null
           phone?: string | null
+          postal_code?: string | null
+          region?: string | null
+          slug?: string | null
         }
         Update: {
           address?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string | null
+          description?: string | null
+          email?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          map_url?: string | null
           name?: string
+          opening_hours?: string | null
           phone?: string | null
+          postal_code?: string | null
+          region?: string | null
+          slug?: string | null
         }
         Relationships: []
       }

@@ -14,6 +14,7 @@ import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
 import FloatingButtons from "@/components/FloatingButtons";
 import SEO from "@/components/SEO";
+import LocalBusinessJsonLd from "@/components/LocalBusinessJsonLd";
 
 const Index = () => {
   useEffect(() => { captureReferralFromUrl(); }, []);
@@ -48,6 +49,7 @@ const Index = () => {
         description="Wujudkan ibadah umroh impian Anda dengan pelayanan terbaik, bimbingan ustadz berpengalaman, dan hotel bintang 5 dekat Masjidil Haram."
         jsonLd={faqJsonLd}
       />
+      <LocalBusinessJsonLd />
       <Navbar />
       <main>
         <HeroSection />
