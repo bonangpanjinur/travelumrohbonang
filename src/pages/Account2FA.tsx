@@ -114,8 +114,20 @@ const Account2FA = () => {
           Two-Factor Authentication
         </h1>
 
-        {loading ? (
+        {loading || settingsLoading ? (
           <p>Memuat…</p>
+        ) : !authSettings.enable_2fa && !enabled ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Lock className="w-5 h-5" /> 2FA Sedang Dinonaktifkan</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Fitur Two-Factor Authentication sedang dinonaktifkan oleh administrator. Silakan hubungi admin untuk mengaktifkannya.
+              </p>
+              <Button asChild variant="outline"><Link to="/dashboard">Kembali ke Dashboard</Link></Button>
+            </CardContent>
+          </Card>
         ) : enabled ? (
           <Card>
             <CardHeader><CardTitle>2FA Aktif</CardTitle></CardHeader>
