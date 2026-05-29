@@ -436,10 +436,20 @@ const Documents = () => {
                               </TableCell>
                               <TableCell>
                                 {doc?.file_url ? (
-                                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                                  <button type="button"
+                                    onClick={async () => {
+                                      const signed = await getSignedPilgrimDocUrl({
+                                        fileUrlOrPath: doc.file_url!,
+                                        pilgrimId: pilgrim.id,
+                                        docType: doc.doc_type,
+                                        context: "admin_documents_view",
+                                      });
+                                      if (signed) window.open(signed, "_blank");
+                                      else toast.error("Tidak dapat membuka file");
+                                    }}
                                     className="text-primary hover:underline text-sm flex items-center gap-1">
                                     <Eye className="w-3 h-3" />{doc.file_name || "Lihat"}
-                                  </a>
+                                  </button>
                                 ) : (
                                   <span className="text-muted-foreground text-sm">-</span>
                                 )}
