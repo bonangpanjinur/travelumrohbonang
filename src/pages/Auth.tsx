@@ -86,11 +86,32 @@ const Auth = () => {
             variant: "destructive",
           });
         } else {
-          toast({ title: "Berhasil masuk!", description: "Selamat datang kembali" });
-          if (isAdmin) {
-            navigate("/admin");
+          const redirect = isAdmin ? "/admin" : "/dashboard";
+
+          // Check 2FA requirement
+          const { data: authData } = await supabase.auth.getUser();
+          const uid = authData.user?.id;
+          let needs2FA = false;
+          if (uid) {
+            const [{ data: prof }, { data: roleRow }] = await Promise.all([
+              supabase.from("profiles").select("totp_enabled").eq("id", uid).maybeSingle(),
+              supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle(),
+            ]);
+            const isStaff = STAFF_ROLES.includes(roleRow?.role ?? "");
+            if (prof?.totp_enabled) needs2FA = true;
+            else if (isStaff) {
+              // Staff without 2FA → force enroll first
+              toast({ title: "2FA wajib", description: "Aktifkan 2FA di Account untuk melanjutkan." });
+              navigate("/account/2fa");
+              return;
+            }
+          }
+
+          if (needs2FA) {
+            setTwoFA({ redirect, code: "" });
           } else {
-            navigate("/dashboard");
+            toast({ title: "Berhasil masuk!", description: "Selamat datang kembali" });
+            navigate(redirect);
           }
         }
       } else {
