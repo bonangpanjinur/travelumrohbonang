@@ -580,9 +580,12 @@ const Booking = () => {
                   Lanjut <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               ) : (
-                <Button onClick={handleSubmit} disabled={submitting} className="gradient-gold text-primary">
-                  {submitting ? "Memproses..." : "Konfirmasi Booking"}
-                </Button>
+                <div className="flex flex-col items-end gap-3">
+                  <TurnstileCaptcha onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
+                  <Button onClick={handleSubmit} disabled={submitting || !captchaToken} className="gradient-gold text-primary">
+                    {submitting ? "Memproses..." : "Konfirmasi Booking"}
+                  </Button>
+                </div>
               )}
             </div>
           </motion.div>
