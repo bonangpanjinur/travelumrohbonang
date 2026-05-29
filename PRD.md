@@ -103,17 +103,69 @@ Auth + roles (buyer/agent/admin/super_admin/branch_manager), packages + departur
 ## 5. Roadmap
 
 **Sprint A (selesai):** housekeeping md, gating super admin, SEO menyeluruh, leaderboard CSV, impersonate banner.
+
 **Sprint B (parsial selesai):** pg_cron daily reminder (memanggil edge `payment-reminder`) ✔︎. Email transaksional (Resend) + WhatsApp belum — menunggu API key user.
+
 **Sprint C (sebagian selesai):** wishlist ✔︎, review publik + JSON-LD ✔︎, sticky CTA mobile ✔︎, kalkulator cicilan ✔︎. Galeri keberangkatan, manifest PDF print-ready, signed URL dokumen belum.
+
 **Sprint D (sebagian selesai):** kalkulator cicilan ✔︎, compare paket ✔︎, loyalty (admin adjust) ✔︎, export data PDP ✔︎. Push, 2FA admin belum.
+
+**Sprint E — SEO Lanjutan (selesai):**
+- FAQ JSON-LD per halaman (`PageFAQ`) dengan scope `general` / `paket` / `package` + filter per `package_id` ✔︎.
+- BreadcrumbList JSON-LD konsisten (`BreadcrumbJsonLd`) di Paket, PackageDetail, Blog, BlogDetail, Galeri — posisi auto ✔︎.
+- Internal linking otomatis (`RelatedPackages` + `RelatedArticles`) di PackageDetail & BlogDetail dengan anchor teks kaya kata kunci ✔︎.
+- Canonical, `og:url`, dan hreflang (id/en/x-default) dinamis mengikuti `window.location.origin` agar ranking SEO tidak tercampur antar tenant domain ✔︎; static prod-domain tags di `index.html` dihapus.
+
+---
+
+## 5b. Backlog Aktif (Belum Selesai)
+
+### SEO & Konten
+- [ ] og:image dinamis per paket / artikel (generate dari image_url) supaya social preview unik.
+- [ ] Sitemap multi-tenant (per domain tenant), saat ini hanya 1 sitemap untuk main domain.
+- [ ] Schema `LocalBusiness` per cabang (branches) untuk SEO lokal.
+- [ ] Auto-redirect 301 dari URL lama / slug berubah.
+- [ ] Google Search Console verification meta per tenant.
+
+### Notifikasi & Komunikasi
+- [ ] Email transaksional Resend (konfirmasi booking, DP, cicilan, e-ticket, refund) — butuh `RESEND_API_KEY`.
+- [ ] WhatsApp notification via Fonnte/Wablas — butuh API key.
+- [ ] Web Push notifications (jamaah + admin).
+- [ ] Live chat widget global (Crisp/Tawk.to atau in-house).
+
+### Operasional Jamaah
+- [ ] Galeri foto per keberangkatan (dokumentasi alumni).
+- [ ] Manifest keberangkatan PDF print-ready dengan QR per jamaah.
+- [ ] Signed URL + watermark + log akses dokumen jamaah (passport/visa).
+- [ ] Filter lengkap di `/paket` (harga, durasi, bulan, hotel, maskapai, kategori).
+- [ ] Halaman CMS default (Tentang Kami, Kontak, T&C, Privacy, Tata Cara Bayar) — template siap pakai.
+- [ ] Pusat unduhan panduan manasik.
+
+### B2B / Agen
+- [ ] Materi promosi + brosur PDF auto-generate per paket.
+- [ ] Target & forecast komisi di dashboard agen.
+- [ ] Affiliate cookie tracking 30 hari.
+
+### Keamanan & Kepatuhan
+- [ ] 2FA TOTP untuk admin & super_admin.
+- [ ] Rate limiting + captcha di Auth & form publik (leads, refund).
+- [ ] Kontrak digital + e-signature sebelum pelunasan.
+- [ ] Aktifkan HIBP (leaked password protection) di Supabase Auth.
+- [ ] Error tracking (Sentry) opsional.
+
+### Operasional Admin
+- [ ] Export CSV terstandar untuk semua tabel admin (saat ini hanya leaderboard).
+- [ ] Audit logs export + filter lanjutan.
+- [ ] Backup terjadwal dump DB ke storage.
 
 ---
 
 ## 6. Teknis
 - Stack: React 18 + Vite + Tailwind + shadcn + Supabase (Lovable Cloud) + Edge Functions Deno.
 - Sitemap: skrip `scripts/generate-sitemap.ts` jalan via `predev` & `prebuild`, baca DB Supabase via REST publik (anon key) → tulis `public/sitemap.xml`.
-- Email: edge function `send-email` (Resend) + template HTML; trigger via DB hook atau frontend.
-- Reminder: pg_cron tiap jam → `notifications` + edge function pengirim.
+- SEO komponen: `SEO.tsx` (canonical + og + hreflang tenant-aware), `BreadcrumbJsonLd.tsx`, `PageFAQ.tsx`, `RelatedPackages.tsx`, `RelatedArticles.tsx`.
+- Email: edge function `send-email` (Resend) + template HTML; trigger via DB hook atau frontend (belum diaktifkan).
+- Reminder: pg_cron daily 09:00 → edge `payment-reminder`.
 - Audit: helper `logAudit()` di `src/lib/audit.ts` — wajib pada aksi admin sensitif.
 - Hanya `PRD.md` (+ `README.md`) sebagai dokumen `.md` repo.
 
@@ -124,3 +176,4 @@ Auth + roles (buyer/agent/admin/super_admin/branch_manager), packages + departur
 - `public/sitemap.xml` terbentuk otomatis & terdaftar di `robots.txt`.
 - Leaderboard: ekspor CSV + akses tercatat di audit logs.
 - Impersonate: banner aktif & audit start/end tercatat.
+
