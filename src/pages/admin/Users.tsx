@@ -39,13 +39,14 @@ const AdminUsers = () => {
     if (!impersonateUser) return;
     setImpersonating(true);
     try {
+      const redirect = `${window.location.origin}/dashboard?impersonated=1`;
       const { data, error } = await supabase.functions.invoke("admin-impersonate", {
-        body: { target_user_id: impersonateUser.id, redirect_to: `${window.location.origin}/dashboard` },
+        body: { target_user_id: impersonateUser.id, redirect_to: redirect },
       });
       if (error) throw error;
       if (data?.action_link) {
         window.open(data.action_link, "_blank");
-        toast({ title: "Link impersonate dibuka di tab baru" });
+        toast({ title: "Link impersonate dibuka di tab baru", description: `Anda akan login sebagai ${impersonateUser.email}` });
       } else {
         throw new Error("Tidak menerima action link");
       }

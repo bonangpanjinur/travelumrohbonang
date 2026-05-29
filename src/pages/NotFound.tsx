@@ -2,6 +2,7 @@ import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const NotFound = () => {
   const location = useLocation();
@@ -11,6 +12,8 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
+    <>
+      <SEO title="Halaman Tidak Ditemukan (404)" description="Halaman yang Anda cari tidak ditemukan." noIndex />
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="text-center space-y-6 max-w-md">
         <div className="relative">
@@ -44,6 +47,7 @@ const NotFound = () => {
         &copy; {new Date().getFullYear()} Travel Umroh Bonang. All rights reserved.
       </div>
     </div>
+    </>
   );
 };
 

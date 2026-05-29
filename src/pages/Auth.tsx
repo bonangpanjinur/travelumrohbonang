@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import SEO from "@/components/SEO";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -103,6 +104,8 @@ const Auth = () => {
   };
 
   return (
+    <>
+      <SEO title={isLogin ? "Masuk" : "Daftar Akun"} description="Login atau daftar akun untuk mengelola booking umroh Anda." noIndex />
     <div className="min-h-screen flex items-center justify-center bg-background islamic-pattern px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -225,6 +228,7 @@ const Auth = () => {
         </div>
       </motion.div>
     </div>
+    </>
   );
 };
 

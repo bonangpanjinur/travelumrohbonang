@@ -5,9 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Medal, Award } from "lucide-react";
+import { Trophy, Medal, Award, Download } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import { logAudit } from "@/lib/audit";
 
 interface Row {
   agent_id: string;
@@ -77,6 +79,21 @@ const AdminLeaderboard = () => {
   };
 
   useEffect(() => { fetchData(); }, [range.start, range.end]);
+  useEffect(() => { logAudit({ action: "view_leaderboard" }); }, []);
+
+  const exportCSV = () => {
+    const header = ["Rank", "Agen", "Booking", "Total Komisi", "Sudah Dibayar"];
+    const lines = rows.map((r, i) => [i + 1, `"${r.agent_name.replace(/"/g, '""')}"`, r.bookings, r.commission_total, r.commission_paid].join(","));
+    const csv = [header.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `leaderboard-agen-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    logAudit({ action: "export_leaderboard_csv", metadata: { rows: rows.length } });
+  };
 
   const fmt = (n: number) => new Intl.NumberFormat("id-ID").format(n);
   const chartData = rows.slice(0, 10).map((r) => ({ name: r.agent_name, komisi: r.commission_total }));
@@ -139,7 +156,13 @@ const AdminLeaderboard = () => {
       )}
 
       <Card>
-        <CardHeader><CardTitle>Peringkat Lengkap ({rows.length})</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Peringkat Lengkap ({rows.length})</CardTitle>
+          <Button size="sm" variant="outline" onClick={exportCSV} disabled={rows.length === 0}>
+            <Download className="mr-2 h-4 w-4" />
+            Ekspor CSV
+          </Button>
+        </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
