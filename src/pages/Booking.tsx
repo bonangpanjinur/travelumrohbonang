@@ -196,7 +196,21 @@ const Booking = () => {
 
   const handleSubmit = async () => {
     if (!user || !pkg || !departure) return;
+
+    if (!captchaToken) {
+      toast({ title: "Verifikasi captcha", description: "Selesaikan captcha sebelum konfirmasi booking.", variant: "destructive" });
+      return;
+    }
+
+    const limit = await rateLimit("booking:create", { max: 5, windowSec: 60 });
+    if (!limit.allowed) {
+      toast({ title: "Terlalu banyak percobaan", description: "Tunggu 1 menit sebelum mencoba lagi.", variant: "destructive" });
+      return;
+    }
+
     setSubmitting(true);
+
+
 
     try {
       // Generate booking code
