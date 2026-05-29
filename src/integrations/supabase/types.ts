@@ -2307,6 +2307,72 @@ export type Database = {
         }
         Relationships: []
       }
+      seo_audit_results: {
+        Row: {
+          created_at: string
+          details: Json | null
+          id: string
+          issue: string
+          path: string
+          severity: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          id?: string
+          issue: string
+          path: string
+          severity?: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          id?: string
+          issue?: string
+          path?: string
+          severity?: string
+        }
+        Relationships: []
+      }
+      seo_overrides: {
+        Row: {
+          canonical_override: string | null
+          created_at: string
+          description: string | null
+          id: string
+          keywords: string | null
+          noindex: boolean
+          og_image: string | null
+          path: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          canonical_override?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          keywords?: string | null
+          noindex?: boolean
+          og_image?: string | null
+          path: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          canonical_override?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          keywords?: string | null
+          noindex?: boolean
+          og_image?: string | null
+          path?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           created_at: string | null

@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import SEO from "@/components/SEO";
 import BreadcrumbJsonLd from "@/components/BreadcrumbJsonLd";
+import ProductJsonLd from "@/components/ProductJsonLd";
 import WishlistButton from "@/components/WishlistButton";
 import PackageReviews from "@/components/PackageReviews";
 import InstallmentCalculator from "@/components/InstallmentCalculator";
@@ -159,6 +160,18 @@ const PackageDetail = () => {
           { name: "Paket", url: "/paket" },
           { name: pkg.title, url: `/paket/${pkg.id}` },
         ]}
+      />
+      <ProductJsonLd
+        name={pkg.title}
+        description={pkg.description || `Paket ${pkg.title} dengan pelayanan premium dan bimbingan ibadah lengkap.`}
+        image={pkg.image_url}
+        sku={pkg.id}
+        price={departures.length ? Math.min(...departures.flatMap((d) => d.prices.map((p) => p.price))) : undefined}
+        currency="IDR"
+        availability={departures.some((d) => d.remaining_quota > 0) ? "InStock" : "SoldOut"}
+        validFrom={departures[0]?.departure_date}
+        validThrough={departures[departures.length - 1]?.return_date}
+        url={typeof window !== "undefined" ? window.location.href : `https://umroh-gateway.lovable.app/paket/${slug}`}
       />
       <Navbar />
       <main className="pt-20">

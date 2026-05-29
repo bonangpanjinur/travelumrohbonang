@@ -17,6 +17,11 @@ Disallow: /refund-request
 Disallow: /auth
 Disallow: /forgot-password
 Disallow: /reset-password
+Disallow: /contract/
+Disallow: /r/
+Disallow: /account/
+Disallow: /wishlist
+Disallow: /bandingkan
 
 User-agent: Googlebot
 Allow: /
