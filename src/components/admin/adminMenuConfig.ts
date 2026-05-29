@@ -32,6 +32,8 @@ import {
   Receipt,
   ShieldCheck,
   ShieldAlert,
+  Trophy,
+  Coins,
   LucideIcon
 } from "lucide-react";
 
@@ -109,6 +111,7 @@ export const menuGroups: MenuGroup[] = [
     items: [
       { label: "CRM & Follow-up", href: "/admin/crm", icon: MessageCircle, premium: true, premiumFeature: "CRM & Follow-up Otomatis" },
       { label: "Kupon", href: "/admin/coupons", icon: Ticket },
+      { label: "Leaderboard Agen", href: "/admin/leaderboard", icon: Trophy },
       { label: "Analitik AI", href: "/admin/analytics-ai", icon: BrainCircuit, premium: true, premiumFeature: "Analitik AI" },
     ],
   },
@@ -148,6 +151,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Upgrade Template", href: "/admin/template-upgrades", icon: ArrowUpCircle, premium: true, premiumFeature: "Upgrade Template Billing" },
       { label: "Audit Logs", href: "/admin/audit-logs", icon: ShieldAlert },
       { label: "Manajemen Role", href: "/admin/role-management", icon: ShieldCheck },
+      { label: "Mata Uang", href: "/admin/currencies", icon: Coins },
       { label: "Pengaturan Umum", href: "/admin/settings", icon: Settings },
     ],
   },
