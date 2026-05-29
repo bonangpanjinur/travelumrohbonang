@@ -18,6 +18,8 @@ import StickyMobileCTA from "@/components/StickyMobileCTA";
 import PageFAQ from "@/components/PageFAQ";
 import RelatedPackages from "@/components/RelatedPackages";
 import RelatedArticles from "@/components/RelatedArticles";
+import { lookupSlugRedirect, buildRedirectPath } from "@/lib/slugRedirect";
+import { useTenant } from "@/hooks/useTenant";
 
 interface Package {
   id: string;
@@ -54,6 +56,7 @@ const PackageDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { tenant } = useTenant();
   const [pkg, setPkg] = useState<Package | null>(null);
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [extraHotels, setExtraHotels] = useState<ExtraHotel[]>([]);
@@ -73,7 +76,7 @@ const PackageDetail = () => {
           airport:airports(name, city)
         `)
         .eq("slug", slug)
-        .single();
+        .maybeSingle();
 
       if (pkgData) {
         setPkg(pkgData as unknown as Package);
@@ -93,12 +96,19 @@ const PackageDetail = () => {
 
         setDepartures((depRes.data as unknown as Departure[]) || []);
         setExtraHotels((extraRes.data as unknown as ExtraHotel[]) || []);
+      } else if (slug) {
+        // No package matched — check the slug redirect table for an old → new mapping
+        const redirectTo = await lookupSlugRedirect("package", slug, tenant?.id);
+        if (redirectTo) {
+          navigate(buildRedirectPath("package", redirectTo), { replace: true });
+          return;
+        }
       }
       setLoading(false);
     };
 
     fetchPackage();
-  }, [slug]);
+  }, [slug, tenant?.id, navigate]);
 
   const handleBookNow = () => {
     if (!user) {
