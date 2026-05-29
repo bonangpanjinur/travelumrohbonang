@@ -55,8 +55,11 @@ const SEO = ({
 
   const siteName = branding.company_name;
   const fullTitle = title ? `${title} | ${siteName}` : `${siteName} - ${branding.tagline}`;
-  const currentUrl = url || (typeof window !== "undefined" ? window.location.href : "");
-  const defaultImage = image || "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=1200&q=80";
+  // Canonical: prefer production domain so previews don't compete in the index
+  const PROD_ORIGIN = "https://umroh-gateway.lovable.app";
+  const pathname = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/";
+  const currentUrl = url || `${PROD_ORIGIN}${pathname}`;
+  const defaultImage = image || `${PROD_ORIGIN}/og-default.jpg`;
 
   // Default Organization JSON-LD
   const organizationJsonLd = {
