@@ -32,7 +32,7 @@ const ImpersonationBanner = () => {
 
   const handleExit = async () => {
     try {
-      await logAudit("impersonate_end", { entity_type: "user", entity_id: user.id });
+      await logAudit({ action: "impersonate_end", entityType: "user", entityId: user.id });
     } catch {}
     sessionStorage.removeItem(STORAGE_KEY);
     await supabase.auth.signOut();
