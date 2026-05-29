@@ -401,6 +401,7 @@ export type Database = {
           booking_code: string
           branch_id: string | null
           created_at: string | null
+          currency: string
           departure_id: string | null
           id: string
           notes: string | null
@@ -417,6 +418,7 @@ export type Database = {
           booking_code: string
           branch_id?: string | null
           created_at?: string | null
+          currency?: string
           departure_id?: string | null
           id?: string
           notes?: string | null
@@ -433,6 +435,7 @@ export type Database = {
           booking_code?: string
           branch_id?: string | null
           created_at?: string | null
+          currency?: string
           departure_id?: string | null
           id?: string
           notes?: string | null
@@ -568,6 +571,42 @@ export type Database = {
           min_purchase?: number | null
           used_count?: number | null
           value?: number
+        }
+        Relationships: []
+      }
+      currencies: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          rate_to_idr: number
+          symbol: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          rate_to_idr?: number
+          symbol?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          rate_to_idr?: number
+          symbol?: string
+          updated_at?: string
         }
         Relationships: []
       }
