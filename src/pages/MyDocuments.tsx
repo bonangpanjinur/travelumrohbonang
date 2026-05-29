@@ -90,9 +90,10 @@ const MyDocuments = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from("pilgrim-documents")
-        .getPublicUrl(path);
+      // pilgrim-documents is a PRIVATE bucket; store the storage path only and
+      // generate short-lived signed URLs on demand via getSignedPilgrimDocUrl.
+      const fileUrl = path;
+
 
       const existingDoc = getDoc(pilgrimId, docType);
 
