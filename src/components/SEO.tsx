@@ -59,9 +59,10 @@ const SEO = ({
   // Per-tenant Google Search Console verification token. On the main brand
   // domain we fall back to the `seo.gsc_verification` site_setting key.
   useEffect(() => {
+    const tenantGsc = (tenant as { gsc_verification?: string | null } | null)?.gsc_verification;
     const fetchGsc = async () => {
-      if (tenant?.gsc_verification) {
-        setGscToken(tenant.gsc_verification);
+      if (tenantGsc) {
+        setGscToken(tenantGsc);
         return;
       }
       const { data } = await supabase
@@ -73,7 +74,7 @@ const SEO = ({
       if (v?.gsc_verification) setGscToken(v.gsc_verification);
     };
     fetchGsc();
-  }, [tenant?.id, tenant?.gsc_verification]);
+  }, [tenant]);
 
   const siteName = branding.company_name;
   const fullTitle = title ? `${title} | ${siteName}` : `${siteName} - ${branding.tagline}`;
@@ -155,6 +156,7 @@ const SEO = ({
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
       {noIndex && <meta name="robots" content="noindex, nofollow" />}
+      {gscToken && <meta name="google-site-verification" content={gscToken} />}
       <link rel="canonical" href={currentUrl} />
 
       {/* hreflang — points back to the same tenant origin so each domain is
