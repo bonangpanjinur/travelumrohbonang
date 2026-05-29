@@ -191,6 +191,28 @@ const AdminFAQ = () => {
                   min={0}
                 />
               </div>
+              <div>
+                <label className="text-sm font-medium">Tampilkan di</label>
+                <select
+                  className="w-full border border-border rounded-md px-3 py-2 bg-background text-sm"
+                  value={formData.scope}
+                  onChange={(e) => setFormData({ ...formData, scope: e.target.value as FAQ["scope"], package_id: e.target.value === "package" ? formData.package_id : null })}
+                >
+                  {SCOPE_OPTIONS.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  "Umum" muncul di mana saja yang memuatnya. "Halaman Daftar Paket" hanya di /paket. "Detail Paket" muncul di semua detail paket, atau hanya paket tertentu jika dipilih di bawah.
+                </p>
+              </div>
+              {formData.scope === "package" && (
+                <div>
+                  <label className="text-sm font-medium">Paket Spesifik (opsional)</label>
+                  <PackagePicker value={formData.package_id} onChange={(v) => setFormData({ ...formData, package_id: v })} />
+                  <p className="text-xs text-muted-foreground mt-1">Kosongkan untuk tampil di semua halaman detail paket.</p>
+                </div>
+              )}
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Batal
