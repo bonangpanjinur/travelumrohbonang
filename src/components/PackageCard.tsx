@@ -148,7 +148,7 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
           <div>
             <span className="text-xs text-muted-foreground">Mulai dari</span>
             <div className="text-xl font-display font-bold text-foreground">
-              Rp {lowestPrice.toLocaleString("id-ID")}
+              {formatPrice(lowestPrice)}
             </div>
           </div>
           <Link to={`/paket/${pkg.slug}`}>
