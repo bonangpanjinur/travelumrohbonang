@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageFAQ from "@/components/PageFAQ";
 import BackgroundPattern from "@/components/BackgroundPattern";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
