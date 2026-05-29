@@ -39,8 +39,10 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  
-  const { signIn, signUp } = useAuth();
+  const [twoFA, setTwoFA] = useState<{ redirect: string; code: string } | null>(null);
+  const [twoFALoading, setTwoFALoading] = useState(false);
+
+  const { signIn, signUp, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
