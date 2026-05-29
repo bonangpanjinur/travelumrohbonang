@@ -341,6 +341,12 @@ const Paket = () => {
         title="Paket Perjalanan Umroh"
         description="Temukan paket perjalanan umroh terbaik sesuai kebutuhan dan budget Anda. Berbagai pilihan paket dari ekonomi hingga VIP."
       />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Beranda", url: "/" },
+          { name: "Paket", url: "/paket" },
+        ]}
+      />
       <Navbar />
       <main className="pt-20">
         {/* Header */}
