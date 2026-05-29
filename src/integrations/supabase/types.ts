@@ -2115,6 +2115,41 @@ export type Database = {
         }
         Relationships: []
       }
+      slug_redirects: {
+        Row: {
+          created_at: string
+          id: string
+          new_slug: string
+          old_slug: string
+          resource_type: string
+          tenant_site_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_slug: string
+          old_slug: string
+          resource_type: string
+          tenant_site_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_slug?: string
+          old_slug?: string
+          resource_type?: string
+          tenant_site_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slug_redirects_tenant_site_id_fkey"
+            columns: ["tenant_site_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_pricing: {
         Row: {
           created_at: string | null
@@ -2257,6 +2292,7 @@ export type Database = {
           email: string | null
           enabled_modules: Json | null
           facebook_url: string | null
+          gsc_verification: string | null
           hero_image_url: string | null
           hero_subtitle: string | null
           hero_title: string | null
@@ -2268,6 +2304,7 @@ export type Database = {
           phone: string | null
           primary_color: string | null
           secondary_color: string | null
+          seo_default_image: string | null
           site_name: string
           subdomain: string
           tagline: string | null
@@ -2285,6 +2322,7 @@ export type Database = {
           email?: string | null
           enabled_modules?: Json | null
           facebook_url?: string | null
+          gsc_verification?: string | null
           hero_image_url?: string | null
           hero_subtitle?: string | null
           hero_title?: string | null
@@ -2296,6 +2334,7 @@ export type Database = {
           phone?: string | null
           primary_color?: string | null
           secondary_color?: string | null
+          seo_default_image?: string | null
           site_name: string
           subdomain: string
           tagline?: string | null
@@ -2313,6 +2352,7 @@ export type Database = {
           email?: string | null
           enabled_modules?: Json | null
           facebook_url?: string | null
+          gsc_verification?: string | null
           hero_image_url?: string | null
           hero_subtitle?: string | null
           hero_title?: string | null
@@ -2324,6 +2364,7 @@ export type Database = {
           phone?: string | null
           primary_color?: string | null
           secondary_color?: string | null
+          seo_default_image?: string | null
           site_name?: string
           subdomain?: string
           tagline?: string | null
