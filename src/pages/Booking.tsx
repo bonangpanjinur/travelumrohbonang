@@ -210,7 +210,7 @@ const Booking = () => {
         finalPicId = picAgentId;
       }
 
-      // Attach agent_id from referral code if present
+      // Attach agent_id from referral code if present (URL/localStorage first, then 30-day affiliate cookie)
       let agentIdFromRef: string | null = null;
       try {
         const { getStoredReferral, clearStoredReferral } = await import("@/lib/audit");
@@ -226,6 +226,10 @@ const Booking = () => {
             agentIdFromRef = ag.id;
             clearStoredReferral();
           }
+        }
+        if (!agentIdFromRef) {
+          const { resolveAffiliateAgentId } = await import("@/lib/affiliate");
+          agentIdFromRef = await resolveAffiliateAgentId();
         }
       } catch (e) { console.warn("referral attach failed", e); }
 

@@ -91,6 +91,11 @@ import Wishlist from "./pages/Wishlist";
 import Compare from "./pages/Compare";
 import AdminReviews from "./pages/admin/Reviews";
 import AdminLoyalty from "./pages/admin/Loyalty";
+import AdminDepartureGallery from "./pages/admin/DepartureGallery";
+import AdminCheckIn from "./pages/admin/CheckIn";
+import AdminManasik from "./pages/admin/Manasik";
+import Manasik from "./pages/Manasik";
+import AffiliateRedirect from "./pages/AffiliateRedirect";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
@@ -137,6 +142,8 @@ const AppContent = () => {
       <Route path="/galeri" element={<Gallery />} />
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<BlogDetail />} />
+      <Route path="/manasik" element={<Manasik />} />
+      <Route path="/r/:code" element={<AffiliateRedirect />} />
 
       {/* Admin Routes */}
       <Route element={<AdminRoute />}>
@@ -191,6 +198,9 @@ const AppContent = () => {
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="loyalty" element={<AdminLoyalty />} />
           <Route path="slug-redirects" element={<AdminSlugRedirects />} />
+          <Route path="departure-gallery" element={<AdminDepartureGallery />} />
+          <Route path="check-in" element={<AdminCheckIn />} />
+          <Route path="manasik" element={<AdminManasik />} />
         </Route>
       </Route>
 

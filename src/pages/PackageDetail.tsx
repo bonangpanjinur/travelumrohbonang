@@ -20,6 +20,7 @@ import RelatedPackages from "@/components/RelatedPackages";
 import RelatedArticles from "@/components/RelatedArticles";
 import { lookupSlugRedirect, buildRedirectPath } from "@/lib/slugRedirect";
 import { useTenant } from "@/hooks/useTenant";
+import PromoPdfButton from "@/components/PromoPdfButton";
 
 interface Package {
   id: string;
@@ -356,6 +357,19 @@ const PackageDetail = () => {
                   {user ? "Booking Sekarang" : "Login untuk Booking"}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
+                <div className="mt-3">
+                  <PromoPdfButton
+                    packageData={{
+                      title: pkg.title,
+                      image_url: pkg.image_url,
+                      description: pkg.description,
+                      duration_days: pkg.duration_days,
+                      hotel_makkah: pkg.hotel_makkah?.name,
+                      hotel_madinah: pkg.hotel_madinah?.name,
+                      startPrice: selectedDep ? getLowestPrice(selectedDep.prices) : (departures[0] ? getLowestPrice(departures[0].prices) : 0),
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
