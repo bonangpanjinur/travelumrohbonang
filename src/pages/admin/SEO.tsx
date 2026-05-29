@@ -388,6 +388,58 @@ const AdminSEO = () => {
           </Card>
         </TabsContent>
 
+        {/* AUDIT */}
+        <TabsContent value="audit">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
+              <CardTitle>Audit SEO Otomatis</CardTitle>
+              <Button onClick={runAudit} disabled={auditRunning}>
+                {auditRunning ? "Menjalankan..." : "Jalankan Audit"}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {auditFindings.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  Belum ada hasil audit. Klik "Jalankan Audit" untuk memindai paket, blog, dan halaman.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Severity</TableHead>
+                        <TableHead>Path</TableHead>
+                        <TableHead>Issue</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {auditFindings.map((f) => (
+                        <TableRow key={f.id}>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                f.severity === "error"
+                                  ? "destructive"
+                                  : f.severity === "warning"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                            >
+                              {f.severity}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">{f.path}</TableCell>
+                          <TableCell>{f.issue}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* TOOLS */}
         <TabsContent value="tools">
           <Card>
