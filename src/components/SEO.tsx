@@ -1,6 +1,7 @@
 import { Helmet } from "react-helmet-async";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/hooks/useTenant";
 
 interface SEOProps {
   title?: string;
@@ -36,6 +37,8 @@ const SEO = ({
   noIndex = false,
 }: SEOProps) => {
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
+  const [gscToken, setGscToken] = useState<string | null>(null);
+  const { tenant } = useTenant();
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -53,6 +56,26 @@ const SEO = ({
     fetchBranding();
   }, []);
 
+  // Per-tenant Google Search Console verification token. On the main brand
+  // domain we fall back to the `seo.gsc_verification` site_setting key.
+  useEffect(() => {
+    const tenantGsc = (tenant as { gsc_verification?: string | null } | null)?.gsc_verification;
+    const fetchGsc = async () => {
+      if (tenantGsc) {
+        setGscToken(tenantGsc);
+        return;
+      }
+      const { data } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "seo")
+        .maybeSingle();
+      const v = (data?.value as { gsc_verification?: string } | null) ?? null;
+      if (v?.gsc_verification) setGscToken(v.gsc_verification);
+    };
+    fetchGsc();
+  }, [tenant]);
+
   const siteName = branding.company_name;
   const fullTitle = title ? `${title} | ${siteName}` : `${siteName} - ${branding.tagline}`;
 
@@ -65,7 +88,22 @@ const SEO = ({
     ? window.location.pathname + window.location.search
     : "/";
   const currentUrl = url || `${origin}${pathname}`;
-  const defaultImage = image || `${origin}/og-default.jpg`;
+
+  // Always resolve og:image to an absolute URL. Relative paths break crawlers,
+  // and the static /og-default.jpg fallback 404s on tenant subdomains.
+  const resolveAbsolute = (src?: string) => {
+    if (!src) return undefined;
+    if (/^https?:\/\//i.test(src)) return src;
+    if (src.startsWith("/")) return `${origin}${src}`;
+    return `${origin}/${src}`;
+  };
+  const tenantDefault = (tenant as { seo_default_image?: string | null } | null)?.seo_default_image || null;
+  const defaultImage =
+    resolveAbsolute(image) ||
+    resolveAbsolute(tenantDefault || undefined) ||
+    resolveAbsolute(tenant?.hero_image_url || undefined) ||
+    resolveAbsolute(tenant?.logo_url || undefined) ||
+    `${origin}/og-default.jpg`;
 
   // Default Organization JSON-LD
   const organizationJsonLd = {
@@ -118,6 +156,7 @@ const SEO = ({
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
       {noIndex && <meta name="robots" content="noindex, nofollow" />}
+      {gscToken && <meta name="google-site-verification" content={gscToken} />}
       <link rel="canonical" href={currentUrl} />
 
       {/* hreflang — points back to the same tenant origin so each domain is

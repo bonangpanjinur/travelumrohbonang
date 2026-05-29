@@ -44,6 +44,8 @@ interface TenantSite {
   facebook_url: string;
   is_active: boolean;
   template: string;
+  gsc_verification?: string | null;
+  seo_default_image?: string | null;
   created_at: string;
 }
 
@@ -66,6 +68,8 @@ const emptyForm: Partial<TenantSite> = {
   facebook_url: "",
   is_active: true,
   template: "classic",
+  gsc_verification: "",
+  seo_default_image: "",
   branch_id: null,
   agent_id: null,
 };
@@ -309,6 +313,27 @@ const TenantSitesAdmin = () => {
               <div>
                 <Label>Hero Subtitle</Label>
                 <Input value={form.hero_subtitle || ""} onChange={e => updateField("hero_subtitle", e.target.value)} />
+              </div>
+
+              {/* SEO per tenant */}
+              <div className="md:col-span-2">
+                <Label>Google Search Console — meta verification</Label>
+                <Input
+                  value={form.gsc_verification || ""}
+                  onChange={(e) => updateField("gsc_verification", e.target.value)}
+                  placeholder="google-site-verification=XXXXXXXX"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tempel isi <code>content</code> dari meta tag verifikasi GSC. Akan otomatis tampil di tag &lt;head&gt; pada domain tenant ini.
+                </p>
+              </div>
+              <div className="md:col-span-2">
+                <Label>Default og:image (SEO sosial)</Label>
+                <Input
+                  value={form.seo_default_image || ""}
+                  onChange={(e) => updateField("seo_default_image", e.target.value)}
+                  placeholder="https://.../og-cover.jpg"
+                />
               </div>
               <div className="md:col-span-2">
                 <Label>Tentang</Label>

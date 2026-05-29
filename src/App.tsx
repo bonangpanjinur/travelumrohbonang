@@ -78,6 +78,7 @@ import AdminProofAccessLogs from "./pages/admin/PaymentProofAccessLogs";
 import AdminAgentWithdrawals from "./pages/admin/AgentWithdrawals";
 import AdminRefunds from "./pages/admin/Refunds";
 import AdminAuditLogs from "./pages/admin/AuditLogs";
+import AdminSlugRedirects from "./pages/admin/SlugRedirects";
 import AdminRoleManagement from "./pages/admin/RoleManagement";
 import AdminChats from "./pages/admin/Chats";
 import AgentCommissions from "./pages/AgentCommissions";
@@ -189,6 +190,7 @@ const AppContent = () => {
           <Route path="currencies" element={<AdminCurrencies />} />
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="loyalty" element={<AdminLoyalty />} />
+          <Route path="slug-redirects" element={<AdminSlugRedirects />} />
         </Route>
       </Route>
 

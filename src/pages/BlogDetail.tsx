@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useTenant } from "@/hooks/useTenant";
+import { lookupSlugRedirect } from "@/lib/slugRedirect";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -41,6 +43,8 @@ interface RelatedPost {
 
 const BlogDetail = () => {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const { tenant } = useTenant();
   const [post, setPost] = useState<BlogPost | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<RelatedPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +62,7 @@ const BlogDetail = () => {
 
       if (data) {
         setPost(data as BlogPost);
-        
+
         // Fetch related posts
         const { data: related } = await supabase
           .from("blog_posts")
@@ -66,15 +70,21 @@ const BlogDetail = () => {
           .eq("is_published", true)
           .neq("id", data.id)
           .limit(3);
-        
+
         setRelatedPosts((related || []) as RelatedPost[]);
+      } else {
+        const redirectTo = await lookupSlugRedirect("blog", slug, tenant?.id);
+        if (redirectTo) {
+          navigate(`/blog/${redirectTo}`, { replace: true });
+          return;
+        }
       }
 
       setLoading(false);
     };
 
     fetchPost();
-  }, [slug]);
+  }, [slug, tenant?.id, navigate]);
 
   const handleShare = async () => {
     if (navigator.share) {
