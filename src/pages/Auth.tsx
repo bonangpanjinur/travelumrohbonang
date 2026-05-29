@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import SEO from "@/components/SEO";
 import { z } from "zod";
 
 const loginSchema = z.object({
