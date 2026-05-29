@@ -263,6 +263,58 @@ const Integrations = () => {
           );
         })}
       </div>
+
+      <Dialog open={!!testOpen} onOpenChange={(o) => !o && setTestOpen(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Uji Kirim — {testOpen ? SCHEMA[testOpen].label : ""}
+            </DialogTitle>
+            <DialogDescription>
+              {testOpen === "resend"
+                ? "Kirim email uji ke alamat berikut menggunakan konfigurasi Resend yang aktif."
+                : "Kirim pesan WhatsApp uji ke nomor berikut menggunakan provider yang dipilih."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs">
+                {testOpen === "resend" ? "Email Tujuan" : "Nomor WhatsApp (mis. 0812xxx)"}
+              </Label>
+              <Input
+                value={testTo}
+                onChange={(e) => setTestTo(e.target.value)}
+                placeholder={testOpen === "resend" ? "you@example.com" : "08123456789"}
+                type={testOpen === "resend" ? "email" : "tel"}
+              />
+            </div>
+            {testOpen === "resend" && (
+              <div className="space-y-1">
+                <Label className="text-xs">Subjek</Label>
+                <Input value={testSubject} onChange={(e) => setTestSubject(e.target.value)} />
+              </div>
+            )}
+            <div className="space-y-1">
+              <Label className="text-xs">Pesan</Label>
+              <Textarea
+                rows={4}
+                value={testMessage}
+                onChange={(e) => setTestMessage(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestOpen(null)} disabled={testSending}>
+              Batal
+            </Button>
+            <Button onClick={sendTest} disabled={testSending}>
+              {testSending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <Send className="w-4 h-4 mr-2" />
+              Kirim
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
