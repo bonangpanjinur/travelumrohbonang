@@ -115,12 +115,18 @@ const SEO = ({
     return `${origin}/${src}`;
   };
   const tenantDefault = (tenant as { seo_default_image?: string | null } | null)?.seo_default_image || null;
+  const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const ogFallback = projectRef
+    ? `https://${projectRef}.supabase.co/functions/v1/og-image?title=${encodeURIComponent(
+        effectiveTitle || siteName,
+      )}&subtitle=${encodeURIComponent(effectiveDescription.slice(0, 80))}&brand=${encodeURIComponent(siteName)}`
+    : `${origin}/og-default.jpg`;
   const defaultImage =
     resolveAbsolute(image) ||
     resolveAbsolute(tenantDefault || undefined) ||
     resolveAbsolute(tenant?.hero_image_url || undefined) ||
     resolveAbsolute(tenant?.logo_url || undefined) ||
-    `${origin}/og-default.jpg`;
+    ogFallback;
 
   const ogImage = override?.og_image
     ? (override.og_image.startsWith("http") ? override.og_image : `${origin}${override.og_image}`)

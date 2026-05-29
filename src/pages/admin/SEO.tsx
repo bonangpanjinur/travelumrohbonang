@@ -58,6 +58,36 @@ const AdminSEO = () => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [auditRunning, setAuditRunning] = useState(false);
+  const [auditFindings, setAuditFindings] = useState<Array<{ id: string; path: string; issue: string; severity: string; created_at: string }>>([]);
+
+  const loadAudit = async () => {
+    const { data } = await supabase
+      .from("seo_audit_results")
+      .select("id,path,issue,severity,created_at")
+      .order("severity", { ascending: true })
+      .order("path", { ascending: true })
+      .limit(500);
+    setAuditFindings((data as typeof auditFindings) || []);
+  };
+
+  const runAudit = async () => {
+    setAuditRunning(true);
+    try {
+      const { error } = await supabase.functions.invoke("seo-audit", { body: {} });
+      if (error) throw error;
+      toast.success("Audit SEO selesai");
+      await loadAudit();
+    } catch (e) {
+      toast.error("Gagal menjalankan audit: " + (e as Error).message);
+    } finally {
+      setAuditRunning(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAudit();
+  }, []);
   const [sitemapInfo, setSitemapInfo] = useState<{ count: number; lastFetched: string } | null>(null);
 
   const loadAll = async () => {
@@ -168,10 +198,11 @@ const AdminSEO = () => {
       </div>
 
       <Tabs defaultValue="defaults" className="w-full">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full md:w-auto">
+        <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full md:w-auto">
           <TabsTrigger value="defaults">Default</TabsTrigger>
           <TabsTrigger value="overrides">Override Halaman</TabsTrigger>
           <TabsTrigger value="sitemap">Sitemap & Robots</TabsTrigger>
+          <TabsTrigger value="audit">Audit</TabsTrigger>
           <TabsTrigger value="tools">Tools</TabsTrigger>
         </TabsList>
 
@@ -353,6 +384,58 @@ const AdminSEO = () => {
               <Button variant="outline" onClick={loadSitemap}>
                 Refresh Info
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* AUDIT */}
+        <TabsContent value="audit">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
+              <CardTitle>Audit SEO Otomatis</CardTitle>
+              <Button onClick={runAudit} disabled={auditRunning}>
+                {auditRunning ? "Menjalankan..." : "Jalankan Audit"}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {auditFindings.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  Belum ada hasil audit. Klik "Jalankan Audit" untuk memindai paket, blog, dan halaman.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Severity</TableHead>
+                        <TableHead>Path</TableHead>
+                        <TableHead>Issue</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {auditFindings.map((f) => (
+                        <TableRow key={f.id}>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                f.severity === "error"
+                                  ? "destructive"
+                                  : f.severity === "warning"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                            >
+                              {f.severity}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">{f.path}</TableCell>
+                          <TableCell>{f.issue}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
