@@ -101,7 +101,7 @@ const MyDocuments = () => {
         await supabase
           .from("pilgrim_documents")
           .update({
-            file_url: urlData.publicUrl,
+            file_url: fileUrl,
             file_name: file.name,
             status: "uploaded",
           })
