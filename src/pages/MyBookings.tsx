@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Calendar, Package, ArrowRight, Printer, AlertCircle, MapPin, ChevronDown, Ticket, MessageCircle, Receipt } from "lucide-react";
+import { Calendar, Package, ArrowRight, Printer, AlertCircle, MapPin, ChevronDown, Ticket, MessageCircle, Receipt, PenLine, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import InvoiceButton from "@/components/InvoiceButton";
@@ -47,6 +47,7 @@ const MyBookings = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [signedMap, setSignedMap] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -74,7 +75,22 @@ const MyBookings = () => {
           .order("created_at", { ascending: false });
 
         if (fetchError) throw fetchError;
-        setBookings((data as unknown as BookingItem[]) || []);
+        const list = (data as unknown as BookingItem[]) || [];
+        setBookings(list);
+
+        if (list.length > 0) {
+          const ids = list.map((b) => b.id);
+          const { data: contracts } = await supabase
+            .from("contracts")
+            .select("booking_id, signed_at")
+            .in("booking_id", ids)
+            .eq("user_id", user.id);
+          const map: Record<string, boolean> = {};
+          (contracts ?? []).forEach((c: any) => {
+            if (c.signed_at) map[c.booking_id] = true;
+          });
+          setSignedMap(map);
+        }
       } catch (err: any) {
         console.error("Error fetching bookings:", err);
         setError(err.message || "Gagal memuat data booking");
@@ -166,6 +182,17 @@ const MyBookings = () => {
                           <Link to={`/booking/payment/${b.id}`}>
                             <Button size="sm" className="gradient-gold text-primary">
                               Bayar <ArrowRight className="w-4 h-4 ml-1" />
+                            </Button>
+                          </Link>
+                        )}
+                        {b.status !== "draft" && b.status !== "cancelled" && (
+                          <Link to={`/contract/${b.id}`}>
+                            <Button size="sm" variant={signedMap[b.id] ? "outline" : "secondary"}>
+                              {signedMap[b.id] ? (
+                                <><CheckCircle2 className="w-4 h-4 mr-1 text-success" />Kontrak Ditandatangani</>
+                              ) : (
+                                <><PenLine className="w-4 h-4 mr-1" />Tanda Tangan Kontrak</>
+                              )}
                             </Button>
                           </Link>
                         )}
