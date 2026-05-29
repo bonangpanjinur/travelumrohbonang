@@ -68,22 +68,18 @@ const AdminFAQ = () => {
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string }) => {
+      const payload = {
+        question: data.question,
+        answer: data.answer,
+        sort_order: data.sort_order,
+        scope: data.scope,
+        package_id: data.scope === "package" ? data.package_id : null,
+      };
       if (data.id) {
-        const { error } = await supabase
-          .from("faqs")
-          .update({
-            question: data.question,
-            answer: data.answer,
-            sort_order: data.sort_order,
-          })
-          .eq("id", data.id);
+        const { error } = await supabase.from("faqs").update(payload).eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("faqs").insert({
-          question: data.question,
-          answer: data.answer,
-          sort_order: data.sort_order,
-        });
+        const { error } = await supabase.from("faqs").insert(payload);
         if (error) throw error;
       }
     },
