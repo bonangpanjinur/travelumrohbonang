@@ -41,6 +41,26 @@ const SCOPE_OPTIONS: { value: FAQ["scope"]; label: string }[] = [
   { value: "package", label: "Halaman Detail Paket" },
 ];
 
+function PackagePicker({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
+  const { data: packages = [] } = useQuery({
+    queryKey: ["faq-packages-picker"],
+    queryFn: async () => {
+      const { data } = await supabase.from("packages").select("id, title").eq("is_active", true).order("title");
+      return (data as { id: string; title: string }[]) || [];
+    },
+  });
+  return (
+    <select
+      className="w-full border border-border rounded-md px-3 py-2 bg-background text-sm"
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value || null)}
+    >
+      <option value="">Semua paket</option>
+      {packages.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+    </select>
+  );
+}
+
 const AdminFAQ = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
