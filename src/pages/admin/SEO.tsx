@@ -479,6 +479,17 @@ const AdminSEO = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeleteAlertDialog
+        open={!!deleteId}
+        onOpenChange={(v) => !v && setDeleteId(null)}
+        title="Hapus override?"
+        description="Override SEO ini akan dihapus permanen."
+        onConfirm={() => {
+          if (deleteId) deleteOverride(deleteId);
+          setDeleteId(null);
+        }}
+      />
     </div>
   );
 };
