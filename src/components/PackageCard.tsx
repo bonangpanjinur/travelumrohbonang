@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Star, Calendar, Users, ArrowRight, Plane, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export interface PackageCardData {
   id: string;
@@ -37,6 +38,7 @@ interface PackageCardProps {
 }
 
 const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps) => {
+  const { format: formatPrice } = useCurrency();
   // Calculate lowest price from departures if available
   const getLowestPrice = () => {
     if (pkg.lowestPrice !== undefined) return pkg.lowestPrice;
@@ -146,7 +148,7 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
           <div>
             <span className="text-xs text-muted-foreground">Mulai dari</span>
             <div className="text-xl font-display font-bold text-foreground">
-              Rp {lowestPrice.toLocaleString("id-ID")}
+              {formatPrice(lowestPrice)}
             </div>
           </div>
           <Link to={`/paket/${pkg.slug}`}>
