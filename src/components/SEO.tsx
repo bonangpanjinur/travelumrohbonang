@@ -38,7 +38,12 @@ const SEO = ({
 }: SEOProps) => {
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
   const [gscToken, setGscToken] = useState<string | null>(null);
+  const [bingToken, setBingToken] = useState<string | null>(null);
+  const [defaultSuffix, setDefaultSuffix] = useState<string>("");
   const { tenant } = useTenant();
+  const pathnameForOverride =
+    typeof window !== "undefined" ? window.location.pathname : "/";
+  const override = useSeoOverride(pathnameForOverride);
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -63,21 +68,32 @@ const SEO = ({
     const fetchGsc = async () => {
       if (tenantGsc) {
         setGscToken(tenantGsc);
-        return;
       }
       const { data } = await supabase
         .from("site_settings")
         .select("value")
         .eq("key", "seo")
         .maybeSingle();
-      const v = (data?.value as { gsc_verification?: string } | null) ?? null;
-      if (v?.gsc_verification) setGscToken(v.gsc_verification);
+      const v = (data?.value as {
+        gsc_verification?: string;
+        bing_verification?: string;
+        default_title_suffix?: string;
+      } | null) ?? null;
+      if (v?.gsc_verification && !tenantGsc) setGscToken(v.gsc_verification);
+      if (v?.bing_verification) setBingToken(v.bing_verification);
+      if (v?.default_title_suffix) setDefaultSuffix(v.default_title_suffix);
     };
     fetchGsc();
   }, [tenant]);
 
   const siteName = branding.company_name;
-  const fullTitle = title ? `${title} | ${siteName}` : `${siteName} - ${branding.tagline}`;
+  const effectiveTitle = override?.title || title;
+  const effectiveDescription = override?.description || description;
+  const effectiveNoIndex = override?.noindex ?? noIndex;
+  const suffix = defaultSuffix || siteName;
+  const fullTitle = effectiveTitle
+    ? `${effectiveTitle} | ${suffix}`
+    : `${siteName} - ${branding.tagline}`;
 
   // Tenant-aware origin: each domain self-canonicals so search engines don't
   // merge ranking signals across the main brand and white-label tenants.
@@ -87,7 +103,7 @@ const SEO = ({
   const pathname = typeof window !== "undefined"
     ? window.location.pathname + window.location.search
     : "/";
-  const currentUrl = url || `${origin}${pathname}`;
+  const currentUrl = override?.canonical_override || url || `${origin}${pathname}`;
 
   // Always resolve og:image to an absolute URL. Relative paths break crawlers,
   // and the static /og-default.jpg fallback 404s on tenant subdomains.
