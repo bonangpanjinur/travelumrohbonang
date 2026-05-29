@@ -122,6 +122,7 @@ const AppContent = () => {
         <Route path="/booking/:slug/:departureId" element={<Booking />} />
         <Route path="/booking/payment/:bookingId" element={<Payment />} />
         <Route path="/my-bookings" element={<MyBookings />} />
+        <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/my-upgrades" element={<MyUpgrades />} />
