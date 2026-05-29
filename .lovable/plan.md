@@ -1,69 +1,59 @@
-# Rencana Eksekusi 2 Batch
+# Audit Status & Update PRD
 
-Scope-nya besar (10 fitur). Saya pecah jadi 2 batch supaya tiap batch bisa di-review & dipakai sebelum lanjut.
+Sesudah sprint-sprint terakhir, banyak item di PRD lama sebenarnya sudah selesai tapi belum tercoret. Plan ini cuma 1 langkah: rewrite `PRD.md` jadi snapshot status yang akurat per area, plus daftar yang benar-benar tersisa beserta kebutuhannya (API key, keputusan produk, dll).
 
----
+## Ringkasan audit (hasil scan kode)
 
-## BATCH 1 — Operasional Jamaah & B2B/Agen
+### ✅ Sudah selesai (sebelumnya masih "todo" di PRD)
+- **SEO**: og:image dinamis per paket/artikel, sitemap multi-tenant (edge function `sitemap`), 301 redirect slug lama (`SlugRedirects` + `slugRedirect.ts`), Google Search Console verification per tenant, `LocalBusinessJsonLd` per cabang, FAQ/Breadcrumb/Related JSON-LD.
+- **Operasional**: galeri per-keberangkatan (`admin/DepartureGallery`), watermark image (client-side `lib/watermark.ts`), scanner QR check-in (`admin/CheckIn`), manasik kit publik + admin, QR per jamaah di Manifest.
+- **B2B/Agen**: PDF promosi auto-generated (`PromoPdfButton` + `lib/promoPdf.ts`), target & forecast komisi di Agent Portal, affiliate cookie 30 hari (`/r/:code` + `lib/affiliate.ts`).
+- **Keamanan**: 2FA TOTP (enrol di `/account/2fa`, gate login + force-enroll untuk staff), Cloudflare Turnstile captcha di Auth & Booking, rate-limit klien via `request_log`, e-signature kontrak (`/contract/:bookingId` + tombol di My Bookings), HIBP aktif, Sentry terintegrasi (no-op tanpa DSN).
+- **Konten/CMS**: Pages, Blog, Testimonials, Reviews, FAQ, Gallery, Tenant template (Classic/Modern/Premium) + billing.
 
-### Operasional
-1. **Galeri per-keberangkatan**
-   - Tabel `departure_gallery` (departure_id, image_url, caption, sort_order)
-   - Admin upload di `/admin/departures/:id/gallery`
-   - Tampil di halaman detail keberangkatan & dashboard jamaah
+### ❌ Masih belum (akan jadi backlog di PRD baru)
 
-2. **Watermark via Signed URL**
-   - Edge function `watermark-image`: ambil image dari storage, overlay teks (nama brand + kode booking) pakai `npm:@napi-rs/canvas` atau SVG composite
-   - Bucket `gallery` jadi private + signed URL 1 jam
-   - Helper `getWatermarkedUrl(path, label)` di frontend
+**SEO & Konten**
+- Halaman CMS default belum disiapkan kontennya (Tentang Kami, Kontak, T&C, Privacy, Tata Cara Bayar) — strukturnya ada, isi belum.
 
-3. **Scanner QR Check-in**
-   - Page `/admin/checkin` pakai `html5-qrcode`
-   - Tabel `check_ins` (pilgrim_id, departure_id, checked_in_at, checked_in_by, location)
-   - Scan QR (sudah ada di Manifest) → record check-in, toast hasil
+**Pembelian & Keuangan**
+- Filter lengkap di `/paket` (harga/durasi/bulan/hotel/maskapai/kategori) — sebagian saja.
+- Reconciliation otomatis pembayaran gateway vs booking (manual via `/admin/payments`).
+- Export keuangan terstandar (jurnal, neraca komisi) — `Accounting` ada tapi minim ekspor.
+- Multi-currency display di harga publik (admin sudah, publik belum konsisten).
 
-4. **Manasik Kit**
-   - Tabel `manasik_materials` (title, type [pdf|video|ebook], file_url, description, sort_order)
-   - Admin CRUD `/admin/manasik`
-   - Jamaah lihat di `/manasik` (filter per paket opsional)
+**Notifikasi & Komunikasi** (butuh API key user)
+- Email transaksional Resend (konfirmasi booking, reminder DP/cicilan, e-ticket, refund).
+- WhatsApp notification Fonnte/Wablas.
+- Web Push (jamaah + admin).
+- Live chat widget global publik (in-house chat untuk booking sudah ada).
 
-### B2B/Agen
-5. **PDF Promosi Auto-generated**
-   - Tombol "Download Materi Promosi" di detail paket (untuk agen login)
-   - Generate PDF client-side pakai `jspdf` + `html2canvas`: cover paket, harga, itinerary, kode referral agen, QR ke link affiliate
+**Operasional Admin**
+- Watermark berbasis signed-URL (bucket `gallery` masih public; saat ini watermark hanya overlay client-side).
+- Log akses + signed URL untuk dokumen jamaah (bucket sudah private, perlu access log seperti payment-proofs).
+- Export CSV terstandar untuk semua tabel admin (saat ini hanya leaderboard + sebagian).
+- Audit logs: ekspor & filter lanjutan.
+- Backup terjadwal dump DB ke storage.
+- Rate limit & captcha juga di form leads (CRM) & refund.
 
-6. **Target & Forecast Komisi**
-   - Kolom `monthly_target` di `agents`
-   - Dashboard agen: progress bar target bulan ini, forecast = pending commissions + paid bulan ini, chart trend 6 bulan
+**Kepatuhan**
+- Penerapan kontrak digital sebagai prasyarat pelunasan (tombol sudah ada di My Bookings, tapi belum mem-block step pelunasan jika kontrak belum ditandatangani).
+- DSN Sentry production — perlu user mengisi build secret `VITE_SENTRY_DSN`.
 
-7. **Affiliate Cookie 30 Hari**
-   - Route handler `/r/:referralCode` → set cookie `aff_ref` 30 hari → redirect home
-   - Saat booking dibuat: baca cookie, set `agent_id` otomatis kalau kosong
-   - Tabel `affiliate_clicks` untuk analytics
+## Yang akan ditulis ulang di PRD.md
 
----
+Struktur baru ringkas:
+1. **Tujuan & Audiens** (tetap)
+2. **Status Inti per Modul** — tabel: modul → status (✅/🟡/❌) → catatan
+3. **Backlog Aktif** — dikelompokkan P1/P2/P3 dengan dependensi (API key, keputusan)
+4. **Roadmap Sprint Berikutnya** — usulan urutan (notifikasi → keuangan → CMS default → operasional admin)
+5. **Teknis** — referensi file kunci (sentry.ts, rateLimit.ts, sitemap function, dsb) supaya dev berikut nggak nyari
+6. **Definition of Done per item P1** — supaya ada exit criteria jelas
 
-## BATCH 2 — Keamanan (setelah Batch 1 selesai)
+Section "Sprint A-E" lama dihapus karena sudah usang; diganti satu seksi "Riwayat Selesai" ringkas.
 
-8. **2FA TOTP** — pakai `otpauth` lib, kolom `totp_secret` & `totp_enabled` di profiles, page `/account/2fa` enroll dengan QR, gate login step kedua
-9. **Rate Limit + Captcha** — Cloudflare Turnstile (gratis) di form login/register/lead; rate limit per-IP via tabel `request_log` di edge function auth-sensitive
-10. **E-signature Kontrak** — tabel `contracts` (booking_id, html_content, signed_at, signature_data_url, ip), canvas signature pad di portal jamaah
-11. **HIBP Check** — aktifkan `password_hibp_enabled: true` via configure_auth
-12. **Error Tracking** — integrasi Sentry (butuh DSN dari user) atau fallback ke tabel `error_logs` + edge function logger
+## File yang berubah
+- `PRD.md` — rewrite penuh
+- `.lovable/plan.md` — dihapus (sudah eksekusi, isinya basi)
 
----
-
-## Catatan Teknis
-- Semua tabel baru pakai pola standar: GRANT + RLS (admin manage, public/auth read sesuai konteks)
-- Bucket `gallery` perlu dipindah ke private — perlu konfirmasi karena akan break URL existing
-- Watermark butuh font; pakai default sans-serif dari canvas
-- PDF promosi: tidak butuh server, full client untuk hemat fungsi
-
----
-
-## Yang Saya Butuhkan Konfirmasi
-1. **Bucket `gallery` saat ini public.** Untuk watermark signed URL, lebih aman jadi private. OK pindah private? (URL lama yang sudah tertanam di blog/posting akan break — perlu migrasi)
-2. **Batch 2 keamanan**: Sentry butuh DSN dari kamu. Atau pakai logger internal saja?
-3. Lanjut sekuensial Batch 1 → Batch 2, atau ada urutan prioritas lain?
-
-Kalau setuju, saya mulai Batch 1 — urutan: galeri → watermark → check-in → manasik → PDF promosi → target komisi → affiliate cookie.
+Tidak ada perubahan kode produk; ini murni dokumentasi.
