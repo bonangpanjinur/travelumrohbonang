@@ -101,6 +101,7 @@ import ContractSign from "./pages/ContractSign";
 import AdminErrorLogs from "./pages/admin/ErrorLogs";
 import AdminIntegrations from "./pages/admin/Integrations";
 import AdminLoginSettings from "./pages/admin/LoginSettings";
+import AdminSEO from "./pages/admin/SEO";
 import { useEffect } from "react";
 import { installGlobalErrorHandlers } from "@/lib/errorLogger";
 const queryClient = new QueryClient();
