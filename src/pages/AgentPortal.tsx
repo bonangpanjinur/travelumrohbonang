@@ -39,6 +39,7 @@ type AgentRow = {
   commission_percent: number;
   referral_code: string | null;
   branch_id: string | null;
+  monthly_target: number | null;
 };
 
 const AgentPortal = () => {
@@ -243,6 +244,77 @@ const AgentPortal = () => {
               color="text-primary"
             />
           </div>
+
+          {/* Target & Forecast */}
+          {(() => {
+            const now = new Date();
+            const thisMonth = paidBookings.filter((b) => {
+              const d = new Date(b.created_at);
+              return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+            });
+            const thisMonthCommission = thisMonth.reduce(
+              (s, b) => s + (Number(b.total_price) || 0) * (agent.commission_percent / 100),
+              0
+            );
+            const pendingCommission = bookings
+              .filter((b) => b.status === "pending" || b.status === "waiting_payment")
+              .reduce((s, b) => s + (Number(b.total_price) || 0) * (agent.commission_percent / 100), 0);
+            const target = Number(agent.monthly_target || 0);
+            const progress = target > 0 ? Math.min(100, (thisMonthCommission / target) * 100) : 0;
+            const forecast = thisMonthCommission + pendingCommission;
+            return (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-primary" /> Target & Forecast Bulan Ini
+                  </CardTitle>
+                  <CardDescription>
+                    Target: Rp {target.toLocaleString("id-ID")} ·{" "}
+                    <button
+                      className="underline text-primary hover:opacity-80"
+                      onClick={async () => {
+                        const v = window.prompt("Set target komisi bulanan (Rp)", String(target));
+                        if (v === null) return;
+                        const num = Number(v.replace(/\D/g, ""));
+                        if (Number.isNaN(num) || num < 0) return toast.error("Angka tidak valid");
+                        const { error } = await supabase.from("agents").update({ monthly_target: num }).eq("id", agent.id);
+                        if (error) return toast.error(error.message);
+                        toast.success("Target diperbarui");
+                        loadData();
+                      }}
+                    >
+                      ubah
+                    </button>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Tercapai: Rp {thisMonthCommission.toLocaleString("id-ID")}</span>
+                      <span className="text-muted-foreground">{progress.toFixed(0)}%</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded overflow-hidden">
+                      <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    <div className="p-3 rounded bg-muted/40">
+                      <p className="text-xs text-muted-foreground">Lunas Bln Ini</p>
+                      <p className="font-semibold">Rp {thisMonthCommission.toLocaleString("id-ID")}</p>
+                    </div>
+                    <div className="p-3 rounded bg-muted/40">
+                      <p className="text-xs text-muted-foreground">Pending</p>
+                      <p className="font-semibold">Rp {pendingCommission.toLocaleString("id-ID")}</p>
+                    </div>
+                    <div className="p-3 rounded bg-primary/10">
+                      <p className="text-xs text-muted-foreground">Forecast</p>
+                      <p className="font-semibold text-primary">Rp {forecast.toLocaleString("id-ID")}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Profil Agen */}
           <Card>
