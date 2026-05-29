@@ -648,7 +648,9 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          package_id: string | null
           question: string
+          scope: string
           sort_order: number | null
         }
         Insert: {
@@ -656,7 +658,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          package_id?: string | null
           question: string
+          scope?: string
           sort_order?: number | null
         }
         Update: {
@@ -664,10 +668,20 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          package_id?: string | null
           question?: string
+          scope?: string
           sort_order?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "faqs_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_transactions: {
         Row: {

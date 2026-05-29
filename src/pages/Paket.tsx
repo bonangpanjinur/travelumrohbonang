@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageFAQ from "@/components/PageFAQ";
 import BackgroundPattern from "@/components/BackgroundPattern";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -539,6 +540,11 @@ const Paket = () => {
             </div>
           </div>
         </BackgroundPattern>
+        <PageFAQ
+          scopes={["paket"]}
+          title="FAQ Paket Umroh"
+          description="Pertanyaan umum seputar pilihan paket, harga, dan jadwal keberangkatan umroh."
+        />
       </main>
       <Footer />
     </div>

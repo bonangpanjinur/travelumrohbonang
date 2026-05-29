@@ -31,6 +31,34 @@ interface FAQ {
   answer: string;
   sort_order: number;
   is_active: boolean;
+  scope: "general" | "paket" | "package";
+  package_id: string | null;
+}
+
+const SCOPE_OPTIONS: { value: FAQ["scope"]; label: string }[] = [
+  { value: "general", label: "Umum (semua halaman)" },
+  { value: "paket", label: "Halaman Daftar Paket (/paket)" },
+  { value: "package", label: "Halaman Detail Paket" },
+];
+
+function PackagePicker({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
+  const { data: packages = [] } = useQuery({
+    queryKey: ["faq-packages-picker"],
+    queryFn: async () => {
+      const { data } = await supabase.from("packages").select("id, title").eq("is_active", true).order("title");
+      return (data as { id: string; title: string }[]) || [];
+    },
+  });
+  return (
+    <select
+      className="w-full border border-border rounded-md px-3 py-2 bg-background text-sm"
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value || null)}
+    >
+      <option value="">Semua paket</option>
+      {packages.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+    </select>
+  );
 }
 
 const AdminFAQ = () => {
@@ -38,10 +66,12 @@ const AdminFAQ = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{ question: string; answer: string; sort_order: number; scope: FAQ["scope"]; package_id: string | null }>({
     question: "",
     answer: "",
     sort_order: 0,
+    scope: "general",
+    package_id: null,
   });
 
   const { data: faqs = [], isLoading } = useQuery({
@@ -58,22 +88,18 @@ const AdminFAQ = () => {
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string }) => {
+      const payload = {
+        question: data.question,
+        answer: data.answer,
+        sort_order: data.sort_order,
+        scope: data.scope,
+        package_id: data.scope === "package" ? data.package_id : null,
+      };
       if (data.id) {
-        const { error } = await supabase
-          .from("faqs")
-          .update({
-            question: data.question,
-            answer: data.answer,
-            sort_order: data.sort_order,
-          })
-          .eq("id", data.id);
+        const { error } = await supabase.from("faqs").update(payload).eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("faqs").insert({
-          question: data.question,
-          answer: data.answer,
-          sort_order: data.sort_order,
-        });
+        const { error } = await supabase.from("faqs").insert(payload);
         if (error) throw error;
       }
     },
@@ -113,7 +139,7 @@ const AdminFAQ = () => {
   });
 
   const resetForm = () => {
-    setFormData({ question: "", answer: "", sort_order: faqs.length });
+    setFormData({ question: "", answer: "", sort_order: faqs.length, scope: "general", package_id: null });
     setEditingFaq(null);
     setIsDialogOpen(false);
   };
@@ -124,6 +150,8 @@ const AdminFAQ = () => {
       question: faq.question,
       answer: faq.answer,
       sort_order: faq.sort_order,
+      scope: faq.scope ?? "general",
+      package_id: faq.package_id ?? null,
     });
     setIsDialogOpen(true);
   };
@@ -183,6 +211,28 @@ const AdminFAQ = () => {
                   min={0}
                 />
               </div>
+              <div>
+                <label className="text-sm font-medium">Tampilkan di</label>
+                <select
+                  className="w-full border border-border rounded-md px-3 py-2 bg-background text-sm"
+                  value={formData.scope}
+                  onChange={(e) => setFormData({ ...formData, scope: e.target.value as FAQ["scope"], package_id: e.target.value === "package" ? formData.package_id : null })}
+                >
+                  {SCOPE_OPTIONS.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  "Umum" muncul di mana saja yang memuatnya. "Halaman Daftar Paket" hanya di /paket. "Detail Paket" muncul di semua detail paket, atau hanya paket tertentu jika dipilih di bawah.
+                </p>
+              </div>
+              {formData.scope === "package" && (
+                <div>
+                  <label className="text-sm font-medium">Paket Spesifik (opsional)</label>
+                  <PackagePicker value={formData.package_id} onChange={(v) => setFormData({ ...formData, package_id: v })} />
+                  <p className="text-xs text-muted-foreground mt-1">Kosongkan untuk tampil di semua halaman detail paket.</p>
+                </div>
+              )}
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Batal
