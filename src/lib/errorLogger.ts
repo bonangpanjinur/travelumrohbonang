@@ -11,13 +11,13 @@ export async function logError({ message, stack, level = "error", context }: Log
   try {
     const { data: { user } } = await supabase.auth.getUser();
     await supabase.from("error_logs").insert({
-      user_id: user?.id ?? null,
+      user_id: user?.id ?? undefined,
       level,
       message: message.slice(0, 2000),
-      stack: stack?.slice(0, 8000),
-      url: typeof window !== "undefined" ? window.location.href : null,
-      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-      context: context ?? null,
+      stack: stack?.slice(0, 8000) ?? undefined,
+      url: typeof window !== "undefined" ? window.location.href : undefined,
+      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+      context: (context ?? undefined) as any,
     });
   } catch (err) {
     // swallow — logger must never throw
