@@ -6,9 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, KeyRound, Mail, MessageSquare, Eye, EyeOff } from "lucide-react";
+import { Loader2, KeyRound, Mail, MessageSquare, Eye, EyeOff, Send } from "lucide-react";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 type Provider = "resend" | "fonnte" | "wablas";
 
@@ -108,6 +117,55 @@ const Integrations = () => {
     setRows((r) => ({ ...r, [p]: { ...r[p], is_active: value } }));
   };
 
+  // Test send state
+  const [testOpen, setTestOpen] = useState<Provider | null>(null);
+  const [testTo, setTestTo] = useState("");
+  const [testMessage, setTestMessage] = useState("Pesan uji dari Admin Integrasi.");
+  const [testSubject, setTestSubject] = useState("Tes Email dari Admin Integrasi");
+  const [testSending, setTestSending] = useState(false);
+
+  const openTest = (p: Provider) => {
+    setTestOpen(p);
+    setTestTo("");
+  };
+
+  const sendTest = async () => {
+    if (!testOpen) return;
+    const p = testOpen;
+    if (!testTo.trim()) {
+      toast.error(p === "resend" ? "Isi alamat email tujuan" : "Isi nomor WhatsApp tujuan");
+      return;
+    }
+    setTestSending(true);
+    try {
+      if (p === "resend") {
+        const { data, error } = await supabase.functions.invoke("send-email", {
+          body: {
+            to: testTo.trim(),
+            subject: testSubject || "Tes Email",
+            html: `<p>${testMessage.replace(/</g, "&lt;")}</p>`,
+            text: testMessage,
+          },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+        toast.success("Email uji berhasil dikirim");
+      } else {
+        const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+          body: { to: testTo.trim(), message: testMessage, provider: p },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+        toast.success(`WhatsApp uji berhasil dikirim via ${p}`);
+      }
+      setTestOpen(null);
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal mengirim pesan uji");
+    } finally {
+      setTestSending(false);
+    }
+  };
+
   if (!isSuper) {
     return (
       <Card>
@@ -184,7 +242,17 @@ const Integrations = () => {
                     </div>
                   );
                 })}
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => openTest(p)}
+                    disabled={!row.is_active || !row.config?.api_key}
+                    title={!row.is_active ? "Aktifkan dulu" : !row.config?.api_key ? "Isi API key dulu" : "Kirim pesan uji"}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Uji Kirim
+                  </Button>
                   <Button onClick={() => save(p)} disabled={saving === p}>
                     {saving === p && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Simpan
@@ -195,6 +263,58 @@ const Integrations = () => {
           );
         })}
       </div>
+
+      <Dialog open={!!testOpen} onOpenChange={(o) => !o && setTestOpen(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Uji Kirim — {testOpen ? SCHEMA[testOpen].label : ""}
+            </DialogTitle>
+            <DialogDescription>
+              {testOpen === "resend"
+                ? "Kirim email uji ke alamat berikut menggunakan konfigurasi Resend yang aktif."
+                : "Kirim pesan WhatsApp uji ke nomor berikut menggunakan provider yang dipilih."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs">
+                {testOpen === "resend" ? "Email Tujuan" : "Nomor WhatsApp (mis. 0812xxx)"}
+              </Label>
+              <Input
+                value={testTo}
+                onChange={(e) => setTestTo(e.target.value)}
+                placeholder={testOpen === "resend" ? "you@example.com" : "08123456789"}
+                type={testOpen === "resend" ? "email" : "tel"}
+              />
+            </div>
+            {testOpen === "resend" && (
+              <div className="space-y-1">
+                <Label className="text-xs">Subjek</Label>
+                <Input value={testSubject} onChange={(e) => setTestSubject(e.target.value)} />
+              </div>
+            )}
+            <div className="space-y-1">
+              <Label className="text-xs">Pesan</Label>
+              <Textarea
+                rows={4}
+                value={testMessage}
+                onChange={(e) => setTestMessage(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestOpen(null)} disabled={testSending}>
+              Batal
+            </Button>
+            <Button onClick={sendTest} disabled={testSending}>
+              {testSending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <Send className="w-4 h-4 mr-2" />
+              Kirim
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
