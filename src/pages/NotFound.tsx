@@ -47,6 +47,7 @@ const NotFound = () => {
         &copy; {new Date().getFullYear()} Travel Umroh Bonang. All rights reserved.
       </div>
     </div>
+    </>
   );
 };
 
