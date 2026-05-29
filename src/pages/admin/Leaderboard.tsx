@@ -156,7 +156,13 @@ const AdminLeaderboard = () => {
       )}
 
       <Card>
-        <CardHeader><CardTitle>Peringkat Lengkap ({rows.length})</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Peringkat Lengkap ({rows.length})</CardTitle>
+          <Button size="sm" variant="outline" onClick={exportCSV} disabled={rows.length === 0}>
+            <Download className="mr-2 h-4 w-4" />
+            Ekspor CSV
+          </Button>
+        </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
