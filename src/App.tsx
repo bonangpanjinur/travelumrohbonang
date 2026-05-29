@@ -86,6 +86,10 @@ import ETicket from "./pages/ETicket";
 import AdminLeaderboard from "./pages/admin/Leaderboard";
 import AdminCurrencies from "./pages/admin/Currencies";
 import { CurrencyProvider } from "@/hooks/useCurrency";
+import Wishlist from "./pages/Wishlist";
+import Compare from "./pages/Compare";
+import AdminReviews from "./pages/admin/Reviews";
+import AdminLoyalty from "./pages/admin/Loyalty";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
