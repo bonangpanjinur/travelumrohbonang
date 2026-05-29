@@ -34,7 +34,7 @@ export default function AdminReviews() {
     if (!confirm("Hapus ulasan ini?")) return;
     const { error } = await supabase.from("package_reviews").delete().eq("id", id);
     if (error) return toast.error(error.message);
-    await logAudit("delete_review", "review", id);
+    await logAudit({ action: "delete_review", entityType: "review", entityId: id });
     toast.success("Dihapus");
     refresh();
   };
