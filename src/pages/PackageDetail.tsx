@@ -16,6 +16,8 @@ import PackageReviews from "@/components/PackageReviews";
 import InstallmentCalculator from "@/components/InstallmentCalculator";
 import StickyMobileCTA from "@/components/StickyMobileCTA";
 import PageFAQ from "@/components/PageFAQ";
+import RelatedPackages from "@/components/RelatedPackages";
+import RelatedArticles from "@/components/RelatedArticles";
 
 interface Package {
   id: string;
