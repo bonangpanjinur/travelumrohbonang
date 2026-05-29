@@ -2,6 +2,7 @@ import { Helmet } from "react-helmet-async";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
+import { useSeoOverride } from "@/hooks/useSeoOverride";
 
 interface SEOProps {
   title?: string;
@@ -121,14 +122,18 @@ const SEO = ({
     resolveAbsolute(tenant?.logo_url || undefined) ||
     `${origin}/og-default.jpg`;
 
+  const ogImage = override?.og_image
+    ? (override.og_image.startsWith("http") ? override.og_image : `${origin}${override.og_image}`)
+    : defaultImage;
+
   // Default Organization JSON-LD
   const organizationJsonLd = {
     "@context": "https://schema.org",
     "@type": "TravelAgency",
     name: siteName,
-    description: description,
+    description: effectiveDescription,
     url: currentUrl,
-    logo: defaultImage,
+    logo: ogImage,
     sameAs: [],
     contactPoint: {
       "@type": "ContactPoint",
@@ -141,9 +146,9 @@ const SEO = ({
   const articleJsonLd = type === "article" ? {
     "@context": "https://schema.org",
     "@type": "Article",
-    headline: title,
-    description: description,
-    image: defaultImage,
+    headline: effectiveTitle,
+    description: effectiveDescription,
+    image: ogImage,
     author: {
       "@type": "Person",
       name: author || siteName,
@@ -153,7 +158,7 @@ const SEO = ({
       name: siteName,
       logo: {
         "@type": "ImageObject",
-        url: defaultImage,
+        url: ogImage,
       },
     },
     datePublished: publishedTime,
@@ -170,24 +175,23 @@ const SEO = ({
     <Helmet>
       {/* Basic Meta Tags */}
       <title>{fullTitle}</title>
-      <meta name="description" content={description} />
-      {noIndex && <meta name="robots" content="noindex, nofollow" />}
+      <meta name="description" content={effectiveDescription} />
+      {override?.keywords && <meta name="keywords" content={override.keywords} />}
+      {effectiveNoIndex && <meta name="robots" content="noindex, nofollow" />}
       {gscToken && <meta name="google-site-verification" content={gscToken} />}
+      {bingToken && <meta name="msvalidate.01" content={bingToken} />}
       <link rel="canonical" href={currentUrl} />
 
-      {/* hreflang — points back to the same tenant origin so each domain is
-          authoritative for its own language variants and ranking signals
-          stay scoped per tenant. */}
+      {/* hreflang */}
       <link rel="alternate" hrefLang="id" href={currentUrl} />
       <link rel="alternate" hrefLang="en" href={currentUrl} />
       <link rel="alternate" hrefLang="x-default" href={currentUrl} />
 
-
       {/* Open Graph */}
       <meta property="og:type" content={type} />
       <meta property="og:title" content={fullTitle} />
-      <meta property="og:description" content={description} />
-      <meta property="og:image" content={defaultImage} />
+      <meta property="og:description" content={effectiveDescription} />
+      <meta property="og:image" content={ogImage} />
       <meta property="og:url" content={currentUrl} />
       <meta property="og:site_name" content={siteName} />
       <meta property="og:locale" content="id_ID" />
@@ -197,8 +201,8 @@ const SEO = ({
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />
-      <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={defaultImage} />
+      <meta name="twitter:description" content={effectiveDescription} />
+      <meta name="twitter:image" content={ogImage} />
 
       {/* JSON-LD Structured Data */}
       {structuredData && (
