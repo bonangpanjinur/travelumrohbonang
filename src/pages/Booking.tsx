@@ -73,6 +73,7 @@ const Booking = () => {
   const [pilgrims, setPilgrims] = useState<Pilgrim[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [pilgrimErrors, setPilgrimErrors] = useState<Record<number, Record<string, string>>>({});
   
   // PIC State
