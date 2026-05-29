@@ -41,6 +41,36 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_clicks: {
+        Row: {
+          agent_id: string
+          created_at: string
+          id: string
+          ip: string | null
+          landing_path: string | null
+          referral_code: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          landing_path?: string | null
+          referral_code?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          id?: string
+          ip?: string | null
+          landing_path?: string | null
+          referral_code?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       agent_commissions: {
         Row: {
           agent_id: string
@@ -136,6 +166,7 @@ export type Database = {
           email: string | null
           id: string
           is_active: boolean | null
+          monthly_target: number | null
           name: string
           phone: string | null
           referral_code: string | null
@@ -148,6 +179,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean | null
+          monthly_target?: number | null
           name: string
           phone?: string | null
           referral_code?: string | null
@@ -160,6 +192,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean | null
+          monthly_target?: number | null
           name?: string
           phone?: string | null
           referral_code?: string | null
@@ -571,6 +604,39 @@ export type Database = {
         }
         Relationships: []
       }
+      check_ins: {
+        Row: {
+          booking_id: string | null
+          checked_in_at: string
+          checked_in_by: string | null
+          departure_id: string | null
+          id: string
+          location: string | null
+          notes: string | null
+          pilgrim_id: string
+        }
+        Insert: {
+          booking_id?: string | null
+          checked_in_at?: string
+          checked_in_by?: string | null
+          departure_id?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          pilgrim_id: string
+        }
+        Update: {
+          booking_id?: string | null
+          checked_in_at?: string
+          checked_in_by?: string | null
+          departure_id?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          pilgrim_id?: string
+        }
+        Relationships: []
+      }
       coupons: {
         Row: {
           code: string
@@ -643,6 +709,33 @@ export type Database = {
           rate_to_idr?: number
           symbol?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      departure_gallery: {
+        Row: {
+          caption: string | null
+          created_at: string
+          departure_id: string
+          id: string
+          image_url: string
+          sort_order: number | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          departure_id: string
+          id?: string
+          image_url: string
+          sort_order?: number | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          departure_id?: string
+          id?: string
+          image_url?: string
+          sort_order?: number | null
         }
         Relationships: []
       }
@@ -1191,6 +1284,45 @@ export type Database = {
           reference_id?: string | null
           source?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      manasik_materials: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_url: string | null
+          id: string
+          is_active: boolean | null
+          package_id: string | null
+          sort_order: number | null
+          thumbnail_url: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          package_id?: string | null
+          sort_order?: number | null
+          thumbnail_url?: string | null
+          title: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          package_id?: string | null
+          sort_order?: number | null
+          thumbnail_url?: string | null
+          title?: string
+          type?: string
         }
         Relationships: []
       }
