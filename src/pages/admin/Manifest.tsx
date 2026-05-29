@@ -10,6 +10,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { exportToCsv } from "@/lib/exportCsv";
+import { QRCodeSVG } from "qrcode.react";
 
 interface Departure {
   id: string;
@@ -251,20 +252,41 @@ const AdminManifest = () => {
                 <TableHead>Telepon</TableHead>
                 <TableHead>Kode Booking</TableHead>
                 <TableHead>Tipe Kamar</TableHead>
+                <TableHead className="text-center">QR</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {manifest.map((row, i) => (
-                <TableRow key={row.id}>
-                  <TableCell>{i + 1}</TableCell>
-                  <TableCell className="font-medium">{row.name}</TableCell>
-                  <TableCell className="font-mono">{row.passport_number || "-"}</TableCell>
-                  <TableCell>{row.gender === "male" ? "Laki-laki" : row.gender === "female" ? "Perempuan" : row.gender || "-"}</TableCell>
-                  <TableCell>{row.phone || "-"}</TableCell>
-                  <TableCell className="font-mono text-sm">{row.booking_code}</TableCell>
-                  <TableCell>{row.room_type}</TableCell>
-                </TableRow>
-              ))}
+              {manifest.map((row, i) => {
+                const origin = typeof window !== "undefined" ? window.location.origin : "";
+                const qrPayload = JSON.stringify({
+                  v: 1,
+                  pid: row.id,
+                  dep: selectedDep,
+                  bc: row.booking_code,
+                  name: row.name,
+                  pp: row.passport_number || null,
+                  url: `${origin}/manifest/checkin?pid=${row.id}&dep=${selectedDep}`,
+                });
+                return (
+                  <TableRow key={row.id}>
+                    <TableCell>{i + 1}</TableCell>
+                    <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell className="font-mono">{row.passport_number || "-"}</TableCell>
+                    <TableCell>{row.gender === "male" ? "Laki-laki" : row.gender === "female" ? "Perempuan" : row.gender || "-"}</TableCell>
+                    <TableCell>{row.phone || "-"}</TableCell>
+                    <TableCell className="font-mono text-sm">{row.booking_code}</TableCell>
+                    <TableCell>{row.room_type}</TableCell>
+                    <TableCell className="text-center">
+                      <div className="inline-flex flex-col items-center gap-1">
+                        <QRCodeSVG value={qrPayload} size={72} level="M" includeMargin={false} />
+                        <span className="text-[10px] font-mono text-muted-foreground print:text-black">
+                          {row.id.slice(0, 8)}
+                        </span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
