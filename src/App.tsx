@@ -99,6 +99,8 @@ import AffiliateRedirect from "./pages/AffiliateRedirect";
 import Account2FA from "./pages/Account2FA";
 import ContractSign from "./pages/ContractSign";
 import AdminErrorLogs from "./pages/admin/ErrorLogs";
+import AdminIntegrations from "./pages/admin/Integrations";
+import AdminLoginSettings from "./pages/admin/LoginSettings";
 import { useEffect } from "react";
 import { installGlobalErrorHandlers } from "@/lib/errorLogger";
 const queryClient = new QueryClient();
@@ -210,6 +212,8 @@ const AppContent = () => {
           <Route path="check-in" element={<AdminCheckIn />} />
           <Route path="manasik" element={<AdminManasik />} />
           <Route path="error-logs" element={<AdminErrorLogs />} />
+          <Route path="integrations" element={<AdminIntegrations />} />
+          <Route path="login-settings" element={<AdminLoginSettings />} />
         </Route>
       </Route>
 
