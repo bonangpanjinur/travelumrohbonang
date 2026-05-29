@@ -210,40 +210,17 @@ const BlogDetail = () => {
           </div>
         </section>
 
-        {/* Related Posts */}
-        {relatedPosts.length > 0 && (
-          <section className="section-padding bg-muted/50">
-            <div className="container-custom">
-              <h2 className="text-2xl font-display font-bold text-foreground mb-8">
-                Artikel Lainnya
-              </h2>
-              <div className="grid md:grid-cols-3 gap-6">
-                {relatedPosts.map((relatedPost) => (
-                  <Link key={relatedPost.id} to={`/blog/${relatedPost.slug}`} className="group">
-                    <div className="bg-card border border-border rounded-xl overflow-hidden hover:border-gold/30 transition-all">
-                      <div className="h-40 overflow-hidden">
-                        <img
-                          src={relatedPost.image_url || "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=400&q=80"}
-                          alt={relatedPost.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                        />
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-foreground group-hover:text-gold transition-colors line-clamp-2">
-                          {relatedPost.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                          {relatedPost.excerpt}
-                        </p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+        {/* Internal linking: related articles + related packages for SEO */}
+        <RelatedArticles
+          excludeId={post.id}
+          category={post.category}
+          heading="Artikel Umroh Lainnya"
+          intro="Lanjutkan membaca panduan dan tips perjalanan ibadah umroh dari tim kami."
+        />
+        <RelatedPackages
+          heading="Paket Umroh Rekomendasi"
+          intro="Siap berangkat? Lihat paket umroh terbaik dengan hotel bintang 5 dan bimbingan ustadz berpengalaman."
+        />
       </main>
       <Footer />
     </div>
