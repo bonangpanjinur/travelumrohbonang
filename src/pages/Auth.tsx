@@ -220,16 +220,39 @@ const Auth = () => {
 
           <div className="text-center mb-8">
             <div className="w-14 h-14 mx-auto rounded-full gradient-gold flex items-center justify-center mb-4">
-              <span className="font-display font-bold text-2xl text-primary">U</span>
+              {twoFA ? <ShieldCheck className="w-7 h-7 text-primary" /> : <span className="font-display font-bold text-2xl text-primary">U</span>}
             </div>
             <h1 className="text-2xl font-display font-bold text-foreground">
-              {isLogin ? "Masuk ke Akun" : "Daftar Akun Baru"}
+              {twoFA ? "Verifikasi 2FA" : isLogin ? "Masuk ke Akun" : "Daftar Akun Baru"}
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
-              {isLogin ? "Masukkan email dan password Anda" : "Buat akun untuk melanjutkan"}
+              {twoFA
+                ? "Masukkan 6 digit kode dari authenticator atau kode cadangan."
+                : isLogin ? "Masukkan email dan password Anda" : "Buat akun untuk melanjutkan"}
             </p>
           </div>
 
+          {twoFA ? (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="totp">Kode 2FA</Label>
+                <Input
+                  id="totp"
+                  inputMode="text"
+                  autoFocus
+                  value={twoFA.code}
+                  onChange={(e) => setTwoFA({ ...twoFA, code: e.target.value })}
+                  placeholder="123456 atau XXXX-XXXX"
+                  className="mt-1 tracking-widest font-mono"
+                  onKeyDown={(e) => { if (e.key === "Enter") verifyTwoFA(); }}
+                />
+              </div>
+              <Button onClick={verifyTwoFA} disabled={twoFALoading || !twoFA.code} className="w-full gradient-gold text-primary font-semibold">
+                {twoFALoading ? "Memverifikasi..." : "Verifikasi & Masuk"}
+              </Button>
+              <Button variant="outline" onClick={cancelTwoFA} className="w-full">Batal</Button>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div>
