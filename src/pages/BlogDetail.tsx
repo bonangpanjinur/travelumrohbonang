@@ -11,6 +11,8 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import SEO from "@/components/SEO";
 import BreadcrumbJsonLd from "@/components/BreadcrumbJsonLd";
+import RelatedPackages from "@/components/RelatedPackages";
+import RelatedArticles from "@/components/RelatedArticles";
 import { toast } from "sonner";
 
 interface BlogPost {
