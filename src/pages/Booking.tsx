@@ -15,6 +15,8 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { validatePilgrim } from "@/lib/validations";
+import TurnstileCaptcha from "@/components/TurnstileCaptcha";
+import { rateLimit } from "@/lib/rateLimit";
 
 interface Package {
   id: string;
