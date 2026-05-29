@@ -102,10 +102,10 @@ Auth + roles (buyer/agent/admin/super_admin/branch_manager), packages + departur
 
 ## 5. Roadmap
 
-**Sprint A (sekarang):** housekeeping md, gating super admin, SEO menyeluruh, leaderboard CSV, impersonate banner.
-**Sprint B:** email transaksional + WA + pg_cron reminders + filter paket + halaman CMS default.
-**Sprint C:** review publik + wishlist + sticky CTA + galeri keberangkatan + manifest PDF + signed URL dokumen.
-**Sprint D:** loyalitas + compare paket + kalkulator cicilan + push + 2FA + export PDP.
+**Sprint A (selesai):** housekeeping md, gating super admin, SEO menyeluruh, leaderboard CSV, impersonate banner.
+**Sprint B (parsial selesai):** pg_cron daily reminder (memanggil edge `payment-reminder`) ✔︎. Email transaksional (Resend) + WhatsApp belum — menunggu API key user.
+**Sprint C (sebagian selesai):** wishlist ✔︎, review publik + JSON-LD ✔︎, sticky CTA mobile ✔︎, kalkulator cicilan ✔︎. Galeri keberangkatan, manifest PDF print-ready, signed URL dokumen belum.
+**Sprint D (sebagian selesai):** kalkulator cicilan ✔︎, compare paket ✔︎, loyalty (admin adjust) ✔︎, export data PDP ✔︎. Push, 2FA admin belum.
 
 ---
 
