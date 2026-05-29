@@ -35,6 +35,7 @@ import NotFound from "./pages/NotFound";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminRoute from "./components/AdminRoute";
 import AuthRoute from "./components/AuthRoute";
+import ImpersonationBanner from "./components/ImpersonationBanner";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminPackages from "./pages/admin/Packages";
 import AdminDepartures from "./pages/admin/Departures";
@@ -99,9 +100,11 @@ const AppContent = () => {
   if (isTenantSite) {
     return <TenantSitePage />;
   }
-  
+
   return (
-    <Routes>
+    <>
+      <ImpersonationBanner />
+      <Routes>
       {/* Public Routes */}
       <Route path="/" element={<Index />} />
       <Route path="/paket" element={<Paket />} />
@@ -185,6 +188,7 @@ const AppContent = () => {
       <Route path="/:slug" element={<DynamicPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </>
   );
 };
 
