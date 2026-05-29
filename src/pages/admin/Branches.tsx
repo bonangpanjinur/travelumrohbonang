@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
@@ -12,10 +13,40 @@ import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 interface Branch {
   id: string;
   name: string;
+  slug: string | null;
   address: string | null;
   phone: string | null;
+  email: string | null;
+  city: string | null;
+  region: string | null;
+  postal_code: string | null;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  opening_hours: string | null;
+  image_url: string | null;
+  map_url: string | null;
+  description: string | null;
   is_active: boolean;
 }
+
+const empty = {
+  name: "",
+  slug: "",
+  address: "",
+  phone: "",
+  email: "",
+  city: "",
+  region: "",
+  postal_code: "",
+  country: "ID",
+  latitude: "",
+  longitude: "",
+  opening_hours: "",
+  image_url: "",
+  map_url: "",
+  description: "",
+};
 
 const AdminBranches = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -24,8 +55,7 @@ const AdminBranches = () => {
   const [editing, setEditing] = useState<Branch | null>(null);
   const { toast } = useToast();
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-
-  const [form, setForm] = useState({ name: "", address: "", phone: "" });
+  const [form, setForm] = useState({ ...empty });
 
   useEffect(() => {
     fetchBranches();
@@ -33,17 +63,34 @@ const AdminBranches = () => {
 
   const fetchBranches = async () => {
     const { data } = await supabase.from("branches").select("*").order("name");
-    setBranches(data || []);
+    setBranches((data as Branch[]) || []);
     setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const payload: Record<string, unknown> = {
+      name: form.name,
+      slug: form.slug || null,
+      address: form.address || null,
+      phone: form.phone || null,
+      email: form.email || null,
+      city: form.city || null,
+      region: form.region || null,
+      postal_code: form.postal_code || null,
+      country: form.country || "ID",
+      latitude: form.latitude ? parseFloat(form.latitude) : null,
+      longitude: form.longitude ? parseFloat(form.longitude) : null,
+      opening_hours: form.opening_hours || null,
+      image_url: form.image_url || null,
+      map_url: form.map_url || null,
+      description: form.description || null,
+    };
     if (editing) {
-      await supabase.from("branches").update(form).eq("id", editing.id);
+      await supabase.from("branches").update(payload).eq("id", editing.id);
       toast({ title: "Cabang diupdate!" });
     } else {
-      await supabase.from("branches").insert(form);
+      await supabase.from("branches").insert(payload as any);
       toast({ title: "Cabang ditambahkan!" });
     }
     fetchBranches();
@@ -51,14 +98,26 @@ const AdminBranches = () => {
     resetForm();
   };
 
-  const handleEdit = (branch: Branch) => {
-    setEditing(branch);
-    setForm({ name: branch.name, address: branch.address || "", phone: branch.phone || "" });
+  const handleEdit = (b: Branch) => {
+    setEditing(b);
+    setForm({
+      name: b.name || "",
+      slug: b.slug || "",
+      address: b.address || "",
+      phone: b.phone || "",
+      email: b.email || "",
+      city: b.city || "",
+      region: b.region || "",
+      postal_code: b.postal_code || "",
+      country: b.country || "ID",
+      latitude: b.latitude != null ? String(b.latitude) : "",
+      longitude: b.longitude != null ? String(b.longitude) : "",
+      opening_hours: b.opening_hours || "",
+      image_url: b.image_url || "",
+      map_url: b.map_url || "",
+      description: b.description || "",
+    });
     setIsOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    setDeleteTargetId(id);
   };
 
   const executeDelete = async (id: string) => {
@@ -69,7 +128,7 @@ const AdminBranches = () => {
 
   const resetForm = () => {
     setEditing(null);
-    setForm({ name: "", address: "", phone: "" });
+    setForm({ ...empty });
   };
 
   return (
@@ -81,22 +140,80 @@ const AdminBranches = () => {
           <DialogTrigger asChild>
             <Button className="gradient-gold text-primary"><Plus className="w-4 h-4 mr-2" /> Tambah</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editing ? "Edit Cabang" : "Tambah Cabang"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label>Nama Cabang *</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="mt-1" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Nama Cabang *</Label>
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="mt-1" />
+                </div>
+                <div>
+                  <Label>Slug (SEO URL)</Label>
+                  <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="jakarta-pusat" className="mt-1" />
+                </div>
               </div>
               <div>
-                <Label>Alamat</Label>
+                <Label>Alamat (jalan)</Label>
                 <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="mt-1" />
               </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label>Kota</Label>
+                  <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="mt-1" />
+                </div>
+                <div>
+                  <Label>Provinsi</Label>
+                  <Input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} className="mt-1" />
+                </div>
+                <div>
+                  <Label>Kode Pos</Label>
+                  <Input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} className="mt-1" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label>Negara (ISO)</Label>
+                  <Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder="ID" className="mt-1" />
+                </div>
+                <div>
+                  <Label>Latitude</Label>
+                  <Input value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} placeholder="-6.2088" className="mt-1" />
+                </div>
+                <div>
+                  <Label>Longitude</Label>
+                  <Input value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} placeholder="106.8456" className="mt-1" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Telepon</Label>
+                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-1" />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="mt-1" />
+                </div>
+              </div>
               <div>
-                <Label>Telepon</Label>
-                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-1" />
+                <Label>Jam Operasional (format schema.org)</Label>
+                <Input value={form.opening_hours} onChange={(e) => setForm({ ...form, opening_hours: e.target.value })} placeholder="Mo-Sa 09:00-17:00" className="mt-1" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>URL Gambar</Label>
+                  <Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} className="mt-1" />
+                </div>
+                <div>
+                  <Label>URL Google Maps</Label>
+                  <Input value={form.map_url} onChange={(e) => setForm({ ...form, map_url: e.target.value })} className="mt-1" />
+                </div>
+              </div>
+              <div>
+                <Label>Deskripsi singkat</Label>
+                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1" rows={3} />
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
@@ -117,8 +234,9 @@ const AdminBranches = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Nama Cabang</TableHead>
-                <TableHead>Alamat</TableHead>
+                <TableHead>Kota</TableHead>
                 <TableHead>Telepon</TableHead>
+                <TableHead>Slug</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -126,11 +244,12 @@ const AdminBranches = () => {
               {branches.map((b) => (
                 <TableRow key={b.id}>
                   <TableCell className="font-semibold">{b.name}</TableCell>
-                  <TableCell>{b.address || "-"}</TableCell>
+                  <TableCell>{b.city || "-"}</TableCell>
                   <TableCell>{b.phone || "-"}</TableCell>
+                  <TableCell className="text-muted-foreground">{b.slug || "-"}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(b)}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(b.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteTargetId(b.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
