@@ -9,15 +9,18 @@ interface BreadcrumbJsonLdProps {
   items: BreadcrumbItem[];
 }
 
-const PROD_ORIGIN = "https://umroh-gateway.lovable.app";
+const FALLBACK_ORIGIN = "https://umroh-gateway.lovable.app";
 
 /**
  * Emits a BreadcrumbList JSON-LD into <head>.
  * Position is auto-assigned by array order (1-based).
- * Always include "Beranda" as the first item for consistency.
+ * URLs resolve against the current tenant origin so each domain stays
+ * authoritative for its own breadcrumb ranking signals.
  */
 const BreadcrumbJsonLd = ({ items }: BreadcrumbJsonLdProps) => {
   if (!items?.length) return null;
+
+  const origin = typeof window !== "undefined" ? window.location.origin : FALLBACK_ORIGIN;
 
   const data = {
     "@context": "https://schema.org",
@@ -26,7 +29,7 @@ const BreadcrumbJsonLd = ({ items }: BreadcrumbJsonLdProps) => {
       "@type": "ListItem",
       position: idx + 1,
       name: item.name,
-      item: item.url.startsWith("http") ? item.url : `${PROD_ORIGIN}${item.url}`,
+      item: item.url.startsWith("http") ? item.url : `${origin}${item.url}`,
     })),
   };
 
