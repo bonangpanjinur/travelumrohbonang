@@ -16,6 +16,8 @@ import PackageReviews from "@/components/PackageReviews";
 import InstallmentCalculator from "@/components/InstallmentCalculator";
 import StickyMobileCTA from "@/components/StickyMobileCTA";
 import PageFAQ from "@/components/PageFAQ";
+import RelatedPackages from "@/components/RelatedPackages";
+import RelatedArticles from "@/components/RelatedArticles";
 
 interface Package {
   id: string;
@@ -25,6 +27,7 @@ interface Package {
   package_type: string;
   image_url: string;
   duration_days: number;
+  category_id: string | null;
   category: { name: string } | null;
   hotel_makkah: { name: string; star: number } | null;
   hotel_madinah: { name: string; star: number } | null;
@@ -352,6 +355,17 @@ const PackageDetail = () => {
           packageId={pkg.id}
           title={`FAQ ${pkg.title}`}
           description="Pertanyaan jamaah tentang paket ini: jadwal, fasilitas, hotel, hingga pembayaran."
+        />
+        <RelatedPackages
+          excludeId={pkg.id}
+          categoryId={pkg.category_id}
+          heading={`Paket ${pkg.category?.name || "Umroh"} Lainnya`}
+          intro={`Bandingkan dengan paket ${pkg.category?.name || "umroh"} lain dari kami: hotel, maskapai, dan jadwal keberangkatan yang fleksibel.`}
+        />
+        <RelatedArticles
+          category={pkg.category?.name || null}
+          heading="Panduan & Artikel Umroh Terkait"
+          intro="Pelajari tips persiapan, tata cara, dan informasi penting sebelum berangkat umroh."
         />
       </main>
       <StickyMobileCTA
