@@ -44,6 +44,8 @@ interface TenantSite {
   facebook_url: string;
   is_active: boolean;
   template: string;
+  gsc_verification?: string | null;
+  seo_default_image?: string | null;
   created_at: string;
 }
 
@@ -66,6 +68,8 @@ const emptyForm: Partial<TenantSite> = {
   facebook_url: "",
   is_active: true,
   template: "classic",
+  gsc_verification: "",
+  seo_default_image: "",
   branch_id: null,
   agent_id: null,
 };
