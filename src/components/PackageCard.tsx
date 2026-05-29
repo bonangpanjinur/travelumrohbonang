@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Star, Calendar, Users, ArrowRight, Plane, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export interface PackageCardData {
   id: string;
