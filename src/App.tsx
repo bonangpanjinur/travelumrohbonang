@@ -215,6 +215,7 @@ const AppContent = () => {
           <Route path="error-logs" element={<AdminErrorLogs />} />
           <Route path="integrations" element={<AdminIntegrations />} />
           <Route path="login-settings" element={<AdminLoginSettings />} />
+          <Route path="seo" element={<AdminSEO />} />
         </Route>
       </Route>
 

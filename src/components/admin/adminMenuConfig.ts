@@ -36,7 +36,9 @@ import {
   Coins,
   KeyRound,
   Lock,
+  Search,
   LucideIcon
+
 } from "lucide-react";
 
 export interface MenuItem {
@@ -159,6 +161,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Audit Logs", href: "/admin/audit-logs", icon: ShieldAlert },
       { label: "Error Tracking", href: "/admin/error-logs", icon: ShieldAlert },
       { label: "Slug Redirects (SEO)", href: "/admin/slug-redirects", icon: ShieldAlert },
+      { label: "Pengaturan SEO", href: "/admin/seo", icon: Search },
       { label: "Manajemen Role", href: "/admin/role-management", icon: ShieldCheck },
       { label: "Mata Uang", href: "/admin/currencies", icon: Coins },
       { label: "Integrasi & API Keys", href: "/admin/integrations", icon: KeyRound, roles: ["super_admin"] },
