@@ -217,10 +217,12 @@ const Auth = () => {
               </div>
             )}
 
+            <TurnstileCaptcha onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
+
             <Button
               type="submit"
               className="w-full gradient-gold text-primary font-semibold"
-              disabled={loading}
+              disabled={loading || !captchaToken}
             >
               {loading ? "Memproses..." : isLogin ? "Masuk" : "Daftar"}
             </Button>
