@@ -6,9 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, KeyRound, Mail, MessageSquare, Eye, EyeOff } from "lucide-react";
+import { Loader2, KeyRound, Mail, MessageSquare, Eye, EyeOff, Send } from "lucide-react";
 import { toast } from "sonner";
 import SEO from "@/components/SEO";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 type Provider = "resend" | "fonnte" | "wablas";
 
