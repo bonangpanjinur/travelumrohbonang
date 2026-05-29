@@ -10,7 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { Search, Shield, User, Users, LogIn } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
-import { ConfirmAlertDialog } from "@/components/admin/ConfirmAlertDialog";
+import ConfirmAlertDialog from "@/components/admin/ConfirmAlertDialog";
 
 interface UserWithRole {
   id: string;
