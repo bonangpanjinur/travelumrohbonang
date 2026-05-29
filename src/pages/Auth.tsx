@@ -5,12 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import SEO from "@/components/SEO";
 import TurnstileCaptcha from "@/components/TurnstileCaptcha";
 import { rateLimit } from "@/lib/rateLimit";
+import { supabase } from "@/integrations/supabase/client";
+import * as OTPAuth from "otpauth";
 import { z } from "zod";
+
+const STAFF_ROLES = ["admin", "super_admin", "superadmin", "staff", "branch_manager", "marketing", "finance", "operations"];
 
 const loginSchema = z.object({
   email: z.string().email("Email tidak valid"),
