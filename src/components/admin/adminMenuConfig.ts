@@ -152,6 +152,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Tenant Sites", href: "/admin/tenant-sites", icon: Globe, premium: true, premiumFeature: "Multi-Tenant Website" },
       { label: "Upgrade Template", href: "/admin/template-upgrades", icon: ArrowUpCircle, premium: true, premiumFeature: "Upgrade Template Billing" },
       { label: "Audit Logs", href: "/admin/audit-logs", icon: ShieldAlert },
+      { label: "Slug Redirects (SEO)", href: "/admin/slug-redirects", icon: ShieldAlert },
       { label: "Manajemen Role", href: "/admin/role-management", icon: ShieldCheck },
       { label: "Mata Uang", href: "/admin/currencies", icon: Coins },
       { label: "Pengaturan Umum", href: "/admin/settings", icon: Settings },
