@@ -15,6 +15,8 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { validatePilgrim } from "@/lib/validations";
+import TurnstileCaptcha from "@/components/TurnstileCaptcha";
+import { rateLimit } from "@/lib/rateLimit";
 
 interface Package {
   id: string;
@@ -71,6 +73,7 @@ const Booking = () => {
   const [pilgrims, setPilgrims] = useState<Pilgrim[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [pilgrimErrors, setPilgrimErrors] = useState<Record<number, Record<string, string>>>({});
   
   // PIC State
@@ -193,7 +196,21 @@ const Booking = () => {
 
   const handleSubmit = async () => {
     if (!user || !pkg || !departure) return;
+
+    if (!captchaToken) {
+      toast({ title: "Verifikasi captcha", description: "Selesaikan captcha sebelum konfirmasi booking.", variant: "destructive" });
+      return;
+    }
+
+    const limit = await rateLimit("booking:create", { max: 5, windowSec: 60 });
+    if (!limit.allowed) {
+      toast({ title: "Terlalu banyak percobaan", description: "Tunggu 1 menit sebelum mencoba lagi.", variant: "destructive" });
+      return;
+    }
+
     setSubmitting(true);
+
+
 
     try {
       // Generate booking code
@@ -563,9 +580,12 @@ const Booking = () => {
                   Lanjut <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               ) : (
-                <Button onClick={handleSubmit} disabled={submitting} className="gradient-gold text-primary">
-                  {submitting ? "Memproses..." : "Konfirmasi Booking"}
-                </Button>
+                <div className="flex flex-col items-end gap-3">
+                  <TurnstileCaptcha onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
+                  <Button onClick={handleSubmit} disabled={submitting || !captchaToken} className="gradient-gold text-primary">
+                    {submitting ? "Memproses..." : "Konfirmasi Booking"}
+                  </Button>
+                </div>
               )}
             </div>
           </motion.div>
