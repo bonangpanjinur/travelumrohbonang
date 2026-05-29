@@ -55,11 +55,17 @@ const SEO = ({
 
   const siteName = branding.company_name;
   const fullTitle = title ? `${title} | ${siteName}` : `${siteName} - ${branding.tagline}`;
-  // Canonical: prefer production domain so previews don't compete in the index
-  const PROD_ORIGIN = "https://umroh-gateway.lovable.app";
-  const pathname = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/";
-  const currentUrl = url || `${PROD_ORIGIN}${pathname}`;
-  const defaultImage = image || `${PROD_ORIGIN}/og-default.jpg`;
+
+  // Tenant-aware origin: each domain self-canonicals so search engines don't
+  // merge ranking signals across the main brand and white-label tenants.
+  // Fallback to the production brand origin during SSR / non-browser contexts.
+  const FALLBACK_ORIGIN = "https://umroh-gateway.lovable.app";
+  const origin = typeof window !== "undefined" ? window.location.origin : FALLBACK_ORIGIN;
+  const pathname = typeof window !== "undefined"
+    ? window.location.pathname + window.location.search
+    : "/";
+  const currentUrl = url || `${origin}${pathname}`;
+  const defaultImage = image || `${origin}/og-default.jpg`;
 
   // Default Organization JSON-LD
   const organizationJsonLd = {
@@ -113,6 +119,14 @@ const SEO = ({
       <meta name="description" content={description} />
       {noIndex && <meta name="robots" content="noindex, nofollow" />}
       <link rel="canonical" href={currentUrl} />
+
+      {/* hreflang — points back to the same tenant origin so each domain is
+          authoritative for its own language variants and ranking signals
+          stay scoped per tenant. */}
+      <link rel="alternate" hrefLang="id" href={currentUrl} />
+      <link rel="alternate" hrefLang="en" href={currentUrl} />
+      <link rel="alternate" hrefLang="x-default" href={currentUrl} />
+
 
       {/* Open Graph */}
       <meta property="og:type" content={type} />
