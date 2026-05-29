@@ -10,6 +10,7 @@ import { Calendar, Star, Users, Plane, Hotel, MapPin, ArrowRight, Check } from "
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import SEO from "@/components/SEO";
+import BreadcrumbJsonLd from "@/components/BreadcrumbJsonLd";
 import WishlistButton from "@/components/WishlistButton";
 import PackageReviews from "@/components/PackageReviews";
 import InstallmentCalculator from "@/components/InstallmentCalculator";
