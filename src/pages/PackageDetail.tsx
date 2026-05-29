@@ -14,6 +14,7 @@ import WishlistButton from "@/components/WishlistButton";
 import PackageReviews from "@/components/PackageReviews";
 import InstallmentCalculator from "@/components/InstallmentCalculator";
 import StickyMobileCTA from "@/components/StickyMobileCTA";
+import PageFAQ from "@/components/PageFAQ";
 
 interface Package {
   id: string;
