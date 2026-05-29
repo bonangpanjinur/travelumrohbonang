@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { format, differenceInDays, isPast } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { getSignedPilgrimDocUrl } from "@/lib/pilgrimDocs";
 import {
   Search, Upload, FileCheck, FileX, AlertTriangle, Eye, CheckCircle, XCircle,
   Clock, Users, FileText, Filter, ChevronDown, ChevronRight
@@ -151,9 +152,9 @@ const Documents = () => {
         .upload(filePath, file);
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("pilgrim-documents")
-        .getPublicUrl(filePath);
+      // pilgrim-documents is PRIVATE; persist only the storage path. View
+      // actions generate short-lived signed URLs and log access.
+      const publicUrl = filePath;
 
       // Check if doc record exists
       const { data: existing } = await supabase
@@ -435,10 +436,20 @@ const Documents = () => {
                               </TableCell>
                               <TableCell>
                                 {doc?.file_url ? (
-                                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                                  <button type="button"
+                                    onClick={async () => {
+                                      const signed = await getSignedPilgrimDocUrl({
+                                        fileUrlOrPath: doc.file_url!,
+                                        pilgrimId: pilgrim.id,
+                                        docType: doc.doc_type,
+                                        context: "admin_documents_view",
+                                      });
+                                      if (signed) window.open(signed, "_blank");
+                                      else toast.error("Tidak dapat membuka file");
+                                    }}
                                     className="text-primary hover:underline text-sm flex items-center gap-1">
                                     <Eye className="w-3 h-3" />{doc.file_name || "Lihat"}
-                                  </a>
+                                  </button>
                                 ) : (
                                   <span className="text-muted-foreground text-sm">-</span>
                                 )}
@@ -531,10 +542,20 @@ const Documents = () => {
           </DialogHeader>
           <div className="space-y-4">
             {verifyDialog?.doc.file_url && (
-              <a href={verifyDialog.doc.file_url} target="_blank" rel="noopener noreferrer"
+              <button type="button"
+                onClick={async () => {
+                  const signed = await getSignedPilgrimDocUrl({
+                    fileUrlOrPath: verifyDialog!.doc.file_url!,
+                    pilgrimId: (verifyDialog!.doc as any).pilgrim_id,
+                    docType: verifyDialog!.doc.doc_type,
+                    context: "admin_verify_dialog",
+                  });
+                  if (signed) window.open(signed, "_blank");
+                  else toast.error("Tidak dapat membuka file");
+                }}
                 className="text-primary hover:underline flex items-center gap-1">
                 <Eye className="w-4 h-4" /> Lihat Dokumen
-              </a>
+              </button>
             )}
             <div>
               <Label>Catatan (opsional, wajib jika ditolak)</Label>

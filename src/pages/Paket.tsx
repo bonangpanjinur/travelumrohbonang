@@ -54,6 +54,8 @@ const Paket = () => {
   const [selectedAirport, setSelectedAirport] = useState(searchParams.get("bandara") || "all");
   const [selectedHotelStar, setSelectedHotelStar] = useState(searchParams.get("bintang") || "all");
   const [selectedMonth, setSelectedMonth] = useState(searchParams.get("bulan") || "all");
+  const [selectedPriceRange, setSelectedPriceRange] = useState(searchParams.get("harga") || "all");
+  const [selectedDuration, setSelectedDuration] = useState(searchParams.get("durasi") || "all");
   
   // Filter options
   const [categories, setCategories] = useState<Category[]>([]);
@@ -121,8 +123,10 @@ const Paket = () => {
     if (selectedAirport !== "all") params.set("bandara", selectedAirport);
     if (selectedHotelStar !== "all") params.set("bintang", selectedHotelStar);
     if (selectedMonth !== "all") params.set("bulan", selectedMonth);
+    if (selectedPriceRange !== "all") params.set("harga", selectedPriceRange);
+    if (selectedDuration !== "all") params.set("durasi", selectedDuration);
     setSearchParams(params);
-  }, [search, selectedMainCategory, selectedSubCategory, selectedAirline, selectedAirport, selectedHotelStar, selectedMonth, setSearchParams]);
+  }, [search, selectedMainCategory, selectedSubCategory, selectedAirline, selectedAirport, selectedHotelStar, selectedMonth, selectedPriceRange, selectedDuration, setSearchParams]);
 
   const getLowestPrice = (departures: Package["departures"]) => {
     if (!departures || departures.length === 0) return 0;
@@ -198,10 +202,29 @@ const Paket = () => {
         });
         if (!hasMatchingDeparture) return false;
       }
-      
+
+      // Price range filter (lowest price across departures)
+      if (selectedPriceRange !== "all") {
+        const lowest = (pkg.departures || []).flatMap(d => d.prices.map(p => p.price));
+        const min = lowest.length ? Math.min(...lowest) : 0;
+        const [loStr, hiStr] = selectedPriceRange.split("-");
+        const lo = Number(loStr);
+        const hi = hiStr === "max" ? Infinity : Number(hiStr);
+        if (min < lo || min > hi) return false;
+      }
+
+      // Duration filter (days range)
+      if (selectedDuration !== "all") {
+        const d = pkg.duration_days || 0;
+        const [loStr, hiStr] = selectedDuration.split("-");
+        const lo = Number(loStr);
+        const hi = hiStr === "max" ? Infinity : Number(hiStr);
+        if (d < lo || d > hi) return false;
+      }
+
       return true;
     });
-  }, [packages, search, selectedMainCategory, selectedSubCategory, selectedAirline, selectedAirport, selectedHotelStar, selectedMonth]);
+  }, [packages, search, selectedMainCategory, selectedSubCategory, selectedAirline, selectedAirport, selectedHotelStar, selectedMonth, selectedPriceRange, selectedDuration]);
 
   const activeFilterCount = [
     selectedMainCategory !== "all",
@@ -209,7 +232,9 @@ const Paket = () => {
     selectedAirline !== "all",
     selectedAirport !== "all",
     selectedHotelStar !== "all",
-    selectedMonth !== "all"
+    selectedMonth !== "all",
+    selectedPriceRange !== "all",
+    selectedDuration !== "all",
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
@@ -219,6 +244,8 @@ const Paket = () => {
     setSelectedAirport("all");
     setSelectedHotelStar("all");
     setSelectedMonth("all");
+    setSelectedPriceRange("all");
+    setSelectedDuration("all");
     setSearch("");
   };
 
@@ -325,6 +352,37 @@ const Paket = () => {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Price Range */}
+      <div>
+        <Label className="text-sm font-medium mb-2 block">Rentang Harga</Label>
+        <Select value={selectedPriceRange} onValueChange={setSelectedPriceRange}>
+          <SelectTrigger><SelectValue placeholder="Semua Harga" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Harga</SelectItem>
+            <SelectItem value="0-25000000">{"< Rp 25 jt"}</SelectItem>
+            <SelectItem value="25000000-35000000">Rp 25 – 35 jt</SelectItem>
+            <SelectItem value="35000000-50000000">Rp 35 – 50 jt</SelectItem>
+            <SelectItem value="50000000-max">{"> Rp 50 jt"}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Duration */}
+      <div>
+        <Label className="text-sm font-medium mb-2 block">Durasi</Label>
+        <Select value={selectedDuration} onValueChange={setSelectedDuration}>
+          <SelectTrigger><SelectValue placeholder="Semua Durasi" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Durasi</SelectItem>
+            <SelectItem value="0-9">≤ 9 hari</SelectItem>
+            <SelectItem value="10-12">10 – 12 hari</SelectItem>
+            <SelectItem value="13-15">13 – 15 hari</SelectItem>
+            <SelectItem value="16-max">{"> 15 hari"}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
 
       {activeFilterCount > 0 && (
         <Button variant="outline" onClick={clearAllFilters} className="w-full">

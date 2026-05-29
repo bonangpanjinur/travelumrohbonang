@@ -1765,6 +1765,42 @@ export type Database = {
           },
         ]
       }
+      pilgrim_doc_access_logs: {
+        Row: {
+          context: string | null
+          created_at: string
+          doc_type: string | null
+          id: string
+          ip: string | null
+          pilgrim_id: string | null
+          storage_path: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          doc_type?: string | null
+          id?: string
+          ip?: string | null
+          pilgrim_id?: string | null
+          storage_path: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          doc_type?: string | null
+          id?: string
+          ip?: string | null
+          pilgrim_id?: string | null
+          storage_path?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       pilgrim_documents: {
         Row: {
           created_at: string | null

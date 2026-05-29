@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Upload, FileText, CheckCircle2, Clock, AlertCircle, Eye } from "lucide-react";
+import { getSignedPilgrimDocUrl } from "@/lib/pilgrimDocs";
 
 const DOC_TYPES = [
   { type: "paspor", label: "Paspor", required: true },
@@ -89,9 +90,10 @@ const MyDocuments = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from("pilgrim-documents")
-        .getPublicUrl(path);
+      // pilgrim-documents is a PRIVATE bucket; store the storage path only and
+      // generate short-lived signed URLs on demand via getSignedPilgrimDocUrl.
+      const fileUrl = path;
+
 
       const existingDoc = getDoc(pilgrimId, docType);
 
@@ -99,7 +101,7 @@ const MyDocuments = () => {
         await supabase
           .from("pilgrim_documents")
           .update({
-            file_url: urlData.publicUrl,
+            file_url: fileUrl,
             file_name: file.name,
             status: "uploaded",
           })
@@ -108,7 +110,7 @@ const MyDocuments = () => {
         await supabase.from("pilgrim_documents").insert({
           pilgrim_id: pilgrimId,
           doc_type: docType,
-          file_url: urlData.publicUrl,
+          file_url: fileUrl,
           file_name: file.name,
           status: "uploaded",
         });
@@ -193,7 +195,16 @@ const MyDocuments = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => window.open(doc.file_url, "_blank")}
+                                onClick={async () => {
+                                  const signed = await getSignedPilgrimDocUrl({
+                                    fileUrlOrPath: doc.file_url,
+                                    pilgrimId: pilgrim.id,
+                                    docType: doc.doc_type,
+                                    context: "my_documents_view",
+                                  });
+                                  if (signed) window.open(signed, "_blank");
+                                  else toast.error("Tidak dapat membuka file");
+                                }}
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
