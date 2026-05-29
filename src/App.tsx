@@ -113,6 +113,7 @@ const AppContent = () => {
       <Route path="/" element={<Index />} />
       <Route path="/paket" element={<Paket />} />
       <Route path="/paket/:slug" element={<PackageDetail />} />
+      <Route path="/bandingkan" element={<Compare />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
