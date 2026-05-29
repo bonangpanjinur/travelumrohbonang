@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
 import { Camera } from "lucide-react";
 import SEO from "@/components/SEO";
+import BreadcrumbJsonLd from "@/components/BreadcrumbJsonLd";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface GalleryItem {
@@ -71,6 +72,12 @@ const Gallery = () => {
       <SEO
         title="Galeri Perjalanan"
         description="Galeri foto perjalanan umroh bersama UmrohPlus. Lihat momen-momen indah jamaah kami di Tanah Suci Makkah dan Madinah."
+      />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Beranda", url: "/" },
+          { name: "Galeri", url: "/gallery" },
+        ]}
       />
 
       <Navbar />

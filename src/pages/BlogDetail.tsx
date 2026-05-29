@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import SEO from "@/components/SEO";
+import BreadcrumbJsonLd from "@/components/BreadcrumbJsonLd";
 import { toast } from "sonner";
 
 interface BlogPost {
@@ -129,6 +130,13 @@ const BlogDetail = () => {
         type="article"
         publishedTime={post.published_at || post.created_at}
         author={post.author}
+      />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Beranda", url: "/" },
+          { name: "Blog", url: "/blog" },
+          { name: post.title, url: `/blog/${post.slug}` },
+        ]}
       />
       
       <Navbar />

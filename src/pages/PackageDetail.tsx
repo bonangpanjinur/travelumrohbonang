@@ -10,6 +10,7 @@ import { Calendar, Star, Users, Plane, Hotel, MapPin, ArrowRight, Check } from "
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import SEO from "@/components/SEO";
+import BreadcrumbJsonLd from "@/components/BreadcrumbJsonLd";
 import WishlistButton from "@/components/WishlistButton";
 import PackageReviews from "@/components/PackageReviews";
 import InstallmentCalculator from "@/components/InstallmentCalculator";
@@ -137,6 +138,13 @@ const PackageDetail = () => {
         title={pkg.title}
         description={pkg.description || `Paket ${pkg.title} dengan pelayanan premium dan bimbingan ibadah lengkap.`}
         image={pkg.image_url}
+      />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Beranda", url: "/" },
+          { name: "Paket", url: "/paket" },
+          { name: pkg.title, url: `/paket/${pkg.id}` },
+        ]}
       />
       <Navbar />
       <main className="pt-20">

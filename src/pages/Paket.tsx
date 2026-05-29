@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import PackageCard, { PackageCardData } from "@/components/PackageCard";
 import SEO from "@/components/SEO";
+import BreadcrumbJsonLd from "@/components/BreadcrumbJsonLd";
 
 interface Package extends PackageCardData {
   description: string;
@@ -339,6 +340,12 @@ const Paket = () => {
       <SEO
         title="Paket Perjalanan Umroh"
         description="Temukan paket perjalanan umroh terbaik sesuai kebutuhan dan budget Anda. Berbagai pilihan paket dari ekonomi hingga VIP."
+      />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Beranda", url: "/" },
+          { name: "Paket", url: "/paket" },
+        ]}
       />
       <Navbar />
       <main className="pt-20">
