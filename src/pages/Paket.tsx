@@ -123,8 +123,10 @@ const Paket = () => {
     if (selectedAirport !== "all") params.set("bandara", selectedAirport);
     if (selectedHotelStar !== "all") params.set("bintang", selectedHotelStar);
     if (selectedMonth !== "all") params.set("bulan", selectedMonth);
+    if (selectedPriceRange !== "all") params.set("harga", selectedPriceRange);
+    if (selectedDuration !== "all") params.set("durasi", selectedDuration);
     setSearchParams(params);
-  }, [search, selectedMainCategory, selectedSubCategory, selectedAirline, selectedAirport, selectedHotelStar, selectedMonth, setSearchParams]);
+  }, [search, selectedMainCategory, selectedSubCategory, selectedAirline, selectedAirport, selectedHotelStar, selectedMonth, selectedPriceRange, selectedDuration, setSearchParams]);
 
   const getLowestPrice = (departures: Package["departures"]) => {
     if (!departures || departures.length === 0) return 0;
