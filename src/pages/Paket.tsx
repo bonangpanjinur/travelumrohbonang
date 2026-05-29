@@ -202,10 +202,29 @@ const Paket = () => {
         });
         if (!hasMatchingDeparture) return false;
       }
-      
+
+      // Price range filter (lowest price across departures)
+      if (selectedPriceRange !== "all") {
+        const lowest = (pkg.departures || []).flatMap(d => d.prices.map(p => p.price));
+        const min = lowest.length ? Math.min(...lowest) : 0;
+        const [loStr, hiStr] = selectedPriceRange.split("-");
+        const lo = Number(loStr);
+        const hi = hiStr === "max" ? Infinity : Number(hiStr);
+        if (min < lo || min > hi) return false;
+      }
+
+      // Duration filter (days range)
+      if (selectedDuration !== "all") {
+        const d = pkg.duration_days || 0;
+        const [loStr, hiStr] = selectedDuration.split("-");
+        const lo = Number(loStr);
+        const hi = hiStr === "max" ? Infinity : Number(hiStr);
+        if (d < lo || d > hi) return false;
+      }
+
       return true;
     });
-  }, [packages, search, selectedMainCategory, selectedSubCategory, selectedAirline, selectedAirport, selectedHotelStar, selectedMonth]);
+  }, [packages, search, selectedMainCategory, selectedSubCategory, selectedAirline, selectedAirport, selectedHotelStar, selectedMonth, selectedPriceRange, selectedDuration]);
 
   const activeFilterCount = [
     selectedMainCategory !== "all",
@@ -213,7 +232,9 @@ const Paket = () => {
     selectedAirline !== "all",
     selectedAirport !== "all",
     selectedHotelStar !== "all",
-    selectedMonth !== "all"
+    selectedMonth !== "all",
+    selectedPriceRange !== "all",
+    selectedDuration !== "all",
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
@@ -223,6 +244,8 @@ const Paket = () => {
     setSelectedAirport("all");
     setSelectedHotelStar("all");
     setSelectedMonth("all");
+    setSelectedPriceRange("all");
+    setSelectedDuration("all");
     setSearch("");
   };
 
