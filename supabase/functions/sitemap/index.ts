@@ -95,13 +95,17 @@ Deno.serve(async (req) => {
       .select("slug, updated_at")
       .eq("is_active", true);
     if (tenant) {
-      const { data: tp } = await supabase
-        .from("tenant_packages")
-        .select("package_id")
-        .eq("tenant_site_id", tenant.id)
-        .eq("is_visible", true);
-      const ids = (tp || []).map((r) => r.package_id);
-      if (ids.length) packageQuery = packageQuery.in("id", ids);
+      try {
+        const { data: tp } = await supabase
+          .from("tenant_packages" as never)
+          .select("package_id")
+          .eq("tenant_site_id", tenant.id)
+          .eq("is_visible", true);
+        const ids = (tp || []).map((r: { package_id: string }) => r.package_id);
+        if (ids.length) packageQuery = packageQuery.in("id", ids);
+      } catch (_) {
+        // tenant_packages table optional — fall back to all active packages
+      }
     }
     const { data: packages } = await packageQuery;
     for (const p of packages || []) {
