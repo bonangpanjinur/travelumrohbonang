@@ -37,6 +37,8 @@ const SEO = ({
   noIndex = false,
 }: SEOProps) => {
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
+  const [gscToken, setGscToken] = useState<string | null>(null);
+  const { tenant } = useTenant();
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -54,6 +56,25 @@ const SEO = ({
     fetchBranding();
   }, []);
 
+  // Per-tenant Google Search Console verification token. On the main brand
+  // domain we fall back to the `seo.gsc_verification` site_setting key.
+  useEffect(() => {
+    const fetchGsc = async () => {
+      if (tenant?.gsc_verification) {
+        setGscToken(tenant.gsc_verification);
+        return;
+      }
+      const { data } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "seo")
+        .maybeSingle();
+      const v = (data?.value as { gsc_verification?: string } | null) ?? null;
+      if (v?.gsc_verification) setGscToken(v.gsc_verification);
+    };
+    fetchGsc();
+  }, [tenant?.id, tenant?.gsc_verification]);
+
   const siteName = branding.company_name;
   const fullTitle = title ? `${title} | ${siteName}` : `${siteName} - ${branding.tagline}`;
 
@@ -66,7 +87,22 @@ const SEO = ({
     ? window.location.pathname + window.location.search
     : "/";
   const currentUrl = url || `${origin}${pathname}`;
-  const defaultImage = image || `${origin}/og-default.jpg`;
+
+  // Always resolve og:image to an absolute URL. Relative paths break crawlers,
+  // and the static /og-default.jpg fallback 404s on tenant subdomains.
+  const resolveAbsolute = (src?: string) => {
+    if (!src) return undefined;
+    if (/^https?:\/\//i.test(src)) return src;
+    if (src.startsWith("/")) return `${origin}${src}`;
+    return `${origin}/${src}`;
+  };
+  const tenantDefault = (tenant as { seo_default_image?: string | null } | null)?.seo_default_image || null;
+  const defaultImage =
+    resolveAbsolute(image) ||
+    resolveAbsolute(tenantDefault || undefined) ||
+    resolveAbsolute(tenant?.hero_image_url || undefined) ||
+    resolveAbsolute(tenant?.logo_url || undefined) ||
+    `${origin}/og-default.jpg`;
 
   // Default Organization JSON-LD
   const organizationJsonLd = {
