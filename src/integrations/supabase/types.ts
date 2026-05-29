@@ -637,6 +637,45 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          booking_id: string
+          created_at: string
+          html_content: string
+          id: string
+          signature_data_url: string | null
+          signed_at: string | null
+          signer_ip: string | null
+          signer_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          html_content: string
+          id?: string
+          signature_data_url?: string | null
+          signed_at?: string | null
+          signer_ip?: string | null
+          signer_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          html_content?: string
+          id?: string
+          signature_data_url?: string | null
+          signed_at?: string | null
+          signer_ip?: string | null
+          signer_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       coupons: {
         Row: {
           code: string
@@ -770,6 +809,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      error_logs: {
+        Row: {
+          context: Json | null
+          created_at: string
+          id: string
+          level: string
+          message: string
+          stack: string | null
+          url: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string
+          id?: string
+          level?: string
+          message: string
+          stack?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string
+          id?: string
+          level?: string
+          message?: string
+          stack?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       faqs: {
         Row: {
@@ -2067,6 +2142,9 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          totp_backup_codes: string[] | null
+          totp_enabled: boolean
+          totp_secret: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -2076,6 +2154,9 @@ export type Database = {
           id: string
           name: string
           phone?: string | null
+          totp_backup_codes?: string[] | null
+          totp_enabled?: boolean
+          totp_secret?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -2085,6 +2166,9 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          totp_backup_codes?: string[] | null
+          totp_enabled?: boolean
+          totp_secret?: string | null
         }
         Relationships: []
       }
@@ -2136,6 +2220,30 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      request_log: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: number
+          ip: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: number
+          ip: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: number
+          ip?: string
+          user_id?: string | null
         }
         Relationships: []
       }

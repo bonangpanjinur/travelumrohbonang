@@ -96,10 +96,16 @@ import AdminCheckIn from "./pages/admin/CheckIn";
 import AdminManasik from "./pages/admin/Manasik";
 import Manasik from "./pages/Manasik";
 import AffiliateRedirect from "./pages/AffiliateRedirect";
+import Account2FA from "./pages/Account2FA";
+import ContractSign from "./pages/ContractSign";
+import AdminErrorLogs from "./pages/admin/ErrorLogs";
+import { useEffect } from "react";
+import { installGlobalErrorHandlers } from "@/lib/errorLogger";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   useDynamicFavicon();
+  useEffect(() => { installGlobalErrorHandlers(); }, []);
   const { isTenantSite, loading: tenantLoading } = useTenant();
 
   if (tenantLoading) {
@@ -138,6 +144,8 @@ const AppContent = () => {
         <Route path="/refund-request" element={<RefundRequest />} />
         <Route path="/e-ticket/:bookingId" element={<ETicket />} />
         <Route path="/branch-dashboard" element={<BranchDashboard />} />
+        <Route path="/account/2fa" element={<Account2FA />} />
+        <Route path="/contract/:bookingId" element={<ContractSign />} />
       </Route>
       <Route path="/galeri" element={<Gallery />} />
       <Route path="/blog" element={<Blog />} />
@@ -201,6 +209,7 @@ const AppContent = () => {
           <Route path="departure-gallery" element={<AdminDepartureGallery />} />
           <Route path="check-in" element={<AdminCheckIn />} />
           <Route path="manasik" element={<AdminManasik />} />
+          <Route path="error-logs" element={<AdminErrorLogs />} />
         </Route>
       </Route>
 
