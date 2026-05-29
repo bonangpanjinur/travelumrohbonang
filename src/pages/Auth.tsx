@@ -8,6 +8,8 @@ import { motion } from "framer-motion";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import SEO from "@/components/SEO";
+import TurnstileCaptcha from "@/components/TurnstileCaptcha";
+import { rateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -32,6 +34,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -40,6 +43,18 @@ const Auth = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+
+    if (!captchaToken) {
+      toast({ title: "Verifikasi captcha", description: "Selesaikan captcha terlebih dahulu.", variant: "destructive" });
+      return;
+    }
+
+    const limit = await rateLimit(isLogin ? "auth:login" : "auth:signup", { max: 10, windowSec: 60 });
+    if (!limit.allowed) {
+      toast({ title: "Terlalu banyak percobaan", description: "Coba lagi dalam 1 menit.", variant: "destructive" });
+      return;
+    }
+
     setLoading(true);
 
     try {
