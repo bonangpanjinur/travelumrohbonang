@@ -314,6 +314,26 @@ const TenantSitesAdmin = () => {
                 <Label>Hero Subtitle</Label>
                 <Input value={form.hero_subtitle || ""} onChange={e => updateField("hero_subtitle", e.target.value)} />
               </div>
+
+              {/* SEO per tenant */}
+              <div className="md:col-span-2">
+                <Label>Google Search Console — meta verification</Label>
+                <Input
+                  value={form.gsc_verification || ""}
+                  onChange={(e) => updateField("gsc_verification", e.target.value)}
+                  placeholder="google-site-verification=XXXXXXXX"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tempel isi <code>content</code> dari meta tag verifikasi GSC. Akan otomatis tampil di tag &lt;head&gt; pada domain tenant ini.
+                </p>
+              </div>
+              <div className="md:col-span-2">
+                <Label>Default og:image (SEO sosial)</Label>
+                <Input
+                  value={form.seo_default_image || ""}
+                  onChange={(e) => updateField("seo_default_image", e.target.value)}
+                  placeholder="https://.../og-cover.jpg"
+                />
               <div className="md:col-span-2">
                 <Label>Tentang</Label>
                 <Textarea value={form.about_text || ""} onChange={e => updateField("about_text", e.target.value)} rows={3} />
