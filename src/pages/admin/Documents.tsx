@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { format, differenceInDays, isPast } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { getSignedPilgrimDocUrl } from "@/lib/pilgrimDocs";
 import {
   Search, Upload, FileCheck, FileX, AlertTriangle, Eye, CheckCircle, XCircle,
   Clock, Users, FileText, Filter, ChevronDown, ChevronRight
