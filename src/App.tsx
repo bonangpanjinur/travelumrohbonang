@@ -82,6 +82,9 @@ import AdminChats from "./pages/admin/Chats";
 import AgentCommissions from "./pages/AgentCommissions";
 import RefundRequest from "./pages/RefundRequest";
 import ETicket from "./pages/ETicket";
+import AdminLeaderboard from "./pages/admin/Leaderboard";
+import AdminCurrencies from "./pages/admin/Currencies";
+import { CurrencyProvider } from "@/hooks/useCurrency";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
@@ -173,6 +176,8 @@ const AppContent = () => {
           <Route path="audit-logs" element={<AdminAuditLogs />} />
           <Route path="role-management" element={<AdminRoleManagement />} />
           <Route path="chats" element={<AdminChats />} />
+          <Route path="leaderboard" element={<AdminLeaderboard />} />
+          <Route path="currencies" element={<AdminCurrencies />} />
         </Route>
       </Route>
 
@@ -190,13 +195,15 @@ const App = () => (
         <LanguageProvider>
           <ThemeProvider>
             <TenantProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <AppContent />
-                </BrowserRouter>
-              </TooltipProvider>
+              <CurrencyProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <AppContent />
+                  </BrowserRouter>
+                </TooltipProvider>
+              </CurrencyProvider>
             </TenantProvider>
           </ThemeProvider>
         </LanguageProvider>

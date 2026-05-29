@@ -17,6 +17,7 @@ import {
 import NotificationBell from "@/components/NotificationBell";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import ThemeToggle from "@/components/ThemeToggle";
+import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 
 interface NavItem {
   id: string;
@@ -254,6 +255,7 @@ const Navbar = () => {
         {/* CTA */}
         <div className="hidden lg:flex items-center gap-2">
           <LanguageSwitcher variant="navbar" />
+          <CurrencySwitcher />
           <ThemeToggle variant="navbar" />
           {user && <NotificationBell />}
           {user ? (

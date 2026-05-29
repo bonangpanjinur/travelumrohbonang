@@ -7,8 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Search, Shield, User, Users } from "lucide-react";
+import { Search, Shield, User, Users, LogIn } from "lucide-react";
 import { format } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
+import ConfirmAlertDialog from "@/components/admin/ConfirmAlertDialog";
 
 interface UserWithRole {
   id: string;
@@ -23,11 +25,37 @@ interface UserWithRole {
 interface BranchOption { id: string; name: string; }
 
 const AdminUsers = () => {
+  const { role } = useAuth();
+  const isSuperAdmin = role === "super_admin" || role === "superadmin";
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [impersonateUser, setImpersonateUser] = useState<UserWithRole | null>(null);
+  const [impersonating, setImpersonating] = useState(false);
+
+  const handleImpersonate = async () => {
+    if (!impersonateUser) return;
+    setImpersonating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-impersonate", {
+        body: { target_user_id: impersonateUser.id, redirect_to: `${window.location.origin}/dashboard` },
+      });
+      if (error) throw error;
+      if (data?.action_link) {
+        window.open(data.action_link, "_blank");
+        toast({ title: "Link impersonate dibuka di tab baru" });
+      } else {
+        throw new Error("Tidak menerima action link");
+      }
+    } catch (e: any) {
+      toast({ title: "Gagal impersonate", description: e.message, variant: "destructive" });
+    } finally {
+      setImpersonating(false);
+      setImpersonateUser(null);
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -188,12 +216,13 @@ const AdminUsers = () => {
                     <TableHead>Role</TableHead>
                     <TableHead>Cabang</TableHead>
                     <TableHead>Ubah Role</TableHead>
+                    {isSuperAdmin && <TableHead className="text-right">Aksi</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={isSuperAdmin ? 8 : 7} className="text-center py-8 text-muted-foreground">
                         Tidak ada user ditemukan
                       </TableCell>
                     </TableRow>
@@ -244,6 +273,19 @@ const AdminUsers = () => {
                             </SelectContent>
                           </Select>
                         </TableCell>
+                        {isSuperAdmin && (
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setImpersonateUser(user)}
+                              disabled={updatingId === user.id}
+                            >
+                              <LogIn className="h-3.5 w-3.5 mr-1" />
+                              Login as
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))
                   )}
@@ -253,6 +295,15 @@ const AdminUsers = () => {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmAlertDialog
+        open={!!impersonateUser}
+        onOpenChange={(o) => !o && setImpersonateUser(null)}
+        onConfirm={handleImpersonate}
+        title={`Impersonate ${impersonateUser?.name}?`}
+        description={`Sebuah magic link akan dibuat untuk ${impersonateUser?.email}. Tindakan ini akan dicatat di audit log. Buka di tab terpisah untuk menghindari logout sesi Anda.`}
+        confirmLabel={impersonating ? "Memproses..." : "Buat Link"}
+      />
     </div>
   );
 };
