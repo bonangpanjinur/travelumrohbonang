@@ -334,6 +334,7 @@ const TenantSitesAdmin = () => {
                   onChange={(e) => updateField("seo_default_image", e.target.value)}
                   placeholder="https://.../og-cover.jpg"
                 />
+              </div>
               <div className="md:col-span-2">
                 <Label>Tentang</Label>
                 <Textarea value={form.about_text || ""} onChange={e => updateField("about_text", e.target.value)} rows={3} />
