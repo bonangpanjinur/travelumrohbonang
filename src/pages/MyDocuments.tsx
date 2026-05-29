@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Upload, FileText, CheckCircle2, Clock, AlertCircle, Eye } from "lucide-react";
+import { getSignedPilgrimDocUrl } from "@/lib/pilgrimDocs";
 
 const DOC_TYPES = [
   { type: "paspor", label: "Paspor", required: true },
