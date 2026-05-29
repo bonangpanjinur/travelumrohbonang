@@ -110,7 +110,7 @@ const MyDocuments = () => {
         await supabase.from("pilgrim_documents").insert({
           pilgrim_id: pilgrimId,
           doc_type: docType,
-          file_url: urlData.publicUrl,
+          file_url: fileUrl,
           file_name: file.name,
           status: "uploaded",
         });
