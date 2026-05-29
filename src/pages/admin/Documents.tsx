@@ -542,10 +542,20 @@ const Documents = () => {
           </DialogHeader>
           <div className="space-y-4">
             {verifyDialog?.doc.file_url && (
-              <a href={verifyDialog.doc.file_url} target="_blank" rel="noopener noreferrer"
+              <button type="button"
+                onClick={async () => {
+                  const signed = await getSignedPilgrimDocUrl({
+                    fileUrlOrPath: verifyDialog!.doc.file_url!,
+                    pilgrimId: (verifyDialog!.doc as any).pilgrim_id,
+                    docType: verifyDialog!.doc.doc_type,
+                    context: "admin_verify_dialog",
+                  });
+                  if (signed) window.open(signed, "_blank");
+                  else toast.error("Tidak dapat membuka file");
+                }}
                 className="text-primary hover:underline flex items-center gap-1">
                 <Eye className="w-4 h-4" /> Lihat Dokumen
-              </a>
+              </button>
             )}
             <div>
               <Label>Catatan (opsional, wajib jika ditolak)</Label>
