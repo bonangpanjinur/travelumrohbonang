@@ -339,6 +339,11 @@ const PackageDetail = () => {
           </div>
         </div>
       </main>
+      <StickyMobileCTA
+        price={selectedDep ? getLowestPrice(selectedDep.prices) : (departures[0] ? getLowestPrice(departures[0].prices) : undefined)}
+        onBook={handleBookNow}
+        disabled={!selectedDeparture}
+      />
       <Footer />
     </div>
   );
