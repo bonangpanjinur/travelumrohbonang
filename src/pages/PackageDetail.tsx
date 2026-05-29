@@ -267,6 +267,14 @@ const PackageDetail = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Calculator */}
+              <InstallmentCalculator defaultPrice={
+                departures.length ? Math.min(...departures.flatMap(d => d.prices.map(p => p.price))) : 30000000
+              } />
+
+              {/* Reviews */}
+              <PackageReviews packageId={pkg.id} packageTitle={pkg.title} />
             </div>
 
             {/* Sidebar - Booking */}
