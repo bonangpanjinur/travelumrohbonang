@@ -131,6 +131,13 @@ const BlogDetail = () => {
         publishedTime={post.published_at || post.created_at}
         author={post.author}
       />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Beranda", url: "/" },
+          { name: "Blog", url: "/blog" },
+          { name: post.title, url: `/blog/${post.slug}` },
+        ]}
+      />
       
       <Navbar />
       <main className="pt-20">
