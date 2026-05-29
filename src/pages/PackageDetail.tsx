@@ -339,6 +339,12 @@ const PackageDetail = () => {
             </div>
           </div>
         </div>
+        <PageFAQ
+          scopes={["package"]}
+          packageId={pkg.id}
+          title={`FAQ ${pkg.title}`}
+          description="Pertanyaan jamaah tentang paket ini: jadwal, fasilitas, hotel, hingga pembayaran."
+        />
       </main>
       <StickyMobileCTA
         price={selectedDep ? getLowestPrice(selectedDep.prices) : (departures[0] ? getLowestPrice(departures[0].prices) : undefined)}
