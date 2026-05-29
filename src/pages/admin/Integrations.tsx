@@ -117,6 +117,55 @@ const Integrations = () => {
     setRows((r) => ({ ...r, [p]: { ...r[p], is_active: value } }));
   };
 
+  // Test send state
+  const [testOpen, setTestOpen] = useState<Provider | null>(null);
+  const [testTo, setTestTo] = useState("");
+  const [testMessage, setTestMessage] = useState("Pesan uji dari Admin Integrasi.");
+  const [testSubject, setTestSubject] = useState("Tes Email dari Admin Integrasi");
+  const [testSending, setTestSending] = useState(false);
+
+  const openTest = (p: Provider) => {
+    setTestOpen(p);
+    setTestTo("");
+  };
+
+  const sendTest = async () => {
+    if (!testOpen) return;
+    const p = testOpen;
+    if (!testTo.trim()) {
+      toast.error(p === "resend" ? "Isi alamat email tujuan" : "Isi nomor WhatsApp tujuan");
+      return;
+    }
+    setTestSending(true);
+    try {
+      if (p === "resend") {
+        const { data, error } = await supabase.functions.invoke("send-email", {
+          body: {
+            to: testTo.trim(),
+            subject: testSubject || "Tes Email",
+            html: `<p>${testMessage.replace(/</g, "&lt;")}</p>`,
+            text: testMessage,
+          },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+        toast.success("Email uji berhasil dikirim");
+      } else {
+        const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+          body: { to: testTo.trim(), message: testMessage, provider: p },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+        toast.success(`WhatsApp uji berhasil dikirim via ${p}`);
+      }
+      setTestOpen(null);
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal mengirim pesan uji");
+    } finally {
+      setTestSending(false);
+    }
+  };
+
   if (!isSuper) {
     return (
       <Card>
