@@ -195,7 +195,16 @@ const MyDocuments = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => window.open(doc.file_url, "_blank")}
+                                onClick={async () => {
+                                  const signed = await getSignedPilgrimDocUrl({
+                                    fileUrlOrPath: doc.file_url,
+                                    pilgrimId: pilgrim.id,
+                                    docType: doc.doc_type,
+                                    context: "my_documents_view",
+                                  });
+                                  if (signed) window.open(signed, "_blank");
+                                  else toast.error("Tidak dapat membuka file");
+                                }}
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
