@@ -335,6 +335,7 @@ const Auth = () => {
               {loading ? "Memproses..." : isLogin ? "Masuk" : "Daftar"}
             </Button>
           </form>
+          )}
 
           <div className="mt-6 text-center text-sm">
             <span className="text-muted-foreground">
