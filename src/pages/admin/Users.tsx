@@ -216,12 +216,13 @@ const AdminUsers = () => {
                     <TableHead>Role</TableHead>
                     <TableHead>Cabang</TableHead>
                     <TableHead>Ubah Role</TableHead>
+                    {isSuperAdmin && <TableHead className="text-right">Aksi</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={isSuperAdmin ? 8 : 7} className="text-center py-8 text-muted-foreground">
                         Tidak ada user ditemukan
                       </TableCell>
                     </TableRow>
@@ -272,6 +273,19 @@ const AdminUsers = () => {
                             </SelectContent>
                           </Select>
                         </TableCell>
+                        {isSuperAdmin && (
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setImpersonateUser(user)}
+                              disabled={updatingId === user.id}
+                            >
+                              <LogIn className="h-3.5 w-3.5 mr-1" />
+                              Login as
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))
                   )}
@@ -281,6 +295,15 @@ const AdminUsers = () => {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmAlertDialog
+        open={!!impersonateUser}
+        onOpenChange={(o) => !o && setImpersonateUser(null)}
+        onConfirm={handleImpersonate}
+        title={`Impersonate ${impersonateUser?.name}?`}
+        description={`Sebuah magic link akan dibuat untuk ${impersonateUser?.email}. Tindakan ini akan dicatat di audit log. Buka di tab terpisah untuk menghindari logout sesi Anda.`}
+        confirmLabel={impersonating ? "Memproses..." : "Buat Link"}
+      />
     </div>
   );
 };
