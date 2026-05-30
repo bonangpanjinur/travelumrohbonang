@@ -9,6 +9,7 @@ import { LanguageProvider } from "@/i18n/LanguageContext";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { TenantProvider, useTenant } from "@/hooks/useTenant";
 import { useDynamicFavicon } from "@/hooks/useDynamicFavicon";
+import { useActiveTemplate } from "@/hooks/useActiveTemplate";
 import Index from "./pages/Index";
 import Paket from "./pages/Paket";
 import PackageDetail from "./pages/PackageDetail";
