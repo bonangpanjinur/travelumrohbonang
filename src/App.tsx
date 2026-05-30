@@ -109,6 +109,7 @@ const queryClient = new QueryClient();
 
 const AppContent = () => {
   useDynamicFavicon();
+  useActiveTemplate();
   useEffect(() => { installGlobalErrorHandlers(); }, []);
   const { isTenantSite, loading: tenantLoading } = useTenant();
 
