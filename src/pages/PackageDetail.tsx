@@ -358,7 +358,7 @@ const PackageDetail = () => {
                   <div className="mt-4 pt-4 border-t border-border">
                     <div className="text-sm text-muted-foreground mb-1">Harga mulai dari</div>
                     <div className="text-2xl font-display font-bold text-foreground">
-                      Rp {getLowestPrice(selectedDep.prices).toLocaleString("id-ID")}
+                      {formatPrice(getLowestPrice(selectedDep.prices))}
                     </div>
                     <div className="text-xs text-muted-foreground">per orang (Quad)</div>
                   </div>
