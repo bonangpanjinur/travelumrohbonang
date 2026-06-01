@@ -49,6 +49,7 @@ export default function AdminPackageCosts() {
   const [selectedPkg, setSelectedPkg] = useState<string>("");
   const [costs, setCosts] = useState<Cost[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Partial<Cost>>({
     category: "ticket", item_name: "", qty: 1, unit: "pax",
