@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { validatePilgrim } from "@/lib/validations";
 import TurnstileCaptcha from "@/components/TurnstileCaptcha";
 import { rateLimit } from "@/lib/rateLimit";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface Package {
   id: string;
