@@ -44,6 +44,7 @@ const statusLabels: Record<string, string> = {
 };
 
 const MyBookings = () => {
+  const { format: fmt } = useCurrency();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
