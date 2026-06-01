@@ -168,7 +168,7 @@ const MyBookings = () => {
                       <div className="text-right">
                         <div className="text-sm text-muted-foreground">Total</div>
                         <div className="text-xl font-bold text-gold">
-                          Rp {b.total_price.toLocaleString("id-ID")}
+                          {fmt(b.total_price)}
                         </div>
                       </div>
                       <div className="flex gap-2 flex-wrap">
