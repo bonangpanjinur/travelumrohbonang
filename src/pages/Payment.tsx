@@ -346,8 +346,8 @@ const Payment = () => {
                 </div>
                 <Progress value={paymentProgress} className="h-2" />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Terbayar: Rp {paidAmount.toLocaleString("id-ID")}</span>
-                  <span>Total: Rp {booking.total_price.toLocaleString("id-ID")}</span>
+                  <span>Terbayar: {fmt(paidAmount)}</span>
+                  <span>Total: {fmt(booking.total_price)}</span>
                 </div>
               </div>
 
