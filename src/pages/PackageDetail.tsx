@@ -347,7 +347,7 @@ const PackageDetail = () => {
                           <Users className="w-4 h-4 text-muted-foreground" />
                         </div>
                         <div className="text-sm font-bold text-gold">
-                          Mulai Rp {getLowestPrice(dep.prices).toLocaleString("id-ID")}
+                          Mulai {formatPrice(getLowestPrice(dep.prices))}
                         </div>
                       </motion.div>
                     ))}
