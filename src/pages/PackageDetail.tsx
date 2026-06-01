@@ -60,6 +60,7 @@ const PackageDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { tenant } = useTenant();
+  const { format: formatPrice } = useCurrency();
   const [pkg, setPkg] = useState<Package | null>(null);
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [extraHotels, setExtraHotels] = useState<ExtraHotel[]>([]);
