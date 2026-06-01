@@ -375,7 +375,7 @@ const Booking = () => {
                   <div key={room.room_type} className="flex items-center justify-between p-4 border border-border rounded-xl">
                     <div>
                       <p className="font-bold">{getRoomLabel(room.room_type)}</p>
-                      <p className="text-gold font-semibold">Rp {room.price.toLocaleString("id-ID")}</p>
+                      <p className="text-gold font-semibold">{formatPrice(room.price)}</p>
                     </div>
                     <div className="flex items-center gap-4">
                       <button
