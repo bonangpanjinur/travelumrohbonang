@@ -41,6 +41,7 @@ interface PaymentRecord {
 }
 
 const Payment = () => {
+  const { format: fmt } = useCurrency();
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
