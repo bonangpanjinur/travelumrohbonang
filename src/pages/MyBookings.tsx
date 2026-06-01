@@ -16,6 +16,7 @@ import EmptyState from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import BookingItinerary from "@/components/booking/BookingItinerary";
 import ChatBox from "@/components/chat/ChatBox";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface BookingItem {
   id: string;
