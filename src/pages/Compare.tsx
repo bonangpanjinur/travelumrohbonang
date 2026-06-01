@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface Pkg {
   id: string; title: string; slug: string; image_url: string; duration_days: number;
