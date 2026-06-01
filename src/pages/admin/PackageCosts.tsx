@@ -291,31 +291,50 @@ export default function AdminPackageCosts() {
         <CardContent>
           {loading ? <div className="text-muted-foreground text-sm">Memuat…</div> :
            costs.length === 0 ? <div className="text-muted-foreground text-sm">Belum ada komponen biaya untuk paket ini.</div> :
-           <ResponsiveTable headers={["Kategori", "Item", "Qty × Harga", "IDR", "Tipe", "Aksi"]}>
-             {costs.map((c) => {
-               const cat = CATEGORIES.find((x) => x.value === c.category)?.label || c.category;
-               const idr = toIDR(Number(c.unit_cost), c.currency_code) * Number(c.qty);
-               return (
-                 <tr key={c.id} className="border-b">
-                   <td className="p-2"><Badge variant="outline">{cat}</Badge></td>
-                   <td className="p-2">{c.item_name}{c.notes && <div className="text-xs text-muted-foreground">{c.notes}</div>}</td>
-                   <td className="p-2 text-sm">{c.qty} {c.unit} × {c.currency_code} {Number(c.unit_cost).toLocaleString("id-ID")}</td>
-                   <td className="p-2 font-medium">{fmtIDR(idr)}</td>
-                   <td className="p-2 text-xs">{c.is_per_pax ? "Per pax" : "Tetap"}</td>
-                   <td className="p-2">
-                     <DeleteAlertDialog
-                       title="Hapus komponen biaya?"
-                       description={`Item "${c.item_name}" akan dihapus.`}
-                       onConfirm={() => del(c.id)}
-                       trigger={<Button size="sm" variant="ghost"><Trash2 className="w-4 h-4 text-destructive" /></Button>}
-                     />
-                   </td>
+           <ResponsiveTable>
+             <table className="w-full text-sm">
+               <thead className="bg-muted/40 text-xs uppercase">
+                 <tr>
+                   <th className="p-2 text-left">Kategori</th>
+                   <th className="p-2 text-left">Item</th>
+                   <th className="p-2 text-left">Qty × Harga</th>
+                   <th className="p-2 text-left">IDR</th>
+                   <th className="p-2 text-left">Tipe</th>
+                   <th className="p-2 text-left">Aksi</th>
                  </tr>
-               );
-             })}
+               </thead>
+               <tbody>
+                 {costs.map((c) => {
+                   const cat = CATEGORIES.find((x) => x.value === c.category)?.label || c.category;
+                   const idr = toIDR(Number(c.unit_cost), c.currency_code) * Number(c.qty);
+                   return (
+                     <tr key={c.id} className="border-b">
+                       <td className="p-2"><Badge variant="outline">{cat}</Badge></td>
+                       <td className="p-2">{c.item_name}{c.notes && <div className="text-xs text-muted-foreground">{c.notes}</div>}</td>
+                       <td className="p-2">{c.qty} {c.unit} × {c.currency_code} {Number(c.unit_cost).toLocaleString("id-ID")}</td>
+                       <td className="p-2 font-medium">{fmtIDR(idr)}</td>
+                       <td className="p-2 text-xs">{c.is_per_pax ? "Per pax" : "Tetap"}</td>
+                       <td className="p-2">
+                         <Button size="sm" variant="ghost" onClick={() => setDeleteId(c.id)}>
+                           <Trash2 className="w-4 h-4 text-destructive" />
+                         </Button>
+                       </td>
+                     </tr>
+                   );
+                 })}
+               </tbody>
+             </table>
            </ResponsiveTable>}
         </CardContent>
       </Card>
+
+      <DeleteAlertDialog
+        open={!!deleteId}
+        onOpenChange={(o) => { if (!o) setDeleteId(null); }}
+        title="Hapus komponen biaya?"
+        description="Item akan dihapus permanen."
+        onConfirm={async () => { if (deleteId) { await del(deleteId); setDeleteId(null); } }}
+      />
     </div>
   );
 }
