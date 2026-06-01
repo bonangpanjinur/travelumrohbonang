@@ -19,6 +19,7 @@ interface Pkg {
 }
 
 export default function Compare() {
+  const { format: formatPrice } = useCurrency();
   const [params, setParams] = useSearchParams();
   const slugs = useMemo(() => (params.get("ids") || "").split(",").filter(Boolean).slice(0, 3), [params]);
   const [pkgs, setPkgs] = useState<Pkg[]>([]);
