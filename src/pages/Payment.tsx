@@ -15,6 +15,7 @@ import { format, differenceInDays, addDays } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import InvoiceButton from "@/components/InvoiceButton";
 import LoadingSpinner from "@/components/ui/loading-spinner";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface BookingData {
   id: string;
