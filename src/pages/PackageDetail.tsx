@@ -22,6 +22,7 @@ import RelatedArticles from "@/components/RelatedArticles";
 import { lookupSlugRedirect, buildRedirectPath } from "@/lib/slugRedirect";
 import { useTenant } from "@/hooks/useTenant";
 import PromoPdfButton from "@/components/PromoPdfButton";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface Package {
   id: string;
