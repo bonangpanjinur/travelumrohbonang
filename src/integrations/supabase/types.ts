@@ -1607,6 +1607,54 @@ export type Database = {
           },
         ]
       }
+      package_costs: {
+        Row: {
+          category: string
+          created_at: string
+          currency_code: string
+          id: string
+          is_per_pax: boolean
+          item_name: string
+          notes: string | null
+          package_id: string
+          qty: number
+          sort_order: number | null
+          unit: string | null
+          unit_cost: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          currency_code?: string
+          id?: string
+          is_per_pax?: boolean
+          item_name: string
+          notes?: string | null
+          package_id: string
+          qty?: number
+          sort_order?: number | null
+          unit?: string | null
+          unit_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          currency_code?: string
+          id?: string
+          is_per_pax?: boolean
+          item_name?: string
+          notes?: string | null
+          package_id?: string
+          qty?: number
+          sort_order?: number | null
+          unit?: string | null
+          unit_cost?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       package_departures: {
         Row: {
           created_at: string | null
@@ -2826,6 +2874,15 @@ export type Database = {
         }
         Relationships: []
       }
+      package_hpp_summary: {
+        Row: {
+          hpp_fixed_idr: number | null
+          hpp_per_pax_idr: number | null
+          items_count: number | null
+          package_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_booking_code: { Args: never; Returns: string }
@@ -2835,6 +2892,7 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       normalize_phone_id: { Args: { raw: string }; Returns: string }
+      to_idr: { Args: { _amount: number; _currency: string }; Returns: number }
     }
     Enums: {
       [_ in never]: never

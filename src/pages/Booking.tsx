@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { validatePilgrim } from "@/lib/validations";
 import TurnstileCaptcha from "@/components/TurnstileCaptcha";
 import { rateLimit } from "@/lib/rateLimit";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface Package {
   id: string;
@@ -61,6 +62,7 @@ interface Agent {
 const STEPS = ["Pilih Kamar", "Data Jemaah", "PIC & Konfirmasi"];
 
 const Booking = () => {
+  const { format: formatPrice } = useCurrency();
   const { slug, departureId } = useParams();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -373,7 +375,7 @@ const Booking = () => {
                   <div key={room.room_type} className="flex items-center justify-between p-4 border border-border rounded-xl">
                     <div>
                       <p className="font-bold">{getRoomLabel(room.room_type)}</p>
-                      <p className="text-gold font-semibold">Rp {room.price.toLocaleString("id-ID")}</p>
+                      <p className="text-gold font-semibold">{formatPrice(room.price)}</p>
                     </div>
                     <div className="flex items-center gap-4">
                       <button
@@ -560,7 +562,7 @@ const Booking = () => {
                   </div>
                   <div className="flex justify-between text-lg">
                     <span className="font-bold">Total Harga</span>
-                    <span className="font-bold text-gold">Rp {getTotalPrice().toLocaleString("id-ID")}</span>
+                    <span className="font-bold text-gold">{formatPrice(getTotalPrice())}</span>
                   </div>
                 </div>
               </div>

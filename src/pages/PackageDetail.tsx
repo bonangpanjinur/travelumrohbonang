@@ -22,6 +22,7 @@ import RelatedArticles from "@/components/RelatedArticles";
 import { lookupSlugRedirect, buildRedirectPath } from "@/lib/slugRedirect";
 import { useTenant } from "@/hooks/useTenant";
 import PromoPdfButton from "@/components/PromoPdfButton";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface Package {
   id: string;
@@ -59,6 +60,7 @@ const PackageDetail = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { tenant } = useTenant();
+  const { format: formatPrice } = useCurrency();
   const [pkg, setPkg] = useState<Package | null>(null);
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [extraHotels, setExtraHotels] = useState<ExtraHotel[]>([]);
@@ -345,7 +347,7 @@ const PackageDetail = () => {
                           <Users className="w-4 h-4 text-muted-foreground" />
                         </div>
                         <div className="text-sm font-bold text-gold">
-                          Mulai Rp {getLowestPrice(dep.prices).toLocaleString("id-ID")}
+                          Mulai {formatPrice(getLowestPrice(dep.prices))}
                         </div>
                       </motion.div>
                     ))}
@@ -356,7 +358,7 @@ const PackageDetail = () => {
                   <div className="mt-4 pt-4 border-t border-border">
                     <div className="text-sm text-muted-foreground mb-1">Harga mulai dari</div>
                     <div className="text-2xl font-display font-bold text-foreground">
-                      Rp {getLowestPrice(selectedDep.prices).toLocaleString("id-ID")}
+                      {formatPrice(getLowestPrice(selectedDep.prices))}
                     </div>
                     <div className="text-xs text-muted-foreground">per orang (Quad)</div>
                   </div>

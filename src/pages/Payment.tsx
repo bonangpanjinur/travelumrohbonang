@@ -15,6 +15,7 @@ import { format, differenceInDays, addDays } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import InvoiceButton from "@/components/InvoiceButton";
 import LoadingSpinner from "@/components/ui/loading-spinner";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface BookingData {
   id: string;
@@ -40,6 +41,7 @@ interface PaymentRecord {
 }
 
 const Payment = () => {
+  const { format: fmt } = useCurrency();
   const { bookingId } = useParams();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -344,8 +346,8 @@ const Payment = () => {
                 </div>
                 <Progress value={paymentProgress} className="h-2" />
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Terbayar: Rp {paidAmount.toLocaleString("id-ID")}</span>
-                  <span>Total: Rp {booking.total_price.toLocaleString("id-ID")}</span>
+                  <span>Terbayar: {fmt(paidAmount)}</span>
+                  <span>Total: {fmt(booking.total_price)}</span>
                 </div>
               </div>
 
@@ -363,7 +365,7 @@ const Payment = () => {
                             <div className="text-xs text-muted-foreground">Minimal pembayaran awal</div>
                           </Label>
                         </div>
-                        <div className="font-bold text-gold">Rp {minimumDp.toLocaleString("id-ID")}</div>
+                        <div className="font-bold text-gold">{fmt(minimumDp)}</div>
                       </div>
                     )}
                     <div className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-colors ${paymentOption === "full" ? "border-gold bg-gold/5" : "border-border"}`}>
@@ -374,7 +376,7 @@ const Payment = () => {
                           <div className="text-xs text-muted-foreground">Sisa pembayaran yang harus dibayar</div>
                         </Label>
                       </div>
-                      <div className="font-bold text-gold">Rp {remainingAmount.toLocaleString("id-ID")}</div>
+                      <div className="font-bold text-gold">{fmt(remainingAmount)}</div>
                     </div>
                   </RadioGroup>
                 </div>

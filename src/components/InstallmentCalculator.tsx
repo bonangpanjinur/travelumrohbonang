@@ -2,11 +2,13 @@ import { useMemo, useState } from "react";
 import { Calculator } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function InstallmentCalculator({ defaultPrice = 30000000 }: { defaultPrice?: number }) {
   const [price, setPrice] = useState(defaultPrice);
   const [dpPct, setDpPct] = useState(30);
   const [tenor, setTenor] = useState(6);
+  const { format } = useCurrency();
 
   const result = useMemo(() => {
     const dp = Math.round(price * (dpPct / 100));
@@ -15,7 +17,7 @@ export default function InstallmentCalculator({ defaultPrice = 30000000 }: { def
     return { dp, remaining, monthly };
   }, [price, dpPct, tenor]);
 
-  const fmt = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
+  const fmt = (n: number) => format(n);
 
   return (
     <div className="bg-card border border-border rounded-2xl p-6">

@@ -5,19 +5,30 @@ import { useTenant } from "@/hooks/useTenant";
 /**
  * Template presets applied to CSS variables on :root.
  * Values are HSL triplets matching the design tokens in index.css.
+ * Each preset can override extended tokens for richer theming.
  */
-const TEMPLATE_PRESETS: Record<string, { primary: string; accent: string }> = {
-  classic: { primary: "150 70% 16%", accent: "45 65% 53%" },        // Emerald + Gold
-  modern: { primary: "215 28% 27%", accent: "217 91% 60%" },        // Slate + Blue
-  luxury: { primary: "238 45% 14%", accent: "346 84% 60%" },        // Indigo + Rose
-  nature: { primary: "175 70% 19%", accent: "187 85% 53%" },        // Teal + Cyan
+type Tokens = {
+  primary: string;
+  accent: string;
+  primaryFg?: string;
+  accentFg?: string;
+  ring?: string;
+  sidebarBg?: string;
+  sidebarPrimary?: string;
 };
 
-const COLOR_SCHEME_PRESETS: Record<string, { primary: string; accent: string }> = {
-  "emerald-gold": { primary: "150 70% 16%", accent: "45 65% 53%" },
-  "blue-slate":   { primary: "215 60% 30%", accent: "217 91% 60%" },
-  "purple-violet": { primary: "262 60% 30%", accent: "270 80% 60%" },
-  "orange-amber": { primary: "20 80% 35%", accent: "38 92% 55%" },
+const TEMPLATE_PRESETS: Record<string, Tokens> = {
+  classic: { primary: "0 55% 25%", accent: "38 75% 55%", ring: "38 75% 55%", sidebarBg: "0 55% 25%", sidebarPrimary: "38 75% 55%" },
+  modern:  { primary: "215 28% 27%", accent: "217 91% 60%", ring: "217 91% 60%", sidebarBg: "215 28% 20%", sidebarPrimary: "217 91% 60%" },
+  luxury:  { primary: "238 45% 14%", accent: "346 84% 60%", ring: "346 84% 60%", sidebarBg: "238 45% 14%", sidebarPrimary: "346 84% 60%" },
+  nature:  { primary: "175 70% 19%", accent: "187 85% 53%", ring: "187 85% 53%", sidebarBg: "175 70% 15%", sidebarPrimary: "187 85% 53%" },
+};
+
+const COLOR_SCHEME_PRESETS: Record<string, Tokens> = {
+  "emerald-gold":  { primary: "150 70% 16%", accent: "45 65% 53%", ring: "45 65% 53%", sidebarBg: "150 70% 13%", sidebarPrimary: "45 65% 53%" },
+  "blue-slate":    { primary: "215 60% 30%", accent: "217 91% 60%", ring: "217 91% 60%", sidebarBg: "215 60% 22%", sidebarPrimary: "217 91% 60%" },
+  "purple-violet": { primary: "262 60% 30%", accent: "270 80% 60%", ring: "270 80% 60%", sidebarBg: "262 60% 22%", sidebarPrimary: "270 80% 60%" },
+  "orange-amber":  { primary: "20 80% 35%",  accent: "38 92% 55%",  ring: "38 92% 55%",  sidebarBg: "20 80% 28%",  sidebarPrimary: "38 92% 55%" },
 };
 
 const FONT_PRESETS: Record<string, { display: string; body: string; href?: string }> = {
@@ -48,13 +59,23 @@ function ensureFontLink(href?: string) {
   document.head.appendChild(link);
 }
 
+function applyTokens(tokens: Tokens) {
+  const root = document.documentElement;
+  root.style.setProperty("--primary", tokens.primary);
+  root.style.setProperty("--accent", tokens.accent);
+  if (tokens.ring) root.style.setProperty("--ring", tokens.ring);
+  if (tokens.sidebarBg) root.style.setProperty("--sidebar-background", tokens.sidebarBg);
+  if (tokens.sidebarPrimary) root.style.setProperty("--sidebar-primary", tokens.sidebarPrimary);
+  // Re-derive companion tokens used across the design system
+  root.style.setProperty("--gold", tokens.accent);
+  root.style.setProperty("--elegant-black", tokens.primary);
+}
+
 export function useActiveTemplate() {
   const { isTenantSite } = useTenant();
 
   useEffect(() => {
-    // Tenant sites have their own theming pipeline; don't override.
     if (isTenantSite) return;
-
     let cancelled = false;
 
     const apply = async () => {
@@ -73,34 +94,40 @@ export function useActiveTemplate() {
           | undefined;
         if (!tpl || typeof tpl !== "object") return;
 
-        const root = document.documentElement;
         const template = String(tpl.active_template || "classic");
         const scheme = String(tpl.color_scheme || "");
         const font = String(tpl.font_style || "");
 
-        // Pick colors: explicit scheme wins; otherwise template preset.
-        const colors =
-          COLOR_SCHEME_PRESETS[scheme] || TEMPLATE_PRESETS[template] || null;
-        if (colors) {
-          root.style.setProperty("--primary", colors.primary);
-          root.style.setProperty("--accent", colors.accent);
-        }
+        const tokens =
+          COLOR_SCHEME_PRESETS[scheme] || TEMPLATE_PRESETS[template] || TEMPLATE_PRESETS.classic;
+        applyTokens(tokens);
 
         const fontPreset = FONT_PRESETS[font];
         if (fontPreset) {
           ensureFontLink(fontPreset.href);
-          root.style.setProperty("--font-display", fontPreset.display);
-          root.style.setProperty("--font-body", fontPreset.body);
+          document.documentElement.style.setProperty("--font-display", fontPreset.display);
+          document.documentElement.style.setProperty("--font-body", fontPreset.body);
         }
       } catch (e) {
-        // Silent fail — never break the app over theming.
         console.warn("useActiveTemplate: failed to apply template", e);
       }
     };
 
     apply();
+
+    // Realtime: react to admin changes immediately
+    const channel = supabase
+      .channel("site_settings_appearance")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "site_settings", filter: "category=eq.appearance" },
+        () => apply(),
+      )
+      .subscribe();
+
     return () => {
       cancelled = true;
+      supabase.removeChannel(channel);
     };
   }, [isTenantSite]);
 }

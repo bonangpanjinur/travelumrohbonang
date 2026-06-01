@@ -16,6 +16,7 @@ import EmptyState from "@/components/ui/empty-state";
 import { useToast } from "@/hooks/use-toast";
 import BookingItinerary from "@/components/booking/BookingItinerary";
 import ChatBox from "@/components/chat/ChatBox";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface BookingItem {
   id: string;
@@ -43,6 +44,7 @@ const statusLabels: Record<string, string> = {
 };
 
 const MyBookings = () => {
+  const { format: fmt } = useCurrency();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -166,7 +168,7 @@ const MyBookings = () => {
                       <div className="text-right">
                         <div className="text-sm text-muted-foreground">Total</div>
                         <div className="text-xl font-bold text-gold">
-                          Rp {b.total_price.toLocaleString("id-ID")}
+                          {fmt(b.total_price)}
                         </div>
                       </div>
                       <div className="flex gap-2 flex-wrap">
