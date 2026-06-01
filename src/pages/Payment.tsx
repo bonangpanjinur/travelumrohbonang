@@ -365,7 +365,7 @@ const Payment = () => {
                             <div className="text-xs text-muted-foreground">Minimal pembayaran awal</div>
                           </Label>
                         </div>
-                        <div className="font-bold text-gold">Rp {minimumDp.toLocaleString("id-ID")}</div>
+                        <div className="font-bold text-gold">{fmt(minimumDp)}</div>
                       </div>
                     )}
                     <div className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-colors ${paymentOption === "full" ? "border-gold bg-gold/5" : "border-border"}`}>
