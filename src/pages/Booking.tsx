@@ -62,6 +62,7 @@ interface Agent {
 const STEPS = ["Pilih Kamar", "Data Jemaah", "PIC & Konfirmasi"];
 
 const Booking = () => {
+  const { format: formatPrice } = useCurrency();
   const { slug, departureId } = useParams();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
