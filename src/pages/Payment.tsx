@@ -376,7 +376,7 @@ const Payment = () => {
                           <div className="text-xs text-muted-foreground">Sisa pembayaran yang harus dibayar</div>
                         </Label>
                       </div>
-                      <div className="font-bold text-gold">Rp {remainingAmount.toLocaleString("id-ID")}</div>
+                      <div className="font-bold text-gold">{fmt(remainingAmount)}</div>
                     </div>
                   </RadioGroup>
                 </div>
