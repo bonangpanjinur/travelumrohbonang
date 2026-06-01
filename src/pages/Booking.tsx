@@ -562,7 +562,7 @@ const Booking = () => {
                   </div>
                   <div className="flex justify-between text-lg">
                     <span className="font-bold">Total Harga</span>
-                    <span className="font-bold text-gold">Rp {getTotalPrice().toLocaleString("id-ID")}</span>
+                    <span className="font-bold text-gold">{formatPrice(getTotalPrice())}</span>
                   </div>
                 </div>
               </div>
