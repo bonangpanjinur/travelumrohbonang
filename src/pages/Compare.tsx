@@ -109,7 +109,7 @@ export default function Compare() {
                 </tr>
               </thead>
               <tbody className="text-sm">
-                <Row label="Harga mulai" values={pkgs.map(p => p.min_price ? `Rp ${p.min_price.toLocaleString("id-ID")}` : "—")} />
+                <Row label="Harga mulai" values={pkgs.map(p => p.min_price ? formatPrice(p.min_price) : "—")} />
                 <Row label="Durasi" values={pkgs.map(p => `${p.duration_days} hari`)} />
                 <Row label="Tipe" values={pkgs.map(p => p.package_type)} />
                 <Row label="Hotel Makkah" values={pkgs.map(p => p.hotel_makkah ? `${p.hotel_makkah.name} (${p.hotel_makkah.star}★)` : "—")} />
