@@ -103,6 +103,7 @@ import AdminErrorLogs from "./pages/admin/ErrorLogs";
 import AdminIntegrations from "./pages/admin/Integrations";
 import AdminLoginSettings from "./pages/admin/LoginSettings";
 import AdminSEO from "./pages/admin/SEO";
+import PackageCosts from "./pages/admin/PackageCosts";
 import { useEffect } from "react";
 import { installGlobalErrorHandlers } from "@/lib/errorLogger";
 const queryClient = new QueryClient();
@@ -190,6 +191,7 @@ const AppContent = () => {
           <Route path="settings" element={<AdminSettings />} />
           {/* Premium routes */}
           <Route path="accounting" element={<AdminAccounting />} />
+          <Route path="package-costs" element={<PackageCosts />} />
           <Route path="crm" element={<AdminCRM />} />
           <Route path="payment-gateway" element={<AdminPaymentGateway />} />
           <Route path="documents" element={<AdminDocuments />} />

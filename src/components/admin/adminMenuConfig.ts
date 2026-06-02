@@ -1,4 +1,5 @@
-import { 
+import {
+  Calculator,
   LayoutDashboard, 
   Package, 
   Calendar, 
@@ -99,6 +100,7 @@ export const menuGroups: MenuGroup[] = [
     items: [
       { label: "Pembayaran", href: "/admin/payments", icon: CreditCard },
       { label: "Cicilan", href: "/admin/installments", icon: Receipt },
+      { label: "HPP & Profitabilitas", href: "/admin/package-costs", icon: Calculator },
       { label: "Akuntansi & Keuangan", href: "/admin/accounting", icon: BarChart3, premium: true, premiumFeature: "Akuntansi & Keuangan" },
       { label: "Payment Gateway", href: "/admin/payment-gateway", icon: Wallet, premium: true, premiumFeature: "Integrasi Payment Gateway" },
       { label: "Laporan", href: "/admin/reports", icon: FileText },
