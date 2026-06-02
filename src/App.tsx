@@ -191,6 +191,7 @@ const AppContent = () => {
           <Route path="settings" element={<AdminSettings />} />
           {/* Premium routes */}
           <Route path="accounting" element={<AdminAccounting />} />
+          <Route path="package-costs" element={<PackageCosts />} />
           <Route path="crm" element={<AdminCRM />} />
           <Route path="payment-gateway" element={<AdminPaymentGateway />} />
           <Route path="documents" element={<AdminDocuments />} />
