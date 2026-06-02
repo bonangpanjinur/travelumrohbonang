@@ -103,6 +103,7 @@ import AdminErrorLogs from "./pages/admin/ErrorLogs";
 import AdminIntegrations from "./pages/admin/Integrations";
 import AdminLoginSettings from "./pages/admin/LoginSettings";
 import AdminSEO from "./pages/admin/SEO";
+import PackageCosts from "./pages/admin/PackageCosts";
 import { useEffect } from "react";
 import { installGlobalErrorHandlers } from "@/lib/errorLogger";
 const queryClient = new QueryClient();

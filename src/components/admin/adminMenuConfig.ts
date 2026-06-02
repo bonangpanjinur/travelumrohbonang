@@ -1,4 +1,5 @@
-import { 
+import {
+  Calculator,
   LayoutDashboard, 
   Package, 
   Calendar, 
