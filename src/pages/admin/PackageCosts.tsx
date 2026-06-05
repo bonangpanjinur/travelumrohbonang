@@ -12,6 +12,7 @@ import { Calculator, Plus, Trash2, TrendingUp, Wallet, Percent, Filter, Pencil }
 import { toast } from "sonner";
 import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 import ResponsiveTable from "@/components/admin/ResponsiveTable";
+import PackageCostsBulkDialog from "@/components/admin/PackageCostsBulkDialog";
 
 const CATEGORIES = [
   { value: "ticket", label: "Tiket Pesawat" },
