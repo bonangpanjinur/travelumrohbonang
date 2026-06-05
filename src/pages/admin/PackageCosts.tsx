@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Calculator, Plus, Trash2, TrendingUp, Wallet, Percent, Filter } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Calculator, Plus, Trash2, TrendingUp, Wallet, Percent, Filter, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 import ResponsiveTable from "@/components/admin/ResponsiveTable";
@@ -40,6 +41,7 @@ interface Currency { code: string; rate_to_idr: number; symbol: string; }
 interface Cost {
   id: string;
   package_id: string;
+  departure_id: string | null;
   category: string;
   item_name: string;
   qty: number;
@@ -47,10 +49,17 @@ interface Cost {
   unit_cost: number;
   currency_code: string;
   is_per_pax: boolean;
+  is_active: boolean;
   notes: string | null;
 }
 
 const fmtIDR = (n: number) => `Rp ${Math.round(n).toLocaleString("id-ID")}`;
+
+const emptyForm: Partial<Cost> = {
+  category: "ticket", item_name: "", qty: 1, unit: "pax",
+  unit_cost: 0, currency_code: "IDR", is_per_pax: true,
+  is_active: true, departure_id: null, notes: "",
+};
 
 export default function AdminPackageCosts() {
   const [packages, setPackages] = useState<PkgOpt[]>([]);
@@ -63,27 +72,30 @@ export default function AdminPackageCosts() {
   const [filterCategory, setFilterCategory] = useState<string>("__all__");
   const [filterType, setFilterType] = useState<string>("__all__");
   const [filterDeparture, setFilterDeparture] = useState<string>("__all__");
+  const [showInactive, setShowInactive] = useState(false);
 
   const [selectedPkg, setSelectedPkg] = useState<string>("");
   const [costs, setCosts] = useState<Cost[]>([]);
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<Partial<Cost>>({
-    category: "ticket", item_name: "", qty: 1, unit: "pax",
-    unit_cost: 0, currency_code: "IDR", is_per_pax: true,
-  });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<Partial<Cost>>(emptyForm);
   const [profit, setProfit] = useState<{
     pkg_price_avg: number; sold_pax: number; revenue: number;
     agent_commission: number; pic_commission: number; marketing: number;
   } | null>(null);
 
-  // Aggregated overview rows for current filter
   const [overview, setOverview] = useState<Array<{
     package_id: string; title: string; type: string | null;
     hpp_per_pax: number; hpp_fixed: number; sold_pax: number;
     revenue: number; net_profit: number; margin: number;
   }>>([]);
+
+  const refreshAllCosts = async () => {
+    const { data } = await supabase.from("package_costs").select("*");
+    setAllCosts((data || []) as Cost[]);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -106,7 +118,6 @@ export default function AdminPackageCosts() {
     return amount * (c?.rate_to_idr || 1);
   };
 
-  // Filtered packages list
   const filteredPackages = useMemo(() => {
     return packages.filter((p) => {
       if (filterCategory !== "__all__" && p.category_id !== filterCategory) return false;
@@ -119,11 +130,8 @@ export default function AdminPackageCosts() {
     });
   }, [packages, departures, filterCategory, filterType, filterDeparture]);
 
-  // Reset selected pkg if not in filter
   useEffect(() => {
-    if (selectedPkg && !filteredPackages.find((p) => p.id === selectedPkg)) {
-      setSelectedPkg("");
-    }
+    if (selectedPkg && !filteredPackages.find((p) => p.id === selectedPkg)) setSelectedPkg("");
   }, [filteredPackages, selectedPkg]);
 
   const departuresForSelected = useMemo(
@@ -134,9 +142,11 @@ export default function AdminPackageCosts() {
   const loadCosts = async (pid: string) => {
     if (!pid) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("package_costs").select("*")
-      .eq("package_id", pid).order("sort_order").order("created_at");
+    let q = supabase.from("package_costs").select("*").eq("package_id", pid);
+    if (filterDeparture !== "__all__") {
+      q = q.or(`departure_id.eq.${filterDeparture},departure_id.is.null`);
+    }
+    const { data } = await q.order("sort_order").order("created_at");
     setCosts((data || []) as Cost[]);
     setLoading(false);
     void loadProfitability(pid);
@@ -155,8 +165,7 @@ export default function AdminPackageCosts() {
     const bookingIds = paidBookings.map((b) => b.id).filter(Boolean);
     let agentCommission = 0;
     if (bookingIds.length) {
-      const { data: ac } = await supabase.from("agent_commissions")
-        .select("amount").in("booking_id", bookingIds);
+      const { data: ac } = await supabase.from("agent_commissions").select("amount").in("booking_id", bookingIds);
       agentCommission = (ac || []).reduce((s, x: any) => s + Number(x.amount || 0), 0);
     }
     const picCommission = ((pcRes.data || []) as any[])
@@ -175,7 +184,6 @@ export default function AdminPackageCosts() {
 
   useEffect(() => { if (selectedPkg) loadCosts(selectedPkg); else { setCosts([]); setProfit(null); } }, [selectedPkg, filterDeparture]);
 
-  // Build overview based on filter
   useEffect(() => {
     (async () => {
       if (filteredPackages.length === 0) { setOverview([]); return; }
@@ -188,10 +196,9 @@ export default function AdminPackageCosts() {
       ]);
       const bookings = (bk.data || []) as any[];
       const bookingIds = bookings.map((b) => b.id).filter(Boolean);
-      let agentByBooking: Record<string, number> = {};
+      const agentByBooking: Record<string, number> = {};
       if (bookingIds.length) {
-        const { data: ac } = await supabase.from("agent_commissions")
-          .select("booking_id,amount").in("booking_id", bookingIds);
+        const { data: ac } = await supabase.from("agent_commissions").select("booking_id,amount").in("booking_id", bookingIds);
         for (const r of (ac || []) as any[]) {
           agentByBooking[r.booking_id] = (agentByBooking[r.booking_id] || 0) + Number(r.amount || 0);
         }
@@ -202,7 +209,11 @@ export default function AdminPackageCosts() {
       }
       const rows = filteredPackages.map((p) => {
         let perPax = 0, fixed = 0;
-        for (const c of allCosts.filter((x) => x.package_id === p.id)) {
+        const pkgCosts = allCosts.filter((x) =>
+          x.package_id === p.id && x.is_active !== false &&
+          (filterDeparture === "__all__" || !x.departure_id || x.departure_id === filterDeparture)
+        );
+        for (const c of pkgCosts) {
           const idr = toIDR(Number(c.unit_cost || 0), c.currency_code) * Number(c.qty || 0);
           if (c.is_per_pax) perPax += idr; else fixed += idr;
         }
@@ -224,14 +235,17 @@ export default function AdminPackageCosts() {
     })();
   }, [filteredPackages, allCosts, currencies, filterDeparture]);
 
+  const visibleCosts = useMemo(() => costs.filter((c) => showInactive || c.is_active !== false), [costs, showInactive]);
+
   const totals = useMemo(() => {
     let perPax = 0, fixed = 0;
-    for (const c of costs) {
+    for (const c of visibleCosts) {
+      if (c.is_active === false) continue;
       const idrAmt = toIDR(Number(c.unit_cost || 0), c.currency_code) * Number(c.qty || 0);
       if (c.is_per_pax) perPax += idrAmt; else fixed += idrAmt;
     }
     return { perPax, fixed };
-  }, [costs, currencies]);
+  }, [visibleCosts, currencies]);
 
   const profitNet = useMemo(() => {
     if (!profit) return 0;
@@ -244,21 +258,39 @@ export default function AdminPackageCosts() {
     return (profitNet / profit.revenue) * 100;
   }, [profitNet, profit]);
 
-  const overviewTotals = useMemo(() => {
-    return overview.reduce((acc, r) => ({
-      revenue: acc.revenue + r.revenue,
-      net_profit: acc.net_profit + r.net_profit,
-      sold_pax: acc.sold_pax + r.sold_pax,
-    }), { revenue: 0, net_profit: 0, sold_pax: 0 });
-  }, [overview]);
+  const overviewTotals = useMemo(() => overview.reduce((acc, r) => ({
+    revenue: acc.revenue + r.revenue,
+    net_profit: acc.net_profit + r.net_profit,
+    sold_pax: acc.sold_pax + r.sold_pax,
+  }), { revenue: 0, net_profit: 0, sold_pax: 0 }), [overview]);
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm({
+      ...emptyForm,
+      departure_id: filterDeparture !== "__all__" ? filterDeparture : null,
+    });
+    setOpen(true);
+  };
+
+  const openEdit = (c: Cost) => {
+    setEditingId(c.id);
+    setForm({
+      category: c.category, item_name: c.item_name, qty: c.qty,
+      unit: c.unit || "pax", unit_cost: c.unit_cost, currency_code: c.currency_code,
+      is_per_pax: c.is_per_pax, is_active: c.is_active !== false,
+      departure_id: c.departure_id, notes: c.notes || "",
+    });
+    setOpen(true);
+  };
 
   const save = async () => {
     if (!selectedPkg || !form.item_name || !form.category) {
-      toast.error("Lengkapi data terlebih dahulu");
-      return;
+      toast.error("Lengkapi data terlebih dahulu"); return;
     }
     const payload = {
       package_id: selectedPkg,
+      departure_id: form.departure_id || null,
       category: form.category,
       item_name: form.item_name,
       qty: Number(form.qty || 1),
@@ -266,17 +298,28 @@ export default function AdminPackageCosts() {
       unit_cost: Number(form.unit_cost || 0),
       currency_code: form.currency_code || "IDR",
       is_per_pax: form.is_per_pax !== false,
+      is_active: form.is_active !== false,
       notes: form.notes || null,
     };
-    const { error } = await supabase.from("package_costs").insert(payload);
+    const { error } = editingId
+      ? await supabase.from("package_costs").update(payload).eq("id", editingId)
+      : await supabase.from("package_costs").insert(payload);
     if (error) { toast.error(error.message); return; }
-    toast.success("Komponen biaya disimpan");
+    toast.success(editingId ? "Komponen diperbarui" : "Komponen disimpan");
     setOpen(false);
-    setForm({ category: "ticket", item_name: "", qty: 1, unit: "pax", unit_cost: 0, currency_code: "IDR", is_per_pax: true });
+    setEditingId(null);
+    setForm(emptyForm);
     loadCosts(selectedPkg);
-    // refresh allCosts for overview
-    const { data: cs } = await supabase.from("package_costs").select("*");
-    setAllCosts((cs || []) as Cost[]);
+    refreshAllCosts();
+  };
+
+  const toggleActive = async (c: Cost) => {
+    const { error } = await supabase.from("package_costs")
+      .update({ is_active: !(c.is_active !== false) }).eq("id", c.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(c.is_active !== false ? "Dinonaktifkan" : "Diaktifkan");
+    loadCosts(selectedPkg);
+    refreshAllCosts();
   };
 
   const del = async (id: string) => {
@@ -284,8 +327,7 @@ export default function AdminPackageCosts() {
     if (error) { toast.error(error.message); return; }
     toast.success("Dihapus");
     loadCosts(selectedPkg);
-    const { data: cs } = await supabase.from("package_costs").select("*");
-    setAllCosts((cs || []) as Cost[]);
+    refreshAllCosts();
   };
 
   return (
@@ -295,11 +337,10 @@ export default function AdminPackageCosts() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Calculator className="w-7 h-7 text-primary" /> HPP & Profitabilitas Paket
           </h1>
-          <p className="text-muted-foreground text-sm">Catat biaya pokok per paket dan analisa laba bersih.</p>
+          <p className="text-muted-foreground text-sm">Kelola komponen biaya per paket & per keberangkatan, lalu analisa laba bersih.</p>
         </div>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2"><Filter className="w-4 h-4" /> Filter</CardTitle>
@@ -345,7 +386,6 @@ export default function AdminPackageCosts() {
         </CardContent>
       </Card>
 
-      {/* Overview grid for filter result */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Ringkasan Paket ({overview.length})</CardTitle>
@@ -396,7 +436,6 @@ export default function AdminPackageCosts() {
         </CardContent>
       </Card>
 
-      {/* Package picker + add cost */}
       <Card>
         <CardContent className="p-4 flex flex-wrap items-end gap-4">
           <div className="flex-1 min-w-[240px]">
@@ -409,12 +448,16 @@ export default function AdminPackageCosts() {
               </SelectContent>
             </Select>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
+          <div className="flex items-center gap-2">
+            <Switch id="show-inactive" checked={showInactive} onCheckedChange={setShowInactive} />
+            <Label htmlFor="show-inactive" className="cursor-pointer">Tampilkan nonaktif</Label>
+          </div>
+          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditingId(null); setForm(emptyForm); } }}>
             <DialogTrigger asChild>
-              <Button disabled={!selectedPkg}><Plus className="w-4 h-4 mr-1" /> Tambah Biaya</Button>
+              <Button disabled={!selectedPkg} onClick={openCreate}><Plus className="w-4 h-4 mr-1" /> Tambah Biaya</Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Komponen Biaya HPP</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{editingId ? "Edit Komponen Biaya" : "Komponen Biaya HPP"}</DialogTitle></DialogHeader>
               <div className="space-y-3">
                 <div>
                   <Label>Kategori</Label>
@@ -428,6 +471,23 @@ export default function AdminPackageCosts() {
                 <div>
                   <Label>Nama Item</Label>
                   <Input value={form.item_name || ""} onChange={(e) => setForm({ ...form, item_name: e.target.value })} placeholder="cth. Tiket Garuda PP" />
+                </div>
+                <div>
+                  <Label>Keberangkatan (opsional)</Label>
+                  <Select
+                    value={form.departure_id || "__all__"}
+                    onValueChange={(v) => setForm({ ...form, departure_id: v === "__all__" ? null : v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">Berlaku untuk semua keberangkatan</SelectItem>
+                      {departuresForSelected.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {new Date(d.departure_date).toLocaleDateString("id-ID")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -459,7 +519,7 @@ export default function AdminPackageCosts() {
                   <Select value={form.is_per_pax ? "per_pax" : "fixed"} onValueChange={(v) => setForm({ ...form, is_per_pax: v === "per_pax" })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="per_pax">Per Jemaah</SelectItem>
+                      <SelectItem value="per_pax">Variabel — Per Jemaah</SelectItem>
                       <SelectItem value="fixed">Tetap per Keberangkatan</SelectItem>
                     </SelectContent>
                   </Select>
@@ -468,7 +528,11 @@ export default function AdminPackageCosts() {
                   <Label>Catatan</Label>
                   <Input value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
                 </div>
-                <Button onClick={save} className="w-full">Simpan</Button>
+                <div className="flex items-center gap-2">
+                  <Switch id="active-toggle" checked={form.is_active !== false} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
+                  <Label htmlFor="active-toggle" className="cursor-pointer">Aktif (dihitung dalam HPP)</Label>
+                </div>
+                <Button onClick={save} className="w-full">{editingId ? "Simpan Perubahan" : "Simpan"}</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -477,7 +541,6 @@ export default function AdminPackageCosts() {
 
       {selectedPkg && (
         <>
-          {/* Profitability summary */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <SummaryCard icon={<Wallet className="w-4 h-4 text-primary" />} label="HPP per Pax" value={fmtIDR(totals.perPax)} />
             <SummaryCard icon={<Wallet className="w-4 h-4 text-amber-600" />} label="HPP Tetap" value={fmtIDR(totals.fixed)} />
@@ -502,35 +565,49 @@ export default function AdminPackageCosts() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="text-base">Komponen HPP</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Komponen HPP ({visibleCosts.length})</CardTitle></CardHeader>
             <CardContent>
               {loading ? <div className="text-muted-foreground text-sm">Memuat…</div> :
-               costs.length === 0 ? <div className="text-muted-foreground text-sm">Belum ada komponen biaya untuk paket ini.</div> :
+               visibleCosts.length === 0 ? <div className="text-muted-foreground text-sm">Belum ada komponen biaya untuk paket ini.</div> :
                <ResponsiveTable>
                  <table className="w-full text-sm">
                    <thead className="bg-muted/40 text-xs uppercase">
                      <tr>
                        <th className="p-2 text-left">Kategori</th>
                        <th className="p-2 text-left">Item</th>
+                       <th className="p-2 text-left">Keberangkatan</th>
                        <th className="p-2 text-left">Qty × Harga</th>
                        <th className="p-2 text-left">IDR</th>
                        <th className="p-2 text-left">Tipe</th>
-                       <th className="p-2 text-left">Aksi</th>
+                       <th className="p-2 text-left">Status</th>
+                       <th className="p-2 text-right">Aksi</th>
                      </tr>
                    </thead>
                    <tbody>
-                     {costs.map((c) => {
+                     {visibleCosts.map((c) => {
                        const cat = CATEGORIES.find((x) => x.value === c.category)?.label || c.category;
                        const idr = toIDR(Number(c.unit_cost), c.currency_code) * Number(c.qty);
+                       const dep = c.departure_id ? departures.find((d) => d.id === c.departure_id) : null;
+                       const inactive = c.is_active === false;
                        return (
-                         <tr key={c.id} className="border-b">
+                         <tr key={c.id} className={`border-b ${inactive ? "opacity-50" : ""}`}>
                            <td className="p-2"><Badge variant="outline">{cat}</Badge></td>
                            <td className="p-2">{c.item_name}{c.notes && <div className="text-xs text-muted-foreground">{c.notes}</div>}</td>
+                           <td className="p-2 text-xs">{dep ? new Date(dep.departure_date).toLocaleDateString("id-ID") : <span className="text-muted-foreground">Semua</span>}</td>
                            <td className="p-2">{c.qty} {c.unit} × {c.currency_code} {Number(c.unit_cost).toLocaleString("id-ID")}</td>
                            <td className="p-2 font-medium">{fmtIDR(idr)}</td>
                            <td className="p-2 text-xs">{c.is_per_pax ? "Per pax" : "Tetap"}</td>
                            <td className="p-2">
-                             <Button size="sm" variant="ghost" onClick={() => setDeleteId(c.id)}>
+                             <Badge variant={inactive ? "secondary" : "default"}>{inactive ? "Nonaktif" : "Aktif"}</Badge>
+                           </td>
+                           <td className="p-2 text-right whitespace-nowrap">
+                             <Button size="sm" variant="ghost" onClick={() => openEdit(c)} title="Edit">
+                               <Pencil className="w-4 h-4" />
+                             </Button>
+                             <Button size="sm" variant="ghost" onClick={() => toggleActive(c)} title={inactive ? "Aktifkan" : "Nonaktifkan"}>
+                               <Switch checked={!inactive} className="pointer-events-none" />
+                             </Button>
+                             <Button size="sm" variant="ghost" onClick={() => setDeleteId(c.id)} title="Hapus">
                                <Trash2 className="w-4 h-4 text-destructive" />
                              </Button>
                            </td>
@@ -549,7 +626,7 @@ export default function AdminPackageCosts() {
         open={!!deleteId}
         onOpenChange={(o) => { if (!o) setDeleteId(null); }}
         title="Hapus komponen biaya?"
-        description="Item akan dihapus permanen."
+        description="Item akan dihapus permanen. Gunakan toggle nonaktif jika ingin menyimpan riwayat."
         onConfirm={async () => { if (deleteId) { await del(deleteId); setDeleteId(null); } }}
       />
     </div>
