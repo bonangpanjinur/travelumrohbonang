@@ -2,13 +2,12 @@
   "buildCommand": "bun run build",
   "installCommand": "bun install",
   "outputDirectory": "dist",
-  "env": {
-    "VITE_SUPABASE_URL": "@vercel-env/VITE_SUPABASE_URL",
-    "VITE_SUPABASE_ANON_KEY": "@vercel-env/VITE_SUPABASE_ANON_KEY",
-    "VITE_SUPABASE_PROJECT_ID": "@vercel-env/VITE_SUPABASE_PROJECT_ID",
-    "VITE_APP_ORIGIN": "@vercel-env/VITE_APP_ORIGIN",
-    "VITE_TURNSTILE_SITE_KEY": "@vercel-env/VITE_TURNSTILE_SITE_KEY",
-    "VITE_SENTRY_DSN": "@vercel-env/VITE_SENTRY_DSN",
-    "VITE_ENVIRONMENT": "@vercel-env/VITE_ENVIRONMENT"
-  }
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
