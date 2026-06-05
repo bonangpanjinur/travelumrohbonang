@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import { getAppOrigin } from "@/lib/env";
 
 export interface BreadcrumbItem {
   name: string;
@@ -9,8 +10,6 @@ interface BreadcrumbJsonLdProps {
   items: BreadcrumbItem[];
 }
 
-const FALLBACK_ORIGIN = "https://umroh-gateway.lovable.app";
-
 /**
  * Emits a BreadcrumbList JSON-LD into <head>.
  * Position is auto-assigned by array order (1-based).
@@ -20,7 +19,7 @@ const FALLBACK_ORIGIN = "https://umroh-gateway.lovable.app";
 const BreadcrumbJsonLd = ({ items }: BreadcrumbJsonLdProps) => {
   if (!items?.length) return null;
 
-  const origin = typeof window !== "undefined" ? window.location.origin : FALLBACK_ORIGIN;
+  const origin = getAppOrigin();
 
   const data = {
     "@context": "https://schema.org",

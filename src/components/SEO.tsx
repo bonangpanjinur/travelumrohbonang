@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { useSeoOverride } from "@/hooks/useSeoOverride";
+import { getAppOrigin } from "@/lib/env";
 
 interface SEOProps {
   title?: string;
@@ -99,8 +100,7 @@ const SEO = ({
   // Tenant-aware origin: each domain self-canonicals so search engines don't
   // merge ranking signals across the main brand and white-label tenants.
   // Fallback to the production brand origin during SSR / non-browser contexts.
-  const FALLBACK_ORIGIN = "https://umroh-gateway.lovable.app";
-  const origin = typeof window !== "undefined" ? window.location.origin : FALLBACK_ORIGIN;
+  const origin = getAppOrigin();
   const pathname = typeof window !== "undefined"
     ? window.location.pathname + window.location.search
     : "/";

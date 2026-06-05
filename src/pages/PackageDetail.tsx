@@ -23,6 +23,7 @@ import { lookupSlugRedirect, buildRedirectPath } from "@/lib/slugRedirect";
 import { useTenant } from "@/hooks/useTenant";
 import PromoPdfButton from "@/components/PromoPdfButton";
 import { useCurrency } from "@/hooks/useCurrency";
+import { getAppOrigin } from "@/lib/env";
 
 interface Package {
   id: string;
@@ -173,7 +174,7 @@ const PackageDetail = () => {
         availability={departures.some((d) => d.remaining_quota > 0) ? "InStock" : "SoldOut"}
         validFrom={departures[0]?.departure_date}
         validThrough={departures[departures.length - 1]?.return_date}
-        url={typeof window !== "undefined" ? window.location.href : `https://umroh-gateway.lovable.app/paket/${slug}`}
+        url={typeof window !== "undefined" ? window.location.href : `${getAppOrigin()}/paket/${slug}`}
       />
       <Navbar />
       <main className="pt-20">

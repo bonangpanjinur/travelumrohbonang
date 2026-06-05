@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
+import { getAppOrigin } from "@/lib/env";
 
-const FALLBACK_ORIGIN = "https://umroh-gateway.lovable.app";
+
 
 interface Branch {
   id: string;
@@ -46,8 +47,7 @@ const LocalBusinessJsonLd = ({ branchId, brandName = "Umroh Gateway" }: Props) =
 
   if (!branches.length) return null;
 
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : FALLBACK_ORIGIN;
+  const origin = getAppOrigin();
 
   const items = branches.map((b) => {
     const url = b.slug ? `${origin}/cabang/${b.slug}` : `${origin}/#cabang-${b.id}`;
