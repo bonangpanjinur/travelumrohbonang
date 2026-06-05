@@ -1612,7 +1612,9 @@ export type Database = {
           category: string
           created_at: string
           currency_code: string
+          departure_id: string | null
           id: string
+          is_active: boolean
           is_per_pax: boolean
           item_name: string
           notes: string | null
@@ -1627,7 +1629,9 @@ export type Database = {
           category: string
           created_at?: string
           currency_code?: string
+          departure_id?: string | null
           id?: string
+          is_active?: boolean
           is_per_pax?: boolean
           item_name: string
           notes?: string | null
@@ -1642,7 +1646,9 @@ export type Database = {
           category?: string
           created_at?: string
           currency_code?: string
+          departure_id?: string | null
           id?: string
+          is_active?: boolean
           is_per_pax?: boolean
           item_name?: string
           notes?: string | null
@@ -1653,7 +1659,15 @@ export type Database = {
           unit_cost?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "package_costs_departure_id_fkey"
+            columns: ["departure_id"]
+            isOneToOne: false
+            referencedRelation: "package_departures"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       package_departures: {
         Row: {
