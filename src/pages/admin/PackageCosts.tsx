@@ -12,6 +12,7 @@ import { Calculator, Plus, Trash2, TrendingUp, Wallet, Percent, Filter, Pencil }
 import { toast } from "sonner";
 import DeleteAlertDialog from "@/components/admin/DeleteAlertDialog";
 import ResponsiveTable from "@/components/admin/ResponsiveTable";
+import PackageCostsBulkDialog from "@/components/admin/PackageCostsBulkDialog";
 
 const CATEGORIES = [
   { value: "ticket", label: "Tiket Pesawat" },
@@ -452,6 +453,13 @@ export default function AdminPackageCosts() {
             <Switch id="show-inactive" checked={showInactive} onCheckedChange={setShowInactive} />
             <Label htmlFor="show-inactive" className="cursor-pointer">Tampilkan nonaktif</Label>
           </div>
+          <PackageCostsBulkDialog
+            sourcePackageId={selectedPkg}
+            sourceCosts={costs}
+            packages={packages}
+            departures={departures}
+            onDone={() => { loadCosts(selectedPkg); refreshAllCosts(); }}
+          />
           <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditingId(null); setForm(emptyForm); } }}>
             <DialogTrigger asChild>
               <Button disabled={!selectedPkg} onClick={openCreate}><Plus className="w-4 h-4 mr-1" /> Tambah Biaya</Button>
