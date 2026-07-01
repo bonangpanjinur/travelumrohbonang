@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LogOut, Lock, ChevronDown, Star } from "lucide-react";
+import { LogOut, ChevronDown } from "lucide-react";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useLanguage } from "@/shared/i18n/LanguageContext";
 import AdminBranding from "./AdminBranding";
@@ -14,7 +14,6 @@ interface AdminSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onLogout: () => void;
-  onPremiumClick: (feature: string) => void;
 }
 
 const AdminSidebar = ({ 
@@ -22,14 +21,12 @@ const AdminSidebar = ({
   isOpen, 
   onClose, 
   onLogout, 
-  onPremiumClick 
 }: AdminSidebarProps) => {
   const { role } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
   const showLogo = branding.display_mode === "logo_only" || branding.display_mode === "both";
   const showText = branding.display_mode === "text_only" || branding.display_mode === "both";
-  const isSuperAdmin = role && ['superadmin', 'super_admin'].includes(role.toLowerCase());
 
   // Auto-collapse: only "Utama" and group with active route are open by default
   const initialCollapsed = useMemo(() => {
@@ -114,26 +111,6 @@ const AdminSidebar = ({
                     <ul className="space-y-0.5 mb-2">
                       {filteredItems.map((item) => {
                         const isActive = location.pathname === item.href;
-                        const isPremiumLocked = item.premium && !isSuperAdmin;
-
-                        if (isPremiumLocked) {
-                          return (
-                            <li key={item.href}>
-                              <button
-                                onClick={() => {
-                                  onClose();
-                                  onPremiumClick(item.premiumFeature || item.label);
-                                }}
-                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary-foreground/30 hover:bg-primary-foreground/5 hover:text-primary-foreground/50 transition-colors w-full"
-                              >
-                                <Lock className="w-4 h-4 shrink-0" />
-                                <span className="flex-1 text-left">{item.label}</span>
-                                <Star className="w-3 h-3 shrink-0 text-amber-400/60" />
-                              </button>
-                            </li>
-                          );
-                        }
-
                         return (
                           <li key={item.href}>
                             <Link
@@ -147,9 +124,6 @@ const AdminSidebar = ({
                             >
                               <item.icon className="w-4 h-4 shrink-0" />
                               <span className="flex-1">{item.label}</span>
-                              {item.premium && (
-                                <Star className="w-3 h-3 shrink-0 text-amber-400" />
-                              )}
                             </Link>
                           </li>
                         );
