@@ -103,7 +103,7 @@ const AdminCreateBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
     setStep(__step);
   }, []);
 
-  const { hasDraft, restoreDraft, clearDraft } = useFormDraft<DraftData>({
+  const { hasDraft, restoreDraft, clearDraft, isDirty } = useFormDraft<DraftData>({
     key: "admin-create-booking",
     value: draftValue,
     onRestore: handleRestore,
@@ -249,7 +249,15 @@ const AdminCreateBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Buat Booking dari Admin</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Buat Booking dari Admin
+            {isDirty && (
+              <span className="flex items-center gap-1.5 text-xs font-normal text-amber-600 dark:text-amber-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                Belum disimpan
+              </span>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         {/* Draft recovery banner — only shown when a saved draft is available */}

@@ -113,7 +113,7 @@ const AdminPackages = () => {
     setExtraHotels(__extraHotels || []);
   }, []);
 
-  const { hasDraft, restoreDraft, clearDraft } = useFormDraft<PackageDraft>({
+  const { hasDraft, restoreDraft, clearDraft, isDirty, markClean } = useFormDraft<PackageDraft>({
     key: draftKey,
     value: draftValue,
     onRestore: handleDraftRestore,
@@ -251,6 +251,10 @@ const AdminPackages = () => {
       image_url: (pkg as any).image_url || "",
     });
     await fetchExtraHotels(pkg.id);
+    // Capture the freshly-loaded DB values as the clean baseline AFTER all
+    // async data (extraHotels) is in state — so the dirty dot only lights up
+    // when the admin actually edits something, not just from opening the form.
+    markClean();
     setIsOpen(true);
   };
 
@@ -350,7 +354,15 @@ const AdminPackages = () => {
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editing ? "Edit Paket" : "Tambah Paket Baru"}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                {editing ? "Edit Paket" : "Tambah Paket Baru"}
+                {isDirty && (
+                  <span className="flex items-center gap-1.5 text-xs font-normal text-amber-600 dark:text-amber-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    Belum disimpan
+                  </span>
+                )}
+              </DialogTitle>
             </DialogHeader>
 
             {/* Draft recovery banner */}

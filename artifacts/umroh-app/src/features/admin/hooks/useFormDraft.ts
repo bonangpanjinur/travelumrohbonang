@@ -22,6 +22,29 @@ export interface UseFormDraftOptions<T extends Record<string, unknown>> {
   isEmpty?: (v: T) => boolean;
 }
 
+export interface FormDraftState {
+  /** True when a non-expired draft exists and the user hasn't acted on it yet. */
+  hasDraft: boolean;
+  /** Restore the draft into the form (calls onRestore + hides banner). */
+  restoreDraft: () => void;
+  /** Discard the draft (clears localStorage + hides banner). */
+  clearDraft: () => void;
+  /**
+   * True when the current form value differs from the last "clean" snapshot.
+   * The snapshot is taken on first mount, on key change, and whenever
+   * markClean() is called explicitly.
+   */
+  isDirty: boolean;
+  /**
+   * Capture the current form value as the new "clean" baseline.
+   * Call this after loading server data into the form (e.g. after an async
+   * fetchExtraHotels) so the dirty indicator starts from the right baseline.
+   */
+  markClean: () => void;
+}
+
+// ── localStorage helpers ──────────────────────────────────────────────────────
+
 function storageKey(key: string) {
   return `form_draft:${key}`;
 }
@@ -62,14 +85,7 @@ function removeDraft(key: string) {
   } catch {}
 }
 
-export interface FormDraftState {
-  /** True when a non-expired draft exists and the user hasn't acted on it yet. */
-  hasDraft: boolean;
-  /** Restore the draft into the form (calls onRestore + hides banner). */
-  restoreDraft: () => void;
-  /** Discard the draft (clears localStorage + hides banner). */
-  clearDraft: () => void;
-}
+// ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useFormDraft<T extends Record<string, unknown>>({
   key,
@@ -88,9 +104,23 @@ export function useFormDraft<T extends Record<string, unknown>>({
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Re-check draft when the key changes (e.g. new → edit-{id}) ────────────
+  // ── Dirty tracking ────────────────────────────────────────────────────────
+  // Serialize to JSON for a simple deep-equal check on plain objects/arrays.
+  const cleanSnapshotRef = useRef<string>(JSON.stringify(value));
+  const isDirty = JSON.stringify(value) !== cleanSnapshotRef.current;
+
+  const markClean = useCallback(() => {
+    cleanSnapshotRef.current = JSON.stringify(valueRef.current);
+  }, []);
+
+  // ── Re-check draft + reset dirty baseline when the key changes ────────────
+  // (e.g. when switching between new-form and edit-{id} in Packages)
   useEffect(() => {
     setHasDraft(!!loadDraft<T>(key));
+    // Reset dirty baseline to whatever value is current at this moment.
+    // For new forms this is EMPTY_FORM; for edit forms the caller should
+    // call markClean() again once async data (extraHotels, etc.) is loaded.
+    cleanSnapshotRef.current = JSON.stringify(valueRef.current);
   }, [key]);
 
   // ── Auto-save on every form change ────────────────────────────────────────
@@ -113,14 +143,21 @@ export function useFormDraft<T extends Record<string, unknown>>({
 
   const restoreDraft = useCallback(() => {
     const saved = loadDraft<T>(key);
-    if (saved) onRestore(saved);
+    if (saved) {
+      onRestore(saved);
+      // The restored values become the new clean baseline so the indicator
+      // doesn't light up just because we restored.
+      cleanSnapshotRef.current = JSON.stringify(saved);
+    }
     setHasDraft(false);
   }, [key, onRestore]);
 
   const clearDraft = useCallback(() => {
     removeDraft(key);
     setHasDraft(false);
+    // Also mark clean so the dot disappears on a successful submit/reset.
+    cleanSnapshotRef.current = JSON.stringify(valueRef.current);
   }, [key]);
 
-  return { hasDraft, restoreDraft, clearDraft };
+  return { hasDraft, restoreDraft, clearDraft, isDirty, markClean };
 }
