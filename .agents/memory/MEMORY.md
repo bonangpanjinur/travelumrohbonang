@@ -1,0 +1,1 @@
+- [Express 5 handler typing](express5-handler-typing.md) — never annotate req/res explicitly in route handlers; always let TypeScript infer from the router method.

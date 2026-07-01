@@ -1,10 +1,10 @@
-import { Router, type Request, type Response } from "express";
+import { Router } from "express";
 import { db, packages, packageDepartures, departurePrices, eq, and } from "@workspace/db";
 import { PackageListResponse, PackageDetailSchema } from "@workspace/api-zod";
 
 const router = Router();
 
-router.get("/", async (req: Request, res: Response) => {
+router.get("/", async (req, res) => {
   try {
     const { type, active } = req.query;
 
@@ -24,12 +24,12 @@ router.get("/", async (req: Request, res: Response) => {
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 
     res.json(PackageListResponse.parse({ data, total: data.length }));
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch packages" });
   }
 });
 
-router.get("/:slug", async (req: Request, res: Response) => {
+router.get("/:slug", async (req, res) => {
   try {
     const slug = req.params.slug as string;
 
@@ -62,7 +62,7 @@ router.get("/:slug", async (req: Request, res: Response) => {
     res.json(
       PackageDetailSchema.parse({ ...pkg, departures: departuresWithPrices }),
     );
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch package" });
   }
 });
