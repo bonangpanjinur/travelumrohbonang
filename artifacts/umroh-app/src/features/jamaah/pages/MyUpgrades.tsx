@@ -7,9 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Crown, ExternalLink, Clock, CheckCircle, XCircle, Loader2, Upload, Image, X, Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import Navbar from "@/shared/components/Navbar";
-import Footer from "@/shared/components/Footer";
-import ConfirmAlertDialog from "@/admin/components/ConfirmAlertDialog";
+import Navbar from "@/shared/components/layout/Navbar";
+import Footer from "@/shared/components/layout/Footer";
+import ConfirmAlertDialog from "@/features/admin/components/ConfirmAlertDialog";
 
 interface UpgradeOrder {
   id: string;

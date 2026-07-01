@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import Navbar from "@/shared/components/Navbar";
-import Footer from "@/shared/components/Footer";
-import SEO from "@/shared/components/SEO";
+import Navbar from "@/shared/components/layout/Navbar";
+import Footer from "@/shared/components/layout/Footer";
+import SEO from "@/shared/components/seo/SEO";
 import { BookOpen, FileText, Video, Book, Download, ExternalLink } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

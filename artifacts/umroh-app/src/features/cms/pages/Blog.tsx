@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import Navbar from "@/shared/components/Navbar";
-import Footer from "@/shared/components/Footer";
+import Navbar from "@/shared/components/layout/Navbar";
+import Footer from "@/shared/components/layout/Footer";
 import { motion } from "framer-motion";
 import { Calendar, User, ArrowRight, Tag, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import SEO from "@/shared/components/SEO";
-import BreadcrumbJsonLd from "@/shared/components/BreadcrumbJsonLd";
+import SEO from "@/shared/components/seo/SEO";
+import BreadcrumbJsonLd from "@/shared/components/seo/BreadcrumbJsonLd";
 
 interface BlogPost {
   id: string;

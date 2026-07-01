@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import Navbar from "@/shared/components/Navbar";
-import Footer from "@/shared/components/Footer";
+import Navbar from "@/shared/components/layout/Navbar";
+import Footer from "@/shared/components/layout/Footer";
 import PageFAQ from "@/features/cms/components/PageFAQ";
-import BackgroundPattern from "@/shared/components/BackgroundPattern";
+import BackgroundPattern from "@/shared/components/common/BackgroundPattern";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Calendar, ArrowRight, Search, Filter, X, Plane, MapPin, Building } from "lucide-react";
@@ -16,8 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import PackageCard, { PackageCardData } from "@/features/paket/components/PackageCard";
-import SEO from "@/shared/components/SEO";
-import BreadcrumbJsonLd from "@/shared/components/BreadcrumbJsonLd";
+import SEO from "@/shared/components/seo/SEO";
+import BreadcrumbJsonLd from "@/shared/components/seo/BreadcrumbJsonLd";
 
 interface Package extends PackageCardData {
   description: string;

@@ -2,7 +2,7 @@ import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
-import SEO from "@/shared/components/SEO";
+import SEO from "@/shared/components/seo/SEO";
 
 const NotFound = () => {
   const location = useLocation();

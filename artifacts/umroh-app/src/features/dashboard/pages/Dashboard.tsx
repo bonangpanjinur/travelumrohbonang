@@ -8,7 +8,7 @@ import {
 import { useNavigate, Navigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import Navbar from "@/shared/components/Navbar";
+import Navbar from "@/shared/components/layout/Navbar";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import AdminBanner from "@/features/dashboard/components/AdminBanner";
 import RecentNotifications from "@/features/dashboard/components/RecentNotifications";

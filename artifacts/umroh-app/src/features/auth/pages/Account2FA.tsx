@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/shared/hooks/use-toast";
-import SEO from "@/shared/components/SEO";
+import SEO from "@/shared/components/seo/SEO";
 import { ShieldCheck, ShieldOff, Lock } from "lucide-react";
-import { useAuthSettings } from "@/admin/hooks/useAuthSettings";
+import { useAuthSettings } from "@/features/admin/hooks/useAuthSettings";
 import { Link } from "react-router-dom";
 
 const ISSUER = "Umroh Gateway";

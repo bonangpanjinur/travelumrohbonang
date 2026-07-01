@@ -2,7 +2,7 @@ import { useAuth } from "@/shared/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Navigate } from "react-router-dom";
-import Navbar from "@/shared/components/Navbar";
+import Navbar from "@/shared/components/layout/Navbar";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

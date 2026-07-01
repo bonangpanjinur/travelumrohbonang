@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { z } from "zod";
-import SEO from "@/shared/components/SEO";
+import SEO from "@/shared/components/seo/SEO";
 import { normalizePhone, PHONE_REGEX } from "@/shared/lib/phone";
 
 const profileSchema = z.object({

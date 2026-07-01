@@ -13,7 +13,7 @@ import { Wallet, Loader2, ArrowDownToLine } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import SEO from "@/shared/components/SEO";
+import SEO from "@/shared/components/seo/SEO";
 
 const statusVariant: Record<string, string> = {
   pending: "bg-warning/10 text-warning border-warning/20",

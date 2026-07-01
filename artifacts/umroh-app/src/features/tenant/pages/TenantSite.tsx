@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTenant } from "@/shared/hooks/useTenant";
 import { supabase } from "@/shared/integrations/supabase/client";
-import SEO from "@/shared/components/SEO";
+import SEO from "@/shared/components/seo/SEO";
 import TenantClassicTemplate from "@/features/tenant/components/TenantClassicTemplate";
 import TenantModernTemplate from "@/features/tenant/components/TenantModernTemplate";
 import TenantPremiumTemplate from "@/features/tenant/components/TenantPremiumTemplate";

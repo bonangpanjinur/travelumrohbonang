@@ -50,3 +50,5 @@ Thumbs.db
 
 # Legacy backup — jangan diedit/hapus tanpa konfirmasi
 .migration-backup/
+
+# Pre-refactor backup — tidak perlu di build/deploy

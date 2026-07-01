@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import Navbar from "@/shared/components/Navbar";
-import Footer from "@/shared/components/Footer";
-import SEO from "@/shared/components/SEO";
+import Navbar from "@/shared/components/layout/Navbar";
+import Footer from "@/shared/components/layout/Footer";
+import SEO from "@/shared/components/seo/SEO";
 import { motion } from "framer-motion";
 import { ArrowLeft, Calendar } from "lucide-react";
 import { format } from "date-fns";

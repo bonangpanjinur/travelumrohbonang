@@ -10,7 +10,7 @@ import { Building2, ShoppingBag, Users, DollarSign, CreditCard, Calendar } from 
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import SEO from "@/shared/components/SEO";
+import SEO from "@/shared/components/seo/SEO";
 
 const BranchDashboard = () => {
   const { user, role, loading: authLoading } = useAuth();

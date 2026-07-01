@@ -10,8 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { Camera, Loader2, ArrowLeft, LayoutDashboard, User as UserIcon, ShieldCheck, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
-import Navbar from "@/shared/components/Navbar";
-import Footer from "@/shared/components/Footer";
+import Navbar from "@/shared/components/layout/Navbar";
+import Footer from "@/shared/components/layout/Footer";
 
 interface ProfileData {
   name: string;

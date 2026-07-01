@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
-import Navbar from "@/shared/components/Navbar";
+import Navbar from "@/shared/components/layout/Navbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft, Plane, Printer } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import SEO from "@/shared/components/SEO";
+import SEO from "@/shared/components/seo/SEO";
 
 const ETicket = () => {
   const { bookingId } = useParams();

@@ -5,7 +5,7 @@ import {
   fetchInvoiceData, 
   generateInvoiceHTML, 
   openInvoicePrintWindow 
-} from "@/admin/components/InvoiceGenerator";
+} from "@/features/admin/components/InvoiceGenerator";
 import { useToast } from "@/shared/hooks/use-toast";
 
 interface InvoiceButtonProps {

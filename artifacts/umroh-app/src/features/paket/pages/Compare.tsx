@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import Navbar from "@/shared/components/Navbar";
-import Footer from "@/shared/components/Footer";
-import SEO from "@/shared/components/SEO";
+import Navbar from "@/shared/components/layout/Navbar";
+import Footer from "@/shared/components/layout/Footer";
+import SEO from "@/shared/components/seo/SEO";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
 import { useCurrency } from "@/shared/hooks/useCurrency";

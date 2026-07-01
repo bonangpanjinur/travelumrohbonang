@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { captureReferralFromUrl } from "@/shared/lib/audit";
-import Navbar from "@/shared/components/Navbar";
+import Navbar from "@/shared/components/layout/Navbar";
 import HeroSection from "@/features/cms/components/HeroSection";
 import ServicesSection from "@/features/cms/components/ServicesSection";
 import AboutSection from "@/features/cms/components/AboutSection";
@@ -11,10 +11,10 @@ import GallerySection from "@/features/cms/components/GallerySection";
 import BlogSection from "@/features/cms/components/BlogSection";
 import FAQSection from "@/features/cms/components/FAQSection";
 import CTASection from "@/features/cms/components/CTASection";
-import Footer from "@/shared/components/Footer";
-import FloatingButtons from "@/shared/components/FloatingButtons";
-import SEO from "@/shared/components/SEO";
-import LocalBusinessJsonLd from "@/shared/components/LocalBusinessJsonLd";
+import Footer from "@/shared/components/layout/Footer";
+import FloatingButtons from "@/shared/components/common/FloatingButtons";
+import SEO from "@/shared/components/seo/SEO";
+import LocalBusinessJsonLd from "@/shared/components/seo/LocalBusinessJsonLd";
 
 const Index = () => {
   useEffect(() => { captureReferralFromUrl(); }, []);

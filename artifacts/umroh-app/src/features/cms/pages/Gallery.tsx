@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import Navbar from "@/shared/components/Navbar";
-import Footer from "@/shared/components/Footer";
+import Navbar from "@/shared/components/layout/Navbar";
+import Footer from "@/shared/components/layout/Footer";
 import { motion } from "framer-motion";
 import { Camera } from "lucide-react";
-import SEO from "@/shared/components/SEO";
-import BreadcrumbJsonLd from "@/shared/components/BreadcrumbJsonLd";
+import SEO from "@/shared/components/seo/SEO";
+import BreadcrumbJsonLd from "@/shared/components/seo/BreadcrumbJsonLd";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface GalleryItem {

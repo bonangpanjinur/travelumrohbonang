@@ -5,7 +5,7 @@ import { useAuth } from "@/shared/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/shared/hooks/use-toast";
-import SEO from "@/shared/components/SEO";
+import SEO from "@/shared/components/seo/SEO";
 import SignaturePad from "@/features/jamaah/components/SignaturePad";
 import { CheckCircle2 } from "lucide-react";
 
