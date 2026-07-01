@@ -160,7 +160,7 @@ const Paket = () => {
   const filteredPackages = useMemo(() => {
     return packages.filter((pkg) => {
       // Search filter
-      if (search && !pkg.title.toLowerCase().includes(search.toLowerCase())) {
+      if (search && !(pkg.title ?? '').toLowerCase().includes(search.toLowerCase())) {
         return false;
       }
       
