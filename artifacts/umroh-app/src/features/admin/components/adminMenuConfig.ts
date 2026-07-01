@@ -39,6 +39,7 @@ import {
   Lock,
   Search,
   Tag,
+  LineChart,
   LucideIcon
 
 } from "lucide-react";
@@ -103,6 +104,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "HPP & Profitabilitas", href: "/admin/package-costs", icon: Calculator },
       { label: "Akuntansi & Keuangan", href: "/admin/accounting", icon: BarChart3, premium: true, premiumFeature: "Akuntansi & Keuangan" },
       { label: "Payment Gateway", href: "/admin/payment-gateway", icon: Wallet, premium: true, premiumFeature: "Integrasi Payment Gateway" },
+      { label: "Dashboard Analitik", href: "/admin/analytics", icon: LineChart },
       { label: "Laporan", href: "/admin/reports", icon: FileText },
       { label: "Histori Akses Bukti", href: "/admin/proof-access-logs", icon: ShieldCheck },
       { label: "Pencairan Komisi Agen", href: "/admin/agent-withdrawals", icon: Wallet },
