@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -11,6 +11,8 @@ import { useToast } from "@/shared/hooks/use-toast";
 import { Search, Loader2, UserRound, Package, Calendar, CreditCard, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { useFormDraft } from "../hooks/useFormDraft";
+import { FormDraftBanner } from "./FormDraftBanner";
 
 interface Package {
   id: string;
@@ -52,6 +54,24 @@ const PAYMENT_SCHEMES = [
   { value: "dp", label: "DP / Cicilan" },
 ];
 
+const EMPTY_FORM = {
+  package_id: "",
+  departure_id: "",
+  room_type: "",
+  payment_scheme: "full",
+  user_id: "",
+  customer_name: "",
+  customer_email: "",
+  notes: "",
+  branch_id: "",
+  agent_id: "",
+};
+
+type FormData = typeof EMPTY_FORM;
+
+// We persist form + step together so restore returns to the right step
+type DraftData = FormData & { __step: Step };
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -71,19 +91,26 @@ const AdminCreateBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
   const [profileResults, setProfileResults] = useState<Profile[]>([]);
   const [profileLoading, setProfileLoading] = useState(false);
 
-  const [form, setForm] = useState({
-    package_id: "",
-    departure_id: "",
-    room_type: "",
-    payment_scheme: "full",
-    user_id: "",
-    customer_name: "",
-    customer_email: "",
-    notes: "",
-    branch_id: "",
-    agent_id: "",
+  const [form, setForm] = useState<FormData>(EMPTY_FORM);
+
+  // ── Draft auto-save / restore ───────────────────────────────────────────────
+  // Combine form + step into a single draft value so step is also restored
+  const draftValue: DraftData = { ...form, __step: step };
+
+  const handleRestore = useCallback((saved: DraftData) => {
+    const { __step, ...savedForm } = saved;
+    setForm(savedForm as FormData);
+    setStep(__step);
+  }, []);
+
+  const { hasDraft, restoreDraft, clearDraft } = useFormDraft<DraftData>({
+    key: "admin-create-booking",
+    value: draftValue,
+    onRestore: handleRestore,
+    isEmpty: (v) => !v.package_id && !v.customer_name,
   });
 
+  // ── Data loading ────────────────────────────────────────────────────────────
   const selectedDeparture = departures.find((d) => d.id === form.departure_id);
   const selectedPrice = selectedDeparture?.prices.find((p) => p.room_type === form.room_type);
   const totalPrice = selectedPrice?.price || 0;
@@ -112,7 +139,6 @@ const AdminCreateBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
       .order("departure_date")
       .then(({ data }) => {
         setDepartures((data as any) || []);
-        setForm((f) => ({ ...f, departure_id: "", room_type: "" }));
       });
   }, [form.package_id]);
 
@@ -139,12 +165,10 @@ const AdminCreateBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
 
   const reset = () => {
     setStep(1);
-    setForm({
-      package_id: "", departure_id: "", room_type: "", payment_scheme: "full",
-      user_id: "", customer_name: "", customer_email: "", notes: "", branch_id: "", agent_id: "",
-    });
+    setForm(EMPTY_FORM);
     setProfileSearch("");
     setProfileResults([]);
+    clearDraft();
   };
 
   const handleClose = (open: boolean) => {
@@ -204,6 +228,7 @@ const AdminCreateBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
         });
       }
 
+      clearDraft();
       toast({ title: `Booking ${codeData} berhasil dibuat!`, description: `Total: Rp ${totalPrice.toLocaleString("id-ID")}` });
       onSuccess();
       handleClose(false);
@@ -226,6 +251,11 @@ const AdminCreateBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
         <DialogHeader>
           <DialogTitle>Buat Booking dari Admin</DialogTitle>
         </DialogHeader>
+
+        {/* Draft recovery banner — only shown when a saved draft is available */}
+        {hasDraft && (
+          <FormDraftBanner onRestore={restoreDraft} onDiscard={clearDraft} />
+        )}
 
         <div className="flex items-center gap-1 mb-6 mt-2">
           {stepLabels.map((s, i) => (
