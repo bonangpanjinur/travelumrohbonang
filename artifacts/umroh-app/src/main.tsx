@@ -2,8 +2,8 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import { initSentry, Sentry } from "./lib/sentry";
-import { installGlobalErrorHandlers } from "./lib/errorLogger";
+import { initSentry, Sentry } from "@/shared/lib/sentry";
+import { installGlobalErrorHandlers } from "@/shared/lib/errorLogger";
 
 initSentry();
 installGlobalErrorHandlers();

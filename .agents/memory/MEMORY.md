@@ -1,2 +1,2 @@
-- [Umroh Gateway refactor phases](umroh-refactor-phases.md) — phase 1 (SQL org) + phase 2 (docs) selesai; phase 3+ = source code feature structure migration
+- [Umroh Gateway refactor phases](umroh-refactor-phases.md) — phase 1-4 SELESAI; phase 5+ = database, docs, testing, final cleanup
 - [Supabase missing env vars](supabase-env.md) — app berjalan (HTTP 200) tapi VITE_SUPABASE_URL belum di-set; supabaseUrl error di console adalah pre-existing bukan regresi

@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { useToast } from "@/shared/hooks/use-toast";
 import {
   Bold,
   Italic,
@@ -33,7 +33,7 @@ import {
   Upload,
   Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/shared/lib/utils";
 import { useEffect, useRef, useState } from "react";
 
 interface RichTextEditorProps {

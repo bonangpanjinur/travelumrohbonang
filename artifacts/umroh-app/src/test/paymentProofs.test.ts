@@ -4,7 +4,7 @@ const createSignedUrl = vi.fn();
 const insert = vi.fn();
 const getUser = vi.fn();
 
-vi.mock("@/integrations/supabase/client", () => ({
+vi.mock("@/shared/integrations/supabase/client", () => ({
   supabase: {
     storage: { from: () => ({ createSignedUrl }) },
     from: () => ({ insert }),
@@ -12,7 +12,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-import { getProofSignedUrl, clearProofUrlCache } from "@/lib/paymentProofs";
+import { getProofSignedUrl, clearProofUrlCache } from "@/features/booking/lib/paymentProofs";
 
 describe("getProofSignedUrl", () => {
   beforeEach(() => {

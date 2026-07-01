@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizePhone, isValidIndonesianPhone } from "@/lib/phone";
+import { normalizePhone, isValidIndonesianPhone } from "@/shared/lib/phone";
 
 describe("normalizePhone — edge cases", () => {
   const cases: [string, string][] = [
