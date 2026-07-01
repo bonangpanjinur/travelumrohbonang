@@ -578,22 +578,28 @@ database/
 
 ---
 
-### Phase 1 — Bersihkan Root
-- [ ] Pindah `PROJECT_ARCHITECTURE.md` → merge ke `docs/Architecture.md`, hapus dari root
-- [ ] Konfirmasi apakah `.migration-backup/` aman diarsip (rename jadi `_archived/` atau hapus)
-- [ ] Pastikan tidak ada file `*.sql`, `*.lock`, `*.env` yang salah tempat di root
+### Phase 1 — Bersihkan Root ✅ SELESAI (2026-07-01)
+- [x] Pindah `PROJECT_ARCHITECTURE.md` → merge ke `docs/Architecture.md`, hapus dari root
+  - `docs/Architecture.md` sekarang versi 1.1 (596 baris, konten gabungan — lebih lengkap dari versi lama 168 baris)
+  - `PROJECT_ARCHITECTURE.md` di root sudah dihapus
+- [ ] Konfirmasi apakah `.migration-backup/` aman diarsip (rename jadi `_archived/` atau hapus) — **PENDING: perlu konfirmasi manual**
+- [x] Pastikan tidak ada file `*.sql`, `*.lock`, `*.env` yang salah tempat di root ✅ Root bersih
 
 **Estimasi:** 30 menit  
 **Risk:** Rendah (tidak ada kode yang berubah)
 
 ---
 
-### Phase 2 — Hapus Dead Code (setelah konfirmasi)
-- [ ] Hapus `pages/not-found.tsx` (dead — tidak ada import ke file ini)
-- [ ] Hapus `lib/watermark.ts` (0 import — konfirmasi dulu dengan dynamic import search)
-- [ ] Evaluasi `components/ui/use-toast.ts` — jika semua consumer sudah pakai `hooks/use-toast.ts`, hapus wrapper
-- [ ] Evaluasi `components/ui/loading-spinner.tsx` vs `components/ui/spinner.tsx` — pilih satu
-- [ ] Evaluasi `components/ui/empty-state.tsx` vs `components/ui/empty.tsx` — pilih satu
+### Phase 2 — Hapus Dead Code ✅ SELESAI SEBAGIAN (2026-07-01)
+- [x] Hapus `pages/not-found.tsx` — dihapus ✅ (0 consumer, dead code)
+- [x] Hapus `lib/watermark.ts` — dihapus ✅ (0 import dari luar file)
+- [x] Hapus `components/ui/use-toast.ts` — dihapus ✅ (0 consumer — wrapper tidak perlu)
+- [ ] `components/ui/loading-spinner.tsx` vs `components/ui/spinner.tsx` — **DITUNDA ke Phase 4**
+  - `loading-spinner.tsx` punya 6 consumer aktif (Dashboard, MyBookings, MyDocuments, Payment, PaymentProofAccessLogs, Payments)
+  - Perlu migrasi consumer dulu sebelum hapus salah satu
+- [ ] `components/ui/empty-state.tsx` vs `components/ui/empty.tsx` — **DITUNDA ke Phase 4**
+  - `empty-state.tsx` punya 3 consumer aktif (MyBookings, PaymentProofAccessLogs, Payments)
+  - Perlu migrasi consumer dulu sebelum hapus salah satu
 
 **Estimasi:** 2-4 jam  
 **Risk:** Sedang (perlu audit import dulu)
@@ -642,7 +648,7 @@ database/
 ---
 
 ### Phase 6 — Rapikan Dokumentasi
-- [ ] Merge `PROJECT_ARCHITECTURE.md` ke `docs/Architecture.md`
+- [x] Merge `PROJECT_ARCHITECTURE.md` ke `docs/Architecture.md` ✅ Selesai di Phase 1
 - [ ] Update `docs/FolderStructure.md` dengan struktur baru setelah Phase 4
 - [ ] Update `docs/DevelopmentGuide.md` dengan cara kerja di struktur baru
 - [ ] Tambah `docs/MigrationGuide.md` — panduan untuk developer yang terbiasa dengan struktur lama
