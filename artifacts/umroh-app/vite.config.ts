@@ -1,10 +1,10 @@
 import path from 'path';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig, type UserConfig } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 
-export default defineConfig(async ({ command }) => {
+export default defineConfig(async ({ command }): Promise<UserConfig> => {
   // PORT and BASE_PATH are only required when running the dev/preview server,
   // not during a static build (e.g. Vercel CI).
   const isBuild = command === 'build';
