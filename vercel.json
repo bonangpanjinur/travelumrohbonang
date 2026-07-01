@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm --filter @workspace/umroh-app run build",
+  "outputDirectory": "artifacts/umroh-app/dist/public",
+  "installCommand": "pnpm install",
+  "framework": null
+}
