@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -80,6 +80,9 @@ export function useAdminNotifications() {
   const readIdsRef = useRef<Set<string>>(getReadIds());
   // Track which notification IDs we've already toasted so HMR doesn't re-toast
   const toastedRef = useRef<Set<string>>(new Set());
+  // Unique ID per hook mount — prevents "cannot add listeners after subscribe()" when
+  // React Strict Mode or fast-refresh re-runs the effect before the previous cleanup finishes.
+  const mountId = useMemo(() => `${Date.now()}-${Math.random().toString(36).slice(2)}`, []);
 
   const showToast = useCallback((notif: AdminNotif) => {
     if (toastedRef.current.has(notif.id)) return;
@@ -136,7 +139,7 @@ export function useAdminNotifications() {
 
     // ── Real-time: new bookings ─────────────────────────────────────────────
     const bookingChannel = supabase
-      .channel("admin-realtime-bookings")
+      .channel(`admin-realtime-bookings-${mountId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "bookings" },
@@ -169,7 +172,7 @@ export function useAdminNotifications() {
 
     // ── Real-time: new/updated payments needing verification ────────────────
     const paymentChannel = supabase
-      .channel("admin-realtime-payments")
+      .channel(`admin-realtime-payments-${mountId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "payments" },
@@ -234,7 +237,7 @@ export function useAdminNotifications() {
       supabase.removeChannel(bookingChannel);
       supabase.removeChannel(paymentChannel);
     };
-  }, [fetchAll, showToast]);
+  }, [fetchAll, showToast, mountId]);
 
   const markAsRead = useCallback((id: string) => {
     readIdsRef.current.add(id);
