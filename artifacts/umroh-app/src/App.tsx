@@ -45,6 +45,7 @@ import AdminPayments from "./features/admin/pages/Payments";
 import AdminItineraries from "./features/admin/pages/Itineraries";
 import AdminReports from "./features/admin/pages/Reports";
 import AdminAnalyticsDashboard from "./features/admin/pages/AnalyticsDashboard";
+import AdminNotificationsPage from "./features/admin/pages/AdminNotifications";
 import AdminPages from "./features/admin/pages/Pages";
 import AdminHotels from "./features/admin/pages/Hotels";
 import AdminAirlines from "./features/admin/pages/Airlines";
@@ -172,6 +173,7 @@ const AppContent = () => {
           <Route path="payments" element={<AdminPayments />} />
           <Route path="reports" element={<AdminReports />} />
           <Route path="analytics" element={<AdminAnalyticsDashboard />} />
+          <Route path="notifications" element={<AdminNotificationsPage />} />
           <Route path="pilgrims" element={<AdminPilgrims />} />
           <Route path="branches" element={<AdminBranches />} />
           <Route path="agents" element={<AdminAgents />} />

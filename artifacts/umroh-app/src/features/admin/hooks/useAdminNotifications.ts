@@ -1,0 +1,269 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
+import { id as localeId } from "date-fns/locale";
+
+export type AdminNotifType = "booking" | "payment";
+
+export interface AdminNotif {
+  id: string;
+  type: AdminNotifType;
+  title: string;
+  message: string;
+  created_at: string;
+  is_read: boolean;
+  link: string;
+  booking_code?: string;
+  amount?: number;
+  user_name?: string;
+  payment_status?: string;
+}
+
+const STORAGE_KEY = "admin_notif_read_ids";
+const MAX_ITEMS = 40;
+
+function getReadIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveReadIds(ids: Set<string>) {
+  try {
+    // Keep only the last 200 to avoid unbounded growth
+    const arr = Array.from(ids).slice(-200);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+  } catch {}
+}
+
+function buildBookingNotif(b: any): AdminNotif {
+  return {
+    id: `booking-${b.id}`,
+    type: "booking",
+    title: "Booking Baru",
+    message: `${b.profile?.name || b.user_name || "Jamaah"} — ${b.booking_code || b.id.slice(0, 8)}`,
+    created_at: b.created_at,
+    is_read: false,
+    link: "/admin/bookings",
+    booking_code: b.booking_code,
+    user_name: b.profile?.name || b.user_name,
+  };
+}
+
+function buildPaymentNotif(p: any): AdminNotif {
+  const bookingCode = p.booking?.booking_code || p.booking_code || "";
+  return {
+    id: `payment-${p.id}`,
+    type: "payment",
+    title: "Pembayaran Butuh Verifikasi",
+    message: `Rp ${(p.amount || 0).toLocaleString("id-ID")}${bookingCode ? ` — ${bookingCode}` : ""}`,
+    created_at: p.created_at,
+    is_read: false,
+    link: "/admin/payments",
+    booking_code: bookingCode,
+    amount: p.amount,
+    payment_status: p.status,
+  };
+}
+
+function applyReadState(items: AdminNotif[], readIds: Set<string>): AdminNotif[] {
+  return items.map((n) => ({ ...n, is_read: readIds.has(n.id) }));
+}
+
+export function useAdminNotifications() {
+  const [notifications, setNotifications] = useState<AdminNotif[]>([]);
+  const [loading, setLoading] = useState(true);
+  const readIdsRef = useRef<Set<string>>(getReadIds());
+  // Track which notification IDs we've already toasted so HMR doesn't re-toast
+  const toastedRef = useRef<Set<string>>(new Set());
+
+  const showToast = useCallback((notif: AdminNotif) => {
+    if (toastedRef.current.has(notif.id)) return;
+    toastedRef.current.add(notif.id);
+
+    const ago = formatDistanceToNow(new Date(notif.created_at), {
+      addSuffix: true,
+      locale: localeId,
+    });
+
+    if (notif.type === "booking") {
+      toast.success(notif.title, {
+        description: `${notif.message} · ${ago}`,
+        duration: 6000,
+        action: { label: "Lihat", onClick: () => window.location.assign(notif.link) },
+      });
+    } else {
+      toast.warning(notif.title, {
+        description: `${notif.message} · ${ago}`,
+        duration: 8000,
+        action: { label: "Verifikasi", onClick: () => window.location.assign(notif.link) },
+      });
+    }
+  }, []);
+
+  const fetchAll = useCallback(async () => {
+    const [{ data: bookings }, { data: payments }] = await Promise.all([
+      supabase
+        .from("bookings")
+        .select("id, booking_code, created_at, profile:profiles!bookings_user_id_profiles_fkey(name)")
+        .order("created_at", { ascending: false })
+        .limit(MAX_ITEMS / 2),
+      supabase
+        .from("payments")
+        .select("id, amount, status, created_at, booking:bookings(booking_code)")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(MAX_ITEMS / 2),
+    ]);
+
+    const bookingNotifs: AdminNotif[] = (bookings || []).map(buildBookingNotif);
+    const paymentNotifs: AdminNotif[] = (payments || []).map(buildPaymentNotif);
+
+    const all = [...bookingNotifs, ...paymentNotifs].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    setNotifications(applyReadState(all, readIdsRef.current));
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchAll();
+
+    // ── Real-time: new bookings ─────────────────────────────────────────────
+    const bookingChannel = supabase
+      .channel("admin-realtime-bookings")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "bookings" },
+        async (payload) => {
+          const b = payload.new as any;
+
+          // Fetch the profile name for richer messaging
+          let user_name = "";
+          if (b.user_id) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("name")
+              .eq("id", b.user_id)
+              .maybeSingle();
+            user_name = profile?.name || "";
+          }
+
+          const notif = buildBookingNotif({ ...b, user_name });
+          notif.is_read = readIdsRef.current.has(notif.id);
+
+          setNotifications((prev) => {
+            if (prev.find((n) => n.id === notif.id)) return prev;
+            return [notif, ...prev].slice(0, MAX_ITEMS);
+          });
+
+          if (!notif.is_read) showToast(notif);
+        }
+      )
+      .subscribe();
+
+    // ── Real-time: new/updated payments needing verification ────────────────
+    const paymentChannel = supabase
+      .channel("admin-realtime-payments")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "payments" },
+        async (payload) => {
+          const p = payload.new as any;
+          if (p.status !== "pending") return;
+
+          let booking_code = "";
+          if (p.booking_id) {
+            const { data: bk } = await supabase
+              .from("bookings")
+              .select("booking_code")
+              .eq("id", p.booking_id)
+              .maybeSingle();
+            booking_code = bk?.booking_code || "";
+          }
+
+          const notif = buildPaymentNotif({ ...p, booking_code });
+          notif.is_read = readIdsRef.current.has(notif.id);
+
+          setNotifications((prev) => {
+            if (prev.find((n) => n.id === notif.id)) return prev;
+            return [notif, ...prev].slice(0, MAX_ITEMS);
+          });
+
+          if (!notif.is_read) showToast(notif);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "payments" },
+        async (payload) => {
+          const p = payload.new as any;
+          const old = payload.old as any;
+          // Only trigger if it just became pending (e.g. proof uploaded)
+          if (p.status !== "pending" || old.status === "pending") return;
+
+          let booking_code = "";
+          if (p.booking_id) {
+            const { data: bk } = await supabase
+              .from("bookings")
+              .select("booking_code")
+              .eq("id", p.booking_id)
+              .maybeSingle();
+            booking_code = bk?.booking_code || "";
+          }
+
+          const notif = buildPaymentNotif({ ...p, booking_code });
+          notif.is_read = readIdsRef.current.has(notif.id);
+
+          setNotifications((prev) => {
+            const without = prev.filter((n) => n.id !== notif.id);
+            return [notif, ...without].slice(0, MAX_ITEMS);
+          });
+
+          if (!notif.is_read) showToast(notif);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bookingChannel);
+      supabase.removeChannel(paymentChannel);
+    };
+  }, [fetchAll, showToast]);
+
+  const markAsRead = useCallback((id: string) => {
+    readIdsRef.current.add(id);
+    saveReadIds(readIdsRef.current);
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+    );
+  }, []);
+
+  const markAllAsRead = useCallback(() => {
+    setNotifications((prev) => {
+      prev.forEach((n) => readIdsRef.current.add(n.id));
+      saveReadIds(readIdsRef.current);
+      return prev.map((n) => ({ ...n, is_read: true }));
+    });
+  }, []);
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const unreadBookings = notifications.filter((n) => !n.is_read && n.type === "booking").length;
+  const unreadPayments = notifications.filter((n) => !n.is_read && n.type === "payment").length;
+
+  return {
+    notifications,
+    loading,
+    unreadCount,
+    unreadBookings,
+    unreadPayments,
+    markAsRead,
+    markAllAsRead,
+    refetch: fetchAll,
+  };
+}

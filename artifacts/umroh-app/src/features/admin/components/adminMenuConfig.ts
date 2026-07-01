@@ -1,6 +1,7 @@
 import {
   Calculator,
-  LayoutDashboard, 
+  LayoutDashboard,
+  BellRing,
   Package, 
   Calendar, 
   Users, 
@@ -79,6 +80,7 @@ export const menuGroups: MenuGroup[] = [
     label: "Utama",
     items: [
       { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+      { label: "Notifikasi", href: "/admin/notifications", icon: BellRing },
       { label: "Website Utama", href: "/", icon: Globe },
     ],
   },
