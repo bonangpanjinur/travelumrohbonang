@@ -49,6 +49,12 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    proxy: {
+      "/health": { target: "http://localhost:8080", changeOrigin: true },
+      "/packages": { target: "http://localhost:8080", changeOrigin: true },
+      "/bookings": { target: "http://localhost:8080", changeOrigin: true },
+      "/profile": { target: "http://localhost:8080", changeOrigin: true },
+    },
   },
   preview: {
     port,
