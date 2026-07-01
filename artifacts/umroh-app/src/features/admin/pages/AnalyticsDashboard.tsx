@@ -305,7 +305,7 @@ const AnalyticsDashboard = () => {
       .lte("created_at", end.toISOString());
 
     const map: Record<string, number> = {};
-    (data ?? []).forEach(p => { map[p.status] = (map[p.status] ?? 0) + 1; });
+    (data ?? []).forEach(p => { if (p.status) { map[p.status] = (map[p.status] ?? 0) + 1; } });
     setPaymentStatus(
       Object.entries(map).map(([key, val]) => ({
         name: STATUS_LABEL[key] ?? key,
@@ -323,7 +323,7 @@ const AnalyticsDashboard = () => {
       .lte("created_at", end.toISOString());
 
     const map: Record<string, number> = {};
-    (data ?? []).forEach(b => { map[b.status] = (map[b.status] ?? 0) + 1; });
+    (data ?? []).forEach(b => { if (b.status) { map[b.status] = (map[b.status] ?? 0) + 1; } });
     setBookingStatus(
       Object.entries(map).map(([key, val]) => ({
         name: BOOKING_STATUS_LABEL[key] ?? key,
