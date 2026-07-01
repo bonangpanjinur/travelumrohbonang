@@ -8,7 +8,7 @@ interface DraftEnvelope<T> {
   savedAt: number; // Unix ms
 }
 
-interface UseFormDraftOptions<T extends Record<string, unknown>> {
+export interface UseFormDraftOptions<T extends Record<string, unknown>> {
   /** Unique key — e.g. "admin-create-booking". Namespaced automatically. */
   key: string;
   /** The live form state to watch and auto-save. */
@@ -78,20 +78,30 @@ export function useFormDraft<T extends Record<string, unknown>>({
   isEmpty = defaultIsEmpty,
 }: UseFormDraftOptions<T>): FormDraftState {
   const [hasDraft, setHasDraft] = useState<boolean>(() => !!loadDraft<T>(key));
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Keep a stable ref to the latest value so the debounce closure captures it
+
+  // Stable refs — avoid stale closures without adding to dep arrays
   const valueRef = useRef(value);
   valueRef.current = value;
+
+  const hasDraftRef = useRef(hasDraft);
+  hasDraftRef.current = hasDraft;
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Re-check draft when the key changes (e.g. new → edit-{id}) ────────────
+  useEffect(() => {
+    setHasDraft(!!loadDraft<T>(key));
+  }, [key]);
 
   // ── Auto-save on every form change ────────────────────────────────────────
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
-      if (isEmpty(valueRef.current)) {
-        // Don't bother saving a blank form
-        return;
-      }
+      // While the restore banner is visible, do NOT overwrite the existing
+      // draft with the freshly-loaded (DB) form values.
+      if (hasDraftRef.current) return;
+      if (isEmpty(valueRef.current)) return;
       saveDraft(key, valueRef.current);
     }, DEBOUNCE_MS);
 
@@ -103,9 +113,7 @@ export function useFormDraft<T extends Record<string, unknown>>({
 
   const restoreDraft = useCallback(() => {
     const saved = loadDraft<T>(key);
-    if (saved) {
-      onRestore(saved);
-    }
+    if (saved) onRestore(saved);
     setHasDraft(false);
   }, [key, onRestore]);
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -16,6 +16,8 @@ import AdminPagination from "@/features/admin/components/AdminPagination";
 import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 import { useDeleteConfirm } from "@/features/admin/hooks/useDeleteConfirm";
+import { useFormDraft } from "@/features/admin/hooks/useFormDraft";
+import { FormDraftBanner } from "@/features/admin/components/FormDraftBanner";
 
 interface Package {
   id: string;
@@ -46,6 +48,32 @@ interface ExtraHotel {
   sort_order: number;
 }
 
+// ── Form shape ────────────────────────────────────────────────────────────────
+
+const EMPTY_FORM = {
+  title: "",
+  slug: "",
+  description: "",
+  package_type: "",
+  duration_days: 9,
+  minimum_dp: 0,
+  dp_deadline_days: 30,
+  full_deadline_days: 7,
+  category_id: "",
+  hotel_makkah_id: "",
+  hotel_madinah_id: "",
+  airline_id: "",
+  airport_id: "",
+  image_url: "",
+};
+
+type FormData = typeof EMPTY_FORM;
+
+// Draft combines the main form + the extra-hotels list
+type PackageDraft = FormData & { __extraHotels: ExtraHotel[] };
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 const AdminPackages = () => {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,22 +98,29 @@ const AdminPackages = () => {
   const [airports, setAirports] = useState<(Option & { code: string | null })[]>([]);
   const [extraHotels, setExtraHotels] = useState<ExtraHotel[]>([]);
 
-  const [form, setForm] = useState({
-    title: "",
-    slug: "",
-    description: "",
-    package_type: "",
-    duration_days: 9,
-    minimum_dp: 0,
-    dp_deadline_days: 30,
-    full_deadline_days: 7,
-    category_id: "",
-    hotel_makkah_id: "",
-    hotel_madinah_id: "",
-    airline_id: "",
-    airport_id: "",
-    image_url: "",
+  const [form, setForm] = useState<FormData>(EMPTY_FORM);
+
+  // ── Draft auto-save / restore ─────────────────────────────────────────────
+  // Key switches between "new" and "edit-{id}" so each package gets its own draft.
+  const draftKey = editing ? `admin-packages-edit-${editing.id}` : "admin-packages-new";
+
+  // Merge form + extra hotels into one object to persist them together.
+  const draftValue: PackageDraft = { ...form, __extraHotels: extraHotels };
+
+  const handleDraftRestore = useCallback((saved: PackageDraft) => {
+    const { __extraHotels, ...savedForm } = saved;
+    setForm(savedForm as FormData);
+    setExtraHotels(__extraHotels || []);
+  }, []);
+
+  const { hasDraft, restoreDraft, clearDraft } = useFormDraft<PackageDraft>({
+    key: draftKey,
+    value: draftValue,
+    onRestore: handleDraftRestore,
+    isEmpty: (v) => !v.title.trim(),
   });
+
+  // ── Data loading ──────────────────────────────────────────────────────────
 
   useEffect(() => {
     fetchPackages();
@@ -128,9 +163,10 @@ const AdminPackages = () => {
   const categoryName = selectedCategory?.name?.toLowerCase() || "";
   const showExtraHotels = categoryName.includes("plus") || categoryName.includes("haji");
 
-  // Hotels not in Makkah/Madinah for extra hotel dropdown
-  const otherHotels = hotels.filter(h => h.city !== "Makkah" && h.city !== "Madinah");
-  const allHotelsForExtra = hotels; // allow any hotel as extra
+  const makkahHotels = hotels.filter(h => h.city === "Makkah");
+  const madinahHotels = hotels.filter(h => h.city === "Madinah");
+
+  // ── Form helpers ──────────────────────────────────────────────────────────
 
   const buildPayload = () => {
     const payload: Record<string, unknown> = {
@@ -153,7 +189,6 @@ const AdminPackages = () => {
   };
 
   const saveExtraHotels = async (packageId: string) => {
-    // Delete existing and re-insert
     await supabase.from("package_hotels").delete().eq("package_id", packageId);
     if (extraHotels.length > 0) {
       const rows = extraHotels.map((eh, i) => ({
@@ -176,6 +211,7 @@ const AdminPackages = () => {
         toast({ title: "Gagal mengupdate", description: error.message, variant: "destructive" });
       } else {
         await saveExtraHotels(editing.id);
+        clearDraft();
         toast({ title: "Paket diupdate!" });
         fetchPackages();
         setIsOpen(false);
@@ -187,6 +223,7 @@ const AdminPackages = () => {
         toast({ title: "Gagal membuat paket", description: error.message, variant: "destructive" });
       } else {
         if (data) await saveExtraHotels(data.id);
+        clearDraft();
         toast({ title: "Paket ditambahkan!" });
         fetchPackages();
         setIsOpen(false);
@@ -230,7 +267,8 @@ const AdminPackages = () => {
   const resetForm = () => {
     setEditing(null);
     setExtraHotels([]);
-    setForm({ title: "", slug: "", description: "", package_type: "", duration_days: 9, minimum_dp: 0, dp_deadline_days: 30, full_deadline_days: 7, category_id: "", hotel_makkah_id: "", hotel_madinah_id: "", airline_id: "", airport_id: "", image_url: "" });
+    setForm(EMPTY_FORM);
+    clearDraft();
   };
 
   const addExtraHotel = () => {
@@ -240,7 +278,6 @@ const AdminPackages = () => {
   const updateExtraHotel = (index: number, field: keyof ExtraHotel, value: string) => {
     const updated = [...extraHotels];
     (updated[index] as any)[field] = value;
-    // Auto-fill label with hotel city when hotel is selected
     if (field === "hotel_id" && value) {
       const hotel = hotels.find(h => h.id === value);
       if (hotel && !updated[index].label) {
@@ -274,22 +311,16 @@ const AdminPackages = () => {
         .from('cms-images')
         .getPublicUrl(filePath);
 
-      setForm({ ...form, image_url: publicUrl });
+      setForm(f => ({ ...f, image_url: publicUrl }));
       toast({ title: "Foto berhasil diunggah!" });
     } catch (error: any) {
-      console.error("Error uploading image:", error);
-      toast({ 
-        title: "Gagal mengunggah foto", 
-        description: error.message, 
-        variant: "destructive" 
-      });
+      toast({ title: "Gagal mengunggah foto", description: error.message, variant: "destructive" });
     } finally {
       setUploading(false);
     }
   };
 
-  const makkahHotels = hotels.filter(h => h.city === "Makkah");
-  const madinahHotels = hotels.filter(h => h.city === "Madinah");
+  // ── JSX ───────────────────────────────────────────────────────────────────
 
   return (
     <div>
@@ -321,6 +352,12 @@ const AdminPackages = () => {
             <DialogHeader>
               <DialogTitle>{editing ? "Edit Paket" : "Tambah Paket Baru"}</DialogTitle>
             </DialogHeader>
+
+            {/* Draft recovery banner */}
+            {hasDraft && (
+              <FormDraftBanner onRestore={restoreDraft} onDiscard={clearDraft} />
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label>Nama Paket *</Label>
@@ -366,7 +403,7 @@ const AdminPackages = () => {
                 </div>
               </div>
 
-              {/* Extra Hotels - shown when category is Plus or Haji */}
+              {/* Extra Hotels — shown when category is Plus or Haji */}
               {showExtraHotels && (
                 <div className="border border-border rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
@@ -452,10 +489,10 @@ const AdminPackages = () => {
                 <div className="mt-1">
                   {!form.image_url ? (
                     <div className="border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer relative">
-                      <Input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleFileUpload} 
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
                         disabled={uploading}
                         className="absolute inset-0 opacity-0 cursor-pointer"
                       />
@@ -467,29 +504,29 @@ const AdminPackages = () => {
                     </div>
                   ) : (
                     <div className="relative group">
-                      <img 
-                        src={form.image_url} 
-                        alt="Preview" 
-                        className="w-full h-48 object-cover rounded-lg border border-border" 
+                      <img
+                        src={form.image_url}
+                        alt="Preview"
+                        className="w-full h-48 object-cover rounded-lg border border-border"
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
                         <div className="relative">
                           <Button type="button" variant="secondary" size="sm">
                             Ganti Foto
                           </Button>
-                          <Input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleFileUpload} 
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileUpload}
                             disabled={uploading}
                             className="absolute inset-0 opacity-0 cursor-pointer"
                           />
                         </div>
-                        <Button 
-                          type="button" 
-                          variant="destructive" 
+                        <Button
+                          type="button"
+                          variant="destructive"
                           size="sm"
-                          onClick={() => setForm({ ...form, image_url: "" })}
+                          onClick={() => setForm(f => ({ ...f, image_url: "" }))}
                         >
                           Hapus
                         </Button>
