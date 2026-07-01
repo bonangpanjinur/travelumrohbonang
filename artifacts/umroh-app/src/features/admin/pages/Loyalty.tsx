@@ -22,7 +22,7 @@ export default function AdminLoyalty() {
     const [bal, hist, prof] = await Promise.all([
       supabase.from("loyalty_balances").select("*").order("total_points", { ascending: false }).limit(50),
       supabase.from("loyalty_points").select("*").order("created_at", { ascending: false }).limit(50),
-      supabase.from("profiles").select("user_id, full_name, email").limit(500),
+      supabase.from("profiles").select("id, name, email").limit(500),
     ]);
     setBalances(bal.data || []);
     setHistory(hist.data || []);
@@ -31,8 +31,8 @@ export default function AdminLoyalty() {
   useEffect(() => { refresh(); }, []);
 
   const nameOf = (uid: string) => {
-    const u = users.find(x => x.user_id === uid);
-    return u ? (u.full_name || u.email) : uid.slice(0, 8);
+    const u = users.find(x => x.id === uid);
+    return u ? (u.name || u.email) : uid.slice(0, 8);
   };
 
   const submit = async () => {
@@ -62,7 +62,7 @@ export default function AdminLoyalty() {
                 <Label>User</Label>
                 <select className="w-full border border-border rounded-md px-3 py-2 bg-background" value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })}>
                   <option value="">Pilih user…</option>
-                  {users.map(u => <option key={u.user_id} value={u.user_id}>{u.full_name || u.email}</option>)}
+                  {users.map(u => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
                 </select>
               </div>
               <div>

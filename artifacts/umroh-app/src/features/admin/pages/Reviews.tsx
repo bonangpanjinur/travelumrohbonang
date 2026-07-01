@@ -14,7 +14,7 @@ export default function AdminReviews() {
 
   const refresh = async () => {
     setLoading(true);
-    let q = supabase.from("package_reviews").select("*, packages(title), profiles(full_name, email)").order("created_at", { ascending: false }).limit(200);
+    let q = supabase.from("package_reviews").select("*, packages(title), profiles(name, email)").order("created_at", { ascending: false }).limit(200);
     if (filter === "pending") q = q.eq("is_approved", false);
     if (filter === "approved") q = q.eq("is_approved", true);
     const { data } = await q;
@@ -62,7 +62,7 @@ export default function AdminReviews() {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold">{r.profiles?.full_name || r.profiles?.email || "Anonim"}</span>
+                    <span className="font-bold">{r.profiles?.name || r.profiles?.email || "Anonim"}</span>
                     <span className="text-xs text-muted-foreground">· {r.packages?.title}</span>
                   </div>
                   <div className="flex items-center gap-1 mb-2">

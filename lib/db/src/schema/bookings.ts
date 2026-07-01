@@ -36,5 +36,8 @@ export const bookingPilgrims = pgTable("booking_pilgrims", {
   email: text("email"),
   gender: text("gender"),
   nik: text("nik"),
+  birthDate: text("birth_date"),
+  passportNumber: text("passport_number"),
+  passportExpiry: text("passport_expiry"),
   createdAt: timestamp("created_at", { withTimezone: true }),
 });

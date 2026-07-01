@@ -8,5 +8,7 @@ export const profiles = pgTable("profiles", {
   avatarUrl: text("avatar_url"),
   branchId: text("branch_id"),
   totpEnabled: boolean("totp_enabled").notNull(),
+  totpSecret: text("totp_secret"),
+  totpBackupCodes: text("totp_backup_codes"),
   createdAt: timestamp("created_at", { withTimezone: true }),
 });

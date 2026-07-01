@@ -17,7 +17,7 @@ interface Review {
   created_at: string;
   user_id: string;
   is_approved: boolean;
-  profiles?: { full_name: string | null } | null;
+  profiles?: { name: string | null } | null;
 }
 
 export default function PackageReviews({ packageId, packageTitle }: { packageId: string; packageTitle: string }) {
@@ -33,7 +33,7 @@ export default function PackageReviews({ packageId, packageTitle }: { packageId:
     setLoading(true);
     const { data } = await supabase
       .from("package_reviews")
-      .select("*, profiles(full_name)")
+      .select("*, profiles(name)")
       .eq("package_id", packageId)
       .eq("is_approved", true)
       .order("created_at", { ascending: false })
@@ -76,7 +76,7 @@ export default function PackageReviews({ packageId, packageTitle }: { packageId:
             review: approved.slice(0, 5).map(r => ({
               "@type": "Review",
               reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5 },
-              author: { "@type": "Person", name: r.profiles?.full_name || "Jamaah" },
+              author: { "@type": "Person", name: r.profiles?.name || "Jamaah" },
               datePublished: r.created_at,
               reviewBody: r.comment || "",
             })),
@@ -107,7 +107,7 @@ export default function PackageReviews({ packageId, packageTitle }: { packageId:
           {approved.map(r => (
             <article key={r.id} className="bg-card border border-border rounded-xl p-4">
               <header className="flex items-center justify-between mb-1">
-                <div className="font-semibold text-sm">{r.profiles?.full_name || "Jamaah"}</div>
+                <div className="font-semibold text-sm">{r.profiles?.name || "Jamaah"}</div>
                 <div className="flex items-center gap-1">
                   {[1,2,3,4,5].map(i => (
                     <Star key={i} className={`w-3 h-3 ${i <= r.rating ? "fill-gold text-gold" : "text-muted"}`} />
