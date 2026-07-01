@@ -16,7 +16,6 @@ export const BookingSchema = z.object({
 });
 
 export const CreateBookingRequest = z.object({
-  userId: z.string(),
   packageId: z.string(),
   departureId: z.string(),
   totalPrice: z.number().positive(),

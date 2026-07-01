@@ -2,12 +2,20 @@ import { Router } from "express";
 import { db, profiles } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { ProfileSchema, UpdateProfileRequest } from "@workspace/api-zod";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
+
+router.use(requireAuth);
 
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (id !== req.user!.id) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
 
     const [profile] = await db
       .select()
@@ -30,10 +38,17 @@ router.patch("/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (id !== req.user!.id) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
     const parsed = UpdateProfileRequest.safeParse(req.body);
 
     if (!parsed.success) {
-      res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
+      res
+        .status(400)
+        .json({ error: "Invalid request body", details: parsed.error.flatten() });
       return;
     }
 

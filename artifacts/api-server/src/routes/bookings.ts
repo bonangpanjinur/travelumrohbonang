@@ -1,13 +1,16 @@
 import { Router } from "express";
 import { db, bookings } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import {
   BookingListResponse,
   BookingSchema,
   CreateBookingRequest,
 } from "@workspace/api-zod";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
+
+router.use(requireAuth);
 
 function generateBookingCode(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -20,12 +23,7 @@ function generateBookingCode(): string {
 
 router.get("/", async (req, res) => {
   try {
-    const { userId } = req.query;
-
-    if (!userId || typeof userId !== "string") {
-      res.status(400).json({ error: "userId query parameter is required" });
-      return;
-    }
+    const userId = req.user!.id;
 
     const data = await db
       .select()
@@ -45,7 +43,7 @@ router.get("/:id", async (req, res) => {
     const [booking] = await db
       .select()
       .from(bookings)
-      .where(eq(bookings.id, id))
+      .where(and(eq(bookings.id, id), eq(bookings.userId, req.user!.id)))
       .limit(1);
 
     if (!booking) {
@@ -64,13 +62,16 @@ router.post("/", async (req, res) => {
     const parsed = CreateBookingRequest.safeParse(req.body);
 
     if (!parsed.success) {
-      res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
+      res
+        .status(400)
+        .json({ error: "Invalid request body", details: parsed.error.flatten() });
       return;
     }
 
-    const { userId, packageId, departureId, totalPrice, currency, paymentScheme, notes } =
+    const { packageId, departureId, totalPrice, currency, paymentScheme, notes } =
       parsed.data;
 
+    const userId = req.user!.id;
     const bookingCode = generateBookingCode();
 
     const [created] = await db
