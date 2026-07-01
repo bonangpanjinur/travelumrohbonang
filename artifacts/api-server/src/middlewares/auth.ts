@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { supabase } from "../lib/supabase";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 export interface AuthenticatedUser {
   id: string;
@@ -20,6 +20,11 @@ export async function requireAuth(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) {
+    res.status(503).json({ error: "Authentication is not configured yet" });
+    return;
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
