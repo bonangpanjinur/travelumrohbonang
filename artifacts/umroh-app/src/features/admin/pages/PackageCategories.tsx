@@ -21,6 +21,7 @@ interface Category {
   parent_id: string | null;
   sort_order: number | null;
   is_active: boolean | null;
+  show_extra_hotels: boolean | null;
   parent?: { name: string } | null;
 }
 
@@ -30,6 +31,7 @@ const emptyForm = {
   parent_id: "",
   sort_order: 0,
   is_active: true,
+  show_extra_hotels: false,
 };
 
 const AdminPackageCategories = () => {
@@ -51,7 +53,7 @@ const AdminPackageCategories = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("package_categories")
-      .select("id, name, description, parent_id, sort_order, is_active, parent:package_categories!package_categories_parent_id_fkey(name)")
+      .select("id, name, description, parent_id, sort_order, is_active, show_extra_hotels, parent:package_categories!package_categories_parent_id_fkey(name)")
       .order("sort_order", { ascending: true })
       .order("name");
 
@@ -76,6 +78,7 @@ const AdminPackageCategories = () => {
       parent_id: cat.parent_id || "",
       sort_order: cat.sort_order || 0,
       is_active: cat.is_active ?? true,
+      show_extra_hotels: cat.show_extra_hotels ?? false,
     });
     setIsOpen(true);
   };
@@ -91,6 +94,7 @@ const AdminPackageCategories = () => {
       parent_id: form.parent_id || null,
       sort_order: form.sort_order,
       is_active: form.is_active,
+      show_extra_hotels: form.show_extra_hotels,
     };
 
     let error;
@@ -236,6 +240,22 @@ const AdminPackageCategories = () => {
                   </div>
                 </div>
 
+                <div className="rounded-lg border border-border p-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="show_extra_hotels" className="font-medium">Hotel Tambahan</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Tampilkan pilihan hotel tambahan saat paket menggunakan kategori ini
+                      </p>
+                    </div>
+                    <Switch
+                      id="show_extra_hotels"
+                      checked={form.show_extra_hotels}
+                      onCheckedChange={(v) => setForm({ ...form, show_extra_hotels: v })}
+                    />
+                  </div>
+                </div>
+
                 <div className="flex justify-end gap-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
                   <Button type="submit" className="gradient-gold text-primary" disabled={saving}>
@@ -266,6 +286,7 @@ const AdminPackageCategories = () => {
                 <TableHead>Parent</TableHead>
                 <TableHead>Deskripsi</TableHead>
                 <TableHead className="w-20 text-center">Urutan</TableHead>
+                <TableHead className="w-32 text-center">Hotel Tambahan</TableHead>
                 <TableHead className="w-24 text-center">Status</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
@@ -288,6 +309,11 @@ const AdminPackageCategories = () => {
                     {cat.description || "—"}
                   </TableCell>
                   <TableCell className="text-center text-sm">{cat.sort_order ?? 0}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={cat.show_extra_hotels ? "default" : "secondary"} className="text-xs">
+                      {cat.show_extra_hotels ? "Ya" : "Tidak"}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center">
                       <Switch

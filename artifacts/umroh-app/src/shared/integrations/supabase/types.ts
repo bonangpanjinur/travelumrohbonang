@@ -1545,6 +1545,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           parent_id: string | null
+          show_extra_hotels: boolean | null
           sort_order: number | null
         }
         Insert: {
@@ -1554,6 +1555,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           parent_id?: string | null
+          show_extra_hotels?: boolean | null
           sort_order?: number | null
         }
         Update: {
@@ -1563,6 +1565,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           parent_id?: string | null
+          show_extra_hotels?: boolean | null
           sort_order?: number | null
         }
         Relationships: [

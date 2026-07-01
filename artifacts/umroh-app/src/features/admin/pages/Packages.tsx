@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Hotel, X, Search, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Hotel, X, Search, Download, ExternalLink } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import { Link } from "react-router-dom";
 import PackageCommissions from "@/features/admin/components/PackageCommissions";
@@ -39,7 +39,7 @@ interface Package {
   airport_id: string | null;
 }
 
-interface Option { id: string; name: string; }
+interface Option { id: string; name: string; show_extra_hotels?: boolean | null; is_active?: boolean | null; }
 interface HotelOption extends Option { city: string | null; }
 
 interface ExtraHotel {
@@ -130,7 +130,7 @@ const AdminPackages = () => {
 
   const fetchOptions = async () => {
     const [catRes, hotelRes, airlineRes, airportRes] = await Promise.all([
-      supabase.from("package_categories").select("id, name").order("sort_order"),
+      supabase.from("package_categories").select("id, name, show_extra_hotels, is_active").order("sort_order"),
       supabase.from("hotels").select("id, name, city").order("name"),
       supabase.from("airlines").select("id, name").order("name"),
       supabase.from("airports").select("id, name, code").order("name"),
@@ -159,10 +159,9 @@ const AdminPackages = () => {
     setExtraHotels((data as ExtraHotel[]) || []);
   };
 
-  // Check if selected category needs extra hotels
+  // Check if selected category needs extra hotels (driven by admin setting, not name matching)
   const selectedCategory = categories.find(c => c.id === form.category_id);
-  const categoryName = selectedCategory?.name?.toLowerCase() || "";
-  const showExtraHotels = categoryName.includes("plus") || categoryName.includes("haji");
+  const showExtraHotels = selectedCategory?.show_extra_hotels ?? false;
 
   const makkahHotels = hotels.filter(h => h.city === "Makkah");
   const madinahHotels = hotels.filter(h => h.city === "Madinah");
@@ -382,11 +381,25 @@ const AdminPackages = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Kategori</Label>
+                  <div className="flex items-center justify-between mb-1">
+                    <Label>Kategori</Label>
+                    <Link
+                      to="/admin/package-categories"
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                      title="Kelola Kategori"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Kelola
+                    </Link>
+                  </div>
                   <Select value={form.category_id || undefined} onValueChange={(v) => setForm({ ...form, category_id: v })}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Kategori" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Pilih Kategori" /></SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      {categories.filter(c => c.id).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      {categories.filter(c => c.id && (c.is_active !== false || c.id === form.category_id)).map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}{c.is_active === false ? " (Nonaktif)" : ""}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
