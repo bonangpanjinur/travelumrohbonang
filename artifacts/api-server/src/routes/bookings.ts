@@ -1,11 +1,15 @@
 import { Router } from "express";
-import { db, bookings, packages, packageDepartures } from "@workspace/db";
+import { db, bookings, packages, packageDepartures, bookingRooms, bookingPilgrims } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import {
   BookingListResponse,
   BookingWithDetailsSchema,
   BookingSchema,
   CreateBookingRequest,
+  CreateBookingRoomsRequest,
+  CreateBookingPilgrimsRequest,
+  BookingRoomSchema,
+  BookingPilgrimSchema,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
 
@@ -140,6 +144,85 @@ router.post("/", async (req, res) => {
     res.status(201).json(BookingSchema.parse(created));
   } catch (err) {
     res.status(500).json({ error: "Failed to create booking" });
+  }
+});
+
+router.post("/:id/rooms", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.id, id), eq(bookings.userId, userId)))
+      .limit(1);
+
+    if (!booking) {
+      res.status(404).json({ error: "Booking not found" });
+      return;
+    }
+
+    const parsed = CreateBookingRoomsRequest.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
+      return;
+    }
+
+    const rows = parsed.data.rooms.map((r) => ({
+      id: crypto.randomUUID(),
+      bookingId: id,
+      roomType: r.roomType,
+      price: String(r.price),
+      quantity: r.quantity,
+      subtotal: String(r.subtotal),
+    }));
+
+    const created = await db.insert(bookingRooms).values(rows).returning();
+
+    res.status(201).json({ data: created.map((r) => BookingRoomSchema.parse(r)) });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to create booking rooms" });
+  }
+});
+
+router.post("/:id/pilgrims", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.id, id), eq(bookings.userId, userId)))
+      .limit(1);
+
+    if (!booking) {
+      res.status(404).json({ error: "Booking not found" });
+      return;
+    }
+
+    const parsed = CreateBookingPilgrimsRequest.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
+      return;
+    }
+
+    const rows = parsed.data.pilgrims.map((p) => ({
+      id: crypto.randomUUID(),
+      bookingId: id,
+      name: p.name,
+      phone: p.phone ?? null,
+      email: p.email ?? null,
+      gender: p.gender,
+      nik: p.nik ?? null,
+    }));
+
+    const created = await db.insert(bookingPilgrims).values(rows).returning();
+
+    res.status(201).json({ data: created.map((p) => BookingPilgrimSchema.parse(p)) });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to create booking pilgrims" });
   }
 });
 

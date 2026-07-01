@@ -263,30 +263,34 @@ const Booking = () => {
         }),
       });
 
-      // Create booking rooms via Supabase (1 quantity = 1 jemaah)
-      const roomsToInsert = rooms
-        .filter((r) => r.quantity > 0)
-        .map((r) => ({
-          booking_id: booking.id,
-          room_type: r.room_type,
-          price: r.price,
-          quantity: r.quantity,
-          subtotal: r.quantity * r.price,
-        }));
+      // Create booking rooms via API
+      await apiFetch(`/api/bookings/${booking.id}/rooms`, {
+        method: "POST",
+        body: JSON.stringify({
+          rooms: rooms
+            .filter((r) => r.quantity > 0)
+            .map((r) => ({
+              roomType: r.room_type,
+              price: r.price,
+              quantity: r.quantity,
+              subtotal: r.quantity * r.price,
+            })),
+        }),
+      });
 
-      await supabase.from("booking_rooms").insert(roomsToInsert);
-
-      // Create pilgrims via Supabase
-      const pilgrimsToInsert = pilgrims.map((p) => ({
-        booking_id: booking.id,
-        name: p.name,
-        phone: p.phone || null,
-        email: p.email || null,
-        gender: p.gender as "male" | "female",
-        nik: p.nik || null,
-      }));
-
-      await supabase.from("booking_pilgrims").insert(pilgrimsToInsert);
+      // Create pilgrims via API
+      await apiFetch(`/api/bookings/${booking.id}/pilgrims`, {
+        method: "POST",
+        body: JSON.stringify({
+          pilgrims: pilgrims.map((p) => ({
+            name: p.name,
+            phone: p.phone || undefined,
+            email: p.email || undefined,
+            gender: p.gender as "male" | "female",
+            nik: p.nik || undefined,
+          })),
+        }),
+      });
 
       toast({ title: "Booking berhasil!", description: `Kode: ${booking.bookingCode}` });
       navigate(`/booking/payment/${booking.id}`);

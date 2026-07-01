@@ -38,5 +38,49 @@ export const BookingListResponse = z.object({
   total: z.number(),
 });
 
+export const BookingRoomSchema = z.object({
+  id: z.string(),
+  bookingId: z.string(),
+  roomType: z.string(),
+  price: z.union([z.string(), z.number()]),
+  quantity: z.number(),
+  subtotal: z.union([z.string(), z.number()]),
+});
+
+export const CreateBookingRoomItem = z.object({
+  roomType: z.string(),
+  price: z.number().positive(),
+  quantity: z.number().int().positive(),
+  subtotal: z.number().positive(),
+});
+
+export const CreateBookingRoomsRequest = z.object({
+  rooms: z.array(CreateBookingRoomItem).min(1),
+});
+
+export const BookingPilgrimSchema = z.object({
+  id: z.string(),
+  bookingId: z.string(),
+  name: z.string(),
+  phone: z.string().nullable(),
+  email: z.string().nullable(),
+  gender: z.string().nullable(),
+  nik: z.string().nullable(),
+});
+
+export const CreateBookingPilgrimItem = z.object({
+  name: z.string().min(1),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  gender: z.enum(["male", "female"]),
+  nik: z.string().optional(),
+});
+
+export const CreateBookingPilgrimsRequest = z.object({
+  pilgrims: z.array(CreateBookingPilgrimItem).min(1),
+});
+
 export type Booking = z.infer<typeof BookingSchema>;
 export type CreateBookingInput = z.infer<typeof CreateBookingRequest>;
+export type BookingRoom = z.infer<typeof BookingRoomSchema>;
+export type BookingPilgrim = z.infer<typeof BookingPilgrimSchema>;
