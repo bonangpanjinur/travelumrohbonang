@@ -11,6 +11,7 @@ import { Crown, Lock } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { AdminQueryErrorBoundary } from "./AdminQueryErrorBoundary";
 import { AdminHealthBanner } from "./AdminHealthBanner";
+import { AdminSessionTimeoutModal } from "./AdminSessionTimeoutModal";
 
 // Build a Set of premium route paths from the menu config
 const PREMIUM_PATHS = new Set(
@@ -124,6 +125,9 @@ const AdminLayout = () => {
         onOpenChange={(open) => setUpgradeDialog({ ...upgradeDialog, open })}
         featureName={upgradeDialog.feature}
       />
+
+      {/* Session expiry warning modal */}
+      <AdminSessionTimeoutModal />
     </div>
   );
 };
