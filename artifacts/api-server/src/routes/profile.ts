@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { db, profiles, eq } from "@workspace/db";
-import { ProfileSchema, UpdateProfileRequest } from "@workspace/api-zod";
+import {
+  ProfileSchema,
+  UpdateProfileRequest,
+  type UpdateProfileInput,
+} from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
 
@@ -9,7 +14,7 @@ router.use(requireAuth);
 
 router.get("/:id", async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     if (id !== req.user!.id) {
       res.status(403).json({ error: "Forbidden" });
@@ -28,32 +33,25 @@ router.get("/:id", async (req, res) => {
     }
 
     res.json(ProfileSchema.parse(profile));
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch profile" });
   }
 });
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", validate(UpdateProfileRequest), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     if (id !== req.user!.id) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
 
-    const parsed = UpdateProfileRequest.safeParse(req.body);
-
-    if (!parsed.success) {
-      res
-        .status(400)
-        .json({ error: "Invalid request body", details: parsed.error.flatten() });
-      return;
-    }
+    const updates = req.body as UpdateProfileInput;
 
     const [updated] = await db
       .update(profiles)
-      .set(parsed.data)
+      .set(updates)
       .where(eq(profiles.id, id))
       .returning();
 
@@ -63,7 +61,7 @@ router.patch("/:id", async (req, res) => {
     }
 
     res.json(ProfileSchema.parse(updated));
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to update profile" });
   }
 });

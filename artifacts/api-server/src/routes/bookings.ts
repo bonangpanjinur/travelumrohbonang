@@ -9,8 +9,12 @@ import {
   CreateBookingPilgrimsRequest,
   BookingRoomSchema,
   BookingPilgrimSchema,
+  type CreateBookingInput,
+  type BookingRoom,
+  type BookingPilgrim,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
+import { validate } from "../middlewares/validate";
 
 const router = Router();
 
@@ -56,14 +60,14 @@ router.get("/", async (req, res) => {
       .where(eq(bookings.userId, userId));
 
     res.json(BookingListResponse.parse({ data, total: data.length }));
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch bookings" });
   }
 });
 
 router.get("/:id", async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const [row] = await db
       .select({
@@ -98,25 +102,24 @@ router.get("/:id", async (req, res) => {
     }
 
     res.json(BookingWithDetailsSchema.parse(row));
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to fetch booking" });
   }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", validate(CreateBookingRequest), async (req, res) => {
   try {
-    const parsed = CreateBookingRequest.safeParse(req.body);
-
-    if (!parsed.success) {
-      res.status(400).json({
-        error: "Invalid request body",
-        details: parsed.error.flatten(),
-      });
-      return;
-    }
-
-    const { packageId, departureId, totalPrice, currency, paymentScheme, notes, picType, picId, agentId } =
-      parsed.data;
+    const {
+      packageId,
+      departureId,
+      totalPrice,
+      currency,
+      paymentScheme,
+      notes,
+      picType,
+      picId,
+      agentId,
+    } = req.body as CreateBookingInput;
 
     const userId = req.user!.id;
     const bookingCode = generateBookingCode();
@@ -141,14 +144,14 @@ router.post("/", async (req, res) => {
       .returning();
 
     res.status(201).json(BookingSchema.parse(created));
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to create booking" });
   }
 });
 
-router.post("/:id/rooms", async (req, res) => {
+router.post("/:id/rooms", validate(CreateBookingRoomsRequest), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const userId = req.user!.id;
 
     const [booking] = await db
@@ -162,13 +165,9 @@ router.post("/:id/rooms", async (req, res) => {
       return;
     }
 
-    const parsed = CreateBookingRoomsRequest.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
-      return;
-    }
+    const { rooms } = req.body as { rooms: BookingRoom[] };
 
-    const rows = parsed.data.rooms.map((r) => ({
+    const rows = rooms.map((r) => ({
       id: crypto.randomUUID(),
       bookingId: id,
       roomType: r.roomType,
@@ -180,14 +179,14 @@ router.post("/:id/rooms", async (req, res) => {
     const created = await db.insert(bookingRooms).values(rows).returning();
 
     res.status(201).json({ data: created.map((r) => BookingRoomSchema.parse(r)) });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to create booking rooms" });
   }
 });
 
-router.post("/:id/pilgrims", async (req, res) => {
+router.post("/:id/pilgrims", validate(CreateBookingPilgrimsRequest), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const userId = req.user!.id;
 
     const [booking] = await db
@@ -201,13 +200,9 @@ router.post("/:id/pilgrims", async (req, res) => {
       return;
     }
 
-    const parsed = CreateBookingPilgrimsRequest.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: "Invalid request body", details: parsed.error.flatten() });
-      return;
-    }
+    const { pilgrims } = req.body as { pilgrims: BookingPilgrim[] };
 
-    const rows = parsed.data.pilgrims.map((p) => ({
+    const rows = pilgrims.map((p) => ({
       id: crypto.randomUUID(),
       bookingId: id,
       name: p.name,
@@ -220,7 +215,7 @@ router.post("/:id/pilgrims", async (req, res) => {
     const created = await db.insert(bookingPilgrims).values(rows).returning();
 
     res.status(201).json({ data: created.map((p) => BookingPilgrimSchema.parse(p)) });
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to create booking pilgrims" });
   }
 });
