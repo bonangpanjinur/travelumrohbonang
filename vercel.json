@@ -1,7 +1,5 @@
 {
   "outputDirectory": "artifacts/umroh-app/dist/public",
-  "cleanUrls": true,
-  "trailingSlash": false,
   "routes": [
     {
       "src": "/assets/(.*)",
