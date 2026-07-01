@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { db, profiles } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, profiles, eq } from "@workspace/db";
 import { ProfileSchema, UpdateProfileRequest } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/auth";
 

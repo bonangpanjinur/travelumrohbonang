@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { db, bookings, packages, packageDepartures, bookingRooms, bookingPilgrims } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, bookings, packages, packageDepartures, bookingRooms, bookingPilgrims, eq, and } from "@workspace/db";
 import {
   BookingListResponse,
   BookingWithDetailsSchema,

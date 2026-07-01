@@ -1,11 +1,10 @@
-import { Router } from "express";
-import { db, packages, packageDepartures, departurePrices } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { Router, type Request, type Response } from "express";
+import { db, packages, packageDepartures, departurePrices, eq, and } from "@workspace/db";
 import { PackageListResponse, PackageDetailSchema } from "@workspace/api-zod";
 
 const router = Router();
 
-router.get("/", async (req, res) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
     const { type, active } = req.query;
 
@@ -30,9 +29,9 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/:slug", async (req, res) => {
+router.get("/:slug", async (req: Request, res: Response) => {
   try {
-    const { slug } = req.params;
+    const slug = req.params.slug as string;
 
     const [pkg] = await db
       .select()
