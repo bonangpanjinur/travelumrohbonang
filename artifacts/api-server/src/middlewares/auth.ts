@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 export interface AuthenticatedUser {
   id: string;
   email: string | undefined;
+  role: string | undefined;
 }
 
 declare global {
@@ -38,6 +39,7 @@ export async function requireAuth(
   req.user = {
     id: data.user.id,
     email: data.user.email,
+    role: (data.user.app_metadata?.role as string | undefined),
   };
 
   next();
