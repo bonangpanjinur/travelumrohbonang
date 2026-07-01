@@ -5,8 +5,9 @@ import BookingFilters from "@/features/admin/components/BookingFilters";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Search, Download } from "lucide-react";
+import { Search, Download, Plus } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
+import AdminCreateBookingDialog from "@/features/admin/components/AdminCreateBookingDialog";
 import {
   Pagination,
   PaginationContent,
@@ -28,6 +29,7 @@ const AdminBookings = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     supabase.from("branches").select("id, name").eq("is_active", true).order("name").then(({ data }) => {
@@ -91,6 +93,9 @@ const AdminBookings = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-display font-bold">Booking</h1>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <Button className="gradient-gold text-primary" onClick={() => setCreateOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" /> Tambah Booking
+          </Button>
           <Button variant="outline" onClick={() => {
             const headers = ["Kode Booking", "Nama", "Email", "Paket", "Total Harga", "Status", "Tanggal"];
             const rows = bookings.map(b => [
@@ -192,6 +197,12 @@ const AdminBookings = () => {
           )}
         </>
       )}
+
+      <AdminCreateBookingDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onSuccess={fetchBookings}
+      />
     </div>
   );
 };

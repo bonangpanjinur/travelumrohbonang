@@ -1,2 +1,0 @@
-- [Umroh App Stack](umroh-app-stack.md) — Vite+React+Supabase app migrated from Vercel; key quirks for deps and Tailwind v4 setup.
-- [Vercel Express Types](vercel-express-types.md) — Never annotate `app`/`router` with explicit `Express`/`IRouter` types; always infer from factory calls to avoid @vercel/node build failures.

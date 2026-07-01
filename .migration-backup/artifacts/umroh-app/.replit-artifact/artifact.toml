@@ -5,6 +5,10 @@ version = "1.0.0"
 id = "artifacts/umroh-app"
 router = "path"
 
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
 [[services]]
 name = "web"
 paths = [ "/" ]
@@ -15,8 +19,8 @@ run = "pnpm --filter @workspace/umroh-app run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/umroh-app", "run", "build" ]
-serve = "static"
 publicDir = "artifacts/umroh-app/dist/public"
+serve = "static"
 
 [[services.production.rewrites]]
 from = "/*"

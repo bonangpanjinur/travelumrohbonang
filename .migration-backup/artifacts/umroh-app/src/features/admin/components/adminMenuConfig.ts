@@ -38,6 +38,7 @@ import {
   KeyRound,
   Lock,
   Search,
+  Tag,
   LucideIcon
 
 } from "lucide-react";
@@ -90,7 +91,6 @@ export const menuGroups: MenuGroup[] = [
       { label: "Jemaah", href: "/admin/pilgrims", icon: Users },
       { label: "Manifest", href: "/admin/manifest", icon: ClipboardList },
       { label: "Check-In QR", href: "/admin/check-in", icon: ShieldCheck },
-      { label: "Galeri Keberangkatan", href: "/admin/departure-gallery", icon: Image },
       { label: "Manasik Kit", href: "/admin/manasik", icon: BookOpen },
       { label: "Dokumen Jemaah", href: "/admin/documents", icon: FileCheck, premium: true, premiumFeature: "Manajemen Dokumen Jemaah" },
     ],
@@ -129,6 +129,7 @@ export const menuGroups: MenuGroup[] = [
   {
     label: "Master Data",
     items: [
+      { label: "Kategori Paket", href: "/admin/package-categories", icon: Tag },
       { label: "Hotel", href: "/admin/hotels", icon: Hotel },
       { label: "Maskapai", href: "/admin/airlines", icon: Plane },
       { label: "Bandara", href: "/admin/airports", icon: MapPin },

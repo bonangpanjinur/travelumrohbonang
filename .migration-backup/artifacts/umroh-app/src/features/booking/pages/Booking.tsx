@@ -18,6 +18,7 @@ import { validatePilgrim } from "@/shared/lib/validations";
 import TurnstileCaptcha from "@/shared/components/common/TurnstileCaptcha";
 import { rateLimit } from "@/shared/lib/rateLimit";
 import { useCurrency } from "@/shared/hooks/useCurrency";
+import { apiFetch } from "@/shared/lib/apiClient";
 
 interface Package {
   id: string;
@@ -215,14 +216,10 @@ const Booking = () => {
 
 
     try {
-      // Generate booking code
-      const { data: codeData } = await supabase.rpc("generate_booking_code");
-      const bookingCode = codeData || `UMR-${Date.now()}`;
-
       // Determine PIC
       let finalPicId: string | null = null;
       let finalPicType = picType;
-      
+
       if (picType === "branch" && picBranchId) {
         finalPicId = picBranchId;
       } else if (picType === "agent" && picAgentId) {
@@ -252,51 +249,50 @@ const Booking = () => {
         }
       } catch (e) { console.warn("referral attach failed", e); }
 
-      // Create booking
-      const { data: booking, error: bookingError } = await supabase
-        .from("bookings")
-        .insert({
-          booking_code: bookingCode,
-          user_id: user.id, // CRITICAL FIX: Menautkan booking ke user
-          package_id: pkg.id,
-          departure_id: departure.id,
-          total_price: getTotalPrice(),
-          status: "draft",
-          pic_type: finalPicType,
-          pic_id: finalPicId,
-          agent_id: agentIdFromRef,
-        })
-        .select()
-        .single();
+      // Create booking via API (handles auth, code generation, and ownership)
+      const booking = await apiFetch<{ id: string; bookingCode: string }>("/api/bookings", {
+        method: "POST",
+        body: JSON.stringify({
+          packageId: pkg.id,
+          departureId: departure.id,
+          totalPrice: getTotalPrice(),
+          currency: "IDR",
+          picType: finalPicType,
+          picId: finalPicId ?? undefined,
+          agentId: agentIdFromRef ?? undefined,
+        }),
+      });
 
-      if (bookingError) throw bookingError;
+      // Create booking rooms via API
+      await apiFetch(`/api/bookings/${booking.id}/rooms`, {
+        method: "POST",
+        body: JSON.stringify({
+          rooms: rooms
+            .filter((r) => r.quantity > 0)
+            .map((r) => ({
+              roomType: r.room_type,
+              price: r.price,
+              quantity: r.quantity,
+              subtotal: r.quantity * r.price,
+            })),
+        }),
+      });
 
-      // Create booking rooms (1 quantity = 1 jemaah)
-      const roomsToInsert = rooms
-        .filter((r) => r.quantity > 0)
-        .map((r) => ({
-          booking_id: booking.id,
-          room_type: r.room_type,
-          price: r.price,
-          quantity: r.quantity,
-          subtotal: r.quantity * r.price,
-        }));
+      // Create pilgrims via API
+      await apiFetch(`/api/bookings/${booking.id}/pilgrims`, {
+        method: "POST",
+        body: JSON.stringify({
+          pilgrims: pilgrims.map((p) => ({
+            name: p.name,
+            phone: p.phone || undefined,
+            email: p.email || undefined,
+            gender: p.gender as "male" | "female",
+            nik: p.nik || undefined,
+          })),
+        }),
+      });
 
-      await supabase.from("booking_rooms").insert(roomsToInsert);
-
-      // Create pilgrims
-      const pilgrimsToInsert = pilgrims.map((p) => ({
-        booking_id: booking.id,
-        name: p.name,
-        phone: p.phone || null,
-        email: p.email || null,
-        gender: p.gender as "male" | "female",
-        nik: p.nik || null,
-      }));
-
-      await supabase.from("booking_pilgrims").insert(pilgrimsToInsert);
-
-      toast({ title: "Booking berhasil!", description: `Kode: ${bookingCode}` });
+      toast({ title: "Booking berhasil!", description: `Kode: ${booking.bookingCode}` });
       navigate(`/booking/payment/${booking.id}`);
     } catch (error: any) {
       console.error("Booking error:", error);

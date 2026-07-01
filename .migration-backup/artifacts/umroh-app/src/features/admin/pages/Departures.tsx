@@ -7,12 +7,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search, Images } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import AdminPagination from "@/features/admin/components/AdminPagination";
 import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
+import { Dialog as GalleryDialog, DialogContent as GalleryDialogContent, DialogHeader as GalleryDialogHeader, DialogTitle as GalleryDialogTitle } from "@/shared/components/ui/dialog";
+import DepartureGalleryPanel from "@/features/admin/components/DepartureGalleryPanel";
 import { useDeleteConfirm } from "@/features/admin/hooks/useDeleteConfirm";
 
 interface Package {
@@ -54,6 +56,7 @@ const AdminDepartures = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Departure | null>(null);
   const [search, setSearch] = useState("");
+  const [galleryDep, setGalleryDep] = useState<Departure | null>(null);
   const { toast } = useToast();
   const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
 
@@ -412,6 +415,9 @@ const AdminDepartures = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon" title="Galeri Foto" onClick={() => setGalleryDep(dep)}>
+                        <Images className="w-4 h-4 text-muted-foreground" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(dep)}>
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -428,6 +434,20 @@ const AdminDepartures = () => {
         <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
         </>
       )}
+
+      <GalleryDialog open={!!galleryDep} onOpenChange={(o) => !o && setGalleryDep(null)}>
+        <GalleryDialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <GalleryDialogHeader>
+            <GalleryDialogTitle>Galeri Foto — {galleryDep?.package?.title}</GalleryDialogTitle>
+          </GalleryDialogHeader>
+          {galleryDep && (
+            <DepartureGalleryPanel
+              departureId={galleryDep.id}
+              departureLabel={format(new Date(galleryDep.departure_date), "d MMMM yyyy", { locale: localeId })}
+            />
+          )}
+        </GalleryDialogContent>
+      </GalleryDialog>
     </div>
   );
 };

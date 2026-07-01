@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { useMyBookings } from "@/features/booking/hooks/useMyBookings";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { motion } from "framer-motion";
-import { Calendar, Package, ArrowRight, Printer, AlertCircle, MapPin, ChevronDown, Ticket, MessageCircle, Receipt, PenLine, CheckCircle2 } from "lucide-react";
+import { Calendar, Package, ArrowRight, AlertCircle, MapPin, ChevronDown, Ticket, MessageCircle, Receipt, PenLine, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import InvoiceButton from "@/features/booking/components/InvoiceButton";
@@ -17,17 +18,6 @@ import { useToast } from "@/shared/hooks/use-toast";
 import BookingItinerary from "@/features/booking/components/BookingItinerary";
 import ChatBox from "@/features/cms/components/ChatBox";
 import { useCurrency } from "@/shared/hooks/useCurrency";
-
-interface BookingItem {
-  id: string;
-  booking_code: string;
-  total_price: number;
-  status: string;
-  created_at: string;
-  departure_id: string | null;
-  package: { title: string; slug: string } | null;
-  departure: { departure_date: string } | null;
-}
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -48,66 +38,46 @@ const MyBookings = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [signedMap, setSignedMap] = useState<Record<string, boolean>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState<string | null>(null);
+
+  const { bookings, loading, error } = useMyBookings(user?.id);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       navigate("/auth");
-      return;
     }
+  }, [user, authLoading, navigate]);
 
-    const fetchBookings = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const { data, error: fetchError } = await supabase
-          .from("bookings")
-          .select(`
-            id, booking_code, total_price, status, created_at, departure_id,
-            package:packages(title, slug),
-            departure:package_departures(departure_date)
-          `)
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
+  useEffect(() => {
+    if (!user || bookings.length === 0) return;
 
-        if (fetchError) throw fetchError;
-        const list = (data as unknown as BookingItem[]) || [];
-        setBookings(list);
-
-        if (list.length > 0) {
-          const ids = list.map((b) => b.id);
-          const { data: contracts } = await supabase
-            .from("contracts")
-            .select("booking_id, signed_at")
-            .in("booking_id", ids)
-            .eq("user_id", user.id);
-          const map: Record<string, boolean> = {};
-          (contracts ?? []).forEach((c: any) => {
-            if (c.signed_at) map[c.booking_id] = true;
-          });
-          setSignedMap(map);
-        }
-      } catch (err: any) {
-        console.error("Error fetching bookings:", err);
-        setError(err.message || "Gagal memuat data booking");
-        toast({
-          title: "Error",
-          description: "Gagal memuat data booking Anda.",
-          variant: "destructive",
+    const ids = bookings.map((b) => b.id);
+    supabase
+      .from("contracts")
+      .select("booking_id, signed_at")
+      .in("booking_id", ids)
+      .eq("user_id", user.id)
+      .then(({ data: contracts }) => {
+        const map: Record<string, boolean> = {};
+        (contracts ?? []).forEach((c: any) => {
+          if (c.signed_at) map[c.booking_id] = true;
         });
-      } finally {
-        setLoading(false);
-      }
-    };
+        setSignedMap(map);
+      });
+  }, [user, bookings]);
 
-    fetchBookings();
-  }, [user, authLoading, navigate, toast]);
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Gagal memuat data booking Anda.",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
   if (loading || authLoading) {
     return <LoadingSpinner fullScreen />;
@@ -153,14 +123,14 @@ const MyBookings = () => {
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="font-mono text-sm text-muted-foreground">{b.booking_code}</span>
-                        <Badge className={statusColors[b.status]}>{statusLabels[b.status]}</Badge>
+                        <span className="font-mono text-sm text-muted-foreground">{b.bookingCode}</span>
+                        <Badge className={statusColors[b.status ?? ""]}>{statusLabels[b.status ?? ""] ?? b.status}</Badge>
                       </div>
-                      <h3 className="text-lg font-bold">{b.package?.title || "Paket Umroh"}</h3>
-                      {b.departure && (
+                      <h3 className="text-lg font-bold">{b.packageTitle ?? "Paket Umroh"}</h3>
+                      {b.departureDate && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                           <Calendar className="w-4 h-4" />
-                          <span>Keberangkatan: {format(new Date(b.departure.departure_date), "d MMMM yyyy", { locale: localeId })}</span>
+                          <span>Keberangkatan: {format(new Date(b.departureDate), "d MMMM yyyy", { locale: localeId })}</span>
                         </div>
                       )}
                     </div>
@@ -168,7 +138,7 @@ const MyBookings = () => {
                       <div className="text-right">
                         <div className="text-sm text-muted-foreground">Total</div>
                         <div className="text-xl font-bold text-gold">
-                          {fmt(b.total_price)}
+                          {fmt(b.totalPrice)}
                         </div>
                       </div>
                       <div className="flex gap-2 flex-wrap">
@@ -201,7 +171,7 @@ const MyBookings = () => {
                       </div>
                     </div>
                   </div>
-                  {b.departure_id && (
+                  {b.departureId && (
                     <div className="mt-4 pt-4 border-t border-border">
                       <button
                         type="button"
@@ -220,7 +190,7 @@ const MyBookings = () => {
                       </button>
                       {expanded === b.id && (
                         <div className="mt-4">
-                          <BookingItinerary departureId={b.departure_id} />
+                          <BookingItinerary departureId={b.departureId} />
                         </div>
                       )}
                     </div>

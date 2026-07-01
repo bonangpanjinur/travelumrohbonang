@@ -104,6 +104,7 @@ import AdminIntegrations from "./features/admin/pages/Integrations";
 import AdminLoginSettings from "./features/admin/pages/LoginSettings";
 import AdminSEO from "./features/admin/pages/SEO";
 import PackageCosts from "./features/admin/pages/PackageCosts";
+import AdminPackageCategories from "./features/admin/pages/PackageCategories";
 import { useEffect } from "react";
 import { installGlobalErrorHandlers } from "@/shared/lib/errorLogger";
 const queryClient = new QueryClient();
@@ -213,6 +214,7 @@ const AppContent = () => {
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="loyalty" element={<AdminLoyalty />} />
           <Route path="slug-redirects" element={<AdminSlugRedirects />} />
+          <Route path="package-categories" element={<AdminPackageCategories />} />
           <Route path="departure-gallery" element={<AdminDepartureGallery />} />
           <Route path="check-in" element={<AdminCheckIn />} />
           <Route path="manasik" element={<AdminManasik />} />

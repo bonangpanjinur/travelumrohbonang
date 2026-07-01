@@ -1,2 +1,2 @@
-- [Umroh Gateway refactor phases](umroh-refactor-phases.md) — phase 1-4 SELESAI; phase 5+ = database, docs, testing, final cleanup
-- [Supabase missing env vars](supabase-env.md) — app berjalan (HTTP 200) tapi VITE_SUPABASE_URL belum di-set; supabaseUrl error di console adalah pre-existing bukan regresi
+- [Umroh App Stack](umroh-app-stack.md) — Vite+React+Supabase app migrated from Vercel; key quirks for deps and Tailwind v4 setup.
+- [Vercel Express Types](vercel-express-types.md) — Never annotate `app`/`router` with explicit `Express`/`IRouter` types; always infer from factory calls to avoid @vercel/node build failures.
