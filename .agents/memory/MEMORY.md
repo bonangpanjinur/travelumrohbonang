@@ -1,0 +1,1 @@
+- [Umroh App Stack](umroh-app-stack.md) — Vite+React+Supabase app migrated from Vercel; key quirks for deps and Tailwind v4 setup.

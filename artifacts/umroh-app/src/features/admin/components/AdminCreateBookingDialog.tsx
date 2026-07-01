@@ -190,8 +190,9 @@ const AdminCreateBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
       await supabase.from("booking_rooms").insert({
         booking_id: booking.id,
         room_type: form.room_type,
-        price_per_person: totalPrice,
-        num_persons: 1,
+        price: totalPrice,
+        quantity: 1,
+        subtotal: totalPrice,
       });
 
       if (form.customer_name && !form.user_id) {
