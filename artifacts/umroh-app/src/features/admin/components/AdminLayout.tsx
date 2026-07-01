@@ -9,6 +9,7 @@ import UpgradeDialog from "./UpgradeDialog";
 import { BrandingSettings, defaultBranding, menuItems } from "./adminMenuConfig";
 import { Crown, Lock } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
+import { AdminQueryErrorBoundary } from "./AdminQueryErrorBoundary";
 
 // Build a Set of premium route paths from the menu config
 const PREMIUM_PATHS = new Set(
@@ -105,7 +106,11 @@ const AdminLayout = () => {
               onContact={() => setUpgradeDialog({ open: true, feature: premiumFeatureName })}
             />
           ) : (
-            <Outlet />
+            // key={location.pathname} resets the boundary on every route change
+            // so a crash on one page doesn't bleed into the next page.
+            <AdminQueryErrorBoundary key={location.pathname}>
+              <Outlet />
+            </AdminQueryErrorBoundary>
           )}
         </div>
       </main>
