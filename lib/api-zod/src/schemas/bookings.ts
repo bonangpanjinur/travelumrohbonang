@@ -24,8 +24,14 @@ export const CreateBookingRequest = z.object({
   notes: z.string().optional(),
 });
 
+export const BookingWithDetailsSchema = BookingSchema.extend({
+  packageTitle: z.string().nullable(),
+  packageSlug: z.string().nullable(),
+  departureDate: z.string().nullable(),
+});
+
 export const BookingListResponse = z.object({
-  data: z.array(BookingSchema),
+  data: z.array(BookingWithDetailsSchema),
   total: z.number(),
 });
 

@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { db, bookings } from "@workspace/db";
+import { db, bookings, packages, packageDepartures } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import {
   BookingListResponse,
+  BookingWithDetailsSchema,
   BookingSchema,
   CreateBookingRequest,
 } from "@workspace/api-zod";
@@ -26,8 +27,29 @@ router.get("/", async (req, res) => {
     const userId = req.user!.id;
 
     const data = await db
-      .select()
+      .select({
+        id: bookings.id,
+        bookingCode: bookings.bookingCode,
+        userId: bookings.userId,
+        packageId: bookings.packageId,
+        departureId: bookings.departureId,
+        branchId: bookings.branchId,
+        status: bookings.status,
+        totalPrice: bookings.totalPrice,
+        currency: bookings.currency,
+        paymentScheme: bookings.paymentScheme,
+        notes: bookings.notes,
+        createdAt: bookings.createdAt,
+        packageTitle: packages.title,
+        packageSlug: packages.slug,
+        departureDate: packageDepartures.departureDate,
+      })
       .from(bookings)
+      .leftJoin(packages, eq(bookings.packageId, packages.id))
+      .leftJoin(
+        packageDepartures,
+        eq(bookings.departureId, packageDepartures.id),
+      )
       .where(eq(bookings.userId, userId));
 
     res.json(BookingListResponse.parse({ data, total: data.length }));
@@ -40,18 +62,39 @@ router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [booking] = await db
-      .select()
+    const [row] = await db
+      .select({
+        id: bookings.id,
+        bookingCode: bookings.bookingCode,
+        userId: bookings.userId,
+        packageId: bookings.packageId,
+        departureId: bookings.departureId,
+        branchId: bookings.branchId,
+        status: bookings.status,
+        totalPrice: bookings.totalPrice,
+        currency: bookings.currency,
+        paymentScheme: bookings.paymentScheme,
+        notes: bookings.notes,
+        createdAt: bookings.createdAt,
+        packageTitle: packages.title,
+        packageSlug: packages.slug,
+        departureDate: packageDepartures.departureDate,
+      })
       .from(bookings)
+      .leftJoin(packages, eq(bookings.packageId, packages.id))
+      .leftJoin(
+        packageDepartures,
+        eq(bookings.departureId, packageDepartures.id),
+      )
       .where(and(eq(bookings.id, id), eq(bookings.userId, req.user!.id)))
       .limit(1);
 
-    if (!booking) {
+    if (!row) {
       res.status(404).json({ error: "Booking not found" });
       return;
     }
 
-    res.json(BookingSchema.parse(booking));
+    res.json(BookingWithDetailsSchema.parse(row));
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch booking" });
   }
@@ -62,9 +105,10 @@ router.post("/", async (req, res) => {
     const parsed = CreateBookingRequest.safeParse(req.body);
 
     if (!parsed.success) {
-      res
-        .status(400)
-        .json({ error: "Invalid request body", details: parsed.error.flatten() });
+      res.status(400).json({
+        error: "Invalid request body",
+        details: parsed.error.flatten(),
+      });
       return;
     }
 
