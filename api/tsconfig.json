@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "noImplicitAny": true,
+    "lib": ["ES2022"],
+    "typeRoots": ["../node_modules/@types", "../artifacts/api-server/node_modules/@types"]
+  },
+  "include": ["./**/*.ts", "../artifacts/api-server/src/**/*.ts"]
+}
