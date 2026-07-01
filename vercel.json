@@ -3,7 +3,6 @@
   "outputDirectory": "artifacts/umroh-app/dist/public",
   "functions": {
     "api/[...path].ts": {
-      "runtime": "@vercel/node@5",
       "includeFiles": "artifacts/api-server/src/**,libs/**"
     }
   },
