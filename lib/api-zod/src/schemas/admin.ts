@@ -46,6 +46,43 @@ export const AdminCreateDeparturePriceRequest = z.object({
 
 export const AdminUpdateDeparturePriceRequest = AdminCreateDeparturePriceRequest.partial();
 
+export const AdminRecordPaymentRequest = z.object({
+  type: z.enum(["dp", "installment", "settlement"]),
+  amount: z.number().int().positive(),
+  paidAt: z.string().min(1),
+  method: z.string().optional(),
+  referenceNumber: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const AdminUpdatePaymentRequest = AdminRecordPaymentRequest.partial();
+
+export const BookingPaymentSchema = z.object({
+  id: z.string(),
+  bookingId: z.string(),
+  type: z.string(),
+  amount: z.number(),
+  paidAt: z.union([z.string(), z.date()]).transform((v) =>
+    v instanceof Date ? v.toISOString() : v,
+  ),
+  method: z.string().nullable().optional(),
+  referenceNumber: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  recordedBy: z.string().nullable().optional(),
+  isVoided: z.boolean(),
+  createdAt: z.union([z.string(), z.date()]).nullable().optional().transform((v) =>
+    v instanceof Date ? v.toISOString() : (v ?? null),
+  ),
+});
+
+export const BookingPaymentSummarySchema = z.object({
+  totalPrice: z.number(),
+  totalPaid: z.number(),
+  remaining: z.number(),
+  paymentStatus: z.enum(["unpaid", "partial", "paid"]),
+  payments: z.array(BookingPaymentSchema),
+});
+
 export type AdminCreatePackageInput = z.infer<typeof AdminCreatePackageRequest>;
 export type AdminUpdatePackageInput = z.infer<typeof AdminUpdatePackageRequest>;
 export type AdminUpdateBookingStatusInput = z.infer<typeof AdminUpdateBookingStatusRequest>;
@@ -54,3 +91,5 @@ export type AdminCreateDepartureInput = z.infer<typeof AdminCreateDepartureReque
 export type AdminUpdateDepartureInput = z.infer<typeof AdminUpdateDepartureRequest>;
 export type AdminCreateDeparturePriceInput = z.infer<typeof AdminCreateDeparturePriceRequest>;
 export type AdminUpdateDeparturePriceInput = z.infer<typeof AdminUpdateDeparturePriceRequest>;
+export type AdminRecordPaymentInput = z.infer<typeof AdminRecordPaymentRequest>;
+export type AdminUpdatePaymentInput = z.infer<typeof AdminUpdatePaymentRequest>;

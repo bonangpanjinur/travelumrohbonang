@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, numeric, boolean } from "drizzle-orm/pg-core";
 
 export const bookings = pgTable("bookings", {
   id: text("id").primaryKey(),
@@ -39,5 +39,19 @@ export const bookingPilgrims = pgTable("booking_pilgrims", {
   birthDate: text("birth_date"),
   passportNumber: text("passport_number"),
   passportExpiry: text("passport_expiry"),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+});
+
+export const bookingPayments = pgTable("booking_payments", {
+  id: text("id").primaryKey(),
+  bookingId: text("booking_id").notNull(),
+  type: text("type").notNull(), // "dp" | "installment" | "settlement"
+  amount: integer("amount").notNull(),
+  paidAt: timestamp("paid_at", { withTimezone: true }).notNull(),
+  method: text("method"),
+  referenceNumber: text("reference_number"),
+  notes: text("notes"),
+  recordedBy: text("recorded_by"),
+  isVoided: boolean("is_voided").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }),
 });
