@@ -1,6 +1,6 @@
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/shared/hooks/useTheme";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 
 interface ThemeToggleProps {
   variant?: "navbar" | "admin";

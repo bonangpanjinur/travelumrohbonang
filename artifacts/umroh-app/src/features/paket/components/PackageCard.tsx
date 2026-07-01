@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { Star, Calendar, Users, ArrowRight, Plane, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";

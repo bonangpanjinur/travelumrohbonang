@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 
 interface Props {
   onSign: (dataUrl: string) => void;

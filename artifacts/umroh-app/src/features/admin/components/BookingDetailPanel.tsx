@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Users, UserCheck, DollarSign, FileDown, Building2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/shared/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { fetchInvoiceData, generateInvoiceHTML, openInvoicePrintWindow } from "./InvoiceGenerator";
 import { toast } from "sonner";
 

@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Camera } from "lucide-react";
 import SEO from "@/shared/components/seo/SEO";
 import BreadcrumbJsonLd from "@/shared/components/seo/BreadcrumbJsonLd";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/shared/components/ui/dialog";
 
 interface GalleryItem {
   id: string;

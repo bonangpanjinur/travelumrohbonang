@@ -1,5 +1,5 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { Button } from "@/shared/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";

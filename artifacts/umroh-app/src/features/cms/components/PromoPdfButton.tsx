@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";

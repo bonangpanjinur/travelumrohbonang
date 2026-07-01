@@ -1,5 +1,5 @@
 import { useCurrency } from "@/shared/hooks/useCurrency";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Coins } from "lucide-react";
 
 export const CurrencySwitcher = () => {

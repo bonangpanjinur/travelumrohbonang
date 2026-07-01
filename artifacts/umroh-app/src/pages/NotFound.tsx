@@ -1,6 +1,6 @@
 import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
 import SEO from "@/shared/components/seo/SEO";
 

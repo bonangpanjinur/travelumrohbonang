@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { toast } from "sonner";
 import { Printer, Users, Plane, Calendar, Download } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+} from "@/shared/components/ui/table";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import { QRCodeSVG } from "qrcode.react";
 

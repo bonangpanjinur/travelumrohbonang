@@ -4,10 +4,10 @@ import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
-import { Button } from "@/components/ui/button";
-import { Toggle } from "@/components/ui/toggle";
-import { Separator } from "@/components/ui/separator";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
+import { Toggle } from "@/shared/components/ui/toggle";
+import { Separator } from "@/shared/components/ui/separator";
+import { Input } from "@/shared/components/ui/input";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useToast } from "@/shared/hooks/use-toast";
 import {

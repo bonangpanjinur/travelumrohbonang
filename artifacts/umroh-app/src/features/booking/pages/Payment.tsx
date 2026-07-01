@@ -4,17 +4,17 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
-import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
+import { Button } from "@/shared/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/shared/components/ui/radio-group";
+import { Label } from "@/shared/components/ui/label";
+import { Progress } from "@/shared/components/ui/progress";
 import { motion } from "framer-motion";
 import { Check, Copy, ArrowLeft, CreditCard, Upload, Image, Loader2, Wallet, Clock, AlertTriangle, Printer, AlertCircle } from "lucide-react";
 import { useToast } from "@/shared/hooks/use-toast";
 import { format, differenceInDays, addDays } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import InvoiceButton from "@/features/booking/components/InvoiceButton";
-import LoadingSpinner from "@/components/ui/loading-spinner";
+import LoadingSpinner from "@/shared/components/ui/loading-spinner";
 import { useCurrency } from "@/shared/hooks/useCurrency";
 
 interface BookingData {

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 import { Send, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 

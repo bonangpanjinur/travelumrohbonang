@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
 import { Crown, ArrowRight, RefreshCw } from "lucide-react";
 import { useAuth } from "@/shared/hooks/useAuth";
 

@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { Switch } from "@/shared/components/ui/switch";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { toast } from "sonner";
 import { Package, Star, Plus, Trash2, GripVertical } from "lucide-react";
 

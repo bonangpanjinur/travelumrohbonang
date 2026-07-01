@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { logAudit } from "@/shared/lib/audit";

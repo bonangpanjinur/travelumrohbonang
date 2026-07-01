@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import BookingTable, { Booking } from "@/features/admin/components/BookingTable";
 import BookingFilters from "@/features/admin/components/BookingFilters";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/shared/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Search, Download } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import {
@@ -14,7 +14,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination";
+} from "@/shared/components/ui/pagination";
 
 const PAGE_SIZE = 20;
 

@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/shared/components/ui/badge";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",

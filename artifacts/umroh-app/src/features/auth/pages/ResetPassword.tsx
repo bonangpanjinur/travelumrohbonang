@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
 import { motion } from "framer-motion";
 import { ArrowLeft, Eye, EyeOff, KeyRound, CheckCircle } from "lucide-react";
 import { useToast } from "@/shared/hooks/use-toast";

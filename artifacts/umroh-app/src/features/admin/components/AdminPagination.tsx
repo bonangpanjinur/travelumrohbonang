@@ -5,7 +5,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination";
+} from "@/shared/components/ui/pagination";
 
 interface AdminPaginationProps {
   page: number;

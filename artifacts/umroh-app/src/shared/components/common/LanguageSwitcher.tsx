@@ -1,12 +1,12 @@
 import { useLanguage } from "@/shared/i18n/LanguageContext";
 import { Globe } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/shared/components/ui/dropdown-menu";
 
 const LanguageSwitcher = ({ variant = "navbar" }: { variant?: "navbar" | "admin" }) => {
   const { language, setLanguage } = useLanguage();

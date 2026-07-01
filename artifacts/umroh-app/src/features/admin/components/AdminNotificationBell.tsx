@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/shared/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";

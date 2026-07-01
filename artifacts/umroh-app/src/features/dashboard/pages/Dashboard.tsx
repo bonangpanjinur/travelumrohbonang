@@ -1,6 +1,6 @@
 import { useAuth } from "@/shared/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { 
   Calendar, CreditCard, FileText, Plane, User, 
   CheckCircle2, Clock, AlertCircle, LogOut, Crown, Upload, Briefcase, Building2
@@ -9,7 +9,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import Navbar from "@/shared/components/layout/Navbar";
-import LoadingSpinner from "@/components/ui/loading-spinner";
+import LoadingSpinner from "@/shared/components/ui/loading-spinner";
 import AdminBanner from "@/features/dashboard/components/AdminBanner";
 import RecentNotifications from "@/features/dashboard/components/RecentNotifications";
 import TestimonialForm from "@/features/dashboard/components/TestimonialForm";

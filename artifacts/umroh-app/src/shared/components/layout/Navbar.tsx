@@ -1,19 +1,19 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, X, User, LogOut, ChevronDown, LayoutDashboard, Ticket, UserCircle, LayoutGrid } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useLanguage } from "@/shared/i18n/LanguageContext";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/shared/components/ui/dropdown-menu";
 import NotificationBell from "@/shared/components/notifications/NotificationBell";
 import LanguageSwitcher from "@/shared/components/common/LanguageSwitcher";
 import ThemeToggle from "@/shared/components/common/ThemeToggle";

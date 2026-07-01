@@ -1,5 +1,5 @@
 import { Heart } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { useWishlist } from "@/features/paket/hooks/useWishlist";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";

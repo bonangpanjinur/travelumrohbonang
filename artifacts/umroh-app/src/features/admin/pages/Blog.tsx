@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Switch } from "@/components/ui/switch";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { Switch } from "@/shared/components/ui/switch";
 import { useToast } from "@/shared/hooks/use-toast";
 import { Plus, Pencil, Trash2, Eye, Image, Calendar } from "lucide-react";
 import { Link } from "react-router-dom";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import RichTextEditor from "@/components/ui/rich-text-editor";
+import RichTextEditor from "@/shared/components/ui/rich-text-editor";
 
 interface BlogPost {
   id: string;

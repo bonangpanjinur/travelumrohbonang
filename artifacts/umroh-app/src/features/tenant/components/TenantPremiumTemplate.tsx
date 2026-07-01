@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Phone, Mail, MapPin, MessageCircle, Instagram, Facebook, Star, Clock, Users, ArrowRight, Sparkles, Shield, Heart } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { TenantSite } from "@/shared/hooks/useTenant";
 
 interface PackageData {

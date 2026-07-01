@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/shared/components/ui/popover";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useNotifications, Notification } from "@/shared/hooks/useNotifications";
 import NotificationList from "./NotificationList";

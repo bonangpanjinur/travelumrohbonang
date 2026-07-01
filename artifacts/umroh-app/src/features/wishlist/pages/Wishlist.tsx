@@ -6,7 +6,7 @@ import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
 import SEO from "@/shared/components/seo/SEO";
 import WishlistButton from "@/features/paket/components/WishlistButton";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { Heart } from "lucide-react";
 
 export default function Wishlist() {

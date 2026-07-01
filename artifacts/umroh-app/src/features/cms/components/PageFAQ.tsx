@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { supabase } from "@/shared/integrations/supabase/client";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
-} from "@/components/ui/accordion";
+} from "@/shared/components/ui/accordion";
 import { HelpCircle } from "lucide-react";
 
 interface PageFAQProps {

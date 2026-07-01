@@ -4,7 +4,7 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
 import SEO from "@/shared/components/seo/SEO";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { Check, X } from "lucide-react";
 import { useCurrency } from "@/shared/hooks/useCurrency";
 

@@ -4,8 +4,8 @@ import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
 import SEO from "@/shared/components/seo/SEO";
 import { BookOpen, FileText, Video, Book, Download, ExternalLink } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
 
 type Material = {
   id: string;

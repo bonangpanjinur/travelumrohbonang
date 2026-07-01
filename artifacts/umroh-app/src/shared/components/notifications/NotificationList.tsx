@@ -1,5 +1,5 @@
 import { Bell } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { Notification } from "@/shared/hooks/useNotifications";
 import NotificationItem from "./NotificationItem";
 

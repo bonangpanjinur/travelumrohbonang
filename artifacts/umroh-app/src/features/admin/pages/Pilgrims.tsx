@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { useToast } from "@/shared/hooks/use-toast";
 import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/shared/components/ui/badge";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import AdminPagination from "@/features/admin/components/AdminPagination";

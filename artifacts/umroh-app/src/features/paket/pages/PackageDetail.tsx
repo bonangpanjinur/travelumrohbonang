@@ -4,7 +4,7 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { motion } from "framer-motion";
 import { Calendar, Star, Users, Plane, Hotel, MapPin, ArrowRight, Check } from "lucide-react";
 import { format } from "date-fns";

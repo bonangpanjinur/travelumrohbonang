@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/components/ui/button";
 import { ArrowRight, Calendar, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";

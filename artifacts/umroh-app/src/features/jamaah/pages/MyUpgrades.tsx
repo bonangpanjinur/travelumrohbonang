@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { ArrowLeft, Crown, ExternalLink, Clock, CheckCircle, XCircle, Loader2, Upload, Image, X, Ban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";

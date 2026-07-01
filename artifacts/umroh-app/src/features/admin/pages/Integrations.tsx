@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Button } from "@/shared/components/ui/button";
+import { Switch } from "@/shared/components/ui/switch";
 import { Loader2, KeyRound, Mail, MessageSquare, Eye, EyeOff, Send } from "lucide-react";
 import { toast } from "sonner";
 import SEO from "@/shared/components/seo/SEO";
@@ -16,8 +16,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/shared/components/ui/dialog";
+import { Textarea } from "@/shared/components/ui/textarea";
 
 type Provider = "resend" | "fonnte" | "wablas";
 

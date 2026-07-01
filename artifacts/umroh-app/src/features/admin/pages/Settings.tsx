@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { Switch } from "@/shared/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { useToast } from "@/shared/hooks/use-toast";
 import { Save, Image, Globe, Building2, Phone, Palette, ImageIcon, Layout, Check, Banknote, Share2, Wallet, Eye, EyeOff } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Json } from "@/shared/integrations/supabase/types";
-import { IconPicker } from "@/components/ui/icon-picker";
+import { IconPicker } from "@/shared/components/ui/icon-picker";
 import { cn } from "@/shared/lib/utils";
 
 interface HeroSettings {
