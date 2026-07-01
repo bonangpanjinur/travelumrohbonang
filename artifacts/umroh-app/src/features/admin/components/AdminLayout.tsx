@@ -10,6 +10,7 @@ import { BrandingSettings, defaultBranding, menuItems } from "./adminMenuConfig"
 import { Crown, Lock } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { AdminQueryErrorBoundary } from "./AdminQueryErrorBoundary";
+import { AdminHealthBanner } from "./AdminHealthBanner";
 
 // Build a Set of premium route paths from the menu config
 const PREMIUM_PATHS = new Set(
@@ -81,6 +82,9 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-muted">
+      {/* Global health banner — shown when Supabase is unreachable */}
+      <AdminHealthBanner />
+
       {/* Mobile Header */}
       <AdminHeader
         branding={branding}
