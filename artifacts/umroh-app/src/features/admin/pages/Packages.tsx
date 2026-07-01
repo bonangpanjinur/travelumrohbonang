@@ -58,8 +58,8 @@ const AdminPackages = () => {
   const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
 
   const filteredPackages = packages.filter((p) =>
-    p.title.toLowerCase().includes(search.toLowerCase()) ||
-    (p.package_type || "").toLowerCase().includes(search.toLowerCase())
+    (p.title ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    (p.package_type ?? "").toLowerCase().includes(search.toLowerCase())
   );
   const { page, setPage, totalPages, totalCount, paginatedItems, pageSize, resetPage } = useAdminPagination(filteredPackages);
   useEffect(() => { resetPage(); }, [search]);
@@ -135,7 +135,7 @@ const AdminPackages = () => {
   const buildPayload = () => {
     const payload: Record<string, unknown> = {
       title: form.title,
-      slug: form.slug || form.title.toLowerCase().replace(/\s+/g, "-"),
+      slug: form.slug || (form.title ?? "").toLowerCase().replace(/\s+/g, "-"),
       description: form.description || null,
       package_type: form.package_type || null,
       duration_days: form.duration_days,
