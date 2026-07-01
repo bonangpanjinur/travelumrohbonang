@@ -1,14 +1,16 @@
 {
-  "buildCommand": "pnpm run typecheck && BASE_PATH=/ pnpm --filter @workspace/umroh-app build && BASE_PATH=/mockup-sandbox pnpm --filter @workspace/mockup-sandbox build && pnpm --filter @workspace/api-server build",
+  "buildCommand": "pnpm run typecheck && BASE_PATH=/ pnpm --filter @workspace/umroh-app build && BASE_PATH=/mockup-sandbox pnpm --filter @workspace/mockup-sandbox build",
   "outputDirectory": "artifacts/umroh-app/dist/public",
+  "functions": {
+    "api/[...path].ts": {
+      "runtime": "@vercel/node@5",
+      "includeFiles": "artifacts/api-server/src/**,libs/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/mockup-sandbox/(.*)",
       "destination": "/mockup-sandbox/$1"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
     },
     {
       "source": "/(.*)",
