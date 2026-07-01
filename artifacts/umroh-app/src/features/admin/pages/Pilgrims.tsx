@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download } from "lucide-react";
+import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download, Plus, Pencil, Loader2 } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import { Badge } from "@/shared/components/ui/badge";
 import { format } from "date-fns";
@@ -35,6 +37,26 @@ interface Pilgrim {
   } | null;
 }
 
+interface BookingOption {
+  id: string;
+  booking_code: string;
+  package_title: string;
+}
+
+const EMPTY_FORM = {
+  name: "",
+  nik: "",
+  phone: "",
+  email: "",
+  gender: "",
+  birth_date: "",
+  passport_number: "",
+  passport_expiry: "",
+  booking_id: "",
+};
+
+type FormState = typeof EMPTY_FORM;
+
 const AdminPilgrims = () => {
   const [pilgrims, setPilgrims] = useState<Pilgrim[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,11 +65,17 @@ const AdminPilgrims = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchPilgrims();
-  }, []);
+  // Form dialog
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
 
-  const fetchPilgrims = async () => {
+  // Booking options for dropdown
+  const [bookings, setBookings] = useState<BookingOption[]>([]);
+  const [bookingSearch, setBookingSearch] = useState("");
+
+  const fetchPilgrims = useCallback(async () => {
     const { data, error } = await supabase
       .from("booking_pilgrims")
       .select(`
@@ -66,23 +94,105 @@ const AdminPilgrims = () => {
       setPilgrims((data as unknown as Pilgrim[]) || []);
     }
     setLoading(false);
-  };
+  }, [toast]);
+
+  const fetchBookings = useCallback(async () => {
+    const { data } = await supabase
+      .from("bookings")
+      .select("id, booking_code, package:packages(title)")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    setBookings(
+      (data || []).map((b: any) => ({
+        id: b.id,
+        booking_code: b.booking_code,
+        package_title: b.package?.title || "-",
+      }))
+    );
+  }, []);
+
+  useEffect(() => {
+    fetchPilgrims();
+    fetchBookings();
+  }, [fetchPilgrims, fetchBookings]);
 
   const filteredPilgrims = pilgrims.filter((p) => {
-    const searchLower = search.toLowerCase();
+    const q = search.toLowerCase();
     return (
-      p.name.toLowerCase().includes(searchLower) ||
-      p.nik?.toLowerCase().includes(searchLower) ||
-      p.passport_number?.toLowerCase().includes(searchLower) ||
-      p.phone?.toLowerCase().includes(searchLower) ||
-      p.email?.toLowerCase().includes(searchLower) ||
-      p.booking?.booking_code?.toLowerCase().includes(searchLower)
+      (p.name ?? "").toLowerCase().includes(q) ||
+      (p.nik ?? "").toLowerCase().includes(q) ||
+      (p.passport_number ?? "").toLowerCase().includes(q) ||
+      (p.phone ?? "").toLowerCase().includes(q) ||
+      (p.email ?? "").toLowerCase().includes(q) ||
+      (p.booking?.booking_code ?? "").toLowerCase().includes(q)
     );
   });
 
-  const { page, setPage, totalPages, totalCount, paginatedItems, pageSize, resetPage } = useAdminPagination(filteredPilgrims);
-
+  const { page, setPage, totalPages, totalCount, paginatedItems, pageSize, resetPage } =
+    useAdminPagination(filteredPilgrims);
   useEffect(() => { resetPage(); }, [search]);
+
+  const filteredBookings = bookings.filter(
+    (b) =>
+      b.booking_code.toLowerCase().includes(bookingSearch.toLowerCase()) ||
+      b.package_title.toLowerCase().includes(bookingSearch.toLowerCase())
+  );
+
+  const openAdd = () => {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setBookingSearch("");
+    setFormOpen(true);
+  };
+
+  const openEdit = (pilgrim: Pilgrim) => {
+    setEditingId(pilgrim.id);
+    setForm({
+      name: pilgrim.name ?? "",
+      nik: pilgrim.nik ?? "",
+      phone: pilgrim.phone ?? "",
+      email: pilgrim.email ?? "",
+      gender: pilgrim.gender ?? "",
+      birth_date: pilgrim.birth_date ?? "",
+      passport_number: pilgrim.passport_number ?? "",
+      passport_expiry: pilgrim.passport_expiry ?? "",
+      booking_id: pilgrim.booking_id ?? "",
+    });
+    setBookingSearch(pilgrim.booking?.booking_code ?? "");
+    setFormOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      toast({ title: "Nama wajib diisi", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    const payload = {
+      name: form.name.trim(),
+      nik: form.nik.trim() || null,
+      phone: form.phone.trim() || null,
+      email: form.email.trim() || null,
+      gender: form.gender || null,
+      birth_date: form.birth_date || null,
+      passport_number: form.passport_number.trim() || null,
+      passport_expiry: form.passport_expiry || null,
+      booking_id: form.booking_id || null,
+    };
+
+    const { error } = editingId
+      ? await supabase.from("booking_pilgrims").update(payload).eq("id", editingId)
+      : await supabase.from("booking_pilgrims").insert(payload);
+
+    setSaving(false);
+    if (error) {
+      toast({ title: "Gagal menyimpan", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: editingId ? "Jemaah berhasil diperbarui" : "Jemaah berhasil ditambahkan" });
+    setFormOpen(false);
+    fetchPilgrims();
+  };
 
   const showDetail = (pilgrim: Pilgrim) => {
     setSelectedPilgrim(pilgrim);
@@ -98,6 +208,9 @@ const AdminPilgrims = () => {
     }
   };
 
+  const field = (key: keyof FormState, value: string) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
@@ -105,7 +218,10 @@ const AdminPilgrims = () => {
           <h1 className="text-2xl font-display font-bold">Daftar Jemaah</h1>
           <p className="text-muted-foreground">Total {filteredPilgrims.length} jemaah ditemukan</p>
         </div>
-        <div className="flex gap-3 items-center">
+        <div className="flex flex-wrap gap-3 items-center">
+          <Button onClick={openAdd}>
+            <Plus className="w-4 h-4 mr-2" /> Tambah Jemaah
+          </Button>
           <Button variant="outline" onClick={() => {
             const headers = ["Nama", "Gender", "NIK", "No. Paspor", "Telepon", "Email", "Kode Booking", "Paket"];
             const rows = filteredPilgrims.map(p => [
@@ -117,7 +233,7 @@ const AdminPilgrims = () => {
           }}>
             <Download className="w-4 h-4 mr-2" /> Export CSV
           </Button>
-          <div className="relative w-full sm:w-80">
+          <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Cari nama, NIK, paspor, booking..."
@@ -131,14 +247,19 @@ const AdminPilgrims = () => {
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
         </div>
       ) : filteredPilgrims.length === 0 ? (
         <div className="text-center py-16">
           <Users className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             {search ? "Tidak ada jemaah yang cocok dengan pencarian" : "Belum ada data jemaah"}
           </p>
+          {!search && (
+            <Button onClick={openAdd}>
+              <Plus className="w-4 h-4 mr-2" /> Tambah Jemaah Pertama
+            </Button>
+          )}
         </div>
       ) : (
         <>
@@ -193,9 +314,14 @@ const AdminPilgrims = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => showDetail(pilgrim)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(pilgrim)} title="Edit">
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => showDetail(pilgrim)} title="Detail">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -207,7 +333,174 @@ const AdminPilgrims = () => {
         </>
       )}
 
-      {/* Detail Dialog */}
+      {/* ── Form Dialog: Tambah / Edit Jemaah ── */}
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingId ? "Edit Jemaah" : "Tambah Jemaah"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5 py-2">
+            {/* Informasi Pribadi */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Informasi Pribadi</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <Label>Nama Lengkap <span className="text-destructive">*</span></Label>
+                  <Input
+                    placeholder="Sesuai KTP / Paspor"
+                    value={form.name}
+                    onChange={(e) => field("name", e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Jenis Kelamin</Label>
+                  <Select value={form.gender} onValueChange={(v) => field("gender", v)}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Pilih..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Laki-laki</SelectItem>
+                      <SelectItem value="female">Perempuan</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Tanggal Lahir</Label>
+                  <Input
+                    type="date"
+                    value={form.birth_date}
+                    onChange={(e) => field("birth_date", e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>No. Telepon</Label>
+                  <Input
+                    placeholder="08xx-xxxx-xxxx"
+                    value={form.phone}
+                    onChange={(e) => field("phone", e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    placeholder="email@contoh.com"
+                    value={form.email}
+                    onChange={(e) => field("email", e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Dokumen */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Dokumen</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>NIK</Label>
+                  <Input
+                    placeholder="16 digit NIK"
+                    maxLength={16}
+                    value={form.nik}
+                    onChange={(e) => field("nik", e.target.value)}
+                    className="mt-1 font-mono"
+                  />
+                </div>
+                <div>
+                  <Label>No. Paspor</Label>
+                  <Input
+                    placeholder="A1234567"
+                    value={form.passport_number}
+                    onChange={(e) => field("passport_number", e.target.value)}
+                    className="mt-1 font-mono"
+                  />
+                </div>
+                <div>
+                  <Label>Masa Berlaku Paspor</Label>
+                  <Input
+                    type="date"
+                    value={form.passport_expiry}
+                    onChange={(e) => field("passport_expiry", e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Link ke Booking */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Hubungkan ke Booking (opsional)</p>
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cari kode booking atau nama paket..."
+                    value={bookingSearch}
+                    onChange={(e) => {
+                      setBookingSearch(e.target.value);
+                      // clear selection if user clears the search
+                      if (!e.target.value) field("booking_id", "");
+                    }}
+                    className="pl-10"
+                  />
+                </div>
+                {bookingSearch && filteredBookings.length > 0 && !form.booking_id && (
+                  <div className="border border-border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                    {filteredBookings.slice(0, 20).map((b) => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => {
+                          field("booking_id", b.id);
+                          setBookingSearch(b.booking_code);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted flex items-center justify-between gap-2 border-b last:border-0"
+                      >
+                        <span className="font-mono font-semibold">{b.booking_code}</span>
+                        <span className="text-muted-foreground truncate">{b.package_title}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {form.booking_id && (
+                  <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg px-4 py-2.5">
+                    <span className="text-sm">
+                      Terhubung ke booking: <span className="font-mono font-semibold">{bookingSearch}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => { field("booking_id", ""); setBookingSearch(""); }}
+                      className="text-xs text-muted-foreground hover:text-destructive ml-2"
+                    >
+                      Lepas
+                    </button>
+                  </div>
+                )}
+                {!form.booking_id && !bookingSearch && (
+                  <p className="text-xs text-muted-foreground">Jemaah bisa ditambahkan tanpa booking terlebih dahulu.</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2 border-t">
+            <Button variant="outline" onClick={() => setFormOpen(false)} disabled={saving}>
+              Batal
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {editingId ? "Simpan Perubahan" : "Tambah Jemaah"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Detail Dialog ── */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -310,6 +603,15 @@ const AdminPilgrims = () => {
                   </div>
                 </div>
               )}
+
+              <div className="flex justify-end pt-2 border-t">
+                <Button variant="outline" size="sm" onClick={() => {
+                  setDetailOpen(false);
+                  openEdit(selectedPilgrim);
+                }}>
+                  <Pencil className="w-4 h-4 mr-2" /> Edit Jemaah
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
