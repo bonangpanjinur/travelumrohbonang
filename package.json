@@ -10,6 +10,8 @@
   },
   "private": true,
   "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "catalog:",
     "prettier": "^3.8.4",
     "typescript": "~5.9.3"
   }
