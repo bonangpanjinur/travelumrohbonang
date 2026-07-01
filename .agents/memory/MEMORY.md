@@ -1,1 +1,2 @@
 - [Express 5 handler typing](express5-handler-typing.md) — never annotate req/res explicitly in route handlers; always let TypeScript infer from the router method.
+- [Vercel API tsconfig typeRoots](vercel-api-tsconfig-typeroots.md) — api/tsconfig.json must declare typeRoots + types or Vercel build gets TS7006 on all Express callback params.

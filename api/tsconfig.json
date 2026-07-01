@@ -3,6 +3,11 @@
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "typeRoots": [
+      "../artifacts/api-server/node_modules/@types",
+      "../node_modules/@types"
+    ],
+    "types": ["node", "express"],
     "paths": {
       "@workspace/db": ["../lib/db/src/index.ts"],
       "@workspace/db/schema": ["../lib/db/src/schema/index.ts"],
