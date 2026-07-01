@@ -102,7 +102,7 @@ const Paket = () => {
 
       setCategories((categoriesRes.data as Category[]) || []);
       setAirlines(airlinesRes.data || []);
-      setAirports(airportsRes.data || []);
+      setAirports((airportsRes.data || []).map(a => ({ ...a, city: a.city ?? undefined })) as FilterOption[]);
     };
 
     fetchData();
@@ -130,7 +130,7 @@ const Paket = () => {
 
   const getLowestPrice = (departures: Package["departures"]) => {
     if (!departures || departures.length === 0) return 0;
-    const allPrices = departures.flatMap((d) => d.prices.map((p) => p.price));
+    const allPrices = departures.flatMap((d) => (d.prices || []).map((p) => p.price));
     return allPrices.length > 0 ? Math.min(...allPrices) : 0;
   };
 
@@ -205,7 +205,7 @@ const Paket = () => {
 
       // Price range filter (lowest price across departures)
       if (selectedPriceRange !== "all") {
-        const lowest = (pkg.departures || []).flatMap(d => d.prices.map(p => p.price));
+        const lowest = (pkg.departures || []).flatMap(d => (d.prices || []).map(p => p.price));
         const min = lowest.length ? Math.min(...lowest) : 0;
         const [loStr, hiStr] = selectedPriceRange.split("-");
         const lo = Number(loStr);

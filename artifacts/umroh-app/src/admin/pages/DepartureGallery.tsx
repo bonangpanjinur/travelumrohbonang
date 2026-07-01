@@ -49,7 +49,7 @@ const AdminDepartureGallery = () => {
   };
 
   const handleUpload = async () => {
-    if (!file || !selectedId) return toast.error("Pilih file dan keberangkatan");
+    if (!file || !selectedId) return void toast.error("Pilih file dan keberangkatan");
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();

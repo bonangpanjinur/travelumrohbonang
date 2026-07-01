@@ -33,7 +33,7 @@ const RecentNotifications = () => {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(5);
-      setItems(data || []);
+      setItems((data || []) as Notif[]);
       setLoading(false);
     };
     load();

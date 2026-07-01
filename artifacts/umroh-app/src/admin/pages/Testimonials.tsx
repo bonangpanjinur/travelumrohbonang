@@ -58,7 +58,7 @@ const AdminTestimonials = () => {
       .from("testimonials")
       .select("*")
       .order("sort_order", { ascending: true });
-    setTestimonials(data || []);
+    setTestimonials((data || []) as Testimonial[]);
     setLoading(false);
   };
 

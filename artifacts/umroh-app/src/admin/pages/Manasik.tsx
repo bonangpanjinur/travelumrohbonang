@@ -64,12 +64,12 @@ const AdminManasik = () => {
   };
 
   const save = async () => {
-    if (!form.title.trim()) return toast.error("Judul wajib");
+    if (!form.title.trim()) return void toast.error("Judul wajib");
     const payload = { ...form, description: form.description || null, file_url: form.file_url || null, thumbnail_url: form.thumbnail_url || null };
     const { error } = editing
       ? await supabase.from("manasik_materials").update(payload).eq("id", editing.id)
       : await supabase.from("manasik_materials").insert(payload);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     toast.success("Tersimpan");
     setOpen(false);
     load();

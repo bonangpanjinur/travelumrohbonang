@@ -30,7 +30,7 @@ const TestimonialsSection = () => {
         .limit(6);
 
       if (testimonialsData && testimonialsData.length > 0) {
-        setTestimonials(testimonialsData);
+        setTestimonials(testimonialsData as Testimonial[]);
       }
 
       // Fetch background pattern

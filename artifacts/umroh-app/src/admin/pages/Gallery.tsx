@@ -52,7 +52,7 @@ const AdminGallery = () => {
       .order("sort_order", { ascending: true });
 
     if (galleryData) {
-      setImages(galleryData);
+      setImages(galleryData as GalleryItem[]);
     }
 
     // Fetch background pattern setting

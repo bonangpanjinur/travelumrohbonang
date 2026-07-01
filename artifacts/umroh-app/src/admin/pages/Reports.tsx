@@ -118,7 +118,7 @@ const AdminReports = () => {
 
     // Group bookings by date
     const grouped = bookings.reduce((acc: Record<string, { count: number; revenue: number }>, booking) => {
-      const date = format(new Date(booking.created_at), "yyyy-MM-dd");
+      const date = format(new Date(booking.created_at || ""), "yyyy-MM-dd");
       if (!acc[date]) acc[date] = { count: 0, revenue: 0 };
       acc[date].count++;
       return acc;
@@ -126,7 +126,7 @@ const AdminReports = () => {
 
     // Add revenue from payments to the correct dates
     (payments || []).forEach(payment => {
-      const date = format(new Date(payment.paid_at || payment.created_at), "yyyy-MM-dd");
+      const date = format(new Date(payment.paid_at || payment.created_at || ""), "yyyy-MM-dd");
       if (!grouped[date]) grouped[date] = { count: 0, revenue: 0 };
       grouped[date].revenue += payment.amount || 0;
     });
@@ -241,7 +241,7 @@ const AdminReports = () => {
     const { data: agents } = await supabase
       .from("agents")
       .select("id, name, branch:branches(name)")
-      .in("id", agentIds);
+      .in("id", agentIds.filter((id): id is string => id !== null));
 
     if (!agents) return;
 

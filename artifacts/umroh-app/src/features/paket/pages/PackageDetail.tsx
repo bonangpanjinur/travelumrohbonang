@@ -80,7 +80,7 @@ const PackageDetail = () => {
           airline:airlines(name),
           airport:airports(name, city)
         `)
-        .eq("slug", slug)
+        .eq("slug", slug!)
         .maybeSingle();
 
       if (pkgData) {

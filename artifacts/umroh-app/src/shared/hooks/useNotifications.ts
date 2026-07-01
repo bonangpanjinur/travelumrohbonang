@@ -18,30 +18,30 @@ export function useNotifications() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchNotifications();
-      
-      // Subscribe to realtime notifications
-      const channel = supabase
-        .channel("notifications")
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "notifications",
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            setNotifications((prev) => [payload.new as Notification, ...prev]);
-          }
-        )
-        .subscribe();
+    if (!user) return;
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
+    fetchNotifications();
+    
+    // Subscribe to realtime notifications
+    const channel = supabase
+      .channel("notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          setNotifications((prev) => [payload.new as Notification, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const fetchNotifications = async () => {

@@ -66,7 +66,7 @@ const Muthawifs = () => {
       return;
     }
 
-    setMuthawifs(data || []);
+    setMuthawifs((data || []) as Muthawif[]);
     setLoading(false);
   };
 

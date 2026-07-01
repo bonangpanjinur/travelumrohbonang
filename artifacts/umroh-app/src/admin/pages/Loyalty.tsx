@@ -36,9 +36,9 @@ export default function AdminLoyalty() {
   };
 
   const submit = async () => {
-    if (!form.user_id || !form.points) return toast.error("User & poin wajib");
+    if (!form.user_id || !form.points) return void toast.error("User & poin wajib");
     const { error } = await supabase.from("loyalty_points").insert(form);
-    if (error) return toast.error(error.message);
+    if (error) return void toast.error(error.message);
     await logAudit({ action: "adjust_loyalty", entityType: "loyalty", metadata: form as any });
     toast.success("Poin ditambahkan");
     setOpen(false);

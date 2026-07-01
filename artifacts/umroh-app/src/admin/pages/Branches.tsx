@@ -87,7 +87,7 @@ const AdminBranches = () => {
       description: form.description || null,
     };
     if (editing) {
-      await supabase.from("branches").update(payload).eq("id", editing.id);
+      await supabase.from("branches").update(payload as any).eq("id", editing.id);
       toast({ title: "Cabang diupdate!" });
     } else {
       await supabase.from("branches").insert(payload as any);

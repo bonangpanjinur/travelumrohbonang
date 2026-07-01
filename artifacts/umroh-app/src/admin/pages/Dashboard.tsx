@@ -79,7 +79,7 @@ const AdminDashboard = () => {
           const monthStart = startOfMonth(monthDate);
           const monthEnd = startOfMonth(subMonths(now, i - 1));
           const count = (trendRes.data || []).filter(b => {
-            const d = new Date(b.created_at);
+            const d = new Date(b.created_at || "");
             return d >= monthStart && d < monthEnd;
           }).length;
           trends.push({

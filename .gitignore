@@ -47,3 +47,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Legacy backup — jangan diedit/hapus tanpa konfirmasi
+.migration-backup/

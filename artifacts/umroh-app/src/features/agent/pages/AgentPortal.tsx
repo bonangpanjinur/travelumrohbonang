@@ -276,9 +276,9 @@ const AgentPortal = () => {
                         const v = window.prompt("Set target komisi bulanan (Rp)", String(target));
                         if (v === null) return;
                         const num = Number(v.replace(/\D/g, ""));
-                        if (Number.isNaN(num) || num < 0) return toast.error("Angka tidak valid");
+                        if (Number.isNaN(num) || num < 0) return void toast.error("Angka tidak valid");
                         const { error } = await supabase.from("agents").update({ monthly_target: num }).eq("id", agent.id);
-                        if (error) return toast.error(error.message);
+                        if (error) return void toast.error(error.message);
                         toast.success("Target diperbarui");
                         loadData();
                       }}

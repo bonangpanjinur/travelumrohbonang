@@ -131,7 +131,7 @@ const Navbar = () => {
           .maybeSingle();
 
         if (data) {
-          setUserProfile(data);
+          setUserProfile({ ...data, avatar_url: data.avatar_url ?? "" });
         } else {
           setUserProfile({ name: user.user_metadata?.name || user.email || "", avatar_url: "" });
         }

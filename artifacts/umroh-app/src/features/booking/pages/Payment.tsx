@@ -80,12 +80,12 @@ const Payment = () => {
               package:packages(title, minimum_dp, dp_deadline_days, full_deadline_days),
               departure:package_departures(departure_date)
             `)
-            .eq("id", bookingId)
+            .eq("id", bookingId!)
             .single(),
           supabase
             .from("payments")
             .select("id, amount, status, payment_type, created_at")
-            .eq("booking_id", bookingId)
+            .eq("booking_id", bookingId!)
             .order("created_at", { ascending: true }),
           supabase
             .from("settings")

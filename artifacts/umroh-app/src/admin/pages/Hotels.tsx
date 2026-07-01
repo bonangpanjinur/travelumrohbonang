@@ -46,7 +46,7 @@ const AdminHotels = () => {
 
   const fetchHotels = async () => {
     const { data } = await supabase.from("hotels").select("*").order("name");
-    setHotels(data || []);
+    setHotels((data || []) as Hotel[]);
     setLoading(false);
   };
 

@@ -110,7 +110,7 @@ const AdminPackages = () => {
       .from("packages")
       .select("*")
       .order("created_at", { ascending: false });
-    setPackages(data || []);
+    setPackages((data || []) as Package[]);
     setLoading(false);
   };
 

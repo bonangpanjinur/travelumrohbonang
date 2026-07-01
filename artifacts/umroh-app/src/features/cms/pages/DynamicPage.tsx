@@ -33,7 +33,7 @@ const DynamicPage = () => {
       const { data, error } = await supabase
         .from("pages")
         .select("*")
-        .eq("slug", slug)
+        .eq("slug", slug!)
         .eq("is_active", true) // Using is_active as per current schema
         .single();
 

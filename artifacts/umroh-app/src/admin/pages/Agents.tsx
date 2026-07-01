@@ -73,7 +73,7 @@ const AdminAgents = () => {
         .order("name")
     ]);
     
-    setAgents(agentsRes.data || []);
+    setAgents((agentsRes.data || []) as Agent[]);
     setBranches(branchesRes.data || []);
     setLoading(false);
   };
