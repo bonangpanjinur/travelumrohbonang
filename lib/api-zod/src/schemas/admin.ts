@@ -93,3 +93,51 @@ export type AdminCreateDeparturePriceInput = z.infer<typeof AdminCreateDeparture
 export type AdminUpdateDeparturePriceInput = z.infer<typeof AdminUpdateDeparturePriceRequest>;
 export type AdminRecordPaymentInput = z.infer<typeof AdminRecordPaymentRequest>;
 export type AdminUpdatePaymentInput = z.infer<typeof AdminUpdatePaymentRequest>;
+
+export const REQUIRED_DOCUMENT_TYPES = ["passport", "visa", "health_certificate", "mahram_letter"] as const;
+export const ALL_DOCUMENT_TYPES = [...REQUIRED_DOCUMENT_TYPES, "ktp", "photo"] as const;
+export type DocumentType = (typeof ALL_DOCUMENT_TYPES)[number];
+
+export const AdminUpsertDocumentRequest = z.object({
+  status: z.enum(["pending", "submitted", "verified", "rejected"]),
+  fileUrl: z.string().optional(),
+  notes: z.string().optional(),
+  submittedAt: z.string().optional(),
+});
+
+export const PilgrimDocumentSchema = z.object({
+  id: z.string(),
+  pilgrimId: z.string(),
+  bookingId: z.string(),
+  documentType: z.string(),
+  status: z.string(),
+  fileUrl: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  submittedAt: z.union([z.string(), z.date()]).nullable().optional().transform((v) =>
+    v instanceof Date ? v.toISOString() : (v ?? null),
+  ),
+  verifiedAt: z.union([z.string(), z.date()]).nullable().optional().transform((v) =>
+    v instanceof Date ? v.toISOString() : (v ?? null),
+  ),
+  verifiedBy: z.string().nullable().optional(),
+  createdAt: z.union([z.string(), z.date()]).nullable().optional().transform((v) =>
+    v instanceof Date ? v.toISOString() : (v ?? null),
+  ),
+});
+
+export const PilgrimChecklistSchema = z.object({
+  pilgrimId: z.string(),
+  pilgrimName: z.string(),
+  completionPct: z.number(),
+  documents: z.array(PilgrimDocumentSchema),
+});
+
+export const BookingDocumentChecklistSchema = z.object({
+  bookingId: z.string(),
+  overallCompletionPct: z.number(),
+  totalPilgrims: z.number(),
+  fullyCompletedPilgrims: z.number(),
+  pilgrims: z.array(PilgrimChecklistSchema),
+});
+
+export type AdminUpsertDocumentInput = z.infer<typeof AdminUpsertDocumentRequest>;

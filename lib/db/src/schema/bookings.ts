@@ -42,6 +42,20 @@ export const bookingPilgrims = pgTable("booking_pilgrims", {
   createdAt: timestamp("created_at", { withTimezone: true }),
 });
 
+export const pilgrimDocuments = pgTable("pilgrim_documents", {
+  id: text("id").primaryKey(),
+  pilgrimId: text("pilgrim_id").notNull(),
+  bookingId: text("booking_id").notNull(),
+  documentType: text("document_type").notNull(), // "passport" | "visa" | "health_certificate" | "mahram_letter" | "ktp" | "photo"
+  status: text("status").notNull().default("pending"), // "pending" | "submitted" | "verified" | "rejected"
+  fileUrl: text("file_url"),
+  notes: text("notes"),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  verifiedBy: text("verified_by"),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+});
+
 export const bookingPayments = pgTable("booking_payments", {
   id: text("id").primaryKey(),
   bookingId: text("booking_id").notNull(),
