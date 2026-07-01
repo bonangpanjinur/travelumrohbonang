@@ -112,7 +112,7 @@ router.post("/", async (req, res) => {
       return;
     }
 
-    const { packageId, departureId, totalPrice, currency, paymentScheme, notes } =
+    const { packageId, departureId, totalPrice, currency, paymentScheme, notes, picType, picId, agentId } =
       parsed.data;
 
     const userId = req.user!.id;
@@ -130,7 +130,10 @@ router.post("/", async (req, res) => {
         currency,
         paymentScheme: paymentScheme ?? null,
         notes: notes ?? null,
-        status: "pending",
+        status: "draft",
+        picType: picType ?? null,
+        picId: picId ?? null,
+        agentId: agentId ?? null,
       })
       .returning();
 

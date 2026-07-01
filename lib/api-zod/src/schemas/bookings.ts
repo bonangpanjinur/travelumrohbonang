@@ -22,6 +22,9 @@ export const CreateBookingRequest = z.object({
   currency: z.string().default("IDR"),
   paymentScheme: z.string().optional(),
   notes: z.string().optional(),
+  picType: z.string().optional(),
+  picId: z.string().optional(),
+  agentId: z.string().optional(),
 });
 
 export const BookingWithDetailsSchema = BookingSchema.extend({
