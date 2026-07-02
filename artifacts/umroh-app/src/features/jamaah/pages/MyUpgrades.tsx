@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
 import ConfirmAlertDialog from "@/features/admin/components/ConfirmAlertDialog";
+import { getProofSignedUrl } from "@/features/booking/lib/paymentProofs";
 
 interface UpgradeOrder {
   id: string;
@@ -272,7 +273,6 @@ const MyUpgrades = () => {
                         onClick={async () => {
                           setOpeningProofId(order.id);
                           try {
-                            const { getProofSignedUrl } = await import("@/features/booking/lib/paymentProofs");
                             const url = await getProofSignedUrl(order.proof_url, 300, { context: "my-upgrades" });
                             if (url) window.open(url, "_blank", "noopener,noreferrer");
                             else toast.error("Gagal memuat bukti transfer");

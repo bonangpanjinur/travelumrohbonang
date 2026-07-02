@@ -40,6 +40,44 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core — never changes, cache long
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          // Supabase client
+          "vendor-supabase": ["@supabase/supabase-js"],
+          // TanStack Query
+          "vendor-query": ["@tanstack/react-query"],
+          // UI / animation libraries
+          "vendor-ui": ["framer-motion", "lucide-react", "sonner", "class-variance-authority", "clsx", "tailwind-merge"],
+          // Radix UI primitives (many small packages → one chunk)
+          "vendor-radix": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-select",
+            "@radix-ui/react-toast",
+            "@radix-ui/react-tooltip",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-accordion",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-switch",
+            "@radix-ui/react-checkbox",
+            "@radix-ui/react-slot",
+            "@radix-ui/react-label",
+            "@radix-ui/react-separator",
+            "@radix-ui/react-avatar",
+            "@radix-ui/react-progress",
+          ],
+          // Date utilities
+          "vendor-date": ["date-fns"],
+          // Charts
+          "vendor-charts": ["recharts"],
+          // PDF / export utilities
+          "vendor-pdf": ["jspdf"],
+        },
+      },
+    },
   },
   server: {
     port,

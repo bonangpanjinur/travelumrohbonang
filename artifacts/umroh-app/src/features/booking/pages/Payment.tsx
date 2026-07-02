@@ -16,6 +16,7 @@ import { id as localeId } from "date-fns/locale";
 import InvoiceButton from "@/features/booking/components/InvoiceButton";
 import LoadingSpinner from "@/shared/components/ui/loading-spinner";
 import { useCurrency } from "@/shared/hooks/useCurrency";
+import { uploadPaymentProof } from "@/features/booking/lib/paymentProofs";
 
 interface BookingData {
   id: string;
@@ -221,7 +222,6 @@ const Payment = () => {
     }
     setUploading(true);
     try {
-      const { uploadPaymentProof } = await import("@/features/booking/lib/paymentProofs");
       const path = await uploadPaymentProof(user.id, file, booking.booking_code);
       setProofUrl(path);
       toast({ title: "Bukti pembayaran berhasil diupload!" });

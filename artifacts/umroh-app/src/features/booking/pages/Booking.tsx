@@ -18,6 +18,8 @@ import { validatePilgrim } from "@/shared/lib/validations";
 import TurnstileCaptcha from "@/shared/components/common/TurnstileCaptcha";
 import { rateLimit } from "@/shared/lib/rateLimit";
 import { useCurrency } from "@/shared/hooks/useCurrency";
+import { getStoredReferral, clearStoredReferral } from "@/shared/lib/audit";
+import { resolveAffiliateAgentId } from "@/features/agent/lib/affiliate";
 import { apiFetch } from "@/shared/lib/apiClient";
 
 interface Package {
@@ -229,7 +231,6 @@ const Booking = () => {
       // Attach agent_id from referral code if present (URL/localStorage first, then 30-day affiliate cookie)
       let agentIdFromRef: string | null = null;
       try {
-        const { getStoredReferral, clearStoredReferral } = await import("@/shared/lib/audit");
         const ref = getStoredReferral();
         if (ref) {
           const { data: ag } = await supabase
@@ -244,7 +245,6 @@ const Booking = () => {
           }
         }
         if (!agentIdFromRef) {
-          const { resolveAffiliateAgentId } = await import("@/features/agent/lib/affiliate");
           agentIdFromRef = await resolveAffiliateAgentId();
         }
       } catch (e) { console.warn("referral attach failed", e); }
