@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, faqs, eq, inArray } from "@workspace/db";
+import { db, faqs, eq } from "@workspace/db";
 
 const router = Router();
 
