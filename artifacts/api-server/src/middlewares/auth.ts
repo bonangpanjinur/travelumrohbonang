@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { type RequestHandler } from "express";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 export interface AuthenticatedUser {
@@ -15,11 +15,7 @@ declare global {
   }
 }
 
-export async function requireAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
+export const requireAuth: RequestHandler = async (req, res, next) => {
   if (!isSupabaseConfigured || !supabase) {
     res.status(503).json({ error: "Authentication is not configured yet" });
     return;
@@ -48,4 +44,4 @@ export async function requireAuth(
   };
 
   next();
-}
+};

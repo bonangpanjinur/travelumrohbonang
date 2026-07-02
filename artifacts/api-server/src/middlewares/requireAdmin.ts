@@ -1,10 +1,6 @@
-import { Request, Response, NextFunction } from "express";
+import { type RequestHandler } from "express";
 
-export function requireAdmin(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
+export const requireAdmin: RequestHandler = (req, res, next) => {
   if (!req.user) {
     res.status(401).json({ error: "Authentication required" });
     return;
@@ -16,4 +12,4 @@ export function requireAdmin(
   }
 
   next();
-}
+};
