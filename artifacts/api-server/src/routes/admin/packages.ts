@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { db, packages, packageDepartures, departurePrices, eq, and } from "@workspace/db";
 import {
   PackageSchema,
@@ -13,7 +13,7 @@ import { validate } from "../../middlewares/validate";
 
 const router = Router();
 
-router.get("/", async (_req, res) => {
+router.get("/", async (_req: Request, res: Response) => {
   try {
     const data = await db.select().from(packages);
     res.json(PackageListResponse.parse({ data, total: data.length }));
@@ -22,7 +22,7 @@ router.get("/", async (_req, res) => {
   }
 });
 
-router.post("/", validate(AdminCreatePackageRequest), async (req, res) => {
+router.post("/", validate(AdminCreatePackageRequest), async (req: Request, res: Response) => {
   try {
     const body = req.body as AdminCreatePackageInput;
 
@@ -50,7 +50,7 @@ router.post("/", validate(AdminCreatePackageRequest), async (req, res) => {
   }
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
 
@@ -86,7 +86,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.patch("/:id", validate(AdminUpdatePackageRequest), async (req, res) => {
+router.patch("/:id", validate(AdminUpdatePackageRequest), async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
     const updates = req.body as AdminUpdatePackageInput;
@@ -108,7 +108,7 @@ router.patch("/:id", validate(AdminUpdatePackageRequest), async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
 

@@ -9,7 +9,7 @@ router.get("/healthz", (_req: Request, res: Response) => {
   res.json(data);
 });
 
-router.get("/health", async (_req, res) => {
+router.get("/health", async (_req: Request, res: Response) => {
   const start = Date.now();
 
   let dbStatus: "ok" | "error" = "error";

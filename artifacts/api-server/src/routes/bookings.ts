@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { db, bookings, packages, packageDepartures, bookingRooms, bookingPilgrims, eq, and } from "@workspace/db";
 import {
   BookingListResponse,
@@ -29,7 +29,7 @@ function generateBookingCode(): string {
   return `BNG-${random}`;
 }
 
-router.get("/", async (req, res) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
 
@@ -65,7 +65,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
 
@@ -107,7 +107,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.post("/", validate(CreateBookingRequest), async (req, res) => {
+router.post("/", validate(CreateBookingRequest), async (req: Request, res: Response) => {
   try {
     const {
       packageId,
@@ -149,7 +149,7 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
   }
 });
 
-router.post("/:id/rooms", validate(CreateBookingRoomsRequest), async (req, res) => {
+router.post("/:id/rooms", validate(CreateBookingRoomsRequest), async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
     const userId = req.user!.id;
@@ -184,7 +184,7 @@ router.post("/:id/rooms", validate(CreateBookingRoomsRequest), async (req, res) 
   }
 });
 
-router.post("/:id/pilgrims", validate(CreateBookingPilgrimsRequest), async (req, res) => {
+router.post("/:id/pilgrims", validate(CreateBookingPilgrimsRequest), async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
     const userId = req.user!.id;

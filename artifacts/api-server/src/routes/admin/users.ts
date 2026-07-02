@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { db, profiles, eq } from "@workspace/db";
 import {
   ProfileSchema,
@@ -9,7 +9,7 @@ import { validate } from "../../middlewares/validate";
 
 const router = Router();
 
-router.get("/", async (_req, res) => {
+router.get("/", async (_req: Request, res: Response) => {
   try {
     const data = await db.select().from(profiles);
     res.json({ data, total: data.length });
@@ -18,7 +18,7 @@ router.get("/", async (_req, res) => {
   }
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
 
@@ -39,7 +39,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.patch("/:id", validate(AdminUpdateUserRequest), async (req, res) => {
+router.patch("/:id", validate(AdminUpdateUserRequest), async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
     const updates = req.body as AdminUpdateUserInput;

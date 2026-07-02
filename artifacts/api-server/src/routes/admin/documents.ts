@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { db, bookingPilgrims, pilgrimDocuments, bookings, eq, and } from "@workspace/db";
 import {
   AdminUpsertDocumentRequest,
@@ -19,7 +19,7 @@ function computePilgrimCompletion(docs: { documentType: string; status: string }
   return Math.round((verifiedRequired / REQUIRED_DOCUMENT_TYPES.length) * 100);
 }
 
-router.get("/", async (req, res) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
 
@@ -80,7 +80,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/pilgrims/:pilgrimId", async (req, res) => {
+router.get("/pilgrims/:pilgrimId", async (req: Request, res: Response) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
     const pilgrimId = req.params.pilgrimId as string;
@@ -121,7 +121,7 @@ router.get("/pilgrims/:pilgrimId", async (req, res) => {
 router.put(
   "/pilgrims/:pilgrimId/:documentType",
   validate(AdminUpsertDocumentRequest),
-  async (req, res) => {
+  async (req: Request, res: Response) => {
     try {
       const bookingId = (req.params as Record<string, string>).bookingId;
       const pilgrimId = req.params.pilgrimId as string;
@@ -203,7 +203,7 @@ router.put(
   },
 );
 
-router.delete("/pilgrims/:pilgrimId/:documentType", async (req, res) => {
+router.delete("/pilgrims/:pilgrimId/:documentType", async (req: Request, res: Response) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
     const pilgrimId = req.params.pilgrimId as string;
