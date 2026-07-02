@@ -1,0 +1,2 @@
+.githooks/* text eol=lf
+.githooks/pre-commit eol=lf

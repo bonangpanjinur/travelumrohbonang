@@ -1,0 +1,18 @@
+#!/bin/sh
+# Pre-commit hook: TypeScript check sebelum commit
+# Setup: diaktifkan otomatis via `pnpm install` (prepare script)
+
+echo "⏳ Typecheck sebelum commit..."
+
+pnpm run typecheck
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ Typecheck GAGAL — commit dibatalkan."
+  echo "   Perbaiki error TypeScript di atas, lalu coba commit lagi."
+  echo ""
+  echo "   Skip hook (darurat): git commit --no-verify"
+  exit 1
+fi
+
+echo "✅ Typecheck lulus — melanjutkan commit."
