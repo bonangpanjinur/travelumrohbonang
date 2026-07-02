@@ -1,6 +1,7 @@
 import { Router } from "express";
 import healthRouter from "./health";
 import packagesRouter from "./packages";
+import faqsRouter from "./faqs";
 import bookingsRouter from "./bookings";
 import profileRouter from "./profile";
 import adminRouter from "./admin";
@@ -10,6 +11,7 @@ const router = Router();
 
 router.use(healthRouter);
 router.use("/packages", packagesRouter);
+router.use("/faqs", faqsRouter);
 router.use("/admin", strictLimiter, adminRouter);
 
 router.use("/bookings", strictLimiter);

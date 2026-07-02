@@ -1,15 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
-import { supabase } from "@/shared/integrations/supabase/client";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/shared/components/ui/accordion";
 import { HelpCircle } from "lucide-react";
 
 interface PageFAQProps {
-  /** Daftar scope yang ingin diambil. Contoh: ['paket'] atau ['package','general'] */
-  scopes: ("general" | "paket" | "package")[];
-  /** Jika diisi, akan menambah FAQ spesifik paket ini juga. */
+  scopes?: ("general" | "paket" | "package")[];
+  scope?: "general" | "paket" | "package";
   packageId?: string;
   title?: string;
   description?: string;
@@ -25,32 +23,29 @@ interface FAQ {
   sort_order: number | null;
 }
 
+const API_BASE = import.meta.env.VITE_API_URL || "";
+
 export default function PageFAQ({
   scopes,
+  scope,
   packageId,
   title = "Pertanyaan yang Sering Diajukan",
   description,
   className = "",
 }: PageFAQProps) {
-  const { data: faqs = [] } = useQuery({
-    queryKey: ["faqs-page", scopes.join(","), packageId ?? ""],
-    queryFn: async () => {
-      let q = supabase
-        .from("faqs")
-        .select("id, question, answer, scope, package_id, sort_order")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true });
+  const scopeList = scopes ?? (scope ? [scope] : ["general"]);
 
-      // Ambil scope yang diminta ATAU FAQ khusus paket ini.
-      if (packageId) {
-        q = q.or(`scope.in.(${scopes.join(",")}),package_id.eq.${packageId}`);
-      } else {
-        q = q.in("scope", scopes);
-      }
-      const { data, error } = await q;
-      if (error) throw error;
-      // Urutkan: package-specific dulu, lalu sort_order
-      return ((data as FAQ[]) || []).sort((a, b) => {
+  const { data: faqs = [] } = useQuery<FAQ[]>({
+    queryKey: ["faqs-page", scopeList.join(","), packageId ?? ""],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("scopes", scopeList.join(","));
+      if (packageId) params.set("package_id", packageId);
+      const res = await fetch(`${API_BASE}/api/faqs?${params.toString()}`);
+      if (!res.ok) return [];
+      const json = await res.json();
+      const data: FAQ[] = json.data || [];
+      return data.sort((a, b) => {
         const aSpec = a.package_id === packageId ? 0 : 1;
         const bSpec = b.package_id === packageId ? 0 : 1;
         if (aSpec !== bSpec) return aSpec - bSpec;
