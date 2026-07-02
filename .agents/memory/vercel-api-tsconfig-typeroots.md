@@ -1,25 +1,29 @@
 ---
-name: Vercel API tsconfig typeRoots
-description: Both api/tsconfig.json AND artifacts/api-server/tsconfig.json must explicitly declare typeRoots or Vercel TS build gets TS7006 on Express callback params.
+name: Vercel API tsconfig typeRoots + explicit handler typing
+description: The only reliable fix for TS7006 on Vercel is explicit Request/Response annotations on every handler. typeRoots alone is insufficient for transitively-compiled files.
 ---
 
 ## Rule
-**Both** `api/tsconfig.json` and `artifacts/api-server/tsconfig.json` must include `typeRoots` + `types`.
+**Always annotate Express route handler parameters explicitly.** Do NOT rely on TypeScript's inference from the Router method.
 
-`api/tsconfig.json` (paths relative to `api/` dir):
+In every route file:
+```typescript
+import { Router, Request, Response } from "express";
+
+router.get("/path", async (req: Request, res: Response) => { ... });
+router.get("/path", (_req: Request, res: Response) => { ... });
+```
+
+**Why:** When Vercel compiles the API serverless function, files in `artifacts/api-server/src/` are compiled transitively. TypeScript uses `api/tsconfig.json` as the root context but may not apply its `typeRoots` to transitively included files the same way. The result is that Express types are unavailable for inference, causing TS7006 on every `(req, res)` callback parameter — even though local build passes (because local build uses `artifacts/api-server/tsconfig.json` directly). Explicit `import { Request, Response } from "express"` uses **module resolution** (not typeRoots), which always works as long as express is in node_modules.
+
+**How to apply:** Any new route file must import `Request, Response` from `express` and annotate all handler params. Run `pnpm typecheck` from root before push.
+
+## tsconfig belt-and-suspenders (keep, but not sufficient alone)
+Both `api/tsconfig.json` and `artifacts/api-server/tsconfig.json` should still have:
 ```json
-"typeRoots": ["../artifacts/api-server/node_modules/@types", "../node_modules/@types"],
+"typeRoots": [".../@types", ".../node_modules/@types"],
 "types": ["node", "express"]
 ```
 
-`artifacts/api-server/tsconfig.json` (paths relative to `artifacts/api-server/` dir):
-```json
-"typeRoots": ["./node_modules/@types", "../../node_modules/@types"],
-"types": ["node", "express"]
-```
-
-**Why:** `tsconfig.base.json` sets `"types": []` which disables automatic `@types` discovery. Vercel compiles `api/index.ts` with `api/tsconfig.json`; route files inside `artifacts/api-server/src/` are compiled transitively. Without Express types loaded in BOTH configs, every router callback param (`req`, `res`) becomes implicitly `any`, causing TS7006 on Vercel even when local build passes (because local build uses `artifacts/api-server/tsconfig.json` directly). The `@types/express` package lives in `artifacts/api-server/node_modules/@types` in pnpm workspace layout.
-
-**How to apply:** Any time either tsconfig is modified or recreated, ensure both tsconfigs have these two fields. Always run `pnpm run build` inside `artifacts/api-server/` locally to catch errors before push.
-
-**Important:** TS7006 errors from an old GitHub commit won't go away until Replit changes are pushed to GitHub and Vercel redeploys.
+## Null-safety in route handlers
+Drizzle schema columns may be `string | null`. When using column values as Record keys or array indices, always guard: `if (!p.departureId) return acc;` before `acc[p.departureId]`.

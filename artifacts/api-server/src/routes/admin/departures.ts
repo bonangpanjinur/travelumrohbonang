@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { db, packageDepartures, departurePrices, eq, and } from "@workspace/db";
 import {
   PackageDepartureSchema,
@@ -16,7 +16,7 @@ import { validate } from "../../middlewares/validate";
 
 const router = Router({ mergeParams: true });
 
-router.get("/", async (req, res) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
     const packageId = (req.params as Record<string, string>).packageId;
 
@@ -41,7 +41,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/", validate(AdminCreateDepartureRequest), async (req, res) => {
+router.post("/", validate(AdminCreateDepartureRequest), async (req: Request, res: Response) => {
   try {
     const packageId = (req.params as Record<string, string>).packageId;
     const body = req.body as AdminCreateDepartureInput;
@@ -66,7 +66,7 @@ router.post("/", validate(AdminCreateDepartureRequest), async (req, res) => {
   }
 });
 
-router.get("/:depId", async (req, res) => {
+router.get("/:depId", async (req: Request, res: Response) => {
   try {
     const packageId = (req.params as Record<string, string>).packageId;
     const depId = req.params.depId as string;
@@ -98,7 +98,7 @@ router.get("/:depId", async (req, res) => {
   }
 });
 
-router.patch("/:depId", validate(AdminUpdateDepartureRequest), async (req, res) => {
+router.patch("/:depId", validate(AdminUpdateDepartureRequest), async (req: Request, res: Response) => {
   try {
     const packageId = (req.params as Record<string, string>).packageId;
     const depId = req.params.depId as string;
@@ -131,7 +131,7 @@ router.patch("/:depId", validate(AdminUpdateDepartureRequest), async (req, res) 
   }
 });
 
-router.delete("/:depId", async (req, res) => {
+router.delete("/:depId", async (req: Request, res: Response) => {
   try {
     const packageId = (req.params as Record<string, string>).packageId;
     const depId = req.params.depId as string;
@@ -161,7 +161,7 @@ router.delete("/:depId", async (req, res) => {
   }
 });
 
-router.post("/:depId/prices", validate(AdminCreateDeparturePriceRequest), async (req, res) => {
+router.post("/:depId/prices", validate(AdminCreateDeparturePriceRequest), async (req: Request, res: Response) => {
   try {
     const depId = req.params.depId as string;
     const body = req.body as AdminCreateDeparturePriceInput;
@@ -182,7 +182,7 @@ router.post("/:depId/prices", validate(AdminCreateDeparturePriceRequest), async 
   }
 });
 
-router.patch("/:depId/prices/:priceId", validate(AdminUpdateDeparturePriceRequest), async (req, res) => {
+router.patch("/:depId/prices/:priceId", validate(AdminUpdateDeparturePriceRequest), async (req: Request, res: Response) => {
   try {
     const depId = req.params.depId as string;
     const priceId = req.params.priceId as string;
@@ -210,7 +210,7 @@ router.patch("/:depId/prices/:priceId", validate(AdminUpdateDeparturePriceReques
   }
 });
 
-router.delete("/:depId/prices/:priceId", async (req, res) => {
+router.delete("/:depId/prices/:priceId", async (req: Request, res: Response) => {
   try {
     const depId = req.params.depId as string;
     const priceId = req.params.priceId as string;

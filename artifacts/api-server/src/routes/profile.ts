@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { db, profiles, eq } from "@workspace/db";
 import {
   ProfileSchema,
@@ -12,7 +12,7 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
 
@@ -38,7 +38,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.patch("/:id", validate(UpdateProfileRequest), async (req, res) => {
+router.patch("/:id", validate(UpdateProfileRequest), async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
 

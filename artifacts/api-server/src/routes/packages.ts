@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import {
   db,
   packages,
@@ -14,7 +14,7 @@ import {
 
 const router = Router();
 
-router.get("/", async (req, res) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
     const { type, active } = req.query;
 
@@ -46,6 +46,7 @@ router.get("/", async (req, res) => {
       : [];
 
     const pricesByDep = allPrices.reduce<Record<string, typeof allPrices>>((acc, p) => {
+      if (!p.departureId) return acc;
       if (!acc[p.departureId]) acc[p.departureId] = [];
       acc[p.departureId].push(p);
       return acc;
@@ -116,7 +117,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/filter-options", async (req, res) => {
+router.get("/filter-options", async (req: Request, res: Response) => {
   try {
     const [cats, airs, apts] = await Promise.all([
       db.select().from(packageCategories).where(eq(packageCategories.isActive, true)),
@@ -133,7 +134,7 @@ router.get("/filter-options", async (req, res) => {
   }
 });
 
-router.get("/:slug", async (req, res) => {
+router.get("/:slug", async (req: Request, res: Response) => {
   try {
     const slug = req.params.slug as string;
 

@@ -1,15 +1,15 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { pool } from "@workspace/db";
 import { HealthCheckResponse } from "@workspace/api-zod";
 
 const router = Router();
 
-router.get("/healthz", (_req, res) => {
+router.get("/healthz", (_req: Request, res: Response) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
 });
 
-router.get("/health", async (_req, res) => {
+router.get("/health", async (_req: Request, res: Response) => {
   const start = Date.now();
 
   let dbStatus: "ok" | "error" = "error";
