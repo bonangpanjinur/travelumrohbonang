@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, type Request, type Response } from "express";
 import { db, packageDepartures, departurePrices, eq, and } from "@workspace/db";
 import {
   PackageDepartureSchema,

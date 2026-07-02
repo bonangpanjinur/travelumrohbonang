@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui
 import { useToast } from "@/shared/hooks/use-toast";
 import { Save, Image, Globe, Building2, Phone, Palette, ImageIcon, Layout, Check, Banknote, Share2, Wallet, Eye, EyeOff } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Json } from "@/shared/integrations/supabase/types";
+import { type Json } from "@/shared/integrations/supabase/types";
 import { IconPicker } from "@/shared/components/ui/icon-picker";
 import { cn } from "@/shared/lib/utils";
 

@@ -5,7 +5,7 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
 import AdminBreadcrumb from "./AdminBreadcrumb";
-import { BrandingSettings, defaultBranding } from "./adminMenuConfig";
+import { type BrandingSettings, defaultBranding } from "./adminMenuConfig";
 import { AdminQueryErrorBoundary } from "./AdminQueryErrorBoundary";
 import { AdminHealthBanner } from "./AdminHealthBanner";
 import { AdminSessionTimeoutModal } from "./AdminSessionTimeoutModal";

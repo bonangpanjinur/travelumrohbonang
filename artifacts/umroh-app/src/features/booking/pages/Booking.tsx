@@ -220,7 +220,7 @@ const Booking = () => {
     try {
       // Determine PIC
       let finalPicId: string | null = null;
-      let finalPicType = picType;
+      const finalPicType = picType;
 
       if (picType === "branch" && picBranchId) {
         finalPicId = picBranchId;

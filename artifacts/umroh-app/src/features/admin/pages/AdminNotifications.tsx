@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { formatDistanceToNow, format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { useAdminNotifications, AdminNotif } from "@/features/admin/hooks/useAdminNotifications";
+import { useAdminNotifications, type AdminNotif } from "@/features/admin/hooks/useAdminNotifications";
 
 const TYPE_LABEL: Record<AdminNotif["type"], string> = {
   booking: "Booking Baru",

@@ -69,7 +69,7 @@ const PaymentProofAccessLogs = () => {
 
       // Fetch user profile names in a second query
       const userIds = Array.from(new Set((data || []).map((r: any) => r.user_id).filter(Boolean))) as string[];
-      let profilesMap = new Map<string, { name: string | null; email: string | null }>();
+      const profilesMap = new Map<string, { name: string | null; email: string | null }>();
       if (userIds.length > 0) {
         const { data: profs } = await supabase
           .from("profiles")

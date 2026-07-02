@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { BrandingSettings } from "./adminMenuConfig";
+import { type BrandingSettings } from "./adminMenuConfig";
 
 interface AdminBrandingProps {
   branding: BrandingSettings;

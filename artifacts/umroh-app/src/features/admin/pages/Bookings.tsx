@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import BookingTable, { Booking } from "@/features/admin/components/BookingTable";
+import BookingTable, { type Booking } from "@/features/admin/components/BookingTable";
 import BookingFilters from "@/features/admin/components/BookingFilters";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";

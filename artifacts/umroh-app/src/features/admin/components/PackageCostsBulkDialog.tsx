@@ -72,7 +72,7 @@ export default function PackageCostsBulkDialog({ sourcePackageId, sourceCosts, p
     const source = sourceCosts.filter((c) => selectedCostIds.includes(c.id));
     if (source.length === 0) { toast.error("Pilih minimal satu komponen"); return; }
 
-    let inserts: any[] = [];
+    const inserts: any[] = [];
     if (mode === "packages") {
       if (targetPackageIds.length === 0) { toast.error("Pilih paket tujuan"); return; }
       for (const pid of targetPackageIds) {

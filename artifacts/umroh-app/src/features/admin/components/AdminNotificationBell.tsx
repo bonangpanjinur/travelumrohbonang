@@ -12,7 +12,7 @@ import {
 } from "@/shared/components/ui/popover";
 import { formatDistanceToNow } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { useAdminNotifications, AdminNotif } from "@/features/admin/hooks/useAdminNotifications";
+import { useAdminNotifications, type AdminNotif } from "@/features/admin/hooks/useAdminNotifications";
 
 const NotifIcon = ({ type }: { type: AdminNotif["type"] }) =>
   type === "booking" ? (

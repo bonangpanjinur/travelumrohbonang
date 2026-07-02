@@ -41,7 +41,7 @@ import {
   Search,
   Tag,
   LineChart,
-  LucideIcon
+  type LucideIcon
 
 } from "lucide-react";
 

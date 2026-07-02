@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, type Request, type Response } from "express";
 import { db, bookings, packages, packageDepartures, bookingRooms, bookingPilgrims, eq, and } from "@workspace/db";
 import {
   BookingListResponse,

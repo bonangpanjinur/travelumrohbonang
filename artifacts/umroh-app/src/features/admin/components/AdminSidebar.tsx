@@ -7,7 +7,7 @@ import LanguageSwitcher from "@/shared/components/common/LanguageSwitcher";
 import ThemeToggle from "@/shared/components/common/ThemeToggle";
 import AdminNotificationBell from "./AdminNotificationBell";
 import { useState, useMemo } from "react";
-import { menuGroups, BrandingSettings } from "./adminMenuConfig";
+import { menuGroups, type BrandingSettings } from "./adminMenuConfig";
 
 interface AdminSidebarProps {
   branding: BrandingSettings;

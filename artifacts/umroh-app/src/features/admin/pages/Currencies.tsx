@@ -11,7 +11,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 import { toast } from "@/shared/hooks/use-toast";
 import { Coins, Plus, Pencil, Trash2 } from "lucide-react";
-import { useCurrency, Currency } from "@/shared/hooks/useCurrency";
+import { useCurrency, type Currency } from "@/shared/hooks/useCurrency";
 
 const empty = { code: "", name: "", symbol: "", rate_to_idr: 1, is_default: false, is_active: true };
 

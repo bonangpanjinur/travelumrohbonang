@@ -283,7 +283,7 @@ const Profile = () => {
               </div>
 
               {/* Role Specific Access Section */}
-              {true && (
+              {(
                 <div className="pt-4 border-t space-y-4">
                   {isAdmin && (
                     <div>

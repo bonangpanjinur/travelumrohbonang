@@ -1,6 +1,6 @@
 import { Bell } from "lucide-react";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
-import { Notification } from "@/shared/hooks/useNotifications";
+import { type Notification } from "@/shared/hooks/useNotifications";
 import NotificationItem from "./NotificationItem";
 
 interface NotificationListProps {

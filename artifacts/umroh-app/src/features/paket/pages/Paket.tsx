@@ -14,7 +14,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Badge } from "@/shared/components/ui/badge";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import PackageCard, { PackageCardData } from "@/features/paket/components/PackageCard";
+import PackageCard, { type PackageCardData } from "@/features/paket/components/PackageCard";
 import SEO from "@/shared/components/seo/SEO";
 import BreadcrumbJsonLd from "@/shared/components/seo/BreadcrumbJsonLd";
 

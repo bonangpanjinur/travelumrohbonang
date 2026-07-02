@@ -1,18 +1,18 @@
 #!/bin/sh
-# Pre-commit hook: TypeScript check sebelum commit
+# Pre-commit hook: TypeScript + ESLint check sebelum commit
 # Setup: diaktifkan otomatis via `pnpm install` (prepare script)
+# Skip darurat: git commit --no-verify
 
-echo "⏳ Typecheck sebelum commit..."
+set -e
 
+echo "⏳ [1/2] Typecheck..."
 pnpm run typecheck
+echo "✅ Typecheck lulus."
 
-if [ $? -ne 0 ]; then
-  echo ""
-  echo "❌ Typecheck GAGAL — commit dibatalkan."
-  echo "   Perbaiki error TypeScript di atas, lalu coba commit lagi."
-  echo ""
-  echo "   Skip hook (darurat): git commit --no-verify"
-  exit 1
-fi
+echo ""
+echo "⏳ [2/2] Lint (ESLint)..."
+pnpm run lint
+echo "✅ Lint lulus."
 
-echo "✅ Typecheck lulus — melanjutkan commit."
+echo ""
+echo "🚀 Semua check lulus — melanjutkan commit."

@@ -4,7 +4,7 @@ import { Button } from "@/shared/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
-import PackageCard, { PackageCardData } from "./PackageCard";
+import PackageCard, { type PackageCardData } from "./PackageCard";
 
 const PackagesPreview = () => {
   const [packages, setPackages] = useState<PackageCardData[]>([]);

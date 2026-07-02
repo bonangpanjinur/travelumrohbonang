@@ -1,6 +1,6 @@
 import { Menu } from "lucide-react";
 import AdminBranding from "./AdminBranding";
-import { BrandingSettings } from "./adminMenuConfig";
+import { type BrandingSettings } from "./adminMenuConfig";
 import AdminNotificationBell from "./AdminNotificationBell";
 import ThemeToggle from "@/shared/components/common/ThemeToggle";
 

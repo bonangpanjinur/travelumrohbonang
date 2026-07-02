@@ -1,7 +1,7 @@
 import { Bell, AlertCircle, Clock, CreditCard } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Notification } from "@/shared/hooks/useNotifications";
+import { type Notification } from "@/shared/hooks/useNotifications";
 
 interface NotificationItemProps {
   notification: Notification;

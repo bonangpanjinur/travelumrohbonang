@@ -1,4 +1,4 @@
-import { Component, ReactNode } from "react";
+import { Component, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw, ServerCrash, ShieldOff, WifiOff } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { logError } from "@/shared/lib/errorLogger";

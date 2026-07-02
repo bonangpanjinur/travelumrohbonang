@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from "@/shared/components/ui/popover";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { useNotifications, Notification } from "@/shared/hooks/useNotifications";
+import { useNotifications, type Notification } from "@/shared/hooks/useNotifications";
 import NotificationList from "./NotificationList";
 
 const NotificationBell = () => {

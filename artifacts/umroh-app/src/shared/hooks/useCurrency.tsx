@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 
 export interface Currency {

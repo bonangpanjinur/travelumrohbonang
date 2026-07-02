@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, type Request, type Response } from "express";
 import { pool } from "@workspace/db";
 import { HealthCheckResponse } from "@workspace/api-zod";
 
