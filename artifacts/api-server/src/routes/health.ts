@@ -1,15 +1,17 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type RequestHandler } from "express";
 import { pool } from "@workspace/db";
 import { HealthCheckResponse } from "@workspace/api-zod";
 
 const router = Router();
 
-router.get("/healthz", (_req: Request, res: Response) => {
+const healthz: RequestHandler = (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
-});
+};
 
-router.get("/health", async (_req: Request, res: Response) => {
+router.get("/healthz", healthz);
+
+const health: RequestHandler = async (_req, res) => {
   const start = Date.now();
 
   let dbStatus: "ok" | "error" = "error";
@@ -43,6 +45,8 @@ router.get("/health", async (_req: Request, res: Response) => {
       },
     },
   });
-});
+};
+
+router.get("/health", health);
 
 export default router;
