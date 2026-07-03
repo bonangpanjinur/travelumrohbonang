@@ -1,2 +1,4 @@
 - [Express 5 handler typing](express5-handler-typing.md) — never annotate req/res explicitly in route handlers; always let TypeScript infer from the router method.
 - [Vercel API tsconfig typeRoots](vercel-api-tsconfig-typeroots.md) — api/tsconfig.json must declare typeRoots + types or Vercel build gets TS7006 on all Express callback params.
+- [Express 5 wildcard routes](express5-wildcard-routes.md) — use `*name` (no colon) for catch-all routes; `/*` and `/:param*` throw at startup in path-to-regexp v8.
+- [esbuild pg externalization](esbuild-pg-external.md) — `pg` must be in esbuild external list AND a direct dep of the bundle target package; otherwise runtime throws ERR_MODULE_NOT_FOUND.

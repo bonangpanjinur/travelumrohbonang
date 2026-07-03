@@ -11,7 +11,6 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 }
 
 function getBucketDir(bucket: string): string {
-  // Sanitize bucket name
   const safe = bucket.replace(/[^a-zA-Z0-9_-]/g, "_");
   const dir = path.join(UPLOADS_DIR, safe);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -20,18 +19,26 @@ function getBucketDir(bucket: string): string {
 
 function getFilePath(bucket: string, filePath: string): string {
   const bucketDir = getBucketDir(bucket);
-  // Sanitize: prevent path traversal
-  const safePath = filePath.split("/").map((p) => p.replace(/[^a-zA-Z0-9._-]/g, "_")).join("/");
+  const safePath = filePath
+    .split("/")
+    .map((p) => p.replace(/[^a-zA-Z0-9._-]/g, "_"))
+    .join("/");
   const fullPath = path.join(bucketDir, safePath);
-  // Ensure the file is inside the bucket dir
   if (!fullPath.startsWith(bucketDir)) throw new Error("Invalid path");
   return fullPath;
 }
 
-// POST /storage/v1/object/:bucket/*  — upload file
-router.post("/object/:bucket/*", (req: Request, res: Response) => {
+function getWildcardPath(req: Request): string {
+  const p = (req.params as Record<string, string | string[]>)["filePath"];
+  if (Array.isArray(p)) return p.join("/");
+  return (p as string) ?? "";
+}
+
+// Express 5 / path-to-regexp v8: wildcards use *name (no colon)
+// POST /storage/v1/object/:bucket/*filePath
+router.post("/object/:bucket/*filePath", (req: Request, res: Response) => {
   const { bucket } = req.params;
-  const filePath = (req.params as any)[0] as string;
+  const filePath = getWildcardPath(req);
   if (!filePath) return res.status(400).json({ error: "Missing file path" });
 
   try {
@@ -58,10 +65,10 @@ router.post("/object/:bucket/*", (req: Request, res: Response) => {
   }
 });
 
-// PUT /storage/v1/object/:bucket/*  — upload (upsert)
-router.put("/object/:bucket/*", (req: Request, res: Response) => {
+// PUT /storage/v1/object/:bucket/*filePath
+router.put("/object/:bucket/*filePath", (req: Request, res: Response) => {
   const { bucket } = req.params;
-  const filePath = (req.params as any)[0] as string;
+  const filePath = getWildcardPath(req);
   if (!filePath) return res.status(400).json({ error: "Missing file path" });
 
   try {
@@ -88,10 +95,10 @@ router.put("/object/:bucket/*", (req: Request, res: Response) => {
   }
 });
 
-// GET /storage/v1/object/public/:bucket/*  — serve public file
-router.get("/object/public/:bucket/*", (req: Request, res: Response) => {
+// GET /storage/v1/object/public/:bucket/*filePath
+router.get("/object/public/:bucket/*filePath", (req: Request, res: Response) => {
   const { bucket } = req.params;
-  const filePath = (req.params as any)[0] as string;
+  const filePath = getWildcardPath(req);
   if (!filePath) return res.status(400).json({ error: "Missing file path" });
 
   try {
@@ -105,10 +112,10 @@ router.get("/object/public/:bucket/*", (req: Request, res: Response) => {
   }
 });
 
-// DELETE /storage/v1/object/:bucket/*  — delete file
-router.delete("/object/:bucket/*", (req: Request, res: Response) => {
+// DELETE /storage/v1/object/:bucket/*filePath
+router.delete("/object/:bucket/*filePath", (req: Request, res: Response) => {
   const { bucket } = req.params;
-  const filePath = (req.params as any)[0] as string;
+  const filePath = getWildcardPath(req);
 
   try {
     const fullPath = getFilePath(bucket, filePath);
