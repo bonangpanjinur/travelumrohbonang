@@ -1,4 +1,5 @@
 import { supabase } from "@/shared/integrations/supabase/client";
+import { getCurrentAuthUser } from "@/shared/lib/currentUser";
 
 const BUCKET = "payment-proofs";
 const DEFAULT_TTL = 300; // 5 menit
@@ -23,8 +24,8 @@ function resolvePath(stored: string): string {
 
 async function logAccess(path: string, context?: string) {
   try {
-    const { data } = await supabase.auth.getUser();
-    const uid = data.user?.id;
+    const data = await getCurrentAuthUser();
+    const uid = data?.id;
     if (!uid) return;
     await supabase.from("payment_proof_access_logs").insert({
       user_id: uid,

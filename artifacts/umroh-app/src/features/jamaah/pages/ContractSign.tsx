@@ -48,7 +48,7 @@ const ContractSign = () => {
   const handleSign = async (dataUrl: string) => {
     if (!user || !booking) return;
     const html = defaultContractTemplate({
-      name: user.user_metadata?.name ?? user.email ?? "Jamaah",
+      name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "Jamaah",
       bookingCode: booking.booking_code,
       packageName: booking.package?.name ?? "-",
       total: booking.total_price ?? 0,
@@ -60,7 +60,7 @@ const ContractSign = () => {
       html_content: html,
       signature_data_url: dataUrl,
       signed_at: new Date().toISOString(),
-      signer_name: user.user_metadata?.name ?? user.email ?? null,
+      signer_name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || null,
     };
 
     const { error } = contract
@@ -79,7 +79,7 @@ const ContractSign = () => {
   if (!booking) return <div className="py-16 text-center">Booking tidak ditemukan.</div>;
 
   const html = defaultContractTemplate({
-    name: user?.user_metadata?.name ?? user?.email ?? "Jamaah",
+    name: [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "Jamaah",
     bookingCode: booking.booking_code,
     packageName: booking.package?.name ?? "-",
     total: booking.total_price ?? 0,

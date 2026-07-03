@@ -31,7 +31,8 @@ function generateBookingCode(): string {
 
 router.get("/", async (req, res) => {
   try {
-    const userId = req.user!.id;
+    if (!req.isAuthenticated()) { res.status(401).json({ error: "Authentication required" }); return; }
+    const userId = req.user.id;
 
     const data = await db
       .select({
@@ -67,6 +68,10 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
+    if (!req.isAuthenticated()) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
     const id = req.params.id as string;
 
     const [row] = await db
@@ -93,7 +98,7 @@ router.get("/:id", async (req, res) => {
         packageDepartures,
         eq(bookings.departureId, packageDepartures.id),
       )
-      .where(and(eq(bookings.id, id), eq(bookings.userId, req.user!.id)))
+      .where(and(eq(bookings.id, id), eq(bookings.userId, req.user.id)))
       .limit(1);
 
     if (!row) {
@@ -121,7 +126,8 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
       agentId,
     } = req.body as CreateBookingInput;
 
-    const userId = req.user!.id;
+    if (!req.isAuthenticated()) { res.status(401).json({ error: "Authentication required" }); return; }
+    const userId = req.user.id;
     const bookingCode = generateBookingCode();
 
     const [created] = await db
@@ -152,7 +158,8 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
 router.post("/:id/rooms", validate(CreateBookingRoomsRequest), async (req, res) => {
   try {
     const id = req.params.id as string;
-    const userId = req.user!.id;
+    if (!req.isAuthenticated()) { res.status(401).json({ error: "Authentication required" }); return; }
+    const userId = req.user.id;
 
     const [booking] = await db
       .select({ id: bookings.id })
@@ -187,7 +194,8 @@ router.post("/:id/rooms", validate(CreateBookingRoomsRequest), async (req, res) 
 router.post("/:id/pilgrims", validate(CreateBookingPilgrimsRequest), async (req, res) => {
   try {
     const id = req.params.id as string;
-    const userId = req.user!.id;
+    if (!req.isAuthenticated()) { res.status(401).json({ error: "Authentication required" }); return; }
+    const userId = req.user.id;
 
     const [booking] = await db
       .select({ id: bookings.id })

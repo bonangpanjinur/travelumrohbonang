@@ -99,7 +99,7 @@ const Dashboard = () => {
         .eq('id', user.id)
         .maybeSingle();
       
-      setUserName(profile?.name || user.user_metadata?.name || user.email || 'Jamaah');
+      setUserName(profile?.name || [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || 'Jamaah');
       setHasBranch(!!profile?.branch_id);
 
       const { data: agentRow } = await supabase

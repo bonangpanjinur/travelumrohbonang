@@ -14,8 +14,6 @@ import Index from "./features/cms/pages/Index";
 import Paket from "./features/paket/pages/Paket";
 import PackageDetail from "./features/paket/pages/PackageDetail";
 import Auth from "./features/auth/pages/Auth";
-import ForgotPassword from "./features/auth/pages/ForgotPassword";
-import ResetPassword from "./features/auth/pages/ResetPassword";
 import Booking from "./features/booking/pages/Booking";
 import Payment from "./features/booking/pages/Payment";
 import MyBookings from "./features/booking/pages/MyBookings";
@@ -137,8 +135,6 @@ const AppContent = () => {
       <Route path="/paket/:slug" element={<PackageDetail />} />
       <Route path="/bandingkan" element={<Compare />} />
       <Route path="/auth" element={<Auth />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
       {/* Protected User Routes */}
       <Route element={<AuthRoute />}>
         <Route path="/booking/:slug/:departureId" element={<Booking />} />

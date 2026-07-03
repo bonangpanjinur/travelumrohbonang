@@ -1,7 +1,6 @@
 import { Router, type RequestHandler } from "express";
 import { db, bookings, pool, sql } from "@workspace/db";
 import { getRequestMetrics } from "../../lib/requestMetrics";
-import { isSupabaseConfigured } from "../../lib/supabase";
 
 const router = Router();
 
@@ -57,8 +56,8 @@ const systemHealth: RequestHandler = async (_req, res) => {
       latencyMs: dbLatencyMs,
       ...(dbError ? { error: dbError } : {}),
     },
-    supabaseAuth: {
-      configured: isSupabaseConfigured,
+    auth: {
+      provider: "replit-auth",
     },
     bookings: {
       total: totalBookings,

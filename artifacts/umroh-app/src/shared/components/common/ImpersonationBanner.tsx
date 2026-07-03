@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, LogOut } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { logAudit } from "@/shared/lib/audit";
 
@@ -14,7 +13,7 @@ import { logAudit } from "@/shared/lib/audit";
 const STORAGE_KEY = "impersonation_active";
 
 const ImpersonationBanner = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [active, setActive] = useState(false);
 
   useEffect(() => {
@@ -35,8 +34,7 @@ const ImpersonationBanner = () => {
       await logAudit({ action: "impersonate_end", entityType: "user", entityId: user.id });
     } catch {}
     sessionStorage.removeItem(STORAGE_KEY);
-    await supabase.auth.signOut();
-    window.location.href = "/";
+    await signOut();
   };
 
   return (

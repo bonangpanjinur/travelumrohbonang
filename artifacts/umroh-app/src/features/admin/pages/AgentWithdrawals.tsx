@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { logAudit } from "@/shared/lib/audit";
+import { useAuth } from "@/shared/hooks/useAuth";
 
 const statusVariant: Record<string, string> = {
   requested: "bg-warning/10 text-warning border-warning/20",
@@ -23,6 +24,7 @@ const statusVariant: Record<string, string> = {
 };
 
 const AdminAgentWithdrawals = () => {
+  const { user: currentUser } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
@@ -46,11 +48,10 @@ const AdminAgentWithdrawals = () => {
     if (!selected) return;
     setSaving(true);
     try {
-      const { data: u } = await supabase.auth.getUser();
       const { error } = await supabase.from("agent_withdrawals").update({
         status, admin_notes: adminNotes || null,
         proof_url: status === "paid" ? (proofUrl || null) : selected.proof_url,
-        processed_by: u?.user?.id, processed_at: new Date().toISOString(),
+        processed_by: currentUser?.id, processed_at: new Date().toISOString(),
       }).eq("id", selected.id);
       if (error) throw error;
       await logAudit({ action: `withdrawal_${status}`, entityType: "agent_withdrawal", entityId: selected.id, metadata: { amount: selected.amount } });

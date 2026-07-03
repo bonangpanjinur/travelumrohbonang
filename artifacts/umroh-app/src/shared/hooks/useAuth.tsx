@@ -1,167 +1,38 @@
-import { useState, useEffect, createContext, useContext, useCallback } from "react";
-import { type User, type Session } from "@supabase/supabase-js";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { createContext, useContext, useCallback, type ReactNode } from "react";
+import { useAuth as useReplitAuth, type AuthUser } from "@workspace/replit-auth-web";
+
+export type { AuthUser };
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: AuthUser | null;
   loading: boolean;
   isAdmin: boolean;
   role: string | null;
   refreshRole: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null; isAdmin?: boolean }>;
-  signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
+  login: () => void;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [role, setRole] = useState<string | null>(null);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const { user, isLoading, login, logout } = useReplitAuth();
 
-  const checkRole = useCallback(async (userId: string): Promise<string> => {
-    try {
-      // Check user_roles table directly to get the actual role
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (roleData?.role) {
-        return roleData.role;
-      }
-
-      // Fallback: check via is_admin RPC
-      const { data: adminResult, error } = await supabase.rpc('is_admin', { _user_id: userId });
-      
-      if (!error && adminResult === true) {
-        return 'admin';
-      }
-
-      return 'buyer';
-    } catch (err) {
-      console.error("Role check failed:", err);
-      return 'buyer';
-    }
-  }, []);
-
-  const updateRole = useCallback((newRole: string) => {
-    const adminStatus = ['admin', 'superadmin', 'super_admin'].includes(newRole);
-    setRole(newRole);
-    setIsAdmin(adminStatus);
-  }, []);
-
-  const clearAuth = useCallback(() => {
-    setUser(null);
-    setSession(null);
-    setIsAdmin(false);
-    setRole(null);
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-
-    // 1. Set up auth listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        if (!mounted) return;
-        console.log("Auth event:", event);
-
-        if (event === 'SIGNED_OUT') {
-          clearAuth();
-          setLoading(false);
-          return;
-        }
-
-        if (currentSession?.user) {
-          setSession(currentSession);
-          setUser(currentSession.user);
-          
-          // Use setTimeout to avoid Supabase deadlock on auth state change
-          setTimeout(async () => {
-            if (!mounted) return;
-            const userRole = await checkRole(currentSession.user.id);
-            if (mounted) {
-              updateRole(userRole);
-              setLoading(false);
-            }
-          }, 0);
-        } else {
-          clearAuth();
-          setLoading(false);
-        }
-      }
-    );
-
-    // 2. Then get initial session
-    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-      if (!mounted) return;
-      
-      if (initialSession?.user) {
-        setSession(initialSession);
-        setUser(initialSession.user);
-        const userRole = await checkRole(initialSession.user.id);
-        if (mounted) {
-          updateRole(userRole);
-        }
-      }
-      if (mounted) setLoading(false);
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [checkRole, updateRole, clearAuth]);
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-
-      if (data?.user) {
-        const userRole = await checkRole(data.user.id);
-        updateRole(userRole);
-        return { error: null, isAdmin: ['admin', 'superadmin', 'super_admin'].includes(userRole) };
-      }
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
-    }
-  };
-
-  const signUp = async (email: string, password: string, name: string) => {
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { name } }
-      });
-      return { error: error as Error | null };
-    } catch (error) {
-      return { error: error as Error };
-    }
-  };
-
-  const signOut = async () => {
-    clearAuth();
-    await supabase.auth.signOut();
-    window.location.href = '/auth';
-  };
+  const role = user?.role ?? null;
+  const isAdmin = role === "admin";
 
   const refreshRole = useCallback(async () => {
-    if (!user) return;
-    const r = await checkRole(user.id);
-    updateRole(r);
-  }, [user, checkRole, updateRole]);
+    window.location.reload();
+  }, []);
+
+  const signOut = useCallback(async () => {
+    logout();
+  }, [logout]);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, role, refreshRole, signIn, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{ user, loading: isLoading, isAdmin, role, refreshRole, login, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );

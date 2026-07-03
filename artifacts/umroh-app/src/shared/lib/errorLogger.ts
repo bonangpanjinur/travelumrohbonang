@@ -1,5 +1,6 @@
 import { supabase } from "@/shared/integrations/supabase/client";
 import { captureException } from "@/shared/lib/sentry";
+import { getCurrentAuthUser } from "@/shared/lib/currentUser";
 
 interface LogPayload {
   message: string;
@@ -16,7 +17,7 @@ export async function logError({ message, stack, level = "error", context, error
   }
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentAuthUser();
     await supabase.from("error_logs").insert({
       user_id: user?.id ?? undefined,
       level,

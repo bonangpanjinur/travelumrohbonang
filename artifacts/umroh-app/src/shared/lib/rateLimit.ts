@@ -1,4 +1,5 @@
 import { supabase } from "@/shared/integrations/supabase/client";
+import { getCurrentAuthUser } from "@/shared/lib/currentUser";
 
 /**
  * Best-effort client-side rate limit using the request_log table.
@@ -20,7 +21,7 @@ export async function rateLimit(endpoint: string, opts: { max: number; windowSec
       return { allowed: false, remaining: 0 };
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getCurrentAuthUser();
     await supabase.from("request_log").insert({
       ip: ipPlaceholder,
       endpoint,

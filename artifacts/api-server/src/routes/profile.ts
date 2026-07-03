@@ -16,7 +16,7 @@ router.get("/:id", async (req, res) => {
   try {
     const id = req.params.id as string;
 
-    if (id !== req.user!.id) {
+    if (!req.isAuthenticated() || id !== req.user.id) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
@@ -42,7 +42,7 @@ router.patch("/:id", validate(UpdateProfileRequest), async (req, res) => {
   try {
     const id = req.params.id as string;
 
-    if (id !== req.user!.id) {
+    if (!req.isAuthenticated() || id !== req.user.id) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }

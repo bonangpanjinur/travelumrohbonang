@@ -15,7 +15,7 @@ const ISSUER = "Umroh Gateway";
 const sessionKey = (uid: string) => `admin_2fa_verified_${uid}`;
 
 const AdminRoute = () => {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading, signOut } = useAuth();
   const { settings, loading: settingsLoading } = useAuthSettings();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -119,7 +119,7 @@ const AdminRoute = () => {
               </p>
               <div className="flex gap-2">
                 <Button onClick={() => navigate("/account/2fa")}>Aktifkan 2FA Sekarang</Button>
-                <Button variant="outline" onClick={() => supabase.auth.signOut().then(() => navigate("/auth"))}>
+                <Button variant="outline" onClick={() => signOut()}>
                   Logout
                 </Button>
               </div>
@@ -156,7 +156,7 @@ const AdminRoute = () => {
                 <Button onClick={verifyCode} disabled={submitting || code.length < 6}>
                   {submitting ? "Memverifikasi…" : "Verifikasi"}
                 </Button>
-                <Button variant="outline" onClick={() => supabase.auth.signOut().then(() => navigate("/auth"))}>
+                <Button variant="outline" onClick={() => signOut()}>
                   Logout
                 </Button>
               </div>

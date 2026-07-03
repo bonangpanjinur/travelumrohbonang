@@ -11,3 +11,4 @@ export * from "./logs";
 export * from "./crm";
 export * from "./contracts";
 export * from "./itineraries";
+export * from "./auth";

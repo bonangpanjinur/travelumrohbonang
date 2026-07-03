@@ -1,4 +1,5 @@
 import { supabase } from "@/shared/integrations/supabase/client";
+import { getCurrentAuthUser } from "@/shared/lib/currentUser";
 
 /**
  * Catat aksi penting ke audit_logs. Best-effort: tidak melempar error
@@ -11,8 +12,8 @@ export async function logAudit(params: {
   metadata?: Record<string, unknown>;
 }) {
   try {
-    const { data: u } = await supabase.auth.getUser();
-    const userId = u?.user?.id ?? null;
+    const u = await getCurrentAuthUser();
+    const userId = u?.id ?? null;
     if (!userId) return;
     await supabase.from("audit_logs").insert({
       user_id: userId,

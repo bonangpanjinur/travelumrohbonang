@@ -1,4 +1,5 @@
 import { supabase } from "@/shared/integrations/supabase/client";
+import { getCurrentAuthUser } from "@/shared/lib/currentUser";
 
 /**
  * Extract the storage path from a Supabase storage URL.
@@ -40,9 +41,9 @@ export async function getSignedPilgrimDocUrl(opts: {
 
   // Best-effort audit log; ignore errors so view still works.
   try {
-    const { data: userData } = await supabase.auth.getUser();
+    const userData = await getCurrentAuthUser();
     await supabase.from("pilgrim_doc_access_logs").insert({
-      user_id: userData?.user?.id ?? null,
+      user_id: userData?.id ?? null,
       pilgrim_id: opts.pilgrimId ?? null,
       doc_type: opts.docType ?? null,
       storage_path: path,

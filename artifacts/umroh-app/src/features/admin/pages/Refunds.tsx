@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { logAudit } from "@/shared/lib/audit";
+import { useAuth } from "@/shared/hooks/useAuth";
 
 const statusColors: Record<string, string> = {
   pending: "bg-warning/10 text-warning border-warning/20",
@@ -22,6 +23,7 @@ const statusColors: Record<string, string> = {
 };
 
 const AdminRefunds = () => {
+  const { user: currentUser } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
@@ -43,10 +45,9 @@ const AdminRefunds = () => {
     if (!selected) return;
     setSaving(true);
     try {
-      const { data: u } = await supabase.auth.getUser();
       const { error } = await supabase.from("refund_requests").update({
         status, admin_notes: adminNotes || null,
-        processed_by: u?.user?.id, processed_at: new Date().toISOString(),
+        processed_by: currentUser?.id, processed_at: new Date().toISOString(),
       }).eq("id", selected.id);
       if (error) throw error;
       await logAudit({ action: `refund_${status}`, entityType: "refund_request", entityId: selected.id, metadata: { amount: selected.amount } });

@@ -67,7 +67,7 @@ const Profile = () => {
         });
       } else {
         setProfile({
-          name: user.user_metadata?.name || "",
+          name: [user.firstName, user.lastName].filter(Boolean).join(" ") || "",
           email: user.email || "",
           phone: "",
           avatar_url: "",
@@ -347,19 +347,8 @@ const Profile = () => {
             <CardContent>
               <Button
                 variant="outline"
-                onClick={async () => {
-                  const { data: { session } } = await supabase.auth.getSession();
-                  if (!session) return;
-                  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-user-data`, {
-                    headers: { Authorization: `Bearer ${session.access_token}` },
-                  });
-                  if (!res.ok) { toast.error("Gagal mengunduh data"); return; }
-                  const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url; a.download = `my-data-${user?.id}.json`; a.click();
-                  URL.revokeObjectURL(url);
-                  toast.success("Data berhasil diunduh");
+                onClick={() => {
+                  toast.error("Fitur unduh data belum tersedia");
                 }}
               >
                 Unduh Data Saya (JSON)

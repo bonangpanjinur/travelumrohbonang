@@ -133,7 +133,7 @@ const Navbar = () => {
         if (data) {
           setUserProfile({ ...data, avatar_url: data.avatar_url ?? "" });
         } else {
-          setUserProfile({ name: user.user_metadata?.name || user.email || "", avatar_url: "" });
+          setUserProfile({ name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "", avatar_url: "" });
         }
       } catch (err) {
         console.error("Error fetching profile:", err);
