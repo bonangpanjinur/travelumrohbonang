@@ -7,6 +7,7 @@ import adminUsersRouter from "./users";
 import adminDeparturesRouter from "./departures";
 import adminPaymentsRouter from "./payments";
 import adminDocumentsRouter from "./documents";
+import adminSystemHealthRouter from "./systemHealth";
 
 const router = Router();
 
@@ -19,5 +20,6 @@ router.use("/bookings", adminBookingsRouter);
 router.use("/bookings/:bookingId/payments", adminPaymentsRouter);
 router.use("/bookings/:bookingId/documents", adminDocumentsRouter);
 router.use("/users", adminUsersRouter);
+router.use("/system-health", adminSystemHealthRouter);
 
 export default router;

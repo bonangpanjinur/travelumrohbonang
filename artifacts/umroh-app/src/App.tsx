@@ -81,6 +81,7 @@ import AdminProofAccessLogs from "./features/admin/pages/PaymentProofAccessLogs"
 import AdminAgentWithdrawals from "./features/admin/pages/AgentWithdrawals";
 import AdminRefunds from "./features/admin/pages/Refunds";
 import AdminAuditLogs from "./features/admin/pages/AuditLogs";
+import AdminSystemHealth from "./features/admin/pages/SystemHealth";
 import AdminSlugRedirects from "./features/admin/pages/SlugRedirects";
 import AdminRoleManagement from "./features/admin/pages/RoleManagement";
 import AdminChats from "./features/admin/pages/Chats";
@@ -211,6 +212,7 @@ const AppContent = () => {
           <Route path="agent-withdrawals" element={<AdminAgentWithdrawals />} />
           <Route path="refunds" element={<AdminRefunds />} />
           <Route path="audit-logs" element={<AdminAuditLogs />} />
+          <Route path="system-health" element={<AdminSystemHealth />} />
           <Route path="role-management" element={<AdminRoleManagement />} />
           <Route path="chats" element={<AdminChats />} />
           <Route path="leaderboard" element={<AdminLeaderboard />} />

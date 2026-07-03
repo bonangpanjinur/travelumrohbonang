@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { generalLimiter } from "./middlewares/rateLimiter";
+import { requestMetrics } from "./lib/requestMetrics";
 
 const app = express();
 

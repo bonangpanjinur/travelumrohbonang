@@ -41,6 +41,7 @@ import {
   Search,
   Tag,
   LineChart,
+  Activity,
   type LucideIcon
 
 } from "lucide-react";
@@ -165,6 +166,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Multi-Cabang", href: "/admin/multi-branch", icon: GitBranch },
       { label: "Tenant Sites", href: "/admin/tenant-sites", icon: Globe },
       { label: "Upgrade Template", href: "/admin/template-upgrades", icon: ArrowUpCircle },
+      { label: "Kesehatan Sistem", href: "/admin/system-health", icon: Activity },
       { label: "Audit Logs", href: "/admin/audit-logs", icon: ShieldAlert },
       { label: "Error Tracking", href: "/admin/error-logs", icon: ShieldAlert },
       { label: "Slug Redirects (SEO)", href: "/admin/slug-redirects", icon: ShieldAlert },
