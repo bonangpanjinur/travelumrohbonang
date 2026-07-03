@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from "express";
+import { Router } from "express";
 import {
   db,
   bookings,
@@ -20,7 +20,7 @@ import { validate } from "../../middlewares/validate";
 
 const router = Router();
 
-router.get("/", async (req: Request, res: Response) => {
+router.get("/", async (req, res) => {
   try {
     const { status, userId } = req.query;
 
@@ -63,7 +63,7 @@ router.get("/", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/:id", async (req: Request, res: Response) => {
+router.get("/:id", async (req, res) => {
   try {
     const id = req.params.id as string;
 
@@ -123,7 +123,7 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.patch("/:id/status", validate(AdminUpdateBookingStatusRequest), async (req: Request, res: Response) => {
+router.patch("/:id/status", validate(AdminUpdateBookingStatusRequest), async (req, res) => {
   try {
     const id = req.params.id as string;
     const { status, notes } = req.body as AdminUpdateBookingStatusInput;

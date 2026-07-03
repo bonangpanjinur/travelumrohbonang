@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from "express";
+import { Router } from "express";
 import { db, bookings, bookingPayments, eq, and, sum, sql } from "@workspace/db";
 import {
   AdminRecordPaymentRequest,
@@ -67,7 +67,7 @@ async function syncBookingStatus(bookingId: string, paymentStatus: "unpaid" | "p
   }
 }
 
-router.get("/", async (req: Request, res: Response) => {
+router.get("/", async (req, res) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
 
@@ -106,7 +106,7 @@ router.get("/", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/", validate(AdminRecordPaymentRequest), async (req: Request, res: Response) => {
+router.post("/", validate(AdminRecordPaymentRequest), async (req, res) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
     const body = req.body as AdminRecordPaymentInput;
@@ -152,7 +152,7 @@ router.post("/", validate(AdminRecordPaymentRequest), async (req: Request, res: 
   }
 });
 
-router.get("/:paymentId", async (req: Request, res: Response) => {
+router.get("/:paymentId", async (req, res) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
     const paymentId = req.params.paymentId as string;
@@ -174,7 +174,7 @@ router.get("/:paymentId", async (req: Request, res: Response) => {
   }
 });
 
-router.patch("/:paymentId", validate(AdminUpdatePaymentRequest), async (req: Request, res: Response) => {
+router.patch("/:paymentId", validate(AdminUpdatePaymentRequest), async (req, res) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
     const paymentId = req.params.paymentId as string;
@@ -211,7 +211,7 @@ router.patch("/:paymentId", validate(AdminUpdatePaymentRequest), async (req: Req
   }
 });
 
-router.delete("/:paymentId", async (req: Request, res: Response) => {
+router.delete("/:paymentId", async (req, res) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
     const paymentId = req.params.paymentId as string;

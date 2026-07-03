@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from "express";
+import { Router } from "express";
 import {
   db,
   packages,
@@ -14,7 +14,7 @@ import {
 
 const router = Router();
 
-router.get("/", async (req: Request, res: Response) => {
+router.get("/", async (req, res) => {
   try {
     const { type, active } = req.query;
 
@@ -117,7 +117,7 @@ router.get("/", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/filter-options", async (req: Request, res: Response) => {
+router.get("/filter-options", async (req, res) => {
   try {
     const [cats, airs, apts] = await Promise.all([
       db.select().from(packageCategories).where(eq(packageCategories.isActive, true)),
@@ -134,7 +134,7 @@ router.get("/filter-options", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/:slug", async (req: Request, res: Response) => {
+router.get("/:slug", async (req, res) => {
   try {
     const slug = req.params.slug as string;
 
