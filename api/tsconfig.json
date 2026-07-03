@@ -4,13 +4,17 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "typeRoots": ["../node_modules/@types"],
-    "types": ["node"],
+    "types": ["node", "express"],
     "paths": {
-      "@workspace/db": ["../lib/db/src/index.ts"],
-      "@workspace/db/schema": ["../lib/db/src/schema/index.ts"],
-      "@workspace/api-zod": ["../lib/api-zod/src/index.ts"],
+      "@workspace/db": ["../lib/db/dist/index.d.ts"],
+      "@workspace/db/schema": ["../lib/db/dist/schema/index.d.ts"],
+      "@workspace/api-zod": ["../lib/api-zod/dist/index.d.ts"],
       "@workspace/api-spec": ["../lib/api-spec/src/index.ts"]
     }
   },
-  "include": ["."]
+  "include": ["."],
+  "references": [
+    { "path": "../lib/db" },
+    { "path": "../lib/api-zod" }
+  ]
 }
