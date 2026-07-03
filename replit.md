@@ -38,23 +38,23 @@ vercel.json              — Konfigurasi deployment Vercel
 
 ## Environment Variables
 
-Lihat `.env.example` untuk daftar lengkap. Variabel yang wajib diisi:
+### Di Replit (development)
 
-| Variabel | Keterangan | Di mana mengisi |
+| Variabel | Keterangan | Status |
 |---|---|---|
-| `SUPABASE_URL` | URL project Supabase | Vercel + Replit Secret |
-| `SUPABASE_ANON_KEY` | Anon/public key Supabase | Vercel + Replit Secret |
-| `DATABASE_URL` | Connection string PostgreSQL Supabase | Vercel + Replit Secret |
-| `VITE_SUPABASE_URL` | URL Supabase untuk frontend | Vercel + Replit Secret |
-| `VITE_SUPABASE_ANON_KEY` | Anon key untuk frontend | Vercel + Replit Secret |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Sama dengan anon key | Vercel + Replit Secret |
-| `VITE_SUPABASE_PROJECT_ID` | Subdomain project Supabase | Vercel + Replit Secret |
-| `PORT` | Port API server (dev only, default 8080) | Replit env var |
+| `DATABASE_URL` | Replit built-in PostgreSQL | ✅ Auto-provided oleh Replit |
+| `SUPABASE_URL` | URL Supabase (untuk auth saja) | ❗ Perlu diisi jika pakai auth |
+| `SUPABASE_ANON_KEY` | Anon key Supabase | ❗ Perlu diisi jika pakai auth |
+| `VITE_SUPABASE_URL` | URL Supabase untuk frontend | ❗ Perlu diisi jika pakai auth |
+| `VITE_SUPABASE_ANON_KEY` | Anon key frontend | ❗ Perlu diisi jika pakai auth |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Sama dengan anon key | ❗ Perlu diisi jika pakai auth |
+| `VITE_SUPABASE_PROJECT_ID` | Subdomain project Supabase | ❗ Perlu diisi jika pakai auth |
 
-**Cara mendapatkan dari Supabase Dashboard:**
-- URL & anon key: _Project Settings → API_
-- Database URL: _Project Settings → Database → Connection string (URI)_
-- Project ID: subdomain dari URL (mis. `abcdef` dari `abcdef.supabase.co`)
+> **Database di Replit**: `DATABASE_URL` sudah otomatis tersedia dari Replit built-in PostgreSQL. Semua 61 tabel sudah dibuat via `drizzle-kit push`. Tidak perlu setup manual.
+
+### Di Vercel (production/deployment)
+
+Lihat `.env.example` untuk daftar lengkap variabel yang dibutuhkan saat deploy ke Vercel.
 
 ## Deployment ke Vercel
 
