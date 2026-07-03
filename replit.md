@@ -2,10 +2,19 @@
 
 Aplikasi manajemen umroh lengkap — paket, booking, jemaah, pembayaran, dan CMS, dibangun di atas Supabase dan PostgreSQL.
 
+## Replit Setup Status (as of import)
+
+- **Dependencies**: `pnpm install` completes cleanly ✅
+- **Workflows configured**:
+  - `Start application` → `PORT=5000 pnpm --filter @workspace/umroh-app dev` (frontend, port 5000)
+  - `API Server` → `PORT=8080 pnpm --filter @workspace/api-server dev` (API, port 8080)
+- **Known issue**: ~20 TypeScript errors in `artifacts/api-server/src/routes/admin/` block a clean build (missing `@types/uuid`, TS7030 missing returns, Drizzle type mismatches). See Task #2 to fix these.
+- **To run the app**: Supabase credentials must be added first — see Environment Variables section below.
+
 ## Run & Operate
 
-- `pnpm --filter @workspace/umroh-app run dev` — frontend React/Vite (port 3000)
-- `PORT=8080 pnpm --filter @workspace/api-server run dev` — API server Express (port 8080)
+- `PORT=5000 pnpm --filter @workspace/umroh-app dev` — frontend React/Vite (port 5000, Replit preview)
+- `PORT=8080 pnpm --filter @workspace/api-server dev` — API server Express (port 8080)
 - `pnpm run typecheck` — typecheck seluruh monorepo
 - `pnpm run build` — build semua package
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks & Zod schemas dari OpenAPI spec
