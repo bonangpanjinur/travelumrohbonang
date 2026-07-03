@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, numeric, timestamp } from "drizzle-orm/pg-core";
 
 export const payments = pgTable("payments", {
   id: text("id").primaryKey(),
@@ -18,5 +18,18 @@ export const paymentProofAccessLogs = pgTable("payment_proof_access_logs", {
   bookingId: text("booking_id"),
   paymentId: text("payment_id"),
   context: text("context"),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+});
+
+export const financialTransactions = pgTable("financial_transactions", {
+  id: text("id").primaryKey(),
+  bookingId: text("booking_id"),
+  category: text("category").notNull(),
+  type: text("type").notNull(), // "income" | "expense"
+  amount: numeric("amount").notNull(),
+  description: text("description"),
+  referenceNumber: text("reference_number"),
+  transactionDate: timestamp("transaction_date", { withTimezone: true }),
+  recordedBy: text("recorded_by"),
   createdAt: timestamp("created_at", { withTimezone: true }),
 });
