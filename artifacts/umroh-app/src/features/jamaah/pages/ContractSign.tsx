@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
@@ -8,6 +7,8 @@ import { useToast } from "@/shared/hooks/use-toast";
 import SEO from "@/shared/components/seo/SEO";
 import SignaturePad from "@/features/jamaah/components/SignaturePad";
 import { CheckCircle2 } from "lucide-react";
+import { apiFetch } from "@/shared/lib/apiClient";
+import { supabase } from "@/shared/integrations/supabase/client";
 
 const defaultContractTemplate = (data: { name: string; bookingCode: string; packageName: string; total: number }) => `
   <h2>Kontrak Layanan Umroh</h2>
@@ -27,21 +28,17 @@ const ContractSign = () => {
   useEffect(() => {
     if (!bookingId || !user) return;
     (async () => {
-      const { data: b } = await supabase
-        .from("bookings")
-        .select("id, booking_code, total_price, package:packages(name)")
-        .eq("id", bookingId)
-        .maybeSingle();
-      setBooking(b);
+      try {
+        const b = await apiFetch<any>(`/api/bookings/${bookingId}`);
+        setBooking(b);
 
-      const { data: existing } = await supabase
-        .from("contracts")
-        .select("*")
-        .eq("booking_id", bookingId)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      setContract(existing);
-      setLoading(false);
+        const existing = await apiFetch<any>(`/api/contracts/${bookingId}`);
+        setContract(existing);
+      } catch (err: any) {
+        toast({ title: "Gagal memuat data", description: err.message, variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [bookingId, user]);
 
@@ -49,30 +46,29 @@ const ContractSign = () => {
     if (!user || !booking) return;
     const html = defaultContractTemplate({
       name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "Jamaah",
-      bookingCode: booking.booking_code,
-      packageName: booking.package?.name ?? "-",
-      total: booking.total_price ?? 0,
+      bookingCode: booking.bookingCode,
+      packageName: booking.packageTitle ?? "-",
+      total: booking.totalPrice ?? 0,
     });
 
-    const payload = {
-      booking_id: booking.id,
-      user_id: user.id,
-      html_content: html,
-      signature_data_url: dataUrl,
-      signed_at: new Date().toISOString(),
-      signer_name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || null,
-    };
+    try {
+      const payload = {
+        bookingId: booking.id,
+        htmlContent: html,
+        signatureDataUrl: dataUrl,
+        signerName: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || null,
+      };
 
-    const { error } = contract
-      ? await supabase.from("contracts").update(payload).eq("id", contract.id)
-      : await supabase.from("contracts").insert(payload);
+      await apiFetch("/api/contracts", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
 
-    if (error) {
-      toast({ title: "Gagal", description: error.message, variant: "destructive" });
-      return;
+      toast({ title: "Kontrak ditandatangani" });
+      navigate(`/my-bookings`);
+    } catch (err: any) {
+      toast({ title: "Gagal", description: err.message, variant: "destructive" });
     }
-    toast({ title: "Kontrak ditandatangani" });
-    navigate(`/my-bookings`);
   };
 
   if (loading) return <div className="py-16 text-center">Memuat…</div>;
@@ -80,9 +76,9 @@ const ContractSign = () => {
 
   const html = defaultContractTemplate({
     name: [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email || "Jamaah",
-    bookingCode: booking.booking_code,
-    packageName: booking.package?.name ?? "-",
-    total: booking.total_price ?? 0,
+    bookingCode: booking.bookingCode,
+    packageName: booking.packageTitle ?? "-",
+    total: booking.totalPrice ?? 0,
   });
 
   return (
@@ -98,7 +94,7 @@ const ContractSign = () => {
           </CardContent>
         </Card>
 
-        {contract?.signed_at ? (
+        {contract?.signedAt ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-success">
@@ -107,10 +103,10 @@ const ContractSign = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Ditandatangani pada {new Date(contract.signed_at).toLocaleString("id-ID")}
+                Ditandatangani pada {new Date(contract.signedAt).toLocaleString("id-ID")}
               </p>
-              {contract.signature_data_url && (
-                <img src={contract.signature_data_url} alt="Tanda tangan" className="border rounded-md max-w-xs bg-white" />
+              {contract.signatureDataUrl && (
+                <img src={contract.signatureDataUrl} alt="Tanda tangan" className="border rounded-md max-w-xs bg-white" />
               )}
               <Button variant="outline" onClick={() => setContract(null)}>Tanda Tangan Ulang</Button>
             </CardContent>

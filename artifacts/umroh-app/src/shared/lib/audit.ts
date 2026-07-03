@@ -1,4 +1,4 @@
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { getCurrentAuthUser } from "@/shared/lib/currentUser";
 
 /**
@@ -15,13 +15,16 @@ export async function logAudit(params: {
     const u = await getCurrentAuthUser();
     const userId = u?.id ?? null;
     if (!userId) return;
-    await supabase.from("audit_logs").insert({
-      user_id: userId,
-      action: params.action,
-      entity_type: params.entityType ?? null,
-      entity_id: params.entityId == null ? null : String(params.entityId),
-      metadata: (params.metadata ?? null) as any,
-      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+    await apiFetch("/api/logs/audit", {
+      method: "POST",
+      body: JSON.stringify({
+        userId,
+        action: params.action,
+        entityType: params.entityType ?? null,
+        entityId: params.entityId == null ? null : String(params.entityId),
+        metadata: params.metadata ?? null,
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      }),
     });
   } catch (e) {
     console.warn("logAudit failed:", e);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
@@ -17,13 +17,30 @@ const AuditLogs = () => {
 
   const load = async () => {
     setLoading(true);
-    let q = supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(500);
-    if (search) q = q.ilike("action", `%${search}%`);
-    if (from) q = q.gte("created_at", from);
-    if (to) q = q.lte("created_at", to + "T23:59:59");
-    const { data } = await q;
-    setItems(data || []);
-    setLoading(false);
+    try {
+      // Note: Backend endpoint for /api/admin/logs/audit doesn't currently support filtering in the sample code I wrote, 
+      // but I should probably add it or handle it here.
+      const data = await apiFetch<any[]>("/api/admin/logs/audit");
+      let filtered = data || [];
+      
+      if (search) {
+        filtered = filtered.filter(l => l.action.toLowerCase().includes(search.toLowerCase()));
+      }
+      if (from) {
+        filtered = filtered.filter(l => new Date(l.createdAt) >= new Date(from));
+      }
+      if (to) {
+        const toDate = new Date(to);
+        toDate.setHours(23, 59, 59);
+        filtered = filtered.filter(l => new Date(l.createdAt) <= toDate);
+      }
+      
+      setItems(filtered);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -57,10 +74,10 @@ const AuditLogs = () => {
                   <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Tidak ada log</TableCell></TableRow>
                 ) : items.map((l) => (
                   <TableRow key={l.id}>
-                    <TableCell className="text-xs whitespace-nowrap">{format(new Date(l.created_at), "dd MMM HH:mm:ss", { locale: localeId })}</TableCell>
+                    <TableCell className="text-xs whitespace-nowrap">{format(new Date(l.createdAt), "dd MMM HH:mm:ss", { locale: localeId })}</TableCell>
                     <TableCell className="text-sm font-medium">{l.action}</TableCell>
-                    <TableCell className="text-xs">{l.entity_type}{l.entity_id ? ` · ${l.entity_id.slice(0, 8)}…` : ""}</TableCell>
-                    <TableCell className="font-mono text-xs">{l.user_id ? l.user_id.slice(0, 8) + "…" : "-"}</TableCell>
+                    <TableCell className="text-xs">{l.entityType}{l.entityId ? ` · ${l.entityId.slice(0, 8)}…` : ""}</TableCell>
+                    <TableCell className="font-mono text-xs">{l.userId ? l.userId.slice(0, 8) + "…" : "-"}</TableCell>
                     <TableCell className="text-xs max-w-xs truncate">{l.metadata ? JSON.stringify(l.metadata) : "-"}</TableCell>
                   </TableRow>
                 ))}

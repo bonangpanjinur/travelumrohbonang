@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -34,12 +35,12 @@ const DepartureGalleryPanel = ({ departureId, departureLabel }: Props) => {
 
   const loadItems = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("departure_gallery")
-      .select("*")
-      .eq("departure_id", departureId)
-      .order("sort_order", { ascending: true });
-    setItems((data as any) || []);
+    try {
+      const res = await apiFetch<{ data: GalleryItem[] }>(`/api/admin/gallery/departure/${departureId}`);
+      setItems(res.data || []);
+    } catch {
+      toast.error("Gagal memuat galeri");
+    }
     setLoading(false);
   };
 
@@ -52,13 +53,17 @@ const DepartureGalleryPanel = ({ departureId, departureLabel }: Props) => {
       const { error: upErr } = await supabase.storage.from("gallery").upload(path, file);
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("gallery").getPublicUrl(path);
-      const { error } = await supabase.from("departure_gallery").insert({
-        departure_id: departureId,
-        image_url: pub.publicUrl,
-        caption: caption || null,
-        sort_order: items.length,
+      
+      await apiFetch("/api/admin/gallery", {
+        method: "POST",
+        body: JSON.stringify({
+          departure_id: departureId,
+          image_url: pub.publicUrl,
+          caption: caption || null,
+          sort_order: items.length,
+        }),
       });
-      if (error) throw error;
+      
       toast.success("Foto berhasil diupload");
       setFile(null);
       setCaption("");
@@ -72,11 +77,12 @@ const DepartureGalleryPanel = ({ departureId, departureLabel }: Props) => {
 
   const handleDelete = async () => {
     if (!toDelete) return;
-    const { error } = await supabase.from("departure_gallery").delete().eq("id", toDelete.id);
-    if (error) toast.error(error.message);
-    else {
+    try {
+      await apiFetch(`/api/admin/gallery/${toDelete.id}`, { method: "DELETE" });
       toast.success("Foto dihapus");
       loadItems();
+    } catch (e: any) {
+      toast.error(e.message);
     }
     setToDelete(null);
   };

@@ -1,6 +1,5 @@
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
 import { Navigate } from "react-router-dom";
 import Navbar from "@/shared/components/layout/Navbar";
 import LoadingSpinner from "@/shared/components/ui/loading-spinner";
@@ -11,6 +10,8 @@ import { Input } from "@/shared/components/ui/input";
 import { toast } from "sonner";
 import { Upload, FileText, CheckCircle2, Clock, AlertCircle, Eye } from "lucide-react";
 import { getSignedPilgrimDocUrl } from "@/features/jamaah/lib/pilgrimDocs";
+import { apiFetch } from "@/shared/lib/apiClient";
+import { supabase } from "@/shared/integrations/supabase/client";
 
 const DOC_TYPES = [
   { type: "paspor", label: "Paspor", required: true },
@@ -42,38 +43,29 @@ const MyDocuments = () => {
 
   const fetchData = async () => {
     if (!user) return;
-    // Get user's bookings -> pilgrims
-    const { data: bookings } = await supabase
-      .from("bookings")
-      .select("id")
-      .eq("user_id", user.id);
+    try {
+      const bookings = await apiFetch<any[]>("/api/bookings");
+      if (!bookings?.length) {
+        setLoadingData(false);
+        return;
+      }
 
-    if (!bookings?.length) {
+      const pilgrimData = await apiFetch<any[]>("/api/pilgrims/my");
+      setPilgrims(pilgrimData || []);
+
+      if (pilgrimData?.length) {
+        const docData = await apiFetch<any[]>("/api/pilgrim-documents");
+        setDocuments(docData || []);
+      }
+    } catch (err: any) {
+      toast.error("Gagal memuat data: " + err.message);
+    } finally {
       setLoadingData(false);
-      return;
     }
-
-    const bookingIds = bookings.map((b) => b.id);
-    const { data: pilgrimData } = await supabase
-      .from("booking_pilgrims")
-      .select("*")
-      .in("booking_id", bookingIds);
-
-    setPilgrims(pilgrimData || []);
-
-    if (pilgrimData?.length) {
-      const pilgrimIds = pilgrimData.map((p) => p.id);
-      const { data: docData } = await supabase
-        .from("pilgrim_documents")
-        .select("*")
-        .in("pilgrim_id", pilgrimIds);
-      setDocuments(docData || []);
-    }
-    setLoadingData(false);
   };
 
   const getDoc = (pilgrimId: string, docType: string) => {
-    return documents.find((d) => d.pilgrim_id === pilgrimId && d.doc_type === docType);
+    return documents.find((d) => d.pilgrimId === pilgrimId && d.documentType === docType);
   };
 
   const handleUpload = async (pilgrimId: string, docType: string, file: File) => {
@@ -90,31 +82,19 @@ const MyDocuments = () => {
 
       if (uploadError) throw uploadError;
 
-      // pilgrim-documents is a PRIVATE bucket; store the storage path only and
-      // generate short-lived signed URLs on demand via getSignedPilgrimDocUrl.
       const fileUrl = path;
 
-
-      const existingDoc = getDoc(pilgrimId, docType);
-
-      if (existingDoc) {
-        await supabase
-          .from("pilgrim_documents")
-          .update({
-            file_url: fileUrl,
-            file_name: file.name,
-            status: "uploaded",
-          })
-          .eq("id", existingDoc.id);
-      } else {
-        await supabase.from("pilgrim_documents").insert({
-          pilgrim_id: pilgrimId,
-          doc_type: docType,
-          file_url: fileUrl,
-          file_name: file.name,
+      await apiFetch("/api/pilgrim-documents", {
+        method: "POST",
+        body: JSON.stringify({
+          pilgrimId,
+          bookingId: pilgrims.find(p => p.id === pilgrimId)?.bookingId,
+          documentType: docType,
+          fileUrl,
+          fileName: file.name,
           status: "uploaded",
-        });
-      }
+        }),
+      });
 
       toast.success("Dokumen berhasil diupload");
       fetchData();
@@ -154,7 +134,7 @@ const MyDocuments = () => {
                 <CardHeader>
                   <CardTitle>{pilgrim.name}</CardTitle>
                   <CardDescription>
-                    {pilgrim.passport_number ? `Paspor: ${pilgrim.passport_number}` : "Nomor paspor belum diisi"}
+                    {pilgrim.passportNumber ? `Paspor: ${pilgrim.passportNumber}` : "Nomor paspor belum diisi"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -178,8 +158,8 @@ const MyDocuments = () => {
                                 {dt.label}
                                 {dt.required && <span className="text-destructive ml-1">*</span>}
                               </p>
-                              {doc?.file_name && (
-                                <p className="text-xs text-muted-foreground">{doc.file_name}</p>
+                              {doc?.fileName && (
+                                <p className="text-xs text-muted-foreground">{doc.fileName}</p>
                               )}
                               {doc?.notes && status === "rejected" && (
                                 <p className="text-xs text-destructive mt-1">{doc.notes}</p>
@@ -191,15 +171,15 @@ const MyDocuments = () => {
                               <Icon className="h-3 w-3" />
                               {config.label}
                             </Badge>
-                            {doc?.file_url && (
+                            {doc?.fileUrl && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={async () => {
                                   const signed = await getSignedPilgrimDocUrl({
-                                    fileUrlOrPath: doc.file_url,
+                                    fileUrlOrPath: doc.fileUrl,
                                     pilgrimId: pilgrim.id,
-                                    docType: doc.doc_type,
+                                    docType: doc.documentType,
                                     context: "my_documents_view",
                                   });
                                   if (signed) window.open(signed, "_blank");

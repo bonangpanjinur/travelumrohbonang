@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -130,10 +131,10 @@ const AdminPackages = () => {
 
   const fetchOptions = async () => {
     const [catRes, hotelRes, airlineRes, airportRes] = await Promise.all([
-      supabase.from("package_categories").select("id, name, show_extra_hotels, is_active").order("sort_order"),
-      supabase.from("hotels").select("id, name, city").order("name"),
-      supabase.from("airlines").select("id, name").order("name"),
-      supabase.from("airports").select("id, name, code").order("name"),
+      apiFetch<{ data: Option[] }>("/api/admin/masterdata/categories"),
+      apiFetch<{ data: HotelOption[] }>("/api/admin/masterdata/hotels"),
+      apiFetch<{ data: Option[] }>("/api/admin/masterdata/airlines"),
+      apiFetch<{ data: (Option & { code: string | null })[] }>("/api/admin/masterdata/airports"),
     ]);
     setCategories(catRes.data || []);
     setHotels(hotelRes.data || []);
@@ -142,21 +143,14 @@ const AdminPackages = () => {
   };
 
   const fetchPackages = async () => {
-    const { data } = await supabase
-      .from("packages")
-      .select("*")
-      .order("created_at", { ascending: false });
-    setPackages((data || []) as Package[]);
+    const { data } = await apiFetch<{ data: Package[] }>("/api/admin/packages");
+    setPackages(data || []);
     setLoading(false);
   };
 
   const fetchExtraHotels = async (packageId: string) => {
-    const { data } = await supabase
-      .from("package_hotels")
-      .select("id, hotel_id, label, sort_order")
-      .eq("package_id", packageId)
-      .order("sort_order");
-    setExtraHotels((data as ExtraHotel[]) || []);
+    const { data } = await apiFetch<{ data: ExtraHotel[] }>(`/api/admin/packages/${packageId}/extra-hotels`);
+    setExtraHotels(data || []);
   };
 
   // Check if selected category needs extra hotels (driven by admin setting, not name matching)
@@ -189,46 +183,48 @@ const AdminPackages = () => {
   };
 
   const saveExtraHotels = async (packageId: string) => {
-    await supabase.from("package_hotels").delete().eq("package_id", packageId);
-    if (extraHotels.length > 0) {
-      const rows = extraHotels.map((eh, i) => ({
-        package_id: packageId,
-        hotel_id: eh.hotel_id,
-        label: eh.label || null,
-        sort_order: i,
-      }));
-      await supabase.from("package_hotels").insert(rows);
-    }
+    await apiFetch(`/api/admin/packages/${packageId}/extra-hotels`, {
+      method: "POST",
+      body: JSON.stringify({
+        hotels: extraHotels.map((eh, i) => ({
+          hotel_id: eh.hotel_id,
+          label: eh.label || null,
+          sort_order: i,
+        })),
+      }),
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = buildPayload();
 
-    if (editing) {
-      const { error } = await supabase.from("packages").update(payload as any).eq("id", editing.id);
-      if (error) {
-        toast({ title: "Gagal mengupdate", description: error.message, variant: "destructive" });
-      } else {
+    try {
+      if (editing) {
+        await apiFetch(`/api/admin/packages/${editing.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
         await saveExtraHotels(editing.id);
         clearDraft();
         toast({ title: "Paket diupdate!" });
         fetchPackages();
         setIsOpen(false);
         resetForm();
-      }
-    } else {
-      const { data, error } = await supabase.from("packages").insert(payload as any).select("id").single();
-      if (error) {
-        toast({ title: "Gagal membuat paket", description: error.message, variant: "destructive" });
       } else {
-        if (data) await saveExtraHotels(data.id);
+        const data = await apiFetch<any>("/api/admin/packages", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        if (data?.id) await saveExtraHotels(data.id);
         clearDraft();
         toast({ title: "Paket ditambahkan!" });
         fetchPackages();
         setIsOpen(false);
         resetForm();
       }
+    } catch (error: any) {
+      toast({ title: "Gagal menyimpan", description: error.message, variant: "destructive" });
     }
   };
 
@@ -259,12 +255,12 @@ const AdminPackages = () => {
   };
 
   const executeDelete = async (id: string) => {
-    const { error } = await supabase.from("packages").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      await apiFetch(`/api/admin/packages/${id}`, { method: "DELETE" });
       toast({ title: "Paket dihapus" });
       fetchPackages();
+    } catch (error: any) {
+      toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
     }
   };
 

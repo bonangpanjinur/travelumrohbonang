@@ -1,5 +1,15 @@
 import { Router } from "express";
-import { db, bookings, bookingPayments, eq, and, sum, sql } from "@workspace/db";
+import {
+  db,
+  bookings,
+  bookingPayments,
+  payments,
+  eq,
+  and,
+  sum,
+  sql,
+  desc,
+} from "@workspace/db";
 import {
   AdminRecordPaymentRequest,
   AdminUpdatePaymentRequest,
@@ -14,7 +24,12 @@ const router = Router({ mergeParams: true });
 
 async function computePaymentStatus(
   bookingId: string,
-): Promise<{ totalPrice: number; totalPaid: number; remaining: number; paymentStatus: "unpaid" | "partial" | "paid" }> {
+): Promise<{
+  totalPrice: number;
+  totalPaid: number;
+  remaining: number;
+  paymentStatus: "unpaid" | "partial" | "paid";
+}> {
   const [booking] = await db
     .select({ totalPrice: bookings.totalPrice })
     .from(bookings)
@@ -26,7 +41,12 @@ async function computePaymentStatus(
   const [result] = await db
     .select({ total: sum(bookingPayments.amount) })
     .from(bookingPayments)
-    .where(and(eq(bookingPayments.bookingId, bookingId), eq(bookingPayments.isVoided, false)));
+    .where(
+      and(
+        eq(bookingPayments.bookingId, bookingId),
+        eq(bookingPayments.isVoided, false),
+      ),
+    );
 
   const totalPaid = Number(result?.total ?? 0);
   const remaining = totalPrice - totalPaid;
@@ -43,14 +63,22 @@ async function computePaymentStatus(
   return { totalPrice, totalPaid, remaining, paymentStatus };
 }
 
-async function syncBookingStatus(bookingId: string, paymentStatus: "unpaid" | "partial" | "paid") {
+async function syncBookingStatus(
+  bookingId: string,
+  paymentStatus: "unpaid" | "partial" | "paid",
+) {
   const [current] = await db
     .select({ status: bookings.status })
     .from(bookings)
     .where(eq(bookings.id, bookingId))
     .limit(1);
 
-  if (!current || current.status === "cancelled" || current.status === "completed") return;
+  if (
+    !current ||
+    current.status === "cancelled" ||
+    current.status === "completed"
+  )
+    return;
 
   let newStatus: string | null = null;
 
@@ -63,9 +91,93 @@ async function syncBookingStatus(bookingId: string, paymentStatus: "unpaid" | "p
   }
 
   if (newStatus) {
-    await db.update(bookings).set({ status: newStatus }).where(eq(bookings.id, bookingId));
+    await db
+      .update(bookings)
+      .set({ status: newStatus })
+      .where(eq(bookings.id, bookingId));
   }
 }
+
+router.get("/all", async (req, res) => {
+  try {
+    const data = await db
+      .select({
+        id: payments.id,
+        amount: payments.amount,
+        status: payments.status,
+        proofUrl: payments.proofUrl,
+        paymentMethod: payments.paymentMethod,
+        paymentType: payments.paymentType,
+        paidAt: payments.paidAt,
+        createdAt: payments.createdAt,
+        booking: {
+          id: bookings.id,
+          bookingCode: bookings.bookingCode,
+          status: bookings.status,
+          totalPrice: bookings.totalPrice,
+          userId: bookings.userId,
+        },
+      })
+      .from(payments)
+      .leftJoin(bookings, eq(payments.bookingId, bookings.id))
+      .orderBy(desc(payments.createdAt));
+    res.json(data);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to fetch all payments" });
+  }
+});
+
+router.get("/recent-pending", async (req, res) => {
+  try {
+    const data = await db
+      .select({
+        id: payments.id,
+        amount: payments.amount,
+        status: payments.status,
+        createdAt: payments.createdAt,
+        bookingCode: bookings.bookingCode,
+      })
+      .from(payments)
+      .leftJoin(bookings, eq(payments.bookingId, bookings.id))
+      .where(eq(payments.status, "pending"))
+      .orderBy(desc(payments.createdAt))
+      .limit(20);
+    res.json(data);
+  } catch {
+    res.status(500).json({ error: "Failed to fetch recent pending payments" });
+  }
+});
+
+router.patch("/verify/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status, verifiedAt, paidAt } = req.body;
+
+    const [updated] = await db
+      .update(payments)
+      .set({ status, paidAt: paidAt ? new Date(paidAt) : null, createdAt: new Date() }) // createdAt is handled by db usually but schema says it is text/timestamp
+      .where(eq(payments.id, id))
+      .returning();
+
+    if (updated && status === "paid") {
+      await db
+        .update(bookings)
+        .set({ status: "paid" })
+        .where(eq(bookings.id, updated.bookingId));
+    } else if (updated && status === "failed") {
+        await db
+          .update(bookings)
+          .set({ status: "cancelled" })
+          .where(eq(bookings.id, updated.bookingId));
+    }
+
+    res.json(updated);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to verify payment" });
+  }
+});
 
 router.get("/", async (req, res) => {
   try {
@@ -88,7 +200,8 @@ router.get("/", async (req, res) => {
       .where(eq(bookingPayments.bookingId, bookingId))
       .orderBy(sql`${bookingPayments.paidAt} asc`);
 
-    const { totalPrice, totalPaid, remaining, paymentStatus } = await computePaymentStatus(bookingId);
+    const { totalPrice, totalPaid, remaining, paymentStatus } =
+      await computePaymentStatus(bookingId);
 
     const payments = paymentRows.map((p) => BookingPaymentSchema.parse(p));
 
@@ -140,7 +253,8 @@ router.post("/", validate(AdminRecordPaymentRequest), async (req, res) => {
       })
       .returning();
 
-    const { totalPrice, totalPaid, remaining, paymentStatus } = await computePaymentStatus(bookingId);
+    const { totalPrice, totalPaid, remaining, paymentStatus } =
+      await computePaymentStatus(bookingId);
     await syncBookingStatus(bookingId, paymentStatus);
 
     res.status(201).json({
@@ -160,7 +274,12 @@ router.get("/:paymentId", async (req, res) => {
     const [payment] = await db
       .select()
       .from(bookingPayments)
-      .where(and(eq(bookingPayments.id, paymentId), eq(bookingPayments.bookingId, bookingId)))
+      .where(
+        and(
+          eq(bookingPayments.id, paymentId),
+          eq(bookingPayments.bookingId, bookingId),
+        ),
+      )
       .limit(1);
 
     if (!payment) {
@@ -174,42 +293,54 @@ router.get("/:paymentId", async (req, res) => {
   }
 });
 
-router.patch("/:paymentId", validate(AdminUpdatePaymentRequest), async (req, res) => {
-  try {
-    const bookingId = (req.params as Record<string, string>).bookingId;
-    const paymentId = req.params.paymentId as string;
-    const updates = req.body as AdminUpdatePaymentInput;
+router.patch(
+  "/:paymentId",
+  validate(AdminUpdatePaymentRequest),
+  async (req, res) => {
+    try {
+      const bookingId = (req.params as Record<string, string>).bookingId;
+      const paymentId = req.params.paymentId as string;
+      const updates = req.body as AdminUpdatePaymentInput;
 
-    const setValues: Record<string, unknown> = {};
-    if (updates.type !== undefined) setValues.type = updates.type;
-    if (updates.amount !== undefined) setValues.amount = updates.amount;
-    if (updates.paidAt !== undefined) setValues.paidAt = new Date(updates.paidAt);
-    if (updates.method !== undefined) setValues.method = updates.method;
-    if (updates.referenceNumber !== undefined) setValues.referenceNumber = updates.referenceNumber;
-    if (updates.notes !== undefined) setValues.notes = updates.notes;
+      const setValues: Record<string, unknown> = {};
+      if (updates.type !== undefined) setValues.type = updates.type;
+      if (updates.amount !== undefined) setValues.amount = updates.amount;
+      if (updates.paidAt !== undefined)
+        setValues.paidAt = new Date(updates.paidAt);
+      if (updates.method !== undefined) setValues.method = updates.method;
+      if (updates.referenceNumber !== undefined)
+        setValues.referenceNumber = updates.referenceNumber;
+      if (updates.notes !== undefined) setValues.notes = updates.notes;
 
-    const [updated] = await db
-      .update(bookingPayments)
-      .set(setValues)
-      .where(and(eq(bookingPayments.id, paymentId), eq(bookingPayments.bookingId, bookingId)))
-      .returning();
+      const [updated] = await db
+        .update(bookingPayments)
+        .set(setValues)
+        .where(
+          and(
+            eq(bookingPayments.id, paymentId),
+            eq(bookingPayments.bookingId, bookingId),
+          ),
+        )
+        .returning();
 
-    if (!updated) {
-      res.status(404).json({ error: "Payment not found" });
-      return;
+      if (!updated) {
+        res.status(404).json({ error: "Payment not found" });
+        return;
+      }
+
+      const { totalPrice, totalPaid, remaining, paymentStatus } =
+        await computePaymentStatus(bookingId);
+      await syncBookingStatus(bookingId, paymentStatus);
+
+      res.json({
+        payment: BookingPaymentSchema.parse(updated),
+        summary: { totalPrice, totalPaid, remaining, paymentStatus },
+      });
+    } catch {
+      res.status(500).json({ error: "Failed to update payment" });
     }
-
-    const { totalPrice, totalPaid, remaining, paymentStatus } = await computePaymentStatus(bookingId);
-    await syncBookingStatus(bookingId, paymentStatus);
-
-    res.json({
-      payment: BookingPaymentSchema.parse(updated),
-      summary: { totalPrice, totalPaid, remaining, paymentStatus },
-    });
-  } catch {
-    res.status(500).json({ error: "Failed to update payment" });
-  }
-});
+  },
+);
 
 router.delete("/:paymentId", async (req, res) => {
   try {
@@ -219,7 +350,12 @@ router.delete("/:paymentId", async (req, res) => {
     const [voided] = await db
       .update(bookingPayments)
       .set({ isVoided: true })
-      .where(and(eq(bookingPayments.id, paymentId), eq(bookingPayments.bookingId, bookingId)))
+      .where(
+        and(
+          eq(bookingPayments.id, paymentId),
+          eq(bookingPayments.bookingId, bookingId),
+        ),
+      )
       .returning();
 
     if (!voided) {
@@ -227,7 +363,8 @@ router.delete("/:paymentId", async (req, res) => {
       return;
     }
 
-    const { totalPrice, totalPaid, remaining, paymentStatus } = await computePaymentStatus(bookingId);
+    const { totalPrice, totalPaid, remaining, paymentStatus } =
+      await computePaymentStatus(bookingId);
     await syncBookingStatus(bookingId, paymentStatus);
 
     res.json({

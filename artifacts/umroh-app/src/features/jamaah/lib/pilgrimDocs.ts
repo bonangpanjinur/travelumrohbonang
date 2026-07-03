@@ -1,5 +1,5 @@
+import { apiFetch } from "@/shared/lib/apiClient";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { getCurrentAuthUser } from "@/shared/lib/currentUser";
 
 /**
  * Extract the storage path from a Supabase storage URL.
@@ -41,14 +41,14 @@ export async function getSignedPilgrimDocUrl(opts: {
 
   // Best-effort audit log; ignore errors so view still works.
   try {
-    const userData = await getCurrentAuthUser();
-    await supabase.from("pilgrim_doc_access_logs").insert({
-      user_id: userData?.id ?? null,
-      pilgrim_id: opts.pilgrimId ?? null,
-      doc_type: opts.docType ?? null,
-      storage_path: path,
-      context: opts.context ?? null,
-      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+    await apiFetch("/api/pilgrim-documents/access-log", {
+      method: "POST",
+      body: JSON.stringify({
+        pilgrimId: opts.pilgrimId ?? null,
+        docType: opts.docType ?? null,
+        storagePath: path,
+        context: opts.context ?? null,
+      }),
     });
   } catch (e) {
     console.warn("doc access log failed", e);

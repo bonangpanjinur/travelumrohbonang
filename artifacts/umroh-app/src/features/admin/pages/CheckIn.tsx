@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { supabase } from "@/shared/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -9,13 +8,15 @@ import { toast } from "sonner";
 import { ScanLine, Camera, Square, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { apiFetch } from "@/shared/lib/apiClient";
+import { supabase } from "@/shared/integrations/supabase/client";
 
 type Recent = {
   id: string;
-  pilgrim_id: string;
-  checked_in_at: string;
+  pilgrimId: string;
+  checkedInAt: string;
   location: string | null;
-  pilgrim_name?: string;
+  pilgrimName?: string;
 };
 
 const AdminCheckIn = () => {
@@ -27,20 +28,20 @@ const AdminCheckIn = () => {
   const lastTimeRef = useRef<number>(0);
 
   const loadRecent = async () => {
-    const { data } = await supabase
-      .from("check_ins")
-      .select("id, pilgrim_id, checked_in_at, location, booking_pilgrims(name)")
-      .order("checked_in_at", { ascending: false })
-      .limit(20);
-    setRecent(
-      (data || []).map((r: any) => ({
-        id: r.id,
-        pilgrim_id: r.pilgrim_id,
-        checked_in_at: r.checked_in_at,
-        location: r.location,
-        pilgrim_name: r.booking_pilgrims?.name,
-      }))
-    );
+    try {
+      const data = await apiFetch<any[]>("/api/admin/pilgrims/check-ins");
+      setRecent(
+        (data || []).map((r: any) => ({
+          id: r.id,
+          pilgrimId: r.pilgrimId,
+          checkedInAt: r.checkedInAt,
+          location: r.location,
+          pilgrimName: r.pilgrimName,
+        }))
+      );
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   useEffect(() => {
@@ -69,28 +70,19 @@ const AdminCheckIn = () => {
       return;
     }
 
-    const { data: pilgrim } = await supabase
-      .from("booking_pilgrims")
-      .select("id, name, booking_id")
-      .eq("id", payload.pilgrim_id)
-      .maybeSingle();
-
-    if (!pilgrim) {
-      toast.error("Jemaah tidak ditemukan");
-      return;
-    }
-
-    const { error } = await supabase.from("check_ins").insert({
-      pilgrim_id: pilgrim.id,
-      departure_id: payload.departure_id || null,
-      booking_id: pilgrim.booking_id,
-      location,
-    });
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success(`✓ Check-in: ${pilgrim.name}`);
+    try {
+      await apiFetch("/api/admin/pilgrims/check-in", {
+        method: "POST",
+        body: JSON.stringify({
+          pilgrimId: payload.pilgrim_id,
+          departureId: payload.departure_id || null,
+          location,
+        }),
+      });
+      toast.success(`✓ Check-in berhasil`);
       loadRecent();
+    } catch (err: any) {
+      toast.error(err.message);
     }
   };
 
@@ -167,11 +159,11 @@ const AdminCheckIn = () => {
                 <li key={r.id} className="py-2 flex items-center gap-3">
                   <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{r.pilgrim_name || r.pilgrim_id.slice(0, 8)}</p>
+                    <p className="font-medium truncate">{r.pilgrimName || r.pilgrimId.slice(0, 8)}</p>
                     <p className="text-xs text-muted-foreground">{r.location || "-"}</p>
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {format(new Date(r.checked_in_at), "HH:mm dd/MM", { locale: localeId })}
+                    {format(new Date(r.checkedInAt), "HH:mm dd/MM", { locale: localeId })}
                   </span>
                 </li>
               ))}

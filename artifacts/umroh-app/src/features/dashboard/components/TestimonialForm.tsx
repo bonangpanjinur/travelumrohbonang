@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
@@ -24,13 +24,9 @@ const TestimonialForm = ({ bookingId, packageTitle, onSubmitted }: Props) => {
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from("pilgrim_testimonials")
-      .select("id")
-      .eq("booking_id", bookingId)
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => setExists(!!data));
+    apiFetch<{ data: any[] }>(`/api/admin/content/pilgrim-testimonials?booking_id=${bookingId}&user_id=${user.id}`)
+      .then(({ data }) => setExists(data && data.length > 0))
+      .catch(() => setExists(false));
   }, [user, bookingId]);
 
   if (exists === null || exists === true) return null;
@@ -42,23 +38,27 @@ const TestimonialForm = ({ bookingId, packageTitle, onSubmitted }: Props) => {
       return;
     }
     setSubmitting(true);
-    const { error } = await supabase.from("pilgrim_testimonials").insert({
-      booking_id: bookingId,
-      user_id: user.id,
-      rating,
-      message: message.trim() || null,
-    });
-    setSubmitting(false);
-    if (error) {
+    try {
+      await apiFetch("/api/admin/content/pilgrim-testimonials", {
+        method: "POST",
+        body: JSON.stringify({
+          bookingId,
+          userId: user.id,
+          rating,
+          message: message.trim() || null,
+        }),
+      });
+      toast({
+        title: "Terima kasih!",
+        description: "Testimoni Anda menunggu persetujuan admin.",
+      });
+      setExists(true);
+      onSubmitted?.();
+    } catch (error: any) {
       toast({ title: "Gagal mengirim", description: error.message, variant: "destructive" });
-      return;
+    } finally {
+      setSubmitting(false);
     }
-    toast({
-      title: "Terima kasih!",
-      description: "Testimoni Anda menunggu persetujuan admin.",
-    });
-    setExists(true);
-    onSubmitted?.();
   };
 
   return (

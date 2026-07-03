@@ -12,7 +12,7 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", async (req: any, res) => {
   try {
     const id = req.params.id as string;
 
@@ -33,12 +33,13 @@ router.get("/:id", async (req, res) => {
     }
 
     res.json(ProfileSchema.parse(profile));
-  } catch {
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Failed to fetch profile" });
   }
 });
 
-router.patch("/:id", validate(UpdateProfileRequest), async (req, res) => {
+router.patch("/:id", validate(UpdateProfileRequest), async (req: any, res) => {
   try {
     const id = req.params.id as string;
 
@@ -51,7 +52,9 @@ router.patch("/:id", validate(UpdateProfileRequest), async (req, res) => {
 
     const [updated] = await db
       .update(profiles)
-      .set(updates)
+      .set({
+        ...updates,
+      })
       .where(eq(profiles.id, id))
       .returning();
 
@@ -61,7 +64,8 @@ router.patch("/:id", validate(UpdateProfileRequest), async (req, res) => {
     }
 
     res.json(ProfileSchema.parse(updated));
-  } catch {
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Failed to update profile" });
   }
 });

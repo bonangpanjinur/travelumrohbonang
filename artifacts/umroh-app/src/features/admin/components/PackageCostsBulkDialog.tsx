@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
@@ -101,19 +101,17 @@ export default function PackageCostsBulkDialog({ sourcePackageId, sourceCosts, p
 
     setBusy(true);
     try {
-      if (overwrite) {
-        if (mode === "packages") {
-          for (const pid of targetPackageIds) {
-            await supabase.from("package_costs").delete().eq("package_id", pid).is("departure_id", null);
-          }
-        } else {
-          for (const did of targetDepartureIds) {
-            await supabase.from("package_costs").delete().eq("departure_id", did);
-          }
-        }
-      }
-      const { error } = await supabase.from("package_costs").insert(inserts);
-      if (error) throw error;
+      await apiFetch("/api/admin/costs/bulk-copy", {
+        method: "POST",
+        body: JSON.stringify({
+          sourceCosts: source,
+          targetPackageIds,
+          targetDepartureIds,
+          mode,
+          overwrite,
+          sourcePackageId,
+        }),
+      });
       toast.success(`${inserts.length} komponen disalin`);
       setOpen(false);
       onDone();

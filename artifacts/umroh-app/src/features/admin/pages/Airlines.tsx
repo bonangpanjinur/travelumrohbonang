@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -30,36 +30,43 @@ const AdminAirlines = () => {
   }, []);
 
   const fetchAirlines = async () => {
-    const { data } = await supabase.from("airlines").select("*").order("name");
-    setAirlines(data || []);
+    try {
+      const res = await apiFetch<{ data: Airline[] }>("/api/admin/masterdata/airlines");
+      setAirlines(res.data || []);
+    } catch {
+      toast({ title: "Gagal memuat maskapai", variant: "destructive" });
+    }
     setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (editing) {
-      const { error } = await supabase.from("airlines").update(form).eq("id", editing.id);
-      if (!error) {
+    try {
+      if (editing) {
+        await apiFetch(`/api/admin/masterdata/airlines/${editing.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(form),
+        });
         toast({ title: "Maskapai diupdate!" });
-        fetchAirlines();
-        setIsOpen(false);
-        resetForm();
-      }
-    } else {
-      const { error } = await supabase.from("airlines").insert(form);
-      if (!error) {
+      } else {
+        await apiFetch("/api/admin/masterdata/airlines", {
+          method: "POST",
+          body: JSON.stringify(form),
+        });
         toast({ title: "Maskapai ditambahkan!" });
-        fetchAirlines();
-        setIsOpen(false);
-        resetForm();
       }
+      fetchAirlines();
+      setIsOpen(false);
+      resetForm();
+    } catch {
+      toast({ title: "Gagal menyimpan", variant: "destructive" });
     }
   };
 
   const handleEdit = (airline: Airline) => {
     setEditing(airline);
-    setForm({ name: airline.name, logo_url: airline.logo_url || "" });
+    setForm({ name: airline.name, logo_url: (airline as any).logo_url || "" });
     setIsOpen(true);
   };
 
@@ -68,9 +75,13 @@ const AdminAirlines = () => {
   };
 
   const executeDelete = async (id: string) => {
-    await supabase.from("airlines").delete().eq("id", id);
-    toast({ title: "Maskapai dihapus" });
-    fetchAirlines();
+    try {
+      await apiFetch(`/api/admin/masterdata/airlines/${id}`, { method: "DELETE" });
+      toast({ title: "Maskapai dihapus" });
+      fetchAirlines();
+    } catch {
+      toast({ title: "Gagal menghapus", variant: "destructive" });
+    }
   };
 
   const resetForm = () => {

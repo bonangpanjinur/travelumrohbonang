@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
@@ -24,13 +25,11 @@ const AdminDepartureGallery = () => {
   const [toDelete, setToDelete] = useState<GalleryItem | null>(null);
 
   useEffect(() => {
-    supabase
-      .from("package_departures")
-      .select("id, departure_date, package_id, packages(title)")
-      .order("departure_date", { ascending: false })
-      .then(({ data }) => {
-        setDepartures((data as any) || []);
-        if (data && data.length && !selectedId) setSelectedId(data[0].id);
+    apiFetch<{ data: Departure[] }>("/api/admin/departures")
+      .then((res) => {
+        const data = res.data || [];
+        setDepartures(data);
+        if (data.length && !selectedId) setSelectedId(data[0].id);
       });
   }, []);
 
@@ -40,12 +39,12 @@ const AdminDepartureGallery = () => {
   }, [selectedId]);
 
   const loadItems = async () => {
-    const { data } = await supabase
-      .from("departure_gallery")
-      .select("*")
-      .eq("departure_id", selectedId)
-      .order("sort_order", { ascending: true });
-    setItems((data as any) || []);
+    try {
+      const res = await apiFetch<{ data: GalleryItem[] }>(`/api/admin/gallery/departure/${selectedId}`);
+      setItems(res.data || []);
+    } catch {
+      toast.error("Gagal memuat galeri");
+    }
   };
 
   const handleUpload = async () => {
@@ -57,12 +56,16 @@ const AdminDepartureGallery = () => {
       const { error: upErr } = await supabase.storage.from("gallery").upload(path, file);
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("gallery").getPublicUrl(path);
-      const { error } = await supabase.from("departure_gallery").insert({
-        departure_id: selectedId,
-        image_url: pub.publicUrl,
-        caption: caption || null,
+      
+      await apiFetch("/api/admin/gallery", {
+        method: "POST",
+        body: JSON.stringify({
+          departure_id: selectedId,
+          image_url: pub.publicUrl,
+          caption: caption || null,
+        }),
       });
-      if (error) throw error;
+      
       toast.success("Foto diupload");
       setFile(null);
       setCaption("");
@@ -76,11 +79,12 @@ const AdminDepartureGallery = () => {
 
   const handleDelete = async () => {
     if (!toDelete) return;
-    const { error } = await supabase.from("departure_gallery").delete().eq("id", toDelete.id);
-    if (error) toast.error(error.message);
-    else {
+    try {
+      await apiFetch(`/api/admin/gallery/${toDelete.id}`, { method: "DELETE" });
       toast.success("Foto dihapus");
       loadItems();
+    } catch (e: any) {
+      toast.error(e.message);
     }
     setToDelete(null);
   };

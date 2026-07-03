@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
@@ -45,8 +45,8 @@ function PackagePicker({ value, onChange }: { value: string | null; onChange: (v
   const { data: packages = [] } = useQuery({
     queryKey: ["faq-packages-picker"],
     queryFn: async () => {
-      const { data } = await supabase.from("packages").select("id, title").eq("is_active", true).order("title");
-      return (data as { id: string; title: string }[]) || [];
+      const { data } = await apiFetch<{ data: any[] }>("/api/packages?active=true");
+      return data || [];
     },
   });
   return (
@@ -77,12 +77,8 @@ const AdminFAQ = () => {
   const { data: faqs = [], isLoading } = useQuery({
     queryKey: ["admin-faqs"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("faqs")
-        .select("*")
-        .order("sort_order", { ascending: true });
-      if (error) throw error;
-      return data as FAQ[];
+      const { data } = await apiFetch<{ data: FAQ[] }>("/api/admin/content/faqs");
+      return data || [];
     },
   });
 
@@ -96,11 +92,15 @@ const AdminFAQ = () => {
         package_id: data.scope === "package" ? data.package_id : null,
       };
       if (data.id) {
-        const { error } = await supabase.from("faqs").update(payload).eq("id", data.id);
-        if (error) throw error;
+        await apiFetch(`/api/admin/content/faqs/${data.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
       } else {
-        const { error } = await supabase.from("faqs").insert(payload);
-        if (error) throw error;
+        await apiFetch("/api/admin/content/faqs", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
       }
     },
     onSuccess: () => {
@@ -115,11 +115,10 @@ const AdminFAQ = () => {
 
   const toggleMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase
-        .from("faqs")
-        .update({ is_active })
-        .eq("id", id);
-      if (error) throw error;
+      await apiFetch(`/api/admin/content/faqs/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_active }),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-faqs"] });
@@ -129,8 +128,7 @@ const AdminFAQ = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("faqs").delete().eq("id", id);
-      if (error) throw error;
+      await apiFetch(`/api/admin/content/faqs/${id}`, { method: "DELETE" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-faqs"] });

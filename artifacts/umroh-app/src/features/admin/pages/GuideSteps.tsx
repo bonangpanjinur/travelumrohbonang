@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -24,8 +24,12 @@ const AdminGuideSteps = () => {
   const [form, setForm] = useState(emptyForm);
 
   const fetchData = async () => {
-    const { data } = await supabase.from("guide_steps").select("*").order("step_number");
-    setItems(data || []);
+    try {
+      const { data } = await apiFetch<{ data: GuideStep[] }>("/api/admin/content/guide-steps");
+      setItems(data || []);
+    } catch (e) {
+      toast.error("Gagal memuat data");
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -33,20 +37,36 @@ const AdminGuideSteps = () => {
   const handleSave = async () => {
     if (!form.title) { toast.error("Judul wajib diisi"); return; }
     const payload = { step_number: form.step_number, title: form.title, description: form.description || null, icon: form.icon, is_active: form.is_active };
-    if (editId) {
-      const { error } = await supabase.from("guide_steps").update(payload).eq("id", editId);
-      if (error) { toast.error(error.message); return; }
-      toast.success("Langkah diperbarui");
-    } else {
-      const { error } = await supabase.from("guide_steps").insert(payload);
-      if (error) { toast.error(error.message); return; }
-      toast.success("Langkah ditambahkan");
+    try {
+      if (editId) {
+        await apiFetch(`/api/admin/content/guide-steps/${editId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+        toast.success("Langkah diperbarui");
+      } else {
+        await apiFetch("/api/admin/content/guide-steps", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        toast.success("Langkah ditambahkan");
+      }
+      setDialogOpen(false); setEditId(null); setForm(emptyForm); fetchData();
+    } catch (e: any) {
+      toast.error(e.message);
     }
-    setDialogOpen(false); setEditId(null); setForm(emptyForm); fetchData();
   };
 
   const handleEdit = (g: GuideStep) => { setEditId(g.id); setForm({ step_number: g.step_number, title: g.title, description: g.description || "", icon: g.icon, is_active: g.is_active ?? true }); setDialogOpen(true); };
-  const handleDelete = async (id: string) => { await supabase.from("guide_steps").delete().eq("id", id); toast.success("Dihapus"); fetchData(); };
+  const handleDelete = async (id: string) => {
+    try {
+      await apiFetch(`/api/admin/content/guide-steps/${id}`, { method: "DELETE" });
+      toast.success("Dihapus");
+      fetchData();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
 
   return (
     <div className="space-y-6">

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
@@ -16,17 +16,21 @@ export default function AdminLoyalty() {
   const [history, setHistory] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ user_id: "", points: 0, source: "manual", description: "" });
+  const [form, setForm] = useState({ userId: "", points: 0, source: "manual", description: "" });
 
   const refresh = async () => {
-    const [bal, hist, prof] = await Promise.all([
-      supabase.from("loyalty_balances").select("*").order("total_points", { ascending: false }).limit(50),
-      supabase.from("loyalty_points").select("*").order("created_at", { ascending: false }).limit(50),
-      supabase.from("profiles").select("id, name, email").limit(500),
-    ]);
-    setBalances(bal.data || []);
-    setHistory(hist.data || []);
-    setUsers(prof.data || []);
+    try {
+      const [bal, hist, prof] = await Promise.all([
+        apiFetch<any[]>("/api/admin/loyalty/balances"),
+        apiFetch<any[]>("/api/admin/loyalty/points"),
+        apiFetch<any[]>("/api/admin/users"),
+      ]);
+      setBalances(bal || []);
+      setHistory(hist || []);
+      setUsers(prof || []);
+    } catch (e: any) {
+      toast.error("Gagal memuat data");
+    }
   };
   useEffect(() => { refresh(); }, []);
 
@@ -36,14 +40,20 @@ export default function AdminLoyalty() {
   };
 
   const submit = async () => {
-    if (!form.user_id || !form.points) return void toast.error("User & poin wajib");
-    const { error } = await supabase.from("loyalty_points").insert(form);
-    if (error) return void toast.error(error.message);
-    await logAudit({ action: "adjust_loyalty", entityType: "loyalty", metadata: form as any });
-    toast.success("Poin ditambahkan");
-    setOpen(false);
-    setForm({ user_id: "", points: 0, source: "manual", description: "" });
-    refresh();
+    if (!form.userId || !form.points) return void toast.error("User & poin wajib");
+    try {
+      await apiFetch("/api/admin/loyalty/points", {
+        method: "POST",
+        body: JSON.stringify(form),
+      });
+      await logAudit({ action: "adjust_loyalty", entityType: "loyalty", metadata: form as any });
+      toast.success("Poin ditambahkan");
+      setOpen(false);
+      setForm({ userId: "", points: 0, source: "manual", description: "" });
+      refresh();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   return (
@@ -60,7 +70,7 @@ export default function AdminLoyalty() {
             <div className="space-y-3">
               <div>
                 <Label>User</Label>
-                <select className="w-full border border-border rounded-md px-3 py-2 bg-background" value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })}>
+                <select className="w-full border border-border rounded-md px-3 py-2 bg-background" value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value })}>
                   <option value="">Pilih user…</option>
                   {users.map(u => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
                 </select>
@@ -89,9 +99,9 @@ export default function AdminLoyalty() {
           <div className="space-y-2">
             {balances.length === 0 ? <p className="text-muted-foreground text-sm">Belum ada data.</p> :
               balances.map(b => (
-                <div key={b.user_id} className="flex items-center justify-between text-sm border-b border-border pb-1">
-                  <span>{nameOf(b.user_id)}</span>
-                  <span className="font-bold text-gold">{b.total_points.toLocaleString("id-ID")} pts</span>
+                <div key={b.userId} className="flex items-center justify-between text-sm border-b border-border pb-1">
+                  <span>{nameOf(b.userId)}</span>
+                  <span className="font-bold text-gold">{b.totalPoints.toLocaleString("id-ID")} pts</span>
                 </div>
               ))
             }
@@ -104,9 +114,9 @@ export default function AdminLoyalty() {
               history.map(h => (
                 <div key={h.id} className="flex items-start justify-between text-sm border-b border-border pb-1">
                   <div>
-                    <div>{nameOf(h.user_id)} <span className="text-muted-foreground">· {h.source}</span></div>
+                    <div>{nameOf(h.userId)} <span className="text-muted-foreground">· {h.source}</span></div>
                     {h.description && <div className="text-xs text-muted-foreground">{h.description}</div>}
-                    <div className="text-xs text-muted-foreground">{format(new Date(h.created_at), "dd MMM yyyy HH:mm")}</div>
+                    <div className="text-xs text-muted-foreground">{format(new Date(h.createdAt), "dd MMM yyyy HH:mm")}</div>
                   </div>
                   <span className={`font-bold ${h.points >= 0 ? "text-success" : "text-destructive"}`}>{h.points > 0 ? "+" : ""}{h.points}</span>
                 </div>

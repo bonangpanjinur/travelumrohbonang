@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -31,23 +31,37 @@ const AdminAirports = () => {
   }, []);
 
   const fetchAirports = async () => {
-    const { data } = await supabase.from("airports").select("*").order("name");
-    setAirports(data || []);
+    try {
+      const res = await apiFetch<{ data: Airport[] }>("/api/admin/masterdata/airports");
+      setAirports(res.data || []);
+    } catch {
+      toast({ title: "Gagal memuat bandara", variant: "destructive" });
+    }
     setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editing) {
-      await supabase.from("airports").update(form).eq("id", editing.id);
-      toast({ title: "Bandara diupdate!" });
-    } else {
-      await supabase.from("airports").insert(form);
-      toast({ title: "Bandara ditambahkan!" });
+    try {
+      if (editing) {
+        await apiFetch(`/api/admin/masterdata/airports/${editing.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(form),
+        });
+        toast({ title: "Bandara diupdate!" });
+      } else {
+        await apiFetch("/api/admin/masterdata/airports", {
+          method: "POST",
+          body: JSON.stringify(form),
+        });
+        toast({ title: "Bandara ditambahkan!" });
+      }
+      fetchAirports();
+      setIsOpen(false);
+      resetForm();
+    } catch {
+      toast({ title: "Gagal menyimpan", variant: "destructive" });
     }
-    fetchAirports();
-    setIsOpen(false);
-    resetForm();
   };
 
   const handleEdit = (airport: Airport) => {
@@ -61,9 +75,13 @@ const AdminAirports = () => {
   };
 
   const executeDelete = async (id: string) => {
-    await supabase.from("airports").delete().eq("id", id);
-    toast({ title: "Bandara dihapus" });
-    fetchAirports();
+    try {
+      await apiFetch(`/api/admin/masterdata/airports/${id}`, { method: "DELETE" });
+      toast({ title: "Bandara dihapus" });
+      fetchAirports();
+    } catch {
+      toast({ title: "Gagal menghapus", variant: "destructive" });
+    }
   };
 
   const resetForm = () => {

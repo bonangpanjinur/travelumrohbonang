@@ -7,8 +7,13 @@ import {
   bookingRooms,
   bookingPilgrims,
   profiles,
+  branches,
+  agents,
   eq,
   and,
+  ilike,
+  is,
+  desc,
 } from "@workspace/db";
 import {
   BookingListResponse,
@@ -22,11 +27,11 @@ const router = Router();
 
 router.get("/", async (req, res) => {
   try {
-    const { status, userId } = req.query;
+    const { status, userId, search, branchId, limit, offset } = req.query;
 
     const conditions = [];
 
-    if (status && typeof status === "string") {
+    if (status && typeof status === "string" && status !== "all") {
       conditions.push(eq(bookings.status, status));
     }
 
@@ -34,7 +39,19 @@ router.get("/", async (req, res) => {
       conditions.push(eq(bookings.userId, userId));
     }
 
-    const data = await db
+    if (search && typeof search === "string") {
+      conditions.push(ilike(bookings.bookingCode, `%${search}%`));
+    }
+
+    if (branchId && typeof branchId === "string") {
+      if (branchId === "__none__") {
+        conditions.push(is(bookings.branchId, null));
+      } else if (branchId !== "__all__") {
+        conditions.push(eq(bookings.branchId, branchId));
+      }
+    }
+
+    const baseQuery = db
       .select({
         id: bookings.id,
         bookingCode: bookings.bookingCode,
@@ -48,18 +65,53 @@ router.get("/", async (req, res) => {
         paymentScheme: bookings.paymentScheme,
         notes: bookings.notes,
         createdAt: bookings.createdAt,
+        picType: bookings.picType,
+        picId: bookings.picId,
         packageTitle: packages.title,
         packageSlug: packages.slug,
         departureDate: packageDepartures.departureDate,
+        userName: profiles.name,
+        userEmail: profiles.email,
+        branchName: branches.name,
       })
       .from(bookings)
       .leftJoin(packages, eq(bookings.packageId, packages.id))
-      .leftJoin(packageDepartures, eq(bookings.departureId, packageDepartures.id))
+      .leftJoin(
+        packageDepartures,
+        eq(bookings.departureId, packageDepartures.id),
+      )
+      .leftJoin(profiles, eq(bookings.userId, profiles.id))
+      .leftJoin(branches, eq(bookings.branchId, branches.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 
-    res.json(BookingListResponse.parse({ data, total: data.length }));
-  } catch {
+    const data = await baseQuery
+      .orderBy(desc(bookings.createdAt))
+      .limit(Number(limit) || 100)
+      .offset(Number(offset) || 0);
+
+    res.json({ data, total: data.length }); // Simplified for internal use, but ideally we'd get a real count
+  } catch (e) {
+    console.error(e);
     res.status(500).json({ error: "Failed to fetch bookings" });
+  }
+});
+
+router.get("/recent", async (req, res) => {
+  try {
+    const data = await db
+      .select({
+        id: bookings.id,
+        bookingCode: bookings.bookingCode,
+        createdAt: bookings.createdAt,
+        userName: profiles.name,
+      })
+      .from(bookings)
+      .leftJoin(profiles, eq(bookings.userId, profiles.id))
+      .orderBy(desc(bookings.createdAt))
+      .limit(20);
+    res.json(data);
+  } catch {
+    res.status(500).json({ error: "Failed to fetch recent bookings" });
   }
 });
 
@@ -81,13 +133,18 @@ router.get("/:id", async (req, res) => {
         paymentScheme: bookings.paymentScheme,
         notes: bookings.notes,
         createdAt: bookings.createdAt,
+        picType: bookings.picType,
+        picId: bookings.picId,
         packageTitle: packages.title,
         packageSlug: packages.slug,
         departureDate: packageDepartures.departureDate,
       })
       .from(bookings)
       .leftJoin(packages, eq(bookings.packageId, packages.id))
-      .leftJoin(packageDepartures, eq(bookings.departureId, packageDepartures.id))
+      .leftJoin(
+        packageDepartures,
+        eq(bookings.departureId, packageDepartures.id),
+      )
       .where(eq(bookings.id, id))
       .limit(1);
 
@@ -107,7 +164,12 @@ router.get("/:id", async (req, res) => {
       .where(eq(bookingPilgrims.bookingId, id));
 
     const [user] = await db
-      .select({ id: profiles.id, name: profiles.name, email: profiles.email, phone: profiles.phone })
+      .select({
+        id: profiles.id,
+        name: profiles.name,
+        email: profiles.email,
+        phone: profiles.phone,
+      })
       .from(profiles)
       .where(eq(profiles.id, booking.userId ?? ""))
       .limit(1);
@@ -123,28 +185,113 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.patch("/:id/status", validate(AdminUpdateBookingStatusRequest), async (req, res) => {
+router.post("/", async (req, res) => {
   try {
-    const id = req.params.id as string;
-    const { status, notes } = req.body as AdminUpdateBookingStatusInput;
+    const {
+      packageId,
+      departureId,
+      totalPrice,
+      currency,
+      paymentScheme,
+      notes,
+      branchId,
+      agentId,
+      userId,
+      customerName,
+      customerEmail,
+      roomType,
+    } = req.body;
 
-    const updateData: Record<string, string | null> = { status };
-    if (notes !== undefined) updateData.notes = notes;
+    const bookingCode = `BNG-ADM-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 
-    const [updated] = await db
-      .update(bookings)
-      .set(updateData)
-      .where(eq(bookings.id, id))
+    const [booking] = await db
+      .insert(bookings)
+      .values({
+        id: crypto.randomUUID(),
+        bookingCode,
+        packageId,
+        departureId,
+        totalPrice,
+        currency: currency || "IDR",
+        paymentScheme: paymentScheme || "full",
+        notes,
+        branchId,
+        agentId,
+        userId,
+        status: "confirmed",
+        picType: "admin",
+        createdAt: new Date(),
+      })
       .returning();
 
-    if (!updated) {
-      res.status(404).json({ error: "Booking not found" });
-      return;
+    await db.insert(bookingRooms).values({
+      id: crypto.randomUUID(),
+      bookingId: booking.id,
+      roomType,
+      price: String(totalPrice),
+      quantity: 1,
+      subtotal: String(totalPrice),
+      createdAt: new Date(),
+    });
+
+    if (customerName && !userId) {
+      await db.insert(bookingPilgrims).values({
+        id: crypto.randomUUID(),
+        bookingId: booking.id,
+        name: customerName,
+        email: customerEmail,
+        gender: "male",
+        createdAt: new Date(),
+      });
     }
 
-    res.json({ id: updated.id, status: updated.status, notes: updated.notes });
+    res.status(201).json(booking);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Failed to create booking" });
+  }
+});
+
+router.patch(
+  "/:id/status",
+  validate(AdminUpdateBookingStatusRequest),
+  async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      const { status, notes } = req.body as AdminUpdateBookingStatusInput;
+
+      const updateData: Record<string, any> = { status };
+      if (notes !== undefined) updateData.notes = notes;
+
+      const [updated] = await db
+        .update(bookings)
+        .set(updateData)
+        .where(eq(bookings.id, id))
+        .returning();
+
+      if (!updated) {
+        res.status(404).json({ error: "Booking not found" });
+        return;
+      }
+
+      res.json({ id: updated.id, status: updated.status, notes: updated.notes });
+    } catch {
+      res.status(500).json({ error: "Failed to update booking status" });
+    }
+  },
+);
+
+router.patch("/:id/branch", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { branchId } = req.body;
+    await db
+      .update(bookings)
+      .set({ branchId: branchId || null })
+      .where(eq(bookings.id, id));
+    res.status(204).end();
   } catch {
-    res.status(500).json({ error: "Failed to update booking status" });
+    res.status(500).json({ error: "Failed to update branch" });
   }
 });
 

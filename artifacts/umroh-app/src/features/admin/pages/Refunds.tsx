@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
 import AdminLayout from "@/features/admin/components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
@@ -14,6 +13,7 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { logAudit } from "@/shared/lib/audit";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { apiFetch } from "@/shared/lib/apiClient";
 
 const statusColors: Record<string, string> = {
   pending: "bg-warning/10 text-warning border-warning/20",
@@ -32,11 +32,14 @@ const AdminRefunds = () => {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("refund_requests")
-      .select("*, bookings(booking_code, total_price)")
-      .order("created_at", { ascending: false });
-    setItems(data || []);
-    setLoading(false);
+    try {
+      const data = await apiFetch<any[]>("/api/admin/bookings/refunds");
+      setItems(data || []);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -45,11 +48,14 @@ const AdminRefunds = () => {
     if (!selected) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("refund_requests").update({
-        status, admin_notes: adminNotes || null,
-        processed_by: currentUser?.id, processed_at: new Date().toISOString(),
-      }).eq("id", selected.id);
-      if (error) throw error;
+      await apiFetch(`/api/admin/bookings/refunds/${selected.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status,
+          adminNotes: adminNotes || null,
+          processedBy: currentUser?.id,
+        }),
+      });
       await logAudit({ action: `refund_${status}`, entityType: "refund_request", entityId: selected.id, metadata: { amount: selected.amount } });
       toast.success("Status diperbarui");
       setSelected(null); setAdminNotes("");
@@ -75,11 +81,11 @@ const AdminRefunds = () => {
                   <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">Belum ada pengajuan</TableCell></TableRow>
                 ) : items.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="text-sm">{format(new Date(r.created_at), "dd MMM yyyy HH:mm", { locale: localeId })}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.bookings?.booking_code}</TableCell>
+                    <TableCell className="text-sm">{format(new Date(r.createdAt), "dd MMM yyyy HH:mm", { locale: localeId })}</TableCell>
+                    <TableCell className="font-mono text-xs">{r.bookingCode}</TableCell>
                     <TableCell className="text-right font-bold">Rp {Number(r.amount).toLocaleString("id-ID")}</TableCell>
                     <TableCell><Badge className={statusColors[r.status]}>{r.status}</Badge></TableCell>
-                    <TableCell><Button size="sm" variant="outline" onClick={() => { setSelected(r); setAdminNotes(r.admin_notes || ""); }}>Detail</Button></TableCell>
+                    <TableCell><Button size="sm" variant="outline" onClick={() => { setSelected(r); setAdminNotes(r.adminNotes || ""); }}>Detail</Button></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -93,10 +99,10 @@ const AdminRefunds = () => {
           <DialogHeader><DialogTitle>Detail Refund</DialogTitle></DialogHeader>
           {selected && (
             <div className="space-y-2 text-sm">
-              <div><strong>Booking:</strong> {selected.bookings?.booking_code}</div>
+              <div><strong>Booking:</strong> {selected.bookingCode}</div>
               <div><strong>Nominal:</strong> Rp {Number(selected.amount).toLocaleString("id-ID")}</div>
               <div><strong>Alasan:</strong> {selected.reason}</div>
-              {selected.bank_name && <div><strong>Rekening:</strong> {selected.bank_name} · {selected.bank_account} · {selected.account_holder}</div>}
+              {selected.bankName && <div><strong>Rekening:</strong> {selected.bankName} · {selected.bankAccount} · {selected.accountHolder}</div>}
               <div><Label>Catatan Admin</Label><Textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={2} /></div>
             </div>
           )}

@@ -8,8 +8,11 @@ import {
   airlines,
   airports,
   packageCategories,
+  packageReviews,
+  profiles,
   eq,
   and,
+  desc,
 } from "@workspace/db";
 
 const router = Router();
@@ -211,6 +214,27 @@ router.get("/:slug", async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch package" });
+  }
+});
+
+router.get("/reviews/:packageId", async (req: Request, res: Response) => {
+  try {
+    const data = await db
+      .select({
+        id: packageReviews.id,
+        rating: packageReviews.rating,
+        title: packageReviews.title,
+        comment: packageReviews.comment,
+        createdAt: packageReviews.createdAt,
+        userName: profiles.name,
+      })
+      .from(packageReviews)
+      .leftJoin(profiles, eq(packageReviews.userId, profiles.id))
+      .where(and(eq(packageReviews.packageId, req.params.packageId), eq(packageReviews.isApproved, true)))
+      .orderBy(desc(packageReviews.createdAt));
+    res.json({ data });
+  } catch {
+    res.status(500).json({ error: "Failed to fetch reviews" });
   }
 });
 

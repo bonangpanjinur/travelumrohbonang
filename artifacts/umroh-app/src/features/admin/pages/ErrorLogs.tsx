@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -13,8 +13,8 @@ interface ErrorLog {
   message: string;
   stack: string | null;
   url: string | null;
-  user_agent: string | null;
-  created_at: string;
+  userAgent: string | null;
+  createdAt: string;
 }
 
 const AdminErrorLogs = () => {
@@ -24,22 +24,21 @@ const AdminErrorLogs = () => {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("error_logs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(200);
-    setLogs((data as ErrorLog[]) ?? []);
-    setLoading(false);
+    try {
+      const data = await apiFetch<ErrorLog[]>("/api/admin/logs/error");
+      setLogs(data || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
 
   const clearAll = async () => {
     if (!confirm("Hapus semua log error?")) return;
-    await supabase.from("error_logs").delete().gte("created_at", "1970-01-01");
-    toast({ title: "Log dihapus" });
-    load();
+    toast({ title: "Fitur hapus log belum tersedia di API baru" });
   };
 
   return (

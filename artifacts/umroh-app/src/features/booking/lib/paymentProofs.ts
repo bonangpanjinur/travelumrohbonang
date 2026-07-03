@@ -1,5 +1,10 @@
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { getCurrentAuthUser } from "@/shared/lib/currentUser";
+
+// For storage, we still need supabase storage until a backend proxy is added,
+// but the task says migrate off Supabase to Express API for data-query.
+// paymentProofAccessLogs should go through API.
+import { supabase } from "@/shared/integrations/supabase/client";
 
 const BUCKET = "payment-proofs";
 const DEFAULT_TTL = 300; // 5 menit
@@ -27,11 +32,14 @@ async function logAccess(path: string, context?: string) {
     const data = await getCurrentAuthUser();
     const uid = data?.id;
     if (!uid) return;
-    await supabase.from("payment_proof_access_logs").insert({
-      user_id: uid,
-      proof_path: path,
-      context: context ?? null,
-      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+    
+    await apiFetch("/api/bookings/payments/proof-access-log", {
+      method: "POST",
+      body: JSON.stringify({
+        userId: uid,
+        proofPath: path,
+        context: context ?? null,
+      }),
     });
   } catch (e) {
     // jangan blokir UX karena gagal log

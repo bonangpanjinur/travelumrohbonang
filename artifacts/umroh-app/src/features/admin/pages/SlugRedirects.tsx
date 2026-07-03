@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -42,12 +42,16 @@ const AdminSlugRedirects = () => {
   });
 
   const fetchAll = async () => {
-    const [{ data: r }, { data: t }] = await Promise.all([
-      supabase.from("slug_redirects").select("*").order("created_at", { ascending: false }),
-      supabase.from("tenant_sites").select("id, site_name, subdomain").order("site_name"),
-    ]);
-    setRows((r as Redirect[]) || []);
-    setTenants((t as TenantOption[]) || []);
+    try {
+      const [{ data: r }, { data: t }] = await Promise.all([
+        apiFetch<{ data: Redirect[] }>("/api/admin/redirects"),
+        apiFetch<{ data: TenantOption[] }>("/api/admin/tenants"), // Assuming this exists or create it
+      ]);
+      setRows(r || []);
+      setTenants(t || []);
+    } catch (error) {
+      console.error(error);
+    }
     setLoading(false);
   };
 
@@ -58,26 +62,33 @@ const AdminSlugRedirects = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
-      tenant_site_id: form.tenant_site_id === SCOPE_GLOBAL ? null : form.tenant_site_id,
-      resource_type: form.resource_type,
-      old_slug: form.old_slug.trim(),
-      new_slug: form.new_slug.trim(),
+      tenantSiteId: form.tenant_site_id === SCOPE_GLOBAL ? null : form.tenant_site_id,
+      resourceType: form.resource_type,
+      oldSlug: form.old_slug.trim(),
+      newSlug: form.new_slug.trim(),
     };
-    const { error } = await supabase.from("slug_redirects").insert(payload);
-    if (error) {
+    try {
+      await apiFetch("/api/admin/redirects", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      toast({ title: "Redirect ditambahkan" });
+      setOpen(false);
+      setForm({ tenant_site_id: SCOPE_GLOBAL, resource_type: "package", old_slug: "", new_slug: "" });
+      fetchAll();
+    } catch (error: any) {
       toast({ title: "Gagal menyimpan", description: error.message, variant: "destructive" });
-      return;
     }
-    toast({ title: "Redirect ditambahkan" });
-    setOpen(false);
-    setForm({ tenant_site_id: SCOPE_GLOBAL, resource_type: "package", old_slug: "", new_slug: "" });
-    fetchAll();
   };
 
   const executeDelete = async (id: string) => {
-    await supabase.from("slug_redirects").delete().eq("id", id);
-    toast({ title: "Redirect dihapus" });
-    fetchAll();
+    try {
+      await apiFetch(`/api/admin/redirects/${id}`, { method: "DELETE" });
+      toast({ title: "Redirect dihapus" });
+      fetchAll();
+    } catch (error: any) {
+      toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
+    }
   };
 
   const tenantLabel = (id: string | null) => {
@@ -180,12 +191,12 @@ const AdminSlugRedirects = () => {
             <TableBody>
               {rows.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell>{tenantLabel(r.tenant_site_id)}</TableCell>
-                  <TableCell>{resourceLabel[r.resource_type]}</TableCell>
+                  <TableCell>{tenantLabel(r.tenant_site_id || r.tenantSiteId || null)}</TableCell>
+                  <TableCell>{resourceLabel[r.resource_type || r.resourceType]}</TableCell>
                   <TableCell className="font-mono text-sm">
-                    <span className="text-muted-foreground line-through">{r.old_slug}</span>
+                    <span className="text-muted-foreground line-through">{r.old_slug || r.oldSlug}</span>
                     <ArrowRight className="inline w-3 h-3 mx-2" />
-                    <span className="text-foreground">{r.new_slug}</span>
+                    <span className="text-foreground">{r.new_slug || r.newSlug}</span>
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => setDeleteId(r.id)}>

@@ -1,5 +1,18 @@
 import { Router } from "express";
-import { db, bookings, packages, packageDepartures, bookingRooms, bookingPilgrims, eq, and } from "@workspace/db";
+import {
+  db,
+  bookings,
+  packages,
+  packageDepartures,
+  bookingRooms,
+  bookingPilgrims,
+  payments,
+  paymentProofAccessLogs,
+  refundRequests,
+  eq,
+  and,
+  desc,
+} from "@workspace/db";
 import {
   BookingListResponse,
   BookingWithDetailsSchema,
@@ -31,7 +44,10 @@ function generateBookingCode(): string {
 
 router.get("/", async (req, res) => {
   try {
-    if (!req.isAuthenticated()) { res.status(401).json({ error: "Authentication required" }); return; }
+    if (!req.isAuthenticated()) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
     const userId = req.user.id;
 
     const data = await db
@@ -58,7 +74,8 @@ router.get("/", async (req, res) => {
         packageDepartures,
         eq(bookings.departureId, packageDepartures.id),
       )
-      .where(eq(bookings.userId, userId));
+      .where(eq(bookings.userId, userId))
+      .orderBy(desc(bookings.createdAt));
 
     res.json(BookingListResponse.parse({ data, total: data.length }));
   } catch {
@@ -91,6 +108,7 @@ router.get("/:id", async (req, res) => {
         packageTitle: packages.title,
         packageSlug: packages.slug,
         departureDate: packageDepartures.departureDate,
+        returnDate: packageDepartures.returnDate,
       })
       .from(bookings)
       .leftJoin(packages, eq(bookings.packageId, packages.id))
@@ -106,7 +124,21 @@ router.get("/:id", async (req, res) => {
       return;
     }
 
-    res.json(BookingWithDetailsSchema.parse(row));
+    const rooms = await db
+      .select()
+      .from(bookingRooms)
+      .where(eq(bookingRooms.bookingId, id));
+
+    const pilgrims = await db
+      .select()
+      .from(bookingPilgrims)
+      .where(eq(bookingPilgrims.bookingId, id));
+
+    res.json({
+      ...BookingWithDetailsSchema.parse(row),
+      rooms,
+      pilgrims,
+    });
   } catch {
     res.status(500).json({ error: "Failed to fetch booking" });
   }
@@ -126,7 +158,10 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
       agentId,
     } = req.body as CreateBookingInput;
 
-    if (!req.isAuthenticated()) { res.status(401).json({ error: "Authentication required" }); return; }
+    if (!req.isAuthenticated()) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
     const userId = req.user.id;
     const bookingCode = generateBookingCode();
 
@@ -146,6 +181,7 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
         picType: picType ?? null,
         picId: picId ?? null,
         agentId: agentId ?? null,
+        createdAt: new Date(),
       })
       .returning();
 
@@ -155,76 +191,254 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
   }
 });
 
-router.post("/:id/rooms", validate(CreateBookingRoomsRequest), async (req, res) => {
-  try {
-    const id = req.params.id as string;
-    if (!req.isAuthenticated()) { res.status(401).json({ error: "Authentication required" }); return; }
-    const userId = req.user.id;
+router.post(
+  "/:id/rooms",
+  validate(CreateBookingRoomsRequest),
+  async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      if (!req.isAuthenticated()) {
+        res.status(401).json({ error: "Authentication required" });
+        return;
+      }
+      const userId = req.user.id;
 
+      const [booking] = await db
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(and(eq(bookings.id, id), eq(bookings.userId, userId)))
+        .limit(1);
+
+      if (!booking) {
+        res.status(404).json({ error: "Booking not found" });
+        return;
+      }
+
+      const { rooms } = req.body as { rooms: BookingRoom[] };
+
+      const rows = rooms.map((r) => ({
+        id: crypto.randomUUID(),
+        bookingId: id,
+        roomType: r.roomType,
+        price: String(r.price),
+        quantity: r.quantity,
+        subtotal: String(r.subtotal),
+        createdAt: new Date(),
+      }));
+
+      const created = await db.insert(bookingRooms).values(rows).returning();
+
+      res
+        .status(201)
+        .json({ data: created.map((r) => BookingRoomSchema.parse(r)) });
+    } catch {
+      res.status(500).json({ error: "Failed to create booking rooms" });
+    }
+  },
+);
+
+router.post(
+  "/:id/pilgrims",
+  validate(CreateBookingPilgrimsRequest),
+  async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      if (!req.isAuthenticated()) {
+        res.status(401).json({ error: "Authentication required" });
+        return;
+      }
+      const userId = req.user.id;
+
+      const [booking] = await db
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(and(eq(bookings.id, id), eq(bookings.userId, userId)))
+        .limit(1);
+
+      if (!booking) {
+        res.status(404).json({ error: "Booking not found" });
+        return;
+      }
+
+      const { pilgrims } = req.body as { pilgrims: BookingPilgrim[] };
+
+      const rows = pilgrims.map((p) => ({
+        id: crypto.randomUUID(),
+        bookingId: id,
+        name: p.name,
+        phone: p.phone ?? null,
+        email: p.email ?? null,
+        gender: p.gender,
+        nik: p.nik ?? null,
+        createdAt: new Date(),
+      }));
+
+      const created = await db.insert(bookingPilgrims).values(rows).returning();
+
+      res
+        .status(201)
+        .json({ data: created.map((p) => BookingPilgrimSchema.parse(p)) });
+    } catch {
+      res.status(500).json({ error: "Failed to create booking pilgrims" });
+    }
+  },
+);
+
+// --- Payments ---
+
+router.get("/:id/payments", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const userId = req.user!.id;
+
+    const data = await db
+      .select()
+      .from(payments)
+      .where(and(eq(payments.bookingId, id)))
+      .orderBy(desc(payments.createdAt));
+
+    // Verify ownership of the booking
     const [booking] = await db
-      .select({ id: bookings.id })
+      .select({ userId: bookings.userId })
       .from(bookings)
-      .where(and(eq(bookings.id, id), eq(bookings.userId, userId)))
+      .where(eq(bookings.id, id))
       .limit(1);
 
-    if (!booking) {
-      res.status(404).json({ error: "Booking not found" });
+    if (!booking || booking.userId !== userId) {
+      res.status(403).json({ error: "Forbidden" });
       return;
     }
 
-    const { rooms } = req.body as { rooms: BookingRoom[] };
-
-    const rows = rooms.map((r) => ({
-      id: crypto.randomUUID(),
-      bookingId: id,
-      roomType: r.roomType,
-      price: String(r.price),
-      quantity: r.quantity,
-      subtotal: String(r.subtotal),
-    }));
-
-    const created = await db.insert(bookingRooms).values(rows).returning();
-
-    res.status(201).json({ data: created.map((r) => BookingRoomSchema.parse(r)) });
+    res.json(data);
   } catch {
-    res.status(500).json({ error: "Failed to create booking rooms" });
+    res.status(500).json({ error: "Failed to fetch payments" });
   }
 });
 
-router.post("/:id/pilgrims", validate(CreateBookingPilgrimsRequest), async (req, res) => {
+router.post("/:id/payments", async (req, res) => {
   try {
-    const id = req.params.id as string;
-    if (!req.isAuthenticated()) { res.status(401).json({ error: "Authentication required" }); return; }
-    const userId = req.user.id;
+    const id = req.params.id;
+    const userId = req.user!.id;
+    const { amount, paymentMethod, paymentType, proofUrl } = req.body;
 
     const [booking] = await db
-      .select({ id: bookings.id })
+      .select({ userId: bookings.userId })
       .from(bookings)
-      .where(and(eq(bookings.id, id), eq(bookings.userId, userId)))
+      .where(eq(bookings.id, id))
       .limit(1);
 
-    if (!booking) {
-      res.status(404).json({ error: "Booking not found" });
+    if (!booking || booking.userId !== userId) {
+      res.status(403).json({ error: "Forbidden" });
       return;
     }
 
-    const { pilgrims } = req.body as { pilgrims: BookingPilgrim[] };
+    const [created] = await db
+      .insert(payments)
+      .values({
+        id: crypto.randomUUID(),
+        bookingId: id,
+        amount,
+        paymentMethod,
+        paymentType,
+        proofUrl,
+        status: "pending",
+        createdAt: new Date(),
+      })
+      .returning();
 
-    const rows = pilgrims.map((p) => ({
-      id: crypto.randomUUID(),
-      bookingId: id,
-      name: p.name,
-      phone: p.phone ?? null,
-      email: p.email ?? null,
-      gender: p.gender,
-      nik: p.nik ?? null,
-    }));
+    await db
+      .update(bookings)
+      .set({ status: "waiting_payment" })
+      .where(eq(bookings.id, id));
 
-    const created = await db.insert(bookingPilgrims).values(rows).returning();
-
-    res.status(201).json({ data: created.map((p) => BookingPilgrimSchema.parse(p)) });
+    res.status(201).json(created);
   } catch {
-    res.status(500).json({ error: "Failed to create booking pilgrims" });
+    res.status(500).json({ error: "Failed to create payment" });
+  }
+});
+
+router.post("/payments/proof-access-log", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const { bookingId, paymentId, context } = req.body;
+
+    await db.insert(paymentProofAccessLogs).values({
+      id: crypto.randomUUID(),
+      userId,
+      bookingId,
+      paymentId,
+      context,
+      createdAt: new Date(),
+    });
+
+    res.status(204).end();
+  } catch {
+    res.status(500).json({ error: "Failed to log access" });
+  }
+});
+
+// --- Refunds ---
+
+router.get("/refunds", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const data = await db
+      .select({
+        id: refundRequests.id,
+        userId: refundRequests.userId,
+        bookingId: refundRequests.bookingId,
+        reason: refundRequests.reason,
+        amount: refundRequests.amount,
+        bankName: refundRequests.bankName,
+        bankAccount: refundRequests.bankAccount,
+        accountHolder: refundRequests.accountHolder,
+        status: refundRequests.status,
+        adminNotes: refundRequests.adminNotes,
+        createdAt: refundRequests.createdAt,
+        bookingCode: bookings.bookingCode,
+      })
+      .from(refundRequests)
+      .leftJoin(bookings, eq(refundRequests.bookingId, bookings.id))
+      .where(eq(refundRequests.userId, userId))
+      .orderBy(desc(refundRequests.createdAt));
+
+    res.json(data);
+  } catch {
+    res.status(500).json({ error: "Failed to fetch refunds" });
+  }
+});
+
+router.post("/refunds", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const {
+      bookingId,
+      reason,
+      amount,
+      bankName,
+      bankAccount,
+      accountHolder,
+    } = req.body;
+
+    const [created] = await db
+      .insert(refundRequests)
+      .values({
+        id: crypto.randomUUID(),
+        userId,
+        bookingId,
+        reason,
+        amount,
+        bankName,
+        bankAccount,
+        accountHolder,
+        status: "pending",
+        createdAt: new Date(),
+      })
+      .returning();
+
+    res.status(201).json(created);
+  } catch {
+    res.status(500).json({ error: "Failed to create refund request" });
   }
 });
 

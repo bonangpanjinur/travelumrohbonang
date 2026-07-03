@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -62,20 +62,18 @@ const AdminSEO = () => {
   const [auditFindings, setAuditFindings] = useState<Array<{ id: string; path: string; issue: string; severity: string; created_at: string }>>([]);
 
   const loadAudit = async () => {
-    const { data } = await supabase
-      .from("seo_audit_results")
-      .select("id,path,issue,severity,created_at")
-      .order("severity", { ascending: true })
-      .order("path", { ascending: true })
-      .limit(500);
-    setAuditFindings((data as typeof auditFindings) || []);
+    try {
+      const { data } = await apiFetch<{ data: any[] }>("/api/admin/seo/audit");
+      setAuditFindings(data || []);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const runAudit = async () => {
     setAuditRunning(true);
     try {
-      const { error } = await supabase.functions.invoke("seo-audit", { body: {} });
-      if (error) throw error;
+      await apiFetch("/api/admin/seo/audit", { method: "POST" });
       toast.success("Audit SEO selesai");
       await loadAudit();
     } catch (e) {
@@ -92,16 +90,21 @@ const AdminSEO = () => {
 
   const loadAll = async () => {
     setLoading(true);
-    const [defRes, ovRes] = await Promise.all([
-      supabase.from("site_settings").select("value").eq("key", "seo").maybeSingle(),
-      supabase.from("seo_overrides").select("*").order("path"),
-    ]);
+    try {
+      const [defRes, ovRes] = await Promise.all([
+        apiFetch<{ data: { value: any } }>("/api/admin/settings/seo"),
+        apiFetch<{ data: SeoOverride[] }>("/api/admin/seo/overrides"),
+      ]);
 
-    if (defRes.data?.value && typeof defRes.data.value === "object") {
-      setDefaults({ ...DEFAULTS_BLANK, ...(defRes.data.value as Partial<SeoDefaults>) });
+      if (defRes.data?.value && typeof defRes.data.value === "object") {
+        setDefaults({ ...DEFAULTS_BLANK, ...(defRes.data.value as Partial<SeoDefaults>) });
+      }
+      setOverrides(ovRes.data ?? []);
+    } catch (e) {
+      toast.error("Gagal memuat data");
+    } finally {
+      setLoading(false);
     }
-    setOverrides((ovRes.data as SeoOverride[]) ?? []);
-    setLoading(false);
   };
 
   const loadSitemap = async () => {
@@ -122,13 +125,17 @@ const AdminSEO = () => {
 
   const saveDefaults = async () => {
     setSavingDefaults(true);
-    const { error } = await supabase
-      .from("site_settings")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .upsert([{ key: "seo", category: "general", value: defaults as any }], { onConflict: "key" });
-    setSavingDefaults(false);
-    if (error) toast.error(error.message);
-    else toast.success("Default SEO disimpan");
+    try {
+      await apiFetch("/api/admin/settings/seo", {
+        method: "PUT",
+        body: JSON.stringify({ category: "general", value: defaults }),
+      });
+      toast.success("Default SEO disimpan");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSavingDefaults(false);
+    }
   };
 
   const saveOverride = async () => {
@@ -147,26 +154,34 @@ const AdminSEO = () => {
       keywords: editing.keywords?.trim() || null,
     };
 
-    const { error } = editing.id
-      ? await supabase.from("seo_overrides").update(payload).eq("id", editing.id)
-      : await supabase.from("seo_overrides").insert(payload);
-
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      if (editing.id) {
+        await apiFetch(`/api/admin/seo/overrides/${editing.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch("/api/admin/seo/overrides", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      }
+      toast.success("SEO override disimpan");
+      setOpen(false);
+      setEditing(null);
+      loadAll();
+    } catch (e: any) {
+      toast.error(e.message);
     }
-    toast.success("SEO override disimpan");
-    setOpen(false);
-    setEditing(null);
-    loadAll();
   };
 
   const deleteOverride = async (id: string) => {
-    const { error } = await supabase.from("seo_overrides").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else {
+    try {
+      await apiFetch(`/api/admin/seo/overrides/${id}`, { method: "DELETE" });
       toast.success("Override dihapus");
       loadAll();
+    } catch (e: any) {
+      toast.error(e.message);
     }
   };
 

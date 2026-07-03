@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import AdminLayout from "@/features/admin/components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
@@ -34,12 +34,14 @@ const AdminAgentWithdrawals = () => {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("agent_withdrawals")
-      .select("*, agents(name, email, phone)")
-      .order("created_at", { ascending: false });
-    setItems(data || []);
-    setLoading(false);
+    try {
+      const data = await apiFetch<any[]>("/api/admin/agents/withdrawals");
+      setItems(data || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -48,12 +50,13 @@ const AdminAgentWithdrawals = () => {
     if (!selected) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("agent_withdrawals").update({
-        status, admin_notes: adminNotes || null,
-        proof_url: status === "paid" ? (proofUrl || null) : selected.proof_url,
-        processed_by: currentUser?.id, processed_at: new Date().toISOString(),
-      }).eq("id", selected.id);
-      if (error) throw error;
+      await apiFetch(`/api/admin/agents/withdrawals/${selected.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status, adminNotes: adminNotes || null,
+          proofUrl: status === "paid" ? (proofUrl || null) : selected.proofUrl,
+        }),
+      });
       await logAudit({ action: `withdrawal_${status}`, entityType: "agent_withdrawal", entityId: selected.id, metadata: { amount: selected.amount } });
       toast.success("Status diperbarui");
       setSelected(null); setAdminNotes(""); setProofUrl("");

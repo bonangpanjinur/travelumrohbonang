@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -39,9 +39,14 @@ const AdminManasik = () => {
   });
 
   const load = async () => {
-    const { data } = await supabase.from("manasik_materials").select("*").order("sort_order");
-    setList((data as any) || []);
+    try {
+      const { data } = await apiFetch<{ data: Material[] }>("/api/admin/content/manasik-materials");
+      setList(data || []);
+    } catch (error: any) {
+      toast.error(error.message);
+    }
   };
+
   useEffect(() => { load(); }, []);
 
   const openNew = () => {
@@ -66,20 +71,36 @@ const AdminManasik = () => {
   const save = async () => {
     if (!form.title.trim()) return void toast.error("Judul wajib");
     const payload = { ...form, description: form.description || null, file_url: form.file_url || null, thumbnail_url: form.thumbnail_url || null };
-    const { error } = editing
-      ? await supabase.from("manasik_materials").update(payload).eq("id", editing.id)
-      : await supabase.from("manasik_materials").insert(payload);
-    if (error) return void toast.error(error.message);
-    toast.success("Tersimpan");
-    setOpen(false);
-    load();
+    
+    try {
+      if (editing) {
+        await apiFetch(`/api/admin/content/manasik-materials/${editing.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch("/api/admin/content/manasik-materials", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      }
+      toast.success("Tersimpan");
+      setOpen(false);
+      load();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
   };
 
   const remove = async () => {
     if (!toDelete) return;
-    const { error } = await supabase.from("manasik_materials").delete().eq("id", toDelete.id);
-    if (error) toast.error(error.message);
-    else { toast.success("Dihapus"); load(); }
+    try {
+      await apiFetch(`/api/admin/content/manasik-materials/${toDelete.id}`, { method: "DELETE" });
+      toast.success("Dihapus");
+      load();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
     setToDelete(null);
   };
 

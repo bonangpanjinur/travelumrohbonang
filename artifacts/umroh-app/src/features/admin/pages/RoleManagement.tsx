@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
@@ -23,13 +23,20 @@ const RoleManagement = () => {
 
   const load = async () => {
     setLoading(true);
-    const { data: profiles } = await supabase.from("profiles").select("id, name, email").order("created_at", { ascending: false }).limit(200);
-    const { data: roles } = await supabase.from("user_roles").select("user_id, role");
-    const map = new Map<string, string>();
-    (roles || []).forEach((r: any) => map.set(r.user_id, r.role));
-    const merged = (profiles || []).map((p: any) => ({ ...p, role: map.get(p.id) || "buyer" }));
-    setUsers(merged);
-    setLoading(false);
+    try {
+      const [profiles, roles] = await Promise.all([
+        apiFetch<any[]>("/api/admin/users"), // Assuming this endpoint exists based on usual patterns
+        apiFetch<any[]>("/api/admin/agents/roles"),
+      ]);
+      const map = new Map<string, string>();
+      (roles || []).forEach((r: any) => map.set(r.userId, r.role));
+      const merged = (profiles || []).map((p: any) => ({ ...p, role: map.get(p.id) || "buyer" }));
+      setUsers(merged);
+    } catch (e: any) {
+      toast.error("Gagal memuat data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -37,10 +44,21 @@ const RoleManagement = () => {
   const changeRole = async (userId: string, newRole: string) => {
     if (!isSuper) { toast.error("Hanya super admin"); return; }
     try {
-      // Delete existing roles, insert new
-      await supabase.from("user_roles").delete().eq("user_id", userId);
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRole });
-      if (error) throw error;
+      // Find and delete if exists, then insert
+      const existingRole = users.find(u => u.id === userId)?.role;
+      if (existingRole && existingRole !== "buyer") {
+        const roles = await apiFetch<any[]>("/api/admin/agents/roles");
+        const roleObj = roles.find((r: any) => r.userId === userId);
+        if (roleObj) {
+          await apiFetch(`/api/admin/agents/roles/${roleObj.id}`, { method: "DELETE" });
+        }
+      }
+      
+      await apiFetch("/api/admin/agents/roles", {
+        method: "POST",
+        body: JSON.stringify({ userId, role: newRole }),
+      });
+
       await logAudit({ action: "role_changed", entityType: "user", entityId: userId, metadata: { new_role: newRole } });
       toast.success("Role diperbarui");
       load();

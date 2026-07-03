@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
@@ -25,7 +25,7 @@ interface SecretRow {
   id?: string;
   provider: Provider;
   config: Record<string, string>;
-  is_active: boolean;
+  isActive: boolean;
 }
 
 const SCHEMA: Record<Provider, { label: string; icon: any; fields: { key: string; label: string; type?: string; placeholder?: string }[]; help: string }> = {
@@ -69,23 +69,21 @@ const Integrations = () => {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("integration_secrets")
-      .select("id, provider, config, is_active");
-    if (error) {
-      toast.error(error.message);
+    try {
+      const data = await apiFetch<any[]>("/api/admin/integrations");
+      const map: any = {};
+      (Object.keys(SCHEMA) as Provider[]).forEach((p) => {
+        const existing = (data || []).find((d: any) => d.provider === p);
+        map[p] = existing
+          ? { id: existing.id, provider: p, config: existing.config || {}, isActive: existing.isActive }
+          : { provider: p, config: {}, isActive: false };
+      });
+      setRows(map);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
       setLoading(false);
-      return;
     }
-    const map: any = {};
-    (Object.keys(SCHEMA) as Provider[]).forEach((p) => {
-      const existing = (data || []).find((d: any) => d.provider === p);
-      map[p] = existing
-        ? { id: existing.id, provider: p, config: existing.config || {}, is_active: existing.is_active }
-        : { provider: p, config: {}, is_active: false };
-    });
-    setRows(map);
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -96,17 +94,26 @@ const Integrations = () => {
   const save = async (p: Provider) => {
     const row = rows[p];
     setSaving(p);
-    const payload = { provider: p, config: row.config, is_active: row.is_active };
-    const { error } = row.id
-      ? await supabase.from("integration_secrets").update(payload).eq("id", row.id)
-      : await supabase.from("integration_secrets").insert(payload);
-    setSaving(null);
-    if (error) {
-      toast.error(error.message);
-      return;
+    const payload = { provider: p, config: row.config, isActive: row.isActive };
+    try {
+      if (row.id) {
+        await apiFetch(`/api/admin/integrations/${row.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch("/api/admin/integrations", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      }
+      toast.success(`${SCHEMA[p].label} disimpan`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(null);
     }
-    toast.success(`${SCHEMA[p].label} disimpan`);
-    load();
   };
 
   const updateField = (p: Provider, key: string, value: string) => {
@@ -114,7 +121,7 @@ const Integrations = () => {
   };
 
   const toggleActive = (p: Provider, value: boolean) => {
-    setRows((r) => ({ ...r, [p]: { ...r[p], is_active: value } }));
+    setRows((r) => ({ ...r, [p]: { ...r[p], isActive: value } }));
   };
 
   // Test send state
@@ -208,7 +215,7 @@ const Integrations = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Label htmlFor={`active-${p}`} className="text-xs">Aktif</Label>
-                    <Switch id={`active-${p}`} checked={row.is_active} onCheckedChange={(v) => toggleActive(p, v)} />
+                    <Switch id={`active-${p}`} checked={row.isActive} onCheckedChange={(v) => toggleActive(p, v)} />
                   </div>
                 </div>
               </CardHeader>
@@ -247,8 +254,8 @@ const Integrations = () => {
                     type="button"
                     variant="outline"
                     onClick={() => openTest(p)}
-                    disabled={!row.is_active || !row.config?.api_key}
-                    title={!row.is_active ? "Aktifkan dulu" : !row.config?.api_key ? "Isi API key dulu" : "Kirim pesan uji"}
+                    disabled={!row.isActive || !row.config?.api_key}
+                    title={!row.isActive ? "Aktifkan dulu" : !row.config?.api_key ? "Isi API key dulu" : "Kirim pesan uji"}
                   >
                     <Send className="w-4 h-4 mr-2" />
                     Uji Kirim

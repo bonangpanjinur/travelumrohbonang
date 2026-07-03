@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -61,21 +61,19 @@ const AdminAgents = () => {
   }, []);
 
   const fetchData = async () => {
-    const [agentsRes, branchesRes] = await Promise.all([
-      supabase
-        .from("agents")
-        .select("*, branch:branches(name)")
-        .order("name"),
-      supabase
-        .from("branches")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name")
-    ]);
-    
-    setAgents((agentsRes.data || []) as Agent[]);
-    setBranches(branchesRes.data || []);
-    setLoading(false);
+    try {
+      const [agentsRes, branchesRes] = await Promise.all([
+        apiFetch<Agent[]>("/api/admin/agents"),
+        apiFetch<Branch[]>("/api/admin/branches"),
+      ]);
+      
+      setAgents(agentsRes || []);
+      setBranches(branchesRes || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -101,25 +99,27 @@ const AdminAgents = () => {
       if (userProfile?.id) payload.user_id = userProfile.id;
     }
 
-    if (editing) {
-      const { error } = await supabase.from("agents").update(payload).eq("id", editing.id);
-      if (error) {
-        toast({ title: "Gagal mengupdate agen", description: error.message, variant: "destructive" });
-        return;
+    try {
+      if (editing) {
+        await apiFetch(`/api/admin/agents/${editing.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+        toast({ title: "Agen berhasil diupdate!" });
+      } else {
+        await apiFetch("/api/admin/agents", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        toast({ title: "Agen berhasil ditambahkan!" });
       }
-      toast({ title: "Agen berhasil diupdate!" });
-    } else {
-      const { error } = await supabase.from("agents").insert(payload);
-      if (error) {
-        toast({ title: "Gagal menambahkan agen", description: error.message, variant: "destructive" });
-        return;
-      }
-      toast({ title: "Agen berhasil ditambahkan!" });
+      
+      fetchData();
+      setIsOpen(false);
+      resetForm();
+    } catch (e: any) {
+      toast({ title: "Gagal menyimpan", description: e.message, variant: "destructive" });
     }
-    
-    fetchData();
-    setIsOpen(false);
-    resetForm();
   };
 
   const handleEdit = (agent: Agent) => {
@@ -137,27 +137,25 @@ const AdminAgents = () => {
   };
 
   const executeDelete = async (id: string) => {
-    const { error } = await supabase.from("agents").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Gagal menghapus agen", description: error.message, variant: "destructive" });
-      return;
+    try {
+      await apiFetch(`/api/admin/agents/${id}`, { method: "DELETE" }); // Assuming delete endpoint exists
+      toast({ title: "Agen berhasil dihapus" });
+      fetchData();
+    } catch (e: any) {
+      toast({ title: "Gagal menghapus agen", description: e.message, variant: "destructive" });
     }
-    toast({ title: "Agen berhasil dihapus" });
-    fetchData();
   };
 
   const handleToggleActive = async (agent: Agent) => {
-    const { error } = await supabase
-      .from("agents")
-      .update({ is_active: !agent.is_active })
-      .eq("id", agent.id);
-    
-    if (error) {
+    try {
+      await apiFetch(`/api/admin/agents/${agent.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive: !agent.isActive }),
+      });
+      fetchData();
+    } catch (e) {
       toast({ title: "Gagal mengubah status", variant: "destructive" });
-      return;
     }
-    
-    fetchData();
   };
 
   const resetForm = () => {

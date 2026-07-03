@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { apiFetch } from "@/shared/lib/apiClient";
+import { supabase } from "@/shared/integrations/supabase/client";
 
 export function useWishlist() {
   const { user } = useAuth();
@@ -13,23 +14,35 @@ export function useWishlist() {
       return;
     }
     setLoading(true);
-    const { data } = await supabase.from("wishlists").select("package_id").eq("user_id", user.id);
-    setIds(new Set((data || []).map((r: any) => r.package_id)));
-    setLoading(false);
+    try {
+      const data = await apiFetch<any[]>("/api/wishlists");
+      setIds(new Set((data || []).map((r: any) => r.packageId)));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
   const toggle = async (packageId: string) => {
     if (!user) return { needsAuth: true };
-    if (ids.has(packageId)) {
-      await supabase.from("wishlists").delete().eq("user_id", user.id).eq("package_id", packageId);
-      setIds(prev => { const n = new Set(prev); n.delete(packageId); return n; });
-      return { added: false };
-    } else {
-      await supabase.from("wishlists").insert({ user_id: user.id, package_id: packageId });
-      setIds(prev => new Set(prev).add(packageId));
-      return { added: true };
+    try {
+      const result = await apiFetch<{ added: boolean }>("/api/wishlists/toggle", {
+        method: "POST",
+        body: JSON.stringify({ packageId }),
+      });
+      
+      if (result.added) {
+        setIds(prev => new Set(prev).add(packageId));
+      } else {
+        setIds(prev => { const n = new Set(prev); n.delete(packageId); return n; });
+      }
+      return result;
+    } catch (err) {
+      console.error(err);
+      return { error: true };
     }
   };
 

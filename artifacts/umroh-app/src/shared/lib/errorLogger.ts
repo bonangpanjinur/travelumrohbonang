@@ -1,4 +1,4 @@
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { captureException } from "@/shared/lib/sentry";
 import { getCurrentAuthUser } from "@/shared/lib/currentUser";
 
@@ -18,14 +18,17 @@ export async function logError({ message, stack, level = "error", context, error
 
   try {
     const user = await getCurrentAuthUser();
-    await supabase.from("error_logs").insert({
-      user_id: user?.id ?? undefined,
-      level,
-      message: message.slice(0, 2000),
-      stack: stack?.slice(0, 8000) ?? undefined,
-      url: typeof window !== "undefined" ? window.location.href : undefined,
-      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
-      context: (context ?? undefined) as any,
+    await apiFetch("/api/logs/error", {
+      method: "POST",
+      body: JSON.stringify({
+        userId: user?.id ?? undefined,
+        level,
+        message: message.slice(0, 2000),
+        stack: stack?.slice(0, 8000) ?? undefined,
+        url: typeof window !== "undefined" ? window.location.href : undefined,
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+        context: context ?? undefined,
+      }),
     });
   } catch (err) {
     // swallow — logger must never throw

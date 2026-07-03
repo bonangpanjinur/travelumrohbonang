@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
@@ -37,15 +37,16 @@ const AgentCommissions = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const { data: ag } = await supabase.from("agents").select("id").eq("user_id", user.id).maybeSingle();
+      const agents = await apiFetch<any[]>("/api/admin/agents");
+      const ag = agents.find(a => a.userId === user.id);
       if (!ag) { setLoading(false); return; }
       setAgentId(ag.id);
-      const [{ data: c }, { data: w }] = await Promise.all([
-        supabase.from("agent_commissions").select("*, bookings(booking_code)").eq("agent_id", ag.id).order("created_at", { ascending: false }),
-        supabase.from("agent_withdrawals").select("*").eq("agent_id", ag.id).order("created_at", { ascending: false }),
+      const [commissions, withdrawals] = await Promise.all([
+        apiFetch<any[]>("/api/admin/agents/commissions"),
+        apiFetch<any[]>("/api/admin/agents/withdrawals"),
       ]);
-      setCommissions(c || []);
-      setWithdrawals(w || []);
+      setCommissions((commissions || []).filter((c: any) => c.agentId === ag.id));
+      setWithdrawals((withdrawals || []).filter((w: any) => w.agentId === ag.id));
     } catch (e: any) { toast.error(e.message); }
     finally { setLoading(false); }
   };
@@ -66,11 +67,13 @@ const AgentCommissions = () => {
     if (!form.bank_name || !form.bank_account || !form.account_holder) { toast.error("Lengkapi data rekening"); return; }
     setSaving(true);
     try {
-      const { error } = await supabase.from("agent_withdrawals").insert({
-        agent_id: agentId, amount: amt, bank_name: form.bank_name, bank_account: form.bank_account,
-        account_holder: form.account_holder, notes: form.notes || null,
+      await apiFetch("/api/admin/agents/withdrawals", {
+        method: "POST",
+        body: JSON.stringify({
+          agentId: agentId, amount: amt, bankName: form.bank_name, bankAccount: form.bank_account,
+          accountHolder: form.account_holder, notes: form.notes || null,
+        }),
       });
-      if (error) throw error;
       toast.success("Pengajuan terkirim, menunggu verifikasi admin");
       setOpen(false);
       setForm({ amount: "", bank_name: "", bank_account: "", account_holder: "", notes: "" });

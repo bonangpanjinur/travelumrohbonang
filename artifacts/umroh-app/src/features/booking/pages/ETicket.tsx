@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
 import Navbar from "@/shared/components/layout/Navbar";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -10,6 +9,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import SEO from "@/shared/components/seo/SEO";
+import { apiFetch } from "@/shared/lib/apiClient";
 
 const ETicket = () => {
   const { bookingId } = useParams();
@@ -21,11 +21,14 @@ const ETicket = () => {
   useEffect(() => {
     if (!user || !bookingId) return;
     (async () => {
-      const { data: b } = await supabase.from("bookings")
-        .select("id, booking_code, status, total_price, packages(title), package_departures(departure_date, return_date), booking_pilgrims(name, nik, passport_number)")
-        .eq("id", bookingId).eq("user_id", user.id).maybeSingle();
-      setData(b);
-      setLoading(false);
+      try {
+        const b = await apiFetch<any>(`/api/bookings/${bookingId}`);
+        setData(b);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [bookingId, user]);
 
@@ -35,7 +38,7 @@ const ETicket = () => {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <SEO title={`E-Ticket ${data.booking_code}`} />
+      <SEO title={`E-Ticket ${data.bookingCode}`} />
       <Navbar />
       <main className="pt-24 pb-16 print:pt-0">
         <div className="container-custom max-w-2xl space-y-4">
@@ -47,27 +50,27 @@ const ETicket = () => {
             <div className="bg-primary text-primary-foreground p-6 flex items-center justify-between">
               <div>
                 <div className="text-xs opacity-90">E-TICKET UMROH</div>
-                <div className="font-mono text-lg font-bold">{data.booking_code}</div>
+                <div className="font-mono text-lg font-bold">{data.bookingCode}</div>
               </div>
               <Plane className="w-10 h-10 opacity-80" />
             </div>
             <CardContent className="p-6 space-y-4">
               <div className="flex flex-col md:flex-row gap-4 items-center md:items-start">
                 <div className="bg-white p-3 rounded-lg border border-border">
-                  <QRCodeSVG value={data.booking_code} size={140} />
+                  <QRCodeSVG value={data.bookingCode} size={140} />
                 </div>
                 <div className="flex-1 space-y-2 text-sm">
-                  <Row label="Paket" value={data.packages?.title || "-"} />
-                  <Row label="Berangkat" value={data.package_departures?.departure_date ? format(new Date(data.package_departures.departure_date), "EEEE, d MMM yyyy", { locale: localeId }) : "-"} />
-                  <Row label="Kembali" value={data.package_departures?.return_date ? format(new Date(data.package_departures.return_date), "EEEE, d MMM yyyy", { locale: localeId }) : "-"} />
-                  <Row label="Total" value={`Rp ${Number(data.total_price).toLocaleString("id-ID")}`} />
+                  <Row label="Paket" value={data.packageTitle || "-"} />
+                  <Row label="Berangkat" value={data.departureDate ? format(new Date(data.departureDate), "EEEE, d MMM yyyy", { locale: localeId }) : "-"} />
+                  <Row label="Kembali" value={data.returnDate ? format(new Date(data.returnDate), "EEEE, d MMM yyyy", { locale: localeId }) : "-"} />
+                  <Row label="Total" value={`Rp ${Number(data.totalPrice).toLocaleString("id-ID")}`} />
                 </div>
               </div>
 
               <div className="border-t border-border pt-4">
                 <div className="text-xs uppercase text-muted-foreground mb-2">Daftar Jemaah</div>
                 <div className="space-y-1.5">
-                  {(data.booking_pilgrims || []).map((p: any, i: number) => (
+                  {(data.pilgrims || []).map((p: any, i: number) => (
                     <div key={i} className="text-sm flex justify-between border-b border-border/50 pb-1.5">
                       <span className="font-medium">{i + 1}. {p.name}</span>
                       <span className="font-mono text-xs text-muted-foreground">{p.passport_number || p.nik || "-"}</span>

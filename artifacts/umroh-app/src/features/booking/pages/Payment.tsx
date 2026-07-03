@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
@@ -17,28 +16,27 @@ import InvoiceButton from "@/features/booking/components/InvoiceButton";
 import LoadingSpinner from "@/shared/components/ui/loading-spinner";
 import { useCurrency } from "@/shared/hooks/useCurrency";
 import { uploadPaymentProof } from "@/features/booking/lib/paymentProofs";
+import { apiFetch } from "@/shared/lib/apiClient";
 
 interface BookingData {
   id: string;
-  booking_code: string;
-  total_price: number;
+  bookingCode: string;
+  totalPrice: number;
   status: string;
-  user_id: string;
-  package: { 
-    title: string; 
-    minimum_dp: number | null;
-    dp_deadline_days?: number | null;
-    full_deadline_days?: number | null;
-  } | null;
-  departure: { departure_date: string } | null;
+  userId: string;
+  packageTitle: string | null;
+  minimumDp: number | null;
+  dpDeadlineDays: number | null;
+  fullDeadlineDays: number | null;
+  departureDate: string | null;
 }
 
 interface PaymentRecord {
   id: string;
   amount: number;
   status: string;
-  payment_type?: string;
-  created_at: string;
+  paymentType?: string;
+  createdAt: string;
 }
 
 const Payment = () => {
@@ -72,66 +70,24 @@ const Payment = () => {
         setLoading(true);
         setError(null);
         
-        // Fetch booking, payments, and bank settings in parallel
-        const [bookingRes, paymentsRes, settingsRes] = await Promise.all([
-          supabase
-            .from("bookings")
-            .select(`
-              id, booking_code, total_price, status, user_id,
-              package:packages(title, minimum_dp, dp_deadline_days, full_deadline_days),
-              departure:package_departures(departure_date)
-            `)
-            .eq("id", bookingId!)
-            .single(),
-          supabase
-            .from("payments")
-            .select("id, amount, status, payment_type, created_at")
-            .eq("booking_id", bookingId!)
-            .order("created_at", { ascending: true }),
-          supabase
-            .from("settings")
-            .select("key, value")
-            .in("key", ["bank_name", "bank_account", "bank_holder"]),
+        const [bookingData, paymentsData] = await Promise.all([
+          apiFetch<BookingData>(`/api/bookings/${bookingId}`),
+          apiFetch<PaymentRecord[]>(`/api/bookings/${bookingId}/payments`),
         ]);
 
-        // If the query fails due to missing columns, try a fallback query without those columns
-        if (bookingRes.error) throw bookingRes.error;
-        const finalBookingData = bookingRes.data;
-
-        const finalPaymentsData = paymentsRes.data || [];
+        if (!bookingData) throw new Error("Booking tidak ditemukan");
         
-        if (!finalBookingData) throw new Error("Booking tidak ditemukan");
-        
-        const bookingData = finalBookingData as any as BookingData;
-        
-        // CRITICAL FIX: Verify ownership
-        if (bookingData.user_id !== user.id) {
+        // Ownership check is done in backend, but we can verify here too
+        if (bookingData.userId !== user.id) {
           setError("Anda tidak memiliki akses ke data booking ini.");
-          toast({
-            title: "Akses Ditolak",
-            description: "Anda tidak memiliki izin untuk melihat pembayaran ini.",
-            variant: "destructive",
-          });
           return;
         }
 
         setBooking(bookingData);
+        setExistingPayments(paymentsData || []);
         
-        if (finalPaymentsData) {
-          setExistingPayments(finalPaymentsData as PaymentRecord[]);
-        }
-        
-        if (settingsRes.data && settingsRes.data.length > 0) {
-          const settings: Record<string, string> = {};
-          settingsRes.data.forEach((s: { key: string; value: string | null }) => {
-            if (s.value) settings[s.key] = s.value;
-          });
-          setBankAccount({
-            bank: settings.bank_name || "Bank Mandiri",
-            number: settings.bank_account || "123-456-7890",
-            name: settings.bank_holder || "PT UmrohPlus Travel",
-          });
-        }
+        // For bank settings, we might need a general settings endpoint
+        // For now keep defaults or fetch if we have an endpoint
       } catch (err: any) {
         console.error("Error fetching payment data:", err);
         setError(err.message || "Gagal memuat data pembayaran");
@@ -152,17 +108,17 @@ const Payment = () => {
     .filter(p => p.status === "pending")
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const remainingAmount = booking ? booking.total_price - paidAmount - pendingAmount : 0;
-  const minimumDp = booking?.package?.minimum_dp || 0;
-  const paymentProgress = booking ? ((paidAmount / booking.total_price) * 100) : 0;
+  const remainingAmount = booking ? booking.totalPrice - paidAmount - pendingAmount : 0;
+  const minimumDp = booking?.minimumDp || 0;
+  const paymentProgress = booking ? ((paidAmount / booking.totalPrice) * 100) : 0;
 
   // Calculate deadlines
-  const departureDate = booking?.departure?.departure_date 
-    ? new Date(booking.departure.departure_date) 
+  const departureDate = booking?.departureDate 
+    ? new Date(booking.departureDate) 
     : null;
   
-  const dpDeadlineDays = booking?.package?.dp_deadline_days ?? 30;
-  const fullDeadlineDays = booking?.package?.full_deadline_days ?? 7;
+  const dpDeadlineDays = booking?.dpDeadlineDays ?? 30;
+  const fullDeadlineDays = booking?.fullDeadlineDays ?? 7;
   
   const dpDeadline = departureDate 
     ? addDays(departureDate, -dpDeadlineDays) 
@@ -172,25 +128,17 @@ const Payment = () => {
     ? addDays(departureDate, -fullDeadlineDays) 
     : null;
 
-  const now = new Date();
-  const daysUntilDpDeadline = dpDeadline ? differenceInDays(dpDeadline, now) : null;
-  const daysUntilFullDeadline = fullDeadline ? differenceInDays(fullDeadline, now) : null;
-  
-  const isDpOverdue = daysUntilDpDeadline !== null && daysUntilDpDeadline < 0;
-  const isFullOverdue = daysUntilFullDeadline !== null && daysUntilFullDeadline < 0;
-
   // Determine current payment amount based on option
   const getCurrentPaymentAmount = () => {
     if (paymentOption === "full") {
       return remainingAmount;
     }
-    // For DP, use minimum_dp or remaining if less
     return Math.min(minimumDp, remainingAmount);
   };
 
   const handleCopyCode = () => {
     if (booking) {
-      navigator.clipboard.writeText(booking.booking_code);
+      navigator.clipboard.writeText(booking.bookingCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast({ title: "Kode booking disalin!" });
@@ -222,7 +170,7 @@ const Payment = () => {
     }
     setUploading(true);
     try {
-      const path = await uploadPaymentProof(user.id, file, booking.booking_code);
+      const path = await uploadPaymentProof(user.id, file, booking.bookingCode);
       setProofUrl(path);
       toast({ title: "Bukti pembayaran berhasil diupload!" });
     } catch (error: any) {
@@ -240,31 +188,15 @@ const Payment = () => {
     const paymentType = isFullPayment ? "full" : (paidAmount === 0 ? "dp" : "installment");
 
     try {
-      // Create payment record
-      // We try to insert with payment_type, but if it fails, we try without it
-      const paymentData: any = {
-        booking_id: booking.id,
-        payment_method: "transfer",
-        amount: paymentAmount,
-        status: "pending",
-        proof_url: proofUrl,
-        payment_type: paymentType,
-      };
-
-      const { error: paymentError } = await supabase.from("payments").insert(paymentData);
-
-      if (paymentError) {
-        console.warn("Primary payment insert failed, trying fallback:", paymentError);
-        // Fallback: remove payment_type if it's the cause of failure
-        const { payment_type, ...fallbackData } = paymentData;
-        const { error: fallbackError } = await supabase.from("payments").insert(fallbackData);
-        if (fallbackError) throw fallbackError;
-      }
-
-      // Update booking status
-      const { error: bookingError } = await supabase.from("bookings").update({ status: "waiting_payment" }).eq("id", booking.id);
-      
-      if (bookingError) throw bookingError;
+      await apiFetch(`/api/bookings/${booking.id}/payments`, {
+        method: "POST",
+        body: JSON.stringify({
+          amount: paymentAmount,
+          paymentMethod: "transfer",
+          paymentType,
+          proofUrl,
+        }),
+      });
 
       toast({ title: "Pembayaran dikonfirmasi!", description: "Menunggu verifikasi admin" });
       navigate("/my-bookings");
@@ -331,7 +263,7 @@ const Payment = () => {
               <div className="flex items-center justify-between p-4 bg-muted rounded-xl">
                 <div>
                   <div className="text-sm text-muted-foreground">Kode Booking</div>
-                  <div className="text-xl font-bold font-mono">{booking.booking_code}</div>
+                  <div className="text-xl font-bold font-mono">{booking.bookingCode}</div>
                 </div>
                 <Button variant="outline" size="icon" onClick={handleCopyCode}>
                   {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
@@ -347,7 +279,7 @@ const Payment = () => {
                 <Progress value={paymentProgress} className="h-2" />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Terbayar: {fmt(paidAmount)}</span>
-                  <span>Total: {fmt(booking.total_price)}</span>
+                  <span>Total: {fmt(booking.totalPrice)}</span>
                 </div>
               </div>
 

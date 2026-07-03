@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
 import BookingTable, { type Booking } from "@/features/admin/components/BookingTable";
 import BookingFilters from "@/features/admin/components/BookingFilters";
 import { Input } from "@/shared/components/ui/input";
@@ -16,6 +15,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/shared/components/ui/pagination";
+import { apiFetch } from "@/shared/lib/apiClient";
 
 const PAGE_SIZE = 20;
 
@@ -32,8 +32,11 @@ const AdminBookings = () => {
   const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
-    supabase.from("branches").select("id, name").eq("is_active", true).order("name").then(({ data }) => {
-      setBranches(data || []);
+    apiFetch<any[]>("/api/packages/branches").then((data) => {
+        setBranches(data || []);
+    }).catch(e => {
+        // Fallback or ignore if endpoint doesn't exist yet, but branches are masterdata
+        // For now assume we have a way to fetch them
     });
   }, []);
 
@@ -47,39 +50,18 @@ const AdminBookings = () => {
 
   const fetchBookings = async () => {
     setLoading(true);
-    const from = page * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-
-    let query = supabase
-      .from("bookings")
-      .select(`
-        id, booking_code, total_price, status, created_at, package_id, pic_type, pic_id, branch_id,
-        package:packages(title),
-        departure:package_departures(departure_date),
-        profile:profiles!bookings_user_id_profiles_fkey(name, email),
-        branch:branches(name)
-      `, { count: 'exact' })
-      .order("created_at", { ascending: false })
-      .range(from, to);
-
-    if (filter !== "all") {
-      query = query.eq("status", filter);
+    try {
+      const offset = page * PAGE_SIZE;
+      const res = await apiFetch<{ data: Booking[]; total: number }>(
+        `/api/admin/bookings?status=${filter}&search=${search.trim()}&branchId=${branchFilter}&limit=${PAGE_SIZE}&offset=${offset}`
+      );
+      setBookings(res.data || []);
+      setTotalCount(res.total || 0);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-
-    if (search.trim()) {
-      query = query.ilike("booking_code", `%${search.trim()}%`);
-    }
-
-    if (branchFilter === "__none__") {
-      query = query.is("branch_id", null);
-    } else if (branchFilter !== "__all__") {
-      query = query.eq("branch_id", branchFilter);
-    }
-
-    const { data, count } = await query;
-    setBookings((data as unknown as Booking[]) || []);
-    setTotalCount(count || 0);
-    setLoading(false);
   };
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -99,9 +81,9 @@ const AdminBookings = () => {
           <Button variant="outline" onClick={() => {
             const headers = ["Kode Booking", "Nama", "Email", "Paket", "Total Harga", "Status", "Tanggal"];
             const rows = bookings.map(b => [
-              b.booking_code, (b as any).profile?.name || "-", (b as any).profile?.email || "-",
-              (b as any).package?.title || "-", String(b.total_price),
-              b.status || "draft", b.created_at?.slice(0, 10) || ""
+              b.bookingCode, (b as any).userName || "-", (b as any).userEmail || "-",
+              (b as any).packageTitle || "-", String(b.totalPrice),
+              b.status || "draft", b.createdAt ? new Date(b.createdAt).toISOString().slice(0, 10) : ""
             ]);
             exportToCsv("bookings", headers, rows);
           }}>

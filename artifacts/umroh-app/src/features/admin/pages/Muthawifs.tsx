@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -56,17 +57,12 @@ const Muthawifs = () => {
   const [uploading, setUploading] = useState(false);
 
   const fetchMuthawifs = async () => {
-    const { data, error } = await supabase
-      .from("muthawifs")
-      .select("*")
-      .order("name", { ascending: true });
-
-    if (error) {
+    try {
+      const res = await apiFetch<{ data: Muthawif[] }>("/api/admin/masterdata/muthawifs");
+      setMuthawifs(res.data || []);
+    } catch {
       toast.error("Gagal memuat data muthawif");
-      return;
     }
-
-    setMuthawifs((data || []) as Muthawif[]);
     setLoading(false);
   };
 
@@ -135,62 +131,50 @@ const Muthawifs = () => {
 
     setSaving(true);
 
-    if (selectedMuthawif) {
-      // Update
-      const { error } = await supabase
-        .from("muthawifs")
-        .update({
-          name: formData.name.trim(),
-          phone: formData.phone.trim() || null,
-          photo_url: formData.photo_url || null,
-        })
-        .eq("id", selectedMuthawif.id);
-
-      if (error) {
-        toast.error("Gagal menyimpan perubahan");
-        setSaving(false);
-        return;
+    try {
+      if (selectedMuthawif) {
+        // Update
+        await apiFetch(`/api/admin/masterdata/muthawifs/${selectedMuthawif.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            name: formData.name.trim(),
+            phone: formData.phone.trim() || null,
+            photo_url: formData.photo_url || null,
+          }),
+        });
+        toast.success("Muthawif berhasil diperbarui");
+      } else {
+        // Create
+        await apiFetch("/api/admin/masterdata/muthawifs", {
+          method: "POST",
+          body: JSON.stringify({
+            name: formData.name.trim(),
+            phone: formData.phone.trim() || null,
+            photo_url: formData.photo_url || null,
+          }),
+        });
+        toast.success("Muthawif berhasil ditambahkan");
       }
-
-      toast.success("Muthawif berhasil diperbarui");
-    } else {
-      // Create
-      const { error } = await supabase.from("muthawifs").insert({
-        name: formData.name.trim(),
-        phone: formData.phone.trim() || null,
-        photo_url: formData.photo_url || null,
-      });
-
-      if (error) {
-        toast.error("Gagal menambah muthawif");
-        setSaving(false);
-        return;
-      }
-
-      toast.success("Muthawif berhasil ditambahkan");
+      setDialogOpen(false);
+      fetchMuthawifs();
+    } catch {
+      toast.error("Gagal menyimpan perubahan");
     }
-
     setSaving(false);
-    setDialogOpen(false);
-    fetchMuthawifs();
   };
 
   const handleDelete = async () => {
     if (!selectedMuthawif) return;
-
-    const { error } = await supabase
-      .from("muthawifs")
-      .delete()
-      .eq("id", selectedMuthawif.id);
-
-    if (error) {
+    try {
+      await apiFetch(`/api/admin/masterdata/muthawifs/${selectedMuthawif.id}`, {
+        method: "DELETE",
+      });
+      toast.success("Muthawif berhasil dihapus");
+      setDeleteDialogOpen(false);
+      fetchMuthawifs();
+    } catch {
       toast.error("Gagal menghapus muthawif");
-      return;
     }
-
-    toast.success("Muthawif berhasil dihapus");
-    setDeleteDialogOpen(false);
-    fetchMuthawifs();
   };
 
   return (

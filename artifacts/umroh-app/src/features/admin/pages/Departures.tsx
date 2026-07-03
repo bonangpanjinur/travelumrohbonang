@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -79,104 +79,45 @@ const AdminDepartures = () => {
   }, []);
 
   const fetchData = async () => {
-    const [departuresRes, packagesRes, muthawifRes] = await Promise.all([
-      supabase
-        .from("package_departures")
-        .select(`
-          *,
-          package:packages(id, title),
-          prices:departure_prices(id, room_type, price)
-        `)
-        .order("departure_date", { ascending: true }),
-      supabase.from("packages").select("id, title").eq("is_active", true),
-      supabase.from("muthawifs").select("id, name").order("name"),
-    ]);
+    try {
+      const [departuresRes, packagesRes, muthawifRes] = await Promise.all([
+        apiFetch<{ data: Departure[] }>("/api/admin/departures"),
+        apiFetch<{ data: Package[] }>("/api/packages?active=true"),
+        apiFetch<{ data: Muthawif[] }>("/api/admin/masterdata/muthawifs"),
+      ]);
 
-    setDepartures((departuresRes.data as unknown as Departure[]) || []);
-    setPackages(packagesRes.data || []);
-    setMuthawifs(muthawifRes.data || []);
+      setDepartures(departuresRes.data || []);
+      setPackages(packagesRes.data || []);
+      setMuthawifs(muthawifRes.data || []);
+    } catch {
+      toast({ title: "Gagal memuat data", variant: "destructive" });
+    }
     setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (editing) {
-      // Update departure
-      // Calculate remaining_quota adjustment: only change if quota changed
-      const quotaDiff = form.quota - editing.quota;
-      const newRemainingQuota = editing.remaining_quota + quotaDiff;
-
-      const { error } = await supabase
-        .from("package_departures")
-        .update({
-          package_id: form.package_id,
-          departure_date: form.departure_date,
-          return_date: form.return_date || null,
-          quota: form.quota,
-          remaining_quota: newRemainingQuota,
-          status: form.status,
-          muthawif_id: form.muthawif_id || null,
-        })
-        .eq("id", editing.id);
-
-      if (error) {
-        toast({ title: "Gagal mengupdate", description: error.message, variant: "destructive" });
-        return;
+    try {
+      if (editing) {
+        await apiFetch(`/api/admin/departures/${editing.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(form),
+        });
+        toast({ title: "Keberangkatan diupdate!" });
+      } else {
+        await apiFetch("/api/admin/departures", {
+          method: "POST",
+          body: JSON.stringify(form),
+        });
+        toast({ title: "Keberangkatan ditambahkan!" });
       }
-
-      // Update prices
-      for (const roomType of ROOM_TYPES) {
-        const price = form.prices[roomType as keyof typeof form.prices];
-        const existingPrice = editing.prices.find((p) => p.room_type === roomType);
-
-        if (existingPrice) {
-          await supabase.from("departure_prices").update({ price }).eq("id", existingPrice.id);
-        } else {
-          await supabase.from("departure_prices").insert({
-            departure_id: editing.id,
-            room_type: roomType,
-            price,
-          });
-        }
-      }
-
-      toast({ title: "Keberangkatan diupdate!" });
-    } else {
-      // Create departure
-      const { data, error } = await supabase
-        .from("package_departures")
-        .insert({
-          package_id: form.package_id,
-          departure_date: form.departure_date,
-          return_date: form.return_date || null,
-          quota: form.quota,
-          remaining_quota: form.quota,
-          status: form.status,
-          muthawif_id: form.muthawif_id || null,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        toast({ title: "Gagal membuat keberangkatan", description: error.message, variant: "destructive" });
-        return;
-      }
-
-      // Create prices
-      const pricesData = ROOM_TYPES.map((roomType) => ({
-        departure_id: data.id,
-        room_type: roomType,
-        price: form.prices[roomType as keyof typeof form.prices],
-      }));
-
-      await supabase.from("departure_prices").insert(pricesData);
-      toast({ title: "Keberangkatan ditambahkan!" });
+      fetchData();
+      setIsOpen(false);
+      resetForm();
+    } catch (error: any) {
+      toast({ title: "Gagal menyimpan", description: error.message, variant: "destructive" });
     }
-
-    fetchData();
-    setIsOpen(false);
-    resetForm();
   };
 
   const handleEdit = (dep: Departure) => {
@@ -199,13 +140,12 @@ const AdminDepartures = () => {
   };
 
   const executeDelete = async (id: string) => {
-    await supabase.from("departure_prices").delete().eq("departure_id", id);
-    const { error } = await supabase.from("package_departures").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      await apiFetch(`/api/admin/departures/${id}`, { method: "DELETE" });
       toast({ title: "Keberangkatan dihapus" });
       fetchData();
+    } catch (error: any) {
+      toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
     }
   };
 

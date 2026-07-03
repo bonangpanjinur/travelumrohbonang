@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -14,6 +13,8 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import AdminPagination from "@/features/admin/components/AdminPagination";
 import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
+import { apiFetch } from "@/shared/lib/apiClient";
+import { supabase } from "@/shared/integrations/supabase/client";
 
 interface Pilgrim {
   id: string;
@@ -22,18 +23,18 @@ interface Pilgrim {
   phone: string | null;
   email: string | null;
   gender: string | null;
-  birth_date: string | null;
-  passport_number: string | null;
-  passport_expiry: string | null;
-  booking_id: string | null;
-  created_at: string;
+  birthDate: string | null;
+  passportNumber: string | null;
+  passportExpiry: string | null;
+  bookingId: string | null;
+  createdAt: string;
   booking?: {
     id: string;
-    booking_code: string;
+    bookingCode: string;
     status: string;
-    total_price: number;
-    package?: { title: string } | null;
-    departure?: { departure_date: string } | null;
+    totalPrice: number;
+    packageTitle?: string | null;
+    departureDate?: string | null;
   } | null;
 }
 
@@ -76,39 +77,29 @@ const AdminPilgrims = () => {
   const [bookingSearch, setBookingSearch] = useState("");
 
   const fetchPilgrims = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("booking_pilgrims")
-      .select(`
-        *,
-        booking:bookings(
-          id, booking_code, status, total_price,
-          package:packages(title),
-          departure:package_departures(departure_date)
-        )
-      `)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast({ title: "Gagal memuat data", description: error.message, variant: "destructive" });
-    } else {
-      setPilgrims((data as unknown as Pilgrim[]) || []);
+    try {
+      const data = await apiFetch<Pilgrim[]>("/api/admin/pilgrims");
+      setPilgrims(data || []);
+    } catch (err: any) {
+      toast({ title: "Gagal memuat data", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [toast]);
 
   const fetchBookings = useCallback(async () => {
-    const { data } = await supabase
-      .from("bookings")
-      .select("id, booking_code, package:packages(title)")
-      .order("created_at", { ascending: false })
-      .limit(200);
-    setBookings(
-      (data || []).map((b: any) => ({
-        id: b.id,
-        booking_code: b.booking_code,
-        package_title: b.package?.title || "-",
-      }))
-    );
+    try {
+      const data = await apiFetch<any[]>("/api/admin/bookings");
+      setBookings(
+        (data || []).map((b: any) => ({
+          id: b.id,
+          booking_code: b.bookingCode,
+          package_title: b.packageTitle || "-",
+        }))
+      );
+    } catch (err) {
+      console.error(err);
+    }
   }, []);
 
   useEffect(() => {
@@ -121,10 +112,10 @@ const AdminPilgrims = () => {
     return (
       (p.name ?? "").toLowerCase().includes(q) ||
       (p.nik ?? "").toLowerCase().includes(q) ||
-      (p.passport_number ?? "").toLowerCase().includes(q) ||
+      (p.passportNumber ?? "").toLowerCase().includes(q) ||
       (p.phone ?? "").toLowerCase().includes(q) ||
       (p.email ?? "").toLowerCase().includes(q) ||
-      (p.booking?.booking_code ?? "").toLowerCase().includes(q)
+      (p.booking?.bookingCode ?? "").toLowerCase().includes(q)
     );
   });
 
@@ -153,12 +144,12 @@ const AdminPilgrims = () => {
       phone: pilgrim.phone ?? "",
       email: pilgrim.email ?? "",
       gender: pilgrim.gender ?? "",
-      birth_date: pilgrim.birth_date ?? "",
-      passport_number: pilgrim.passport_number ?? "",
-      passport_expiry: pilgrim.passport_expiry ?? "",
-      booking_id: pilgrim.booking_id ?? "",
+      birth_date: pilgrim.birthDate ?? "",
+      passport_number: pilgrim.passportNumber ?? "",
+      passport_expiry: pilgrim.passportExpiry ?? "",
+      booking_id: pilgrim.bookingId ?? "",
     });
-    setBookingSearch(pilgrim.booking?.booking_code ?? "");
+    setBookingSearch(pilgrim.booking?.bookingCode ?? "");
     setFormOpen(true);
   };
 
@@ -174,24 +165,32 @@ const AdminPilgrims = () => {
       phone: form.phone.trim() || null,
       email: form.email.trim() || null,
       gender: form.gender || null,
-      birth_date: form.birth_date || null,
-      passport_number: form.passport_number.trim() || null,
-      passport_expiry: form.passport_expiry || null,
-      booking_id: form.booking_id || null,
+      birthDate: form.birth_date || null,
+      passportNumber: form.passport_number.trim() || null,
+      passportExpiry: form.passport_expiry || null,
+      bookingId: form.booking_id || null,
     };
 
-    const { error } = editingId
-      ? await supabase.from("booking_pilgrims").update(payload).eq("id", editingId)
-      : await supabase.from("booking_pilgrims").insert(payload);
-
-    setSaving(false);
-    if (error) {
-      toast({ title: "Gagal menyimpan", description: error.message, variant: "destructive" });
-      return;
+    try {
+      if (editingId) {
+        await apiFetch(`/api/admin/pilgrims/${editingId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch("/api/admin/pilgrims", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      }
+      toast({ title: editingId ? "Jemaah berhasil diperbarui" : "Jemaah berhasil ditambahkan" });
+      setFormOpen(false);
+      fetchPilgrims();
+    } catch (err: any) {
+      toast({ title: "Gagal menyimpan", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
-    toast({ title: editingId ? "Jemaah berhasil diperbarui" : "Jemaah berhasil ditambahkan" });
-    setFormOpen(false);
-    fetchPilgrims();
   };
 
   const showDetail = (pilgrim: Pilgrim) => {
@@ -226,8 +225,8 @@ const AdminPilgrims = () => {
             const headers = ["Nama", "Gender", "NIK", "No. Paspor", "Telepon", "Email", "Kode Booking", "Paket"];
             const rows = filteredPilgrims.map(p => [
               p.name, p.gender === "male" ? "L" : p.gender === "female" ? "P" : "-",
-              p.nik || "-", p.passport_number || "-", p.phone || "-", p.email || "-",
-              p.booking?.booking_code || "-", p.booking?.package?.title || "-"
+              p.nik || "-", p.passportNumber || "-", p.phone || "-", p.email || "-",
+              p.booking?.bookingCode || "-", p.booking?.packageTitle || "-"
             ]);
             exportToCsv("jemaah", headers, rows);
           }}>
@@ -291,7 +290,7 @@ const AdminPilgrims = () => {
                       <TableCell>
                         <div className="text-sm">
                           <p>NIK: {pilgrim.nik || "-"}</p>
-                          <p>Paspor: {pilgrim.passport_number || "-"}</p>
+                          <p>Paspor: {pilgrim.passportNumber || "-"}</p>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -302,11 +301,11 @@ const AdminPilgrims = () => {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-mono">
-                          {pilgrim.booking?.booking_code || "-"}
+                          {pilgrim.booking?.bookingCode || "-"}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <p className="text-sm">{pilgrim.booking?.package?.title || "-"}</p>
+                        <p className="text-sm">{pilgrim.booking?.packageTitle || "-"}</p>
                       </TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(pilgrim.booking?.status)}>
@@ -520,10 +519,10 @@ const AdminPilgrims = () => {
                       </p>
                     </div>
                   </div>
-                  {selectedPilgrim.birth_date && (
+                  {selectedPilgrim.birthDate && (
                     <div className="flex items-center gap-3">
                       <Calendar className="w-5 h-5 text-muted-foreground" />
-                      <p>{format(new Date(selectedPilgrim.birth_date), "dd MMMM yyyy", { locale: idLocale })}</p>
+                      <p>{format(new Date(selectedPilgrim.birthDate), "dd MMMM yyyy", { locale: idLocale })}</p>
                     </div>
                   )}
                   {selectedPilgrim.phone && (
@@ -555,15 +554,15 @@ const AdminPilgrims = () => {
                     <CreditCard className="w-5 h-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">No. Paspor</p>
-                      <p className="font-mono">{selectedPilgrim.passport_number || "-"}</p>
+                      <p className="font-mono">{selectedPilgrim.passportNumber || "-"}</p>
                     </div>
                   </div>
-                  {selectedPilgrim.passport_expiry && (
+                  {selectedPilgrim.passportExpiry && (
                     <div className="flex items-center gap-3">
                       <Calendar className="w-5 h-5 text-muted-foreground" />
                       <div>
                         <p className="text-sm text-muted-foreground">Masa Berlaku Paspor</p>
-                        <p>{format(new Date(selectedPilgrim.passport_expiry), "dd MMMM yyyy", { locale: idLocale })}</p>
+                        <p>{format(new Date(selectedPilgrim.passportExpiry), "dd MMMM yyyy", { locale: idLocale })}</p>
                       </div>
                     </div>
                   )}

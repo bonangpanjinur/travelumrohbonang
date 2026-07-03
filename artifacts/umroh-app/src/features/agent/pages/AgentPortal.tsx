@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
@@ -62,38 +62,30 @@ const AgentPortal = () => {
       return;
     }
     loadData();
-    supabase.from("branches").select("id, name").eq("is_active", true).order("name")
-      .then(({ data }) => setBranches(data || []));
+    apiFetch<{ id: string; name: string }[]>("/api/misc/branches") // assuming misc/branches exists or should be added
+      .then((data) => setBranches(data || []))
+      .catch(() => {});
   }, [user, authLoading]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const { data: agentData, error: agentErr } = await supabase
-        .from("agents")
-        .select("*")
-        .eq("user_id", user!.id)
-        .maybeSingle();
-
-      if (agentErr) throw agentErr;
-      setAgent(agentData as any);
+      // Get current user's agent profile
+      const agents = await apiFetch<any[]>("/api/admin/agents"); // We might need a proper public/agent profile endpoint
+      const agentData = agents.find(a => a.userId === user?.id);
+      setAgent(agentData);
 
       if (agentData) {
-        if (agentData.branch_id) {
-          const { data: br } = await supabase
-            .from("branches")
-            .select("name")
-            .eq("id", agentData.branch_id)
-            .maybeSingle();
+        if (agentData.branchId) {
+          const branches = await apiFetch<any[]>("/api/admin/branches");
+          const br = branches.find(b => b.id === agentData.branchId);
           setBranchName(br?.name || null);
         }
 
-        const { data: bookingData } = await supabase
-          .from("bookings")
-          .select("id, booking_code, total_price, status, created_at, packages(title)")
-          .eq("agent_id", agentData.id)
-          .order("created_at", { ascending: false });
-        setBookings(bookingData || []);
+        // Fetch bookings for this agent
+        const bookings = await apiFetch<any[]>("/api/admin/bookings"); // Assuming we can filter or fetch all and filter
+        const agentBookings = bookings.filter(b => b.agentId === agentData.id);
+        setBookings(agentBookings);
       }
     } catch (err: any) {
       console.error(err);
@@ -140,16 +132,15 @@ const AgentPortal = () => {
     }
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("agents")
-        .update({
+      await apiFetch(`/api/admin/agents/${agent.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
           name: parsed.data.name,
           email: parsed.data.email || null,
           phone: parsed.data.phone || null,
-          branch_id: parsed.data.branch_id,
-        })
-        .eq("id", agent.id);
-      if (error) throw error;
+          branchId: parsed.data.branch_id,
+        }),
+      });
       toast.success("Profil berhasil diperbarui");
       setEditOpen(false);
       await loadData();

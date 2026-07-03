@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -62,9 +62,14 @@ const AdminBranches = () => {
   }, []);
 
   const fetchBranches = async () => {
-    const { data } = await supabase.from("branches").select("*").order("name");
-    setBranches((data as Branch[]) || []);
-    setLoading(false);
+    try {
+      const data = await apiFetch<Branch[]>("/api/admin/branches");
+      setBranches(data || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,16 +91,26 @@ const AdminBranches = () => {
       map_url: form.map_url || null,
       description: form.description || null,
     };
-    if (editing) {
-      await supabase.from("branches").update(payload as any).eq("id", editing.id);
-      toast({ title: "Cabang diupdate!" });
-    } else {
-      await supabase.from("branches").insert(payload as any);
-      toast({ title: "Cabang ditambahkan!" });
+    try {
+      if (editing) {
+        await apiFetch(`/api/admin/branches/${editing.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+        toast({ title: "Cabang diupdate!" });
+      } else {
+        await apiFetch("/api/admin/branches", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        toast({ title: "Cabang ditambahkan!" });
+      }
+      fetchBranches();
+      setIsOpen(false);
+      resetForm();
+    } catch (e: any) {
+      toast({ title: "Gagal menyimpan", description: e.message, variant: "destructive" });
     }
-    fetchBranches();
-    setIsOpen(false);
-    resetForm();
   };
 
   const handleEdit = (b: Branch) => {
@@ -121,9 +136,13 @@ const AdminBranches = () => {
   };
 
   const executeDelete = async (id: string) => {
-    await supabase.from("branches").delete().eq("id", id);
-    toast({ title: "Cabang dihapus" });
-    fetchBranches();
+    try {
+      await apiFetch(`/api/admin/branches/${id}`, { method: "DELETE" });
+      toast({ title: "Cabang dihapus" });
+      fetchBranches();
+    } catch (e: any) {
+      toast({ title: "Gagal menghapus", description: e.message, variant: "destructive" });
+    }
   };
 
   const resetForm = () => {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -45,47 +45,54 @@ const AdminHotels = () => {
   }, []);
 
   const fetchHotels = async () => {
-    const { data } = await supabase.from("hotels").select("*").order("name");
-    setHotels((data || []) as Hotel[]);
+    try {
+      const res = await apiFetch<{ data: Hotel[] }>("/api/admin/masterdata/hotels");
+      setHotels(res.data || []);
+    } catch {
+      toast({ title: "Gagal memuat hotel", variant: "destructive" });
+    }
     setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (editing) {
-      const { error } = await supabase.from("hotels").update(form).eq("id", editing.id);
-      if (error) {
-        toast({ title: "Gagal mengupdate", variant: "destructive" });
-      } else {
+    try {
+      if (editing) {
+        await apiFetch(`/api/admin/masterdata/hotels/${editing.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(form),
+        });
         toast({ title: "Hotel diupdate!" });
-        fetchHotels();
-        setIsOpen(false);
-        resetForm();
-      }
-    } else {
-      const { error } = await supabase.from("hotels").insert(form);
-      if (error) {
-        toast({ title: "Gagal menambahkan", variant: "destructive" });
       } else {
+        await apiFetch("/api/admin/masterdata/hotels", {
+          method: "POST",
+          body: JSON.stringify(form),
+        });
         toast({ title: "Hotel ditambahkan!" });
-        fetchHotels();
-        setIsOpen(false);
-        resetForm();
       }
+      fetchHotels();
+      setIsOpen(false);
+      resetForm();
+    } catch {
+      toast({ title: "Gagal menyimpan", variant: "destructive" });
     }
   };
 
   const handleEdit = (hotel: Hotel) => {
     setEditing(hotel);
-    setForm({ name: hotel.name, city: hotel.city || "", star: hotel.star || 5 });
+    setForm({ name: hotel.name, city: hotel.city || "", star: (hotel as any).stars || (hotel as any).star || 5 });
     setIsOpen(true);
   };
 
   const executeDelete = async (id: string) => {
-    await supabase.from("hotels").delete().eq("id", id);
-    toast({ title: "Hotel dihapus" });
-    fetchHotels();
+    try {
+      await apiFetch(`/api/admin/masterdata/hotels/${id}`, { method: "DELETE" });
+      toast({ title: "Hotel dihapus" });
+      fetchHotels();
+    } catch {
+      toast({ title: "Gagal menghapus", variant: "destructive" });
+    }
   };
 
   const resetForm = () => {

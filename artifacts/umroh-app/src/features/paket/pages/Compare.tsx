@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
 import SEO from "@/shared/components/seo/SEO";
@@ -26,34 +26,29 @@ export default function Compare() {
   const [allPkgs, setAllPkgs] = useState<{id:string;title:string;slug:string}[]>([]);
 
   useEffect(() => {
-    supabase.from("packages").select("id,title,slug").eq("is_active", true).order("title").then(({ data }) => {
-      setAllPkgs(data || []);
-    });
+    apiFetch<{ data: { id: string; title: string; slug: string }[] }>("/api/packages?active=true")
+      .then((res) => {
+        setAllPkgs(res.data || []);
+      });
   }, []);
 
   useEffect(() => {
     if (slugs.length === 0) { setPkgs([]); return; }
     (async () => {
-      const { data } = await supabase
-        .from("packages")
-        .select(`id, title, slug, image_url, duration_days, package_type, description,
-          hotel_makkah:hotels!packages_hotel_makkah_id_fkey(name, star),
-          hotel_madinah:hotels!packages_hotel_madinah_id_fkey(name, star),
-          airline:airlines(name),
-          airport:airports(city)`)
-        .in("slug", slugs);
-      const list = (data as any) || [];
-      const ids = list.map((p: any) => p.id);
-      const { data: dep } = await supabase.from("package_departures").select("package_id, departure_prices(price)").in("package_id", ids);
-      const priceMap = new Map<string, number>();
-      (dep || []).forEach((d: any) => {
-        const prices = (d.departure_prices || []).map((p: any) => p.price);
-        if (prices.length) {
-          const min = Math.min(...prices);
-          if (!priceMap.has(d.package_id) || priceMap.get(d.package_id)! > min) priceMap.set(d.package_id, min);
-        }
+      const { data } = await apiFetch<{ data: any[] }>("/api/packages");
+      const list = (data || []).filter(p => slugs.includes(p.slug));
+      
+      const pkgsWithMinPrice = list.map(p => {
+        const prices = (p.departures || []).flatMap((d: any) => (d.prices || []).map((pr: any) => pr.price));
+        const minPrice = prices.length > 0 ? Math.min(...prices) : undefined;
+        return {
+          ...p,
+          min_price: minPrice,
+          hotel_makkah: p.hotel_makkah ? { name: p.hotel_makkah.name, star: p.hotel_makkah.star } : null,
+          hotel_madinah: p.hotel_madinah ? { name: p.hotel_madinah.name, star: p.hotel_madinah.star } : null,
+        };
       });
-      setPkgs(list.map((p: any) => ({ ...p, min_price: priceMap.get(p.id) })));
+      setPkgs(pkgsWithMinPrice);
     })();
   }, [slugs.join(",")]);
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -13,7 +13,7 @@ import { toast } from "@/shared/hooks/use-toast";
 import { Coins, Plus, Pencil, Trash2 } from "lucide-react";
 import { useCurrency, type Currency } from "@/shared/hooks/useCurrency";
 
-const empty = { code: "", name: "", symbol: "", rate_to_idr: 1, is_default: false, is_active: true };
+const empty = { code: "", name: "", symbol: "", rateToIdr: 1, isDefault: false, isActive: true };
 
 const AdminCurrencies = () => {
   const { refresh } = useCurrency();
@@ -21,15 +21,19 @@ const AdminCurrencies = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Currency | null>(null);
-  const [form, setForm] = useState<typeof empty>(empty);
+  const [form, setForm] = useState<any>(empty);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("currencies").select("*").order("code");
-    if (error) toast({ title: "Gagal memuat", description: error.message, variant: "destructive" });
-    setItems((data || []) as Currency[]);
-    setLoading(false);
+    try {
+      const data = await apiFetch<Currency[]>("/api/admin/currencies");
+      setItems(data || []);
+    } catch (e: any) {
+      toast({ title: "Gagal memuat", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -37,7 +41,7 @@ const AdminCurrencies = () => {
   const openNew = () => { setEditing(null); setForm(empty); setOpen(true); };
   const openEdit = (c: Currency) => {
     setEditing(c);
-    setForm({ code: c.code, name: c.name, symbol: c.symbol, rate_to_idr: c.rate_to_idr, is_default: c.is_default, is_active: c.is_active });
+    setForm({ code: c.code, name: c.name, symbol: c.symbol, rateToIdr: c.rateToIdr, isDefault: c.isDefault, isActive: c.isActive });
     setOpen(true);
   };
 
@@ -46,34 +50,40 @@ const AdminCurrencies = () => {
       toast({ title: "Kode dan nama wajib diisi", variant: "destructive" });
       return;
     }
-    const payload = { ...form, code: form.code.toUpperCase(), rate_to_idr: Number(form.rate_to_idr) || 1 };
-    const op = editing
-      ? supabase.from("currencies").update(payload).eq("id", editing.id)
-      : supabase.from("currencies").insert(payload);
-    const { error } = await op;
-    if (error) {
-      toast({ title: "Gagal menyimpan", description: error.message, variant: "destructive" });
-      return;
+    const payload = { ...form, code: form.code.toUpperCase(), rateToIdr: Number(form.rateToIdr) || 1 };
+    try {
+      if (editing) {
+        await apiFetch(`/api/admin/currencies/${editing.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch("/api/admin/currencies", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      }
+      
+      toast({ title: editing ? "Mata uang diperbarui" : "Mata uang ditambahkan" });
+      setOpen(false);
+      await fetchData();
+      await refresh();
+    } catch (e: any) {
+      toast({ title: "Gagal menyimpan", description: e.message, variant: "destructive" });
     }
-    // Ensure single default
-    if (payload.is_default) {
-      await supabase.from("currencies").update({ is_default: false })
-        .neq("code", payload.code);
-    }
-    toast({ title: editing ? "Mata uang diperbarui" : "Mata uang ditambahkan" });
-    setOpen(false);
-    await fetchData();
-    await refresh();
   };
 
   const confirmDelete = async () => {
     if (!deleteId) return;
-    const { error } = await supabase.from("currencies").delete().eq("id", deleteId);
-    if (error) toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
-    else toast({ title: "Mata uang dihapus" });
-    setDeleteId(null);
-    await fetchData();
-    await refresh();
+    try {
+      await apiFetch(`/api/admin/currencies/${deleteId}`, { method: "DELETE" });
+      toast({ title: "Mata uang dihapus" });
+      setDeleteId(null);
+      await fetchData();
+      await refresh();
+    } catch (e: any) {
+      toast({ title: "Gagal menghapus", description: e.message, variant: "destructive" });
+    }
   };
 
   return (
@@ -112,10 +122,10 @@ const AdminCurrencies = () => {
                       <TableCell className="font-mono font-medium">{c.code}</TableCell>
                       <TableCell>{c.name}</TableCell>
                       <TableCell>{c.symbol}</TableCell>
-                      <TableCell>{new Intl.NumberFormat("id-ID").format(c.rate_to_idr)}</TableCell>
+                      <TableCell>{new Intl.NumberFormat("id-ID").format(c.rateToIdr)}</TableCell>
                       <TableCell className="space-x-1">
-                        {c.is_default && <Badge variant="default">Default</Badge>}
-                        {c.is_active ? <Badge variant="secondary">Aktif</Badge> : <Badge variant="outline">Nonaktif</Badge>}
+                        {c.isDefault && <Badge variant="default">Default</Badge>}
+                        {c.isActive ? <Badge variant="secondary">Aktif</Badge> : <Badge variant="outline">Nonaktif</Badge>}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="ghost" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>
@@ -152,16 +162,16 @@ const AdminCurrencies = () => {
             </div>
             <div>
               <Label>1 unit = ... IDR</Label>
-              <Input type="number" step="0.01" value={form.rate_to_idr} onChange={(e) => setForm({ ...form, rate_to_idr: Number(e.target.value) })} />
+              <Input type="number" step="0.01" value={form.rateToIdr} onChange={(e) => setForm({ ...form, rateToIdr: Number(e.target.value) })} />
               <p className="text-xs text-muted-foreground mt-1">Contoh: untuk USD isi sekitar 15800</p>
             </div>
             <div className="flex items-center justify-between">
               <Label>Mata uang default</Label>
-              <Switch checked={form.is_default} onCheckedChange={(v) => setForm({ ...form, is_default: v })} />
+              <Switch checked={form.isDefault} onCheckedChange={(v) => setForm({ ...form, isDefault: v })} />
             </div>
             <div className="flex items-center justify-between">
               <Label>Aktif</Label>
-              <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
+              <Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
             </div>
           </div>
           <DialogFooter>

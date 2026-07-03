@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -94,23 +94,23 @@ export default function AdminPackageCosts() {
   }>>([]);
 
   const refreshAllCosts = async () => {
-    const { data } = await supabase.from("package_costs").select("*");
-    setAllCosts((data || []) as Cost[]);
+    const res = await apiFetch<{ data: Cost[] }>("/api/admin/costs/all");
+    setAllCosts(res.data || []);
   };
 
   useEffect(() => {
     Promise.all([
-      supabase.from("packages").select("id,title,category_id,package_type").eq("is_active", true).order("title"),
-      supabase.from("package_categories").select("id,name").eq("is_active", true).order("name"),
-      supabase.from("package_departures").select("id,package_id,departure_date,quota,remaining_quota").eq("status", "active").order("departure_date"),
-      supabase.from("currencies").select("code,rate_to_idr,symbol").eq("is_active", true),
-      supabase.from("package_costs").select("*"),
+      apiFetch<{ data: PkgOpt[] }>("/api/packages?active=true"),
+      apiFetch<{ data: PkgCategory[] }>("/api/admin/masterdata/categories"),
+      apiFetch<{ data: Departure[] }>("/api/admin/departures"),
+      apiFetch<{ data: Currency[] }>("/api/admin/masterdata/currencies"),
+      apiFetch<{ data: Cost[] }>("/api/admin/costs/all"),
     ]).then(([pk, pc, dp, cu, cs]) => {
-      setPackages((pk.data || []) as PkgOpt[]);
-      setPkgCategories((pc.data || []) as PkgCategory[]);
-      setDepartures((dp.data || []) as Departure[]);
-      setCurrencies((cu.data || []) as Currency[]);
-      setAllCosts((cs.data || []) as Cost[]);
+      setPackages(pk.data || []);
+      setPkgCategories(pc.data || []);
+      setDepartures((dp.data || []).filter((d: any) => d.status === 'active'));
+      setCurrencies(cu.data || []);
+      setAllCosts(cs.data || []);
     });
   }, []);
 
@@ -143,44 +143,34 @@ export default function AdminPackageCosts() {
   const loadCosts = async (pid: string) => {
     if (!pid) return;
     setLoading(true);
-    let q = supabase.from("package_costs").select("*").eq("package_id", pid);
-    if (filterDeparture !== "__all__") {
-      q = q.or(`departure_id.eq.${filterDeparture},departure_id.is.null`);
+    try {
+      const res = await apiFetch<{ data: Cost[] }>(`/api/admin/costs/package/${pid}${filterDeparture !== "__all__" ? `?departureId=${filterDeparture}` : ""}`);
+      setCosts(res.data || []);
+    } catch {
+      toast.error("Gagal memuat biaya");
     }
-    const { data } = await q.order("sort_order").order("created_at");
-    setCosts((data || []) as Cost[]);
     setLoading(false);
     void loadProfitability(pid);
   };
 
   const loadProfitability = async (pid: string) => {
-    let q = supabase.from("bookings").select("id,total_price,status,departure_id").eq("package_id", pid).eq("status", "paid");
-    if (filterDeparture !== "__all__") q = q.eq("departure_id", filterDeparture);
-    const [bkRes, pcRes] = await Promise.all([
-      q,
-      supabase.from("package_commissions").select("commission_amount").eq("package_id", pid),
-    ]);
-    const paidBookings = (bkRes.data || []) as any[];
-    const revenue = paidBookings.reduce((s, b) => s + Number(b.total_price || 0), 0);
-    const soldPax = paidBookings.length;
-    const bookingIds = paidBookings.map((b) => b.id).filter(Boolean);
-    let agentCommission = 0;
-    if (bookingIds.length) {
-      const { data: ac } = await supabase.from("agent_commissions").select("amount").in("booking_id", bookingIds);
-      agentCommission = (ac || []).reduce((s, x: any) => s + Number(x.amount || 0), 0);
+    try {
+      const data = await apiFetch<any>(`/api/admin/costs/profitability/${pid}${filterDeparture !== "__all__" ? `?departureId=${filterDeparture}` : ""}`);
+      const paidBookings = data.paidBookings || [];
+      const revenue = paidBookings.reduce((s: number, b: any) => s + Number(b.total_price || 0), 0);
+      const soldPax = paidBookings.length;
+      
+      setProfit({
+        pkg_price_avg: soldPax ? revenue / soldPax : 0,
+        sold_pax: soldPax,
+        revenue,
+        agent_commission: data.agentCommission,
+        pic_commission: data.picCommissionPerPax * soldPax,
+        marketing: data.marketingTotal,
+      });
+    } catch {
+      toast.error("Gagal memuat data profitabilitas");
     }
-    const picCommission = ((pcRes.data || []) as any[])
-      .reduce((s, x) => s + Number(x.commission_amount || 0), 0) * soldPax;
-    const { data: ftx } = await supabase.from("financial_transactions")
-      .select("amount,type,category").is("booking_id", null);
-    const marketing = (ftx || [])
-      .filter((t: any) => t.category === "marketing" && t.type === "expense")
-      .reduce((s, t: any) => s + Number(t.amount || 0), 0);
-    setProfit({
-      pkg_price_avg: soldPax ? revenue / soldPax : 0,
-      sold_pax: soldPax, revenue, agent_commission: agentCommission,
-      pic_commission: picCommission, marketing,
-    });
   };
 
   useEffect(() => { if (selectedPkg) loadCosts(selectedPkg); else { setCosts([]); setProfit(null); } }, [selectedPkg, filterDeparture]);
@@ -189,52 +179,43 @@ export default function AdminPackageCosts() {
     (async () => {
       if (filteredPackages.length === 0) { setOverview([]); return; }
       const ids = filteredPackages.map((p) => p.id);
-      let bq = supabase.from("bookings").select("id,package_id,total_price,status,departure_id").in("package_id", ids).eq("status", "paid");
-      if (filterDeparture !== "__all__") bq = bq.eq("departure_id", filterDeparture);
-      const [bk, pc] = await Promise.all([
-        bq,
-        supabase.from("package_commissions").select("package_id,commission_amount").in("package_id", ids),
-      ]);
-      const bookings = (bk.data || []) as any[];
-      const bookingIds = bookings.map((b) => b.id).filter(Boolean);
-      const agentByBooking: Record<string, number> = {};
-      if (bookingIds.length) {
-        const { data: ac } = await supabase.from("agent_commissions").select("booking_id,amount").in("booking_id", bookingIds);
-        for (const r of (ac || []) as any[]) {
-          agentByBooking[r.booking_id] = (agentByBooking[r.booking_id] || 0) + Number(r.amount || 0);
-        }
+      
+      try {
+        const results = await Promise.all(ids.map(async (pid) => {
+          const p = packages.find(pkg => pkg.id === pid)!;
+          const data = await apiFetch<any>(`/api/admin/costs/profitability/${pid}${filterDeparture !== "__all__" ? `?departureId=${filterDeparture}` : ""}`);
+          const paidBookings = data.paidBookings || [];
+          const soldPax = paidBookings.length;
+          const revenue = paidBookings.reduce((s: number, b: any) => s + Number(b.total_price || 0), 0);
+          const agent = data.agentCommission;
+          const pic = data.picCommissionPerPax * soldPax;
+          
+          let perPax = 0, fixed = 0;
+          const pkgCosts = allCosts.filter((x) =>
+            x.package_id === pid && x.is_active !== false &&
+            (filterDeparture === "__all__" || !x.departure_id || x.departure_id === filterDeparture)
+          );
+          for (const c of pkgCosts) {
+            const idr = toIDR(Number(c.unit_cost || 0), c.currency_code) * Number(c.qty || 0);
+            if (c.is_per_pax) perPax += idr; else fixed += idr;
+          }
+          
+          const hppTotal = perPax * soldPax + fixed;
+          const netProfit = revenue - hppTotal - agent - pic;
+          const margin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
+          
+          return {
+            package_id: pid, title: p.title, type: p.package_type,
+            hpp_per_pax: perPax, hpp_fixed: fixed, sold_pax: soldPax,
+            revenue, net_profit: netProfit, margin,
+          };
+        }));
+        setOverview(results);
+      } catch {
+        toast.error("Gagal memuat ringkasan paket");
       }
-      const picByPkg: Record<string, number> = {};
-      for (const r of (pc.data || []) as any[]) {
-        picByPkg[r.package_id] = (picByPkg[r.package_id] || 0) + Number(r.commission_amount || 0);
-      }
-      const rows = filteredPackages.map((p) => {
-        let perPax = 0, fixed = 0;
-        const pkgCosts = allCosts.filter((x) =>
-          x.package_id === p.id && x.is_active !== false &&
-          (filterDeparture === "__all__" || !x.departure_id || x.departure_id === filterDeparture)
-        );
-        for (const c of pkgCosts) {
-          const idr = toIDR(Number(c.unit_cost || 0), c.currency_code) * Number(c.qty || 0);
-          if (c.is_per_pax) perPax += idr; else fixed += idr;
-        }
-        const pkgBookings = bookings.filter((b) => b.package_id === p.id);
-        const soldPax = pkgBookings.length;
-        const revenue = pkgBookings.reduce((s, b) => s + Number(b.total_price || 0), 0);
-        const agent = pkgBookings.reduce((s, b) => s + (agentByBooking[b.id] || 0), 0);
-        const pic = (picByPkg[p.id] || 0) * soldPax;
-        const hppTotal = perPax * soldPax + fixed;
-        const netProfit = revenue - hppTotal - agent - pic;
-        const margin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
-        return {
-          package_id: p.id, title: p.title, type: p.package_type,
-          hpp_per_pax: perPax, hpp_fixed: fixed, sold_pax: soldPax,
-          revenue, net_profit: netProfit, margin,
-        };
-      });
-      setOverview(rows);
     })();
-  }, [filteredPackages, allCosts, currencies, filterDeparture]);
+  }, [filteredPackages, allCosts, currencies, filterDeparture, packages]);
 
   const visibleCosts = useMemo(() => costs.filter((c) => showInactive || c.is_active !== false), [costs, showInactive]);
 
@@ -302,33 +283,52 @@ export default function AdminPackageCosts() {
       is_active: form.is_active !== false,
       notes: form.notes || null,
     };
-    const { error } = editingId
-      ? await supabase.from("package_costs").update(payload).eq("id", editingId)
-      : await supabase.from("package_costs").insert(payload);
-    if (error) { toast.error(error.message); return; }
-    toast.success(editingId ? "Komponen diperbarui" : "Komponen disimpan");
-    setOpen(false);
-    setEditingId(null);
-    setForm(emptyForm);
-    loadCosts(selectedPkg);
-    refreshAllCosts();
+    try {
+      if (editingId) {
+        await apiFetch(`/api/admin/costs/${editingId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch("/api/admin/costs", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      }
+      toast.success(editingId ? "Komponen diperbarui" : "Komponen disimpan");
+      setOpen(false);
+      setEditingId(null);
+      setForm(emptyForm);
+      loadCosts(selectedPkg);
+      refreshAllCosts();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
   };
 
   const toggleActive = async (c: Cost) => {
-    const { error } = await supabase.from("package_costs")
-      .update({ is_active: !(c.is_active !== false) }).eq("id", c.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success(c.is_active !== false ? "Dinonaktifkan" : "Diaktifkan");
-    loadCosts(selectedPkg);
-    refreshAllCosts();
+    try {
+      await apiFetch(`/api/admin/costs/${c.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_active: !(c.is_active !== false) }),
+      });
+      toast.success(c.is_active !== false ? "Dinonaktifkan" : "Diaktifkan");
+      loadCosts(selectedPkg);
+      refreshAllCosts();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
   };
 
   const del = async (id: string) => {
-    const { error } = await supabase.from("package_costs").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Dihapus");
-    loadCosts(selectedPkg);
-    refreshAllCosts();
+    try {
+      await apiFetch(`/api/admin/costs/${id}`, { method: "DELETE" });
+      toast.success("Dihapus");
+      loadCosts(selectedPkg);
+      refreshAllCosts();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
   };
 
   return (

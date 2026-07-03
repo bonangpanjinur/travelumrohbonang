@@ -1,21 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Bell, Check } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { Button } from "@/shared/components/ui/button";
+import { apiFetch } from "@/shared/lib/apiClient";
+import { supabase } from "@/shared/integrations/supabase/client";
 
 interface Notif {
   id: string;
   title: string;
   message: string;
   type: string;
-  is_read: boolean;
-  booking_id: string | null;
-  created_at: string;
+  isRead: boolean;
+  bookingId: string | null;
+  createdAt: string;
 }
 
 const RecentNotifications = () => {
@@ -27,14 +28,14 @@ const RecentNotifications = () => {
   useEffect(() => {
     if (!user) return;
     const load = async () => {
-      const { data } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
-      setItems((data || []) as Notif[]);
-      setLoading(false);
+      try {
+        const data = await apiFetch<Notif[]>("/api/notifications?limit=5");
+        setItems(data || []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
 
@@ -52,11 +53,15 @@ const RecentNotifications = () => {
   }, [user]);
 
   const handleClick = async (n: Notif) => {
-    if (!n.is_read) {
-      await supabase.from("notifications").update({ is_read: true }).eq("id", n.id);
+    if (!n.isRead) {
+      try {
+        await apiFetch(`/api/notifications/${n.id}/read`, { method: "PATCH" });
+      } catch (err) {
+        console.error(err);
+      }
     }
-    if (n.booking_id) {
-      navigate(`/booking/payment/${n.booking_id}`);
+    if (n.bookingId) {
+      navigate(`/booking/payment/${n.bookingId}`);
     }
   };
 
@@ -82,14 +87,14 @@ const RecentNotifications = () => {
                 key={n.id}
                 onClick={() => handleClick(n)}
                 className={`p-4 cursor-pointer hover:bg-muted/40 transition-colors ${
-                  !n.is_read ? "bg-info/5" : ""
+                  !n.isRead ? "bg-info/5" : ""
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h4 className="font-semibold text-sm truncate">{n.title}</h4>
-                      {!n.is_read && (
+                      {!n.isRead && (
                         <span className="w-2 h-2 rounded-full bg-info shrink-0" />
                       )}
                     </div>
@@ -97,13 +102,13 @@ const RecentNotifications = () => {
                       {n.message}
                     </p>
                     <span className="text-[11px] text-muted-foreground/70 mt-1 block">
-                      {formatDistanceToNow(new Date(n.created_at), {
+                      {formatDistanceToNow(new Date(n.createdAt), {
                         locale: localeId,
                         addSuffix: true,
                       })}
                     </span>
                   </div>
-                  {n.is_read && <Check className="h-4 w-4 text-success shrink-0 mt-1" />}
+                  {n.isRead && <Check className="h-4 w-4 text-success shrink-0 mt-1" />}
                 </div>
               </li>
             ))}

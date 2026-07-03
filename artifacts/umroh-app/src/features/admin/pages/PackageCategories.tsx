@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -51,16 +51,11 @@ const AdminPackageCategories = () => {
 
   const fetchCategories = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("package_categories")
-      .select("id, name, description, parent_id, sort_order, is_active, show_extra_hotels, parent:package_categories!package_categories_parent_id_fkey(name)")
-      .order("sort_order", { ascending: true })
-      .order("name");
-
-    if (error) {
+    try {
+      const res = await apiFetch<{ data: any[] }>("/api/admin/masterdata/categories");
+      setCategories(res.data || []);
+    } catch (error: any) {
       toast({ title: "Gagal memuat kategori", description: error.message, variant: "destructive" });
-    } else {
-      setCategories((data as any) || []);
     }
     setLoading(false);
   };
@@ -97,41 +92,47 @@ const AdminPackageCategories = () => {
       show_extra_hotels: form.show_extra_hotels,
     };
 
-    let error;
-    if (editing) {
-      ({ error } = await supabase.from("package_categories").update(payload).eq("id", editing.id));
-    } else {
-      ({ error } = await supabase.from("package_categories").insert(payload));
-    }
-
-    if (error) {
-      toast({ title: "Gagal menyimpan", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      if (editing) {
+        await apiFetch(`/api/admin/masterdata/categories/${editing.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch("/api/admin/masterdata/categories", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      }
       toast({ title: editing ? "Kategori diperbarui" : "Kategori ditambahkan" });
       fetchCategories();
       setIsOpen(false);
       resetForm();
+    } catch (error: any) {
+      toast({ title: "Gagal menyimpan", description: error.message, variant: "destructive" });
     }
     setSaving(false);
   };
 
   const executeDelete = async (id: string) => {
-    const { error } = await supabase.from("package_categories").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      await apiFetch(`/api/admin/masterdata/categories/${id}`, { method: "DELETE" });
       toast({ title: "Kategori dihapus" });
       fetchCategories();
+    } catch (error: any) {
+      toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
     }
   };
 
   const handleToggleActive = async (cat: Category) => {
-    const { error } = await supabase
-      .from("package_categories")
-      .update({ is_active: !cat.is_active })
-      .eq("id", cat.id);
-    if (!error) {
+    try {
+      await apiFetch(`/api/admin/masterdata/categories/${cat.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_active: !cat.is_active }),
+      });
       setCategories((prev) => prev.map((c) => c.id === cat.id ? { ...c, is_active: !c.is_active } : c));
+    } catch {
+      toast({ title: "Gagal mengubah status", variant: "destructive" });
     }
   };
 

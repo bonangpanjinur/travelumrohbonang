@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -65,14 +65,19 @@ const AdminNavigation = () => {
   }, []);
 
   const fetchData = async () => {
-    const [navRes, catRes] = await Promise.all([
-      supabase.from("navigation_items").select("*").order("sort_order"),
-      supabase.from("package_categories").select("*").order("sort_order"),
-    ]);
+    try {
+      const [navRes, catRes] = await Promise.all([
+        apiFetch<{ data: NavItem[] }>("/api/admin/content/navigation-items"),
+        apiFetch<{ data: Category[] }>("/api/admin/content/package-categories"),
+      ]);
 
-    setNavItems((navRes.data as NavItem[]) || []);
-    setCategories((catRes.data as Category[]) || []);
-    setLoading(false);
+      setNavItems(navRes.data || []);
+      setCategories(catRes.data || []);
+    } catch (e) {
+      toast({ title: "Gagal memuat data", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Navigation CRUD
@@ -84,26 +89,25 @@ const AdminNavigation = () => {
       parent_id: navForm.parent_id || null,
     };
 
-    if (editingNav) {
-      const { error } = await supabase.from("navigation_items").update(data).eq("id", editingNav.id);
-      if (error) {
-        toast({ title: "Gagal mengupdate", variant: "destructive" });
-      } else {
+    try {
+      if (editingNav) {
+        await apiFetch(`/api/admin/content/navigation-items/${editingNav.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        });
         toast({ title: "Navigasi diupdate!" });
-        fetchData();
-        setIsNavOpen(false);
-        resetNavForm();
-      }
-    } else {
-      const { error } = await supabase.from("navigation_items").insert(data);
-      if (error) {
-        toast({ title: "Gagal menambahkan", variant: "destructive" });
       } else {
+        await apiFetch("/api/admin/content/navigation-items", {
+          method: "POST",
+          body: JSON.stringify(data),
+        });
         toast({ title: "Navigasi ditambahkan!" });
-        fetchData();
-        setIsNavOpen(false);
-        resetNavForm();
       }
+      fetchData();
+      setIsNavOpen(false);
+      resetNavForm();
+    } catch (error: any) {
+      toast({ title: "Gagal menyimpan", variant: "destructive" });
     }
   };
 
@@ -125,12 +129,12 @@ const AdminNavigation = () => {
   };
 
   const executeNavDelete = async (id: string) => {
-    const { error } = await supabase.from("navigation_items").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Gagal menghapus", variant: "destructive" });
-    } else {
+    try {
+      await apiFetch(`/api/admin/content/navigation-items/${id}`, { method: "DELETE" });
       toast({ title: "Navigasi dihapus" });
       fetchData();
+    } catch (error) {
+      toast({ title: "Gagal menghapus", variant: "destructive" });
     }
   };
 
@@ -148,26 +152,25 @@ const AdminNavigation = () => {
       parent_id: catForm.parent_id || null,
     };
 
-    if (editingCat) {
-      const { error } = await supabase.from("package_categories").update(data).eq("id", editingCat.id);
-      if (error) {
-        toast({ title: "Gagal mengupdate", variant: "destructive" });
-      } else {
+    try {
+      if (editingCat) {
+        await apiFetch(`/api/admin/content/package-categories/${editingCat.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        });
         toast({ title: "Kategori diupdate!" });
-        fetchData();
-        setIsCatOpen(false);
-        resetCatForm();
-      }
-    } else {
-      const { error } = await supabase.from("package_categories").insert(data);
-      if (error) {
-        toast({ title: "Gagal menambahkan", variant: "destructive" });
       } else {
+        await apiFetch("/api/admin/content/package-categories", {
+          method: "POST",
+          body: JSON.stringify(data),
+        });
         toast({ title: "Kategori ditambahkan!" });
-        fetchData();
-        setIsCatOpen(false);
-        resetCatForm();
       }
+      fetchData();
+      setIsCatOpen(false);
+      resetCatForm();
+    } catch (error) {
+      toast({ title: "Gagal menyimpan", variant: "destructive" });
     }
   };
 
@@ -188,12 +191,12 @@ const AdminNavigation = () => {
   };
 
   const executeCatDelete = async (id: string) => {
-    const { error } = await supabase.from("package_categories").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Gagal menghapus", variant: "destructive" });
-    } else {
+    try {
+      await apiFetch(`/api/admin/content/package-categories/${id}`, { method: "DELETE" });
       toast({ title: "Kategori dihapus" });
       fetchData();
+    } catch (error) {
+      toast({ title: "Gagal menghapus", variant: "destructive" });
     }
   };
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -47,11 +47,8 @@ const AdminPages = () => {
   }, []);
 
   const fetchPages = async () => {
-    const { data } = await supabase
-      .from("pages")
-      .select("*")
-      .order("created_at", { ascending: false });
-    setPages((data as Page[]) || []);
+    const { data } = await apiFetch<{ data: Page[] }>("/api/admin/content/pages");
+    setPages(data || []);
     setLoading(false);
   };
 
@@ -70,45 +67,34 @@ const AdminPages = () => {
       return;
     }
 
-    if (editing) {
-      const { error } = await supabase
-        .from("pages")
-        .update({
-          slug,
-          title: form.title || null,
-          content: form.content || null,
-          seo_title: form.seo_title || null,
-          seo_description: form.seo_description || null,
-          is_active: form.is_active,
-        })
-        .eq("id", editing.id);
+    const payload = {
+      slug,
+      title: form.title || null,
+      content: form.content || null,
+      seo_title: form.seo_title || null,
+      seo_description: form.seo_description || null,
+      is_active: form.is_active,
+    };
 
-      if (error) {
-        toast({ title: "Gagal mengupdate", description: error.message, variant: "destructive" });
-      } else {
+    try {
+      if (editing) {
+        await apiFetch(`/api/admin/content/pages/${editing.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
         toast({ title: "Halaman diupdate!" });
-        fetchPages();
-        setIsOpen(false);
-        resetForm();
-      }
-    } else {
-      const { error } = await supabase.from("pages").insert({
-        slug,
-        title: form.title || null,
-        content: form.content || null,
-        seo_title: form.seo_title || null,
-        seo_description: form.seo_description || null,
-        is_active: form.is_active,
-      });
-
-      if (error) {
-        toast({ title: "Gagal membuat halaman", description: error.message, variant: "destructive" });
       } else {
+        await apiFetch("/api/admin/content/pages", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
         toast({ title: "Halaman ditambahkan!" });
-        fetchPages();
-        setIsOpen(false);
-        resetForm();
       }
+      fetchPages();
+      setIsOpen(false);
+      resetForm();
+    } catch (error: any) {
+      toast({ title: "Gagal", description: error.message, variant: "destructive" });
     }
   };
 
@@ -130,24 +116,25 @@ const AdminPages = () => {
   };
 
   const executeDelete = async (id: string) => {
-    const { error } = await supabase.from("pages").delete().eq("id", id);
-    if (error) {
-      toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      await apiFetch(`/api/admin/content/pages/${id}`, { method: "DELETE" });
       toast({ title: "Halaman dihapus" });
       fetchPages();
+    } catch (error: any) {
+      toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
     }
   };
 
   const handleToggleActive = async (page: Page) => {
-    const { error } = await supabase
-      .from("pages")
-      .update({ is_active: !page.is_active })
-      .eq("id", page.id);
-
-    if (!error) {
+    try {
+      await apiFetch(`/api/admin/content/pages/${page.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ is_active: !page.is_active }),
+      });
       fetchPages();
       toast({ title: page.is_active ? "Halaman dinonaktifkan" : "Halaman diaktifkan" });
+    } catch (error: any) {
+      toast({ title: "Gagal", variant: "destructive" });
     }
   };
 

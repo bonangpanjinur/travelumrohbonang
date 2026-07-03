@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -16,16 +16,16 @@ import { toast } from "sonner";
 interface Coupon {
   id: string;
   code: string;
-  discount_type: string;
+  discountType: string;
   value: number;
-  min_purchase: number | null;
-  max_uses: number | null;
-  used_count: number | null;
-  expired_at: string | null;
-  is_active: boolean | null;
+  minPurchase: number | null;
+  maxUses: number | null;
+  usedCount: number | null;
+  expiredAt: string | null;
+  isActive: boolean | null;
 }
 
-const emptyForm = { code: "", discount_type: "percentage", value: 0, min_purchase: 0, max_uses: null as number | null, expired_at: "", is_active: true };
+const emptyForm = { code: "", discountType: "percentage", value: 0, minPurchase: 0, maxUses: null as number | null, expiredAt: "", isActive: true };
 
 const AdminCoupons = () => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -36,9 +36,14 @@ const AdminCoupons = () => {
   const [search, setSearch] = useState("");
 
   const fetchCoupons = async () => {
-    const { data } = await supabase.from("coupons").select("*").order("created_at", { ascending: false });
-    setCoupons(data || []);
-    setLoading(false);
+    try {
+      const data = await apiFetch<Coupon[]>("/api/admin/coupons");
+      setCoupons(data || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchCoupons(); }, []);
@@ -47,38 +52,50 @@ const AdminCoupons = () => {
     if (!form.code || !form.value) { toast.error("Kode dan nilai wajib diisi"); return; }
     const payload = {
       code: form.code.toUpperCase(),
-      discount_type: form.discount_type,
+      discountType: form.discountType,
       value: form.value,
-      min_purchase: form.min_purchase || 0,
-      max_uses: form.max_uses || null,
-      expired_at: form.expired_at || null,
-      is_active: form.is_active,
+      minPurchase: form.minPurchase || 0,
+      maxUses: form.maxUses || null,
+      expiredAt: form.expiredAt || null,
+      isActive: form.isActive,
     };
-    if (editId) {
-      const { error } = await supabase.from("coupons").update(payload).eq("id", editId);
-      if (error) { toast.error(error.message); return; }
-      toast.success("Kupon diperbarui");
-    } else {
-      const { error } = await supabase.from("coupons").insert(payload);
-      if (error) { toast.error(error.message); return; }
-      toast.success("Kupon ditambahkan");
+    try {
+      if (editId) {
+        await apiFetch(`/api/admin/coupons/${editId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
+        toast.success("Kupon diperbarui");
+      } else {
+        await apiFetch("/api/admin/coupons", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        toast.success("Kupon ditambahkan");
+      }
+      setDialogOpen(false);
+      setEditId(null);
+      setForm(emptyForm);
+      fetchCoupons();
+    } catch (e: any) {
+      toast.error(e.message);
     }
-    setDialogOpen(false);
-    setEditId(null);
-    setForm(emptyForm);
-    fetchCoupons();
   };
 
   const handleEdit = (c: Coupon) => {
     setEditId(c.id);
-    setForm({ code: c.code, discount_type: c.discount_type, value: c.value, min_purchase: c.min_purchase || 0, max_uses: c.max_uses, expired_at: c.expired_at || "", is_active: c.is_active ?? true });
+    setForm({ code: c.code, discountType: c.discountType, value: c.value, minPurchase: c.minPurchase || 0, maxUses: c.maxUses, expiredAt: c.expiredAt || "", isActive: c.isActive ?? true });
     setDialogOpen(true);
   };
 
   const handleDelete = async (id: string) => {
-    await supabase.from("coupons").delete().eq("id", id);
-    toast.success("Kupon dihapus");
-    fetchCoupons();
+    try {
+      await apiFetch(`/api/admin/coupons/${id}`, { method: "DELETE" });
+      toast.success("Kupon dihapus");
+      fetchCoupons();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   const filtered = coupons.filter(c => c.code.toLowerCase().includes(search.toLowerCase()));
@@ -95,7 +112,7 @@ const AdminCoupons = () => {
               <div><Label>Kode Kupon</Label><Input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder="DISKON10" /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div><Label>Tipe Diskon</Label>
-                  <Select value={form.discount_type} onValueChange={v => setForm({ ...form, discount_type: v })}>
+                  <Select value={form.discountType} onValueChange={v => setForm({ ...form, discountType: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="percentage">Persentase (%)</SelectItem>
@@ -106,11 +123,11 @@ const AdminCoupons = () => {
                 <div><Label>Nilai</Label><Input type="number" value={form.value} onChange={e => setForm({ ...form, value: Number(e.target.value) })} /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>Min. Pembelian</Label><Input type="number" value={form.min_purchase || ""} onChange={e => setForm({ ...form, min_purchase: Number(e.target.value) })} /></div>
-                <div><Label>Maks. Penggunaan</Label><Input type="number" value={form.max_uses || ""} onChange={e => setForm({ ...form, max_uses: e.target.value ? Number(e.target.value) : null })} /></div>
+                <div><Label>Min. Pembelian</Label><Input type="number" value={form.minPurchase || ""} onChange={e => setForm({ ...form, minPurchase: Number(e.target.value) })} /></div>
+                <div><Label>Maks. Penggunaan</Label><Input type="number" value={form.maxUses || ""} onChange={e => setForm({ ...form, maxUses: e.target.value ? Number(e.target.value) : null })} /></div>
               </div>
-              <div><Label>Kadaluarsa</Label><Input type="date" value={form.expired_at} onChange={e => setForm({ ...form, expired_at: e.target.value })} /></div>
-              <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={v => setForm({ ...form, is_active: v })} /><Label>Aktif</Label></div>
+              <div><Label>Kadaluarsa</Label><Input type="date" value={form.expiredAt} onChange={e => setForm({ ...form, expiredAt: e.target.value })} /></div>
+              <div className="flex items-center gap-2"><Switch checked={form.isActive} onCheckedChange={v => setForm({ ...form, isActive: v })} /><Label>Aktif</Label></div>
               <Button className="w-full" onClick={handleSave}>{editId ? "Simpan Perubahan" : "Tambah"}</Button>
             </div>
           </DialogContent>
@@ -127,11 +144,11 @@ const AdminCoupons = () => {
               {filtered.map(c => (
                 <TableRow key={c.id}>
                   <TableCell className="font-mono font-bold">{c.code}</TableCell>
-                  <TableCell>{c.discount_type === "percentage" ? "%" : "Rp"}</TableCell>
-                  <TableCell>{c.discount_type === "percentage" ? `${c.value}%` : `Rp ${c.value.toLocaleString("id-ID")}`}</TableCell>
-                  <TableCell>{c.used_count || 0}{c.max_uses ? ` / ${c.max_uses}` : ""}</TableCell>
-                  <TableCell>{c.expired_at ? new Date(c.expired_at).toLocaleDateString("id-ID") : "-"}</TableCell>
-                  <TableCell><Badge variant={c.is_active ? "default" : "secondary"}>{c.is_active ? "Aktif" : "Nonaktif"}</Badge></TableCell>
+                  <TableCell>{c.discountType === "percentage" ? "%" : "Rp"}</TableCell>
+                  <TableCell>{c.discountType === "percentage" ? `${c.value}%` : `Rp ${c.value.toLocaleString("id-ID")}`}</TableCell>
+                  <TableCell>{c.usedCount || 0}{c.maxUses ? ` / ${c.maxUses}` : ""}</TableCell>
+                  <TableCell>{c.expiredAt ? new Date(c.expiredAt).toLocaleDateString("id-ID") : "-"}</TableCell>
+                  <TableCell><Badge variant={c.isActive ? "default" : "secondary"}>{c.isActive ? "Aktif" : "Nonaktif"}</Badge></TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(c)}><Pencil className="h-4 w-4" /></Button>

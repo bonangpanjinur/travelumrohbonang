@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Helmet } from "react-helmet-async";
 import { Star } from "lucide-react";
@@ -31,14 +31,12 @@ export default function PackageReviews({ packageId, packageTitle }: { packageId:
 
   const refresh = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("package_reviews")
-      .select("*, profiles(name)")
-      .eq("package_id", packageId)
-      .eq("is_approved", true)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    setReviews((data as any) || []);
+    try {
+      const res = await apiFetch<{ data: any[] }>(`/api/packages/reviews/${packageId}`);
+      setReviews(res.data || []);
+    } catch {
+      toast.error("Gagal memuat ulasan");
+    }
     setLoading(false);
   };
 
@@ -51,13 +49,19 @@ export default function PackageReviews({ packageId, packageTitle }: { packageId:
     if (!user) { toast.info("Login dulu untuk memberi ulasan"); return; }
     if (!comment.trim()) { toast.error("Komentar wajib diisi"); return; }
     setSubmitting(true);
-    const { error } = await supabase.from("package_reviews").insert({
-      package_id: packageId, user_id: user.id, rating, title: title || null, comment,
-    });
+    try {
+      await apiFetch("/api/packages/reviews", {
+        method: "POST",
+        body: JSON.stringify({
+          package_id: packageId, rating, title: title || null, comment,
+        }),
+      });
+      toast.success("Ulasan dikirim, menunggu moderasi admin.");
+      setTitle(""); setComment(""); setRating(5);
+    } catch (error: any) {
+      toast.error(error.message);
+    }
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Ulasan dikirim, menunggu moderasi admin.");
-    setTitle(""); setComment(""); setRating(5);
   };
 
   return (
