@@ -88,8 +88,10 @@ export default defineConfig({
       strict: true,
     },
     proxy: {
-      // Forward /api/* to the local API server in development
+      // Forward API and Supabase-compat routes to the local Express server
       "/api": { target: "http://localhost:8080", changeOrigin: true },
+      "/rest/v1": { target: "http://localhost:8080", changeOrigin: true },
+      "/storage/v1": { target: "http://localhost:8080", changeOrigin: true },
     },
   },
   preview: {

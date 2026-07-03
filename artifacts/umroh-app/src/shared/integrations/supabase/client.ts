@@ -1,23 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// In dev: point to the local Express server via Vite proxy (/rest/v1 → localhost:8080).
+// VITE_SUPABASE_URL can override this (e.g. for Vercel deployment with real Supabase).
+const SUPABASE_URL =
+  import.meta.env.VITE_SUPABASE_URL ||
+  (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
 
-if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  console.warn('[Supabase] Missing environment variables: VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY. Set these secrets to connect to your database.');
-}
+const SUPABASE_KEY =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  'local-dev-key';
 
-// Use placeholder values when env vars are missing so the app can render
-// without crashing. All Supabase calls will fail gracefully at runtime.
-export const supabase = createClient<Database>(
-  SUPABASE_URL || 'https://placeholder.supabase.co',
-  SUPABASE_PUBLISHABLE_KEY || 'placeholder-anon-key',
-  {
-    auth: {
-      storage: localStorage,
-      persistSession: true,
-      autoRefreshToken: true,
-    }
-  }
-);
+// Auth is handled by Replit Auth (server-side sessions).
+// Disable Supabase Auth to prevent it from making /auth/v1/* requests.
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+  },
+  global: {
+    headers: {
+      apikey: SUPABASE_KEY,
+    },
+  },
+});
