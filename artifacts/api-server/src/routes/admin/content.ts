@@ -28,11 +28,11 @@ const createCrudRoutes = (table: any, name: string) => {
 
   router.post(`/${name}`, async (req, res) => {
     try {
-      const [item] = await db.insert(table).values({
+      const [item] = (await db.insert(table).values({
         id: crypto.randomUUID(),
         ...req.body,
         createdAt: new Date(),
-      }).returning();
+      }).returning()) as any[];
       res.status(201).json({ data: item });
     } catch (err) {
       console.error(err);
@@ -52,7 +52,7 @@ const createCrudRoutes = (table: any, name: string) => {
 
   router.delete(`/${name}/:id`, async (req, res) => {
     try {
-      const [item] = await db.delete(table).where(eq(table.id, req.params.id)).returning();
+      const [item] = (await db.delete(table).where(eq(table.id, req.params.id)).returning()) as any[];
       if (!item) return res.status(404).json({ error: "Not found" });
       res.json({ message: "Deleted successfully" });
     } catch (err) {

@@ -49,8 +49,16 @@ app.use("/rest/v1", restRouter);
 app.use("/storage/v1", express.raw({ type: "*/*", limit: "50mb" }), storageRouter);
 
 // Serve uploaded files as static assets
-const uploadsDir = path.resolve(process.cwd(), "uploads");
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+// Use /tmp on Vercel (read-only filesystem), local uploads/ in dev
+const uploadsDir =
+  process.env.VERCEL === "1"
+    ? "/tmp/uploads"
+    : path.resolve(process.cwd(), "uploads");
+try {
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+} catch {
+  // Filesystem may be read-only (serverless); uploads will not persist
+}
 app.use("/uploads", express.static(uploadsDir));
 
 app.use("/api", router);

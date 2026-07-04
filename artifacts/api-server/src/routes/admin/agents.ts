@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { db, agents, agentCommissions, agentWithdrawals, affiliateClicks, userRoles, eq, desc } from "@workspace/db";
-import { v4 as uuidv4 } from "uuid";
 
 const router = Router();
 
@@ -16,7 +15,7 @@ router.get("/", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    const id = uuidv4();
+    const id = crypto.randomUUID();
     const [data] = await db.insert(agents).values({
       ...req.body,
       id,
@@ -98,7 +97,7 @@ router.get("/roles", async (req, res) => {
 
 router.post("/roles", async (req, res) => {
   try {
-    const id = uuidv4();
+    const id = crypto.randomUUID();
     const [data] = await db.insert(userRoles).values({
       ...req.body,
       id,

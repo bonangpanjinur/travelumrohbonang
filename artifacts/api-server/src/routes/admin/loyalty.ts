@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { db, loyaltyBalances, loyaltyPoints, eq, desc } from "@workspace/db";
-import { v4 as uuidv4 } from "uuid";
 
 const router = Router();
 
@@ -24,7 +23,7 @@ router.get("/points", async (req, res) => {
 
 router.post("/points", async (req, res) => {
   try {
-    const id = uuidv4();
+    const id = crypto.randomUUID();
     const { userId, points } = req.body;
     
     // Use transaction to update balance
@@ -42,7 +41,7 @@ router.post("/points", async (req, res) => {
         }).where(eq(loyaltyBalances.userId, userId));
       } else {
         await tx.insert(loyaltyBalances).values({
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           userId,
           totalPoints: points,
           createdAt: new Date(),

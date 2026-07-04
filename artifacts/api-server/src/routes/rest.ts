@@ -286,7 +286,7 @@ function buildOrderClause(table: string, orderStr: string): string {
 // ── GET ──────────────────────────────────────────────────────────────────────
 
 router.get("/:table", async (req: Request, res: Response) => {
-  const { table } = req.params;
+  const { table } = req.params as Record<string, string>;
   if (!ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
   }
@@ -337,7 +337,7 @@ router.get("/:table", async (req: Request, res: Response) => {
 // ── POST (INSERT / UPSERT) ───────────────────────────────────────────────────
 
 router.post("/:table", async (req: Request, res: Response) => {
-  const { table } = req.params;
+  const { table } = req.params as Record<string, string>;
   if (!ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
   }
@@ -401,7 +401,7 @@ router.post("/:table", async (req: Request, res: Response) => {
 // ── PATCH (UPDATE) ───────────────────────────────────────────────────────────
 
 router.patch("/:table", async (req: Request, res: Response) => {
-  const { table } = req.params;
+  const { table } = req.params as Record<string, string>;
   if (!ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
   }
@@ -441,7 +441,7 @@ router.patch("/:table", async (req: Request, res: Response) => {
 // ── DELETE ───────────────────────────────────────────────────────────────────
 
 router.delete("/:table", async (req: Request, res: Response) => {
-  const { table } = req.params;
+  const { table } = req.params as Record<string, string>;
   if (!ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
   }

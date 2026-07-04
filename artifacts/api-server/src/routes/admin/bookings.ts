@@ -12,7 +12,7 @@ import {
   eq,
   and,
   ilike,
-  is,
+  isNull,
   desc,
 } from "@workspace/db";
 import {
@@ -45,7 +45,7 @@ router.get("/", async (req, res) => {
 
     if (branchId && typeof branchId === "string") {
       if (branchId === "__none__") {
-        conditions.push(is(bookings.branchId, null));
+        conditions.push(isNull(bookings.branchId));
       } else if (branchId !== "__all__") {
         conditions.push(eq(bookings.branchId, branchId));
       }

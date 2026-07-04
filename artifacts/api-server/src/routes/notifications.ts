@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, notifications, eq, desc } from "@workspace/db";
+import { db, notifications, eq, and, desc } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth";
 
 const router = Router();

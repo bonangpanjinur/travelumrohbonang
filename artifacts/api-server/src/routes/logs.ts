@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { db, requestLog, errorLogs, auditLogs } from "@workspace/db";
-import { v4 as uuidv4 } from "uuid";
 // NOTE: In a real app, you'd add rate limiting here. The requirement mentioned rate limiting.
 // artifacts/api-server/src/middlewares/rateLimiter.ts likely exists.
 
@@ -8,7 +7,7 @@ const router = Router();
 
 router.post("/request", async (req, res) => {
   try {
-    const id = uuidv4();
+    const id = crypto.randomUUID();
     await db.insert(requestLog).values({
       ...req.body,
       id,
@@ -23,7 +22,7 @@ router.post("/request", async (req, res) => {
 
 router.post("/error", async (req, res) => {
   try {
-    const id = uuidv4();
+    const id = crypto.randomUUID();
     await db.insert(errorLogs).values({
       ...req.body,
       id,
@@ -37,7 +36,7 @@ router.post("/error", async (req, res) => {
 
 router.post("/audit", async (req, res) => {
   try {
-    const id = uuidv4();
+    const id = crypto.randomUUID();
     await db.insert(auditLogs).values({
       ...req.body,
       id,

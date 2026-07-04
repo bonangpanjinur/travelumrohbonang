@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { db, leads, leadFollowUps, eq, desc } from "@workspace/db";
-import { v4 as uuidv4 } from "uuid";
 
 const router = Router();
 
@@ -16,7 +15,7 @@ router.get("/leads", async (req, res) => {
 
 router.post("/leads", async (req, res) => {
   try {
-    const id = uuidv4();
+    const id = crypto.randomUUID();
     const [data] = await db.insert(leads).values({
       ...req.body,
       id,
@@ -59,7 +58,7 @@ router.get("/leads/:leadId/follow-ups", async (req, res) => {
 
 router.post("/leads/:leadId/follow-ups", async (req, res) => {
   try {
-    const id = uuidv4();
+    const id = crypto.randomUUID();
     const [data] = await db.insert(leadFollowUps).values({
       ...req.body,
       id,

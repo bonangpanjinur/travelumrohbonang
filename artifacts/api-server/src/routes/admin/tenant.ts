@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { db, tenantSites, tenantSitePackages, templateUpgradeOrders, eq, desc } from "@workspace/db";
-import { v4 as uuidv4 } from "uuid";
 
 const router = Router();
 
@@ -16,7 +15,7 @@ router.get("/", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    const id = uuidv4();
+    const id = crypto.randomUUID();
     const [data] = await db.insert(tenantSites).values({
       ...req.body,
       id,
@@ -50,7 +49,7 @@ router.get("/packages", async (req, res) => {
 
 router.post("/packages", async (req, res) => {
   try {
-    const id = uuidv4();
+    const id = crypto.randomUUID();
     const [data] = await db.insert(tenantSitePackages).values({
       ...req.body,
       id,

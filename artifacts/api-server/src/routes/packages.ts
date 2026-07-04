@@ -230,7 +230,7 @@ router.get("/reviews/:packageId", async (req: Request, res: Response) => {
       })
       .from(packageReviews)
       .leftJoin(profiles, eq(packageReviews.userId, profiles.id))
-      .where(and(eq(packageReviews.packageId, req.params.packageId), eq(packageReviews.isApproved, true)))
+      .where(and(eq(packageReviews.packageId, String(req.params.packageId)), eq(packageReviews.isApproved, true)))
       .orderBy(desc(packageReviews.createdAt));
     res.json({ data });
   } catch {
