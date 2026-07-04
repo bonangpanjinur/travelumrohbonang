@@ -176,6 +176,9 @@ router.get("/:id", async (req, res) => {
         packageSlug: packages.slug,
         departureDate: packageDepartures.departureDate,
         returnDate: packageDepartures.returnDate,
+        minimumDp: packages.minimumDp,
+        dpDeadlineDays: packages.dpDeadlineDays,
+        fullDeadlineDays: packages.fullDeadlineDays,
       })
       .from(bookings)
       .leftJoin(packages, eq(bookings.packageId, packages.id))

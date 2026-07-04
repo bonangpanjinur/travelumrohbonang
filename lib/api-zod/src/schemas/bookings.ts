@@ -32,6 +32,9 @@ export const BookingWithDetailsSchema = BookingSchema.extend({
   packageSlug: z.string().nullable(),
   departureDate: z.string().nullable(),
   returnDate: z.string().nullable().optional(),
+  minimumDp: z.number().nullable().optional(),
+  dpDeadlineDays: z.number().nullable().optional(),
+  fullDeadlineDays: z.number().nullable().optional(),
 });
 
 export const BookingListResponse = z.object({
