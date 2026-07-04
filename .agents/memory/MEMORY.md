@@ -5,3 +5,4 @@
 - [esbuild pg externalization](esbuild-pg-external.md) — `pg` must be in esbuild external list AND a direct dep of the bundle target package; otherwise runtime throws ERR_MODULE_NOT_FOUND.
 - [Supabase backend auth on Node 20](supabase-backend-auth.md) — never use createClient() on the API server (Node 20, no native WebSocket → crash). Use direct fetch to /auth/v1/user instead.
 - [Umroh app stack](umroh-app-stack.md) — app still runs on Supabase Auth (not Replit Auth); data layer runs on Replit Postgres via a local REST shim. Don't swap auth on routine re-imports.
+- [Admin API camelCase mismatch](api-camelcase-mismatch.md) — `/api/admin/*` routes return camelCase (Drizzle) but some admin pages expect snake_case; fix per-page with a map function, never globally in apiFetch.

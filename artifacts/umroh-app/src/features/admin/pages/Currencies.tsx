@@ -27,8 +27,16 @@ const AdminCurrencies = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const data = await apiFetch<Currency[]>("/api/admin/currencies");
-      setItems(data || []);
+      const data = await apiFetch<any[]>("/api/admin/currencies");
+      setItems((data || []).map((c) => ({
+        id: c.id,
+        code: c.code,
+        name: c.name,
+        symbol: c.symbol,
+        rate_to_idr: c.rateToIdr,
+        is_default: c.isDefault,
+        is_active: c.isActive,
+      })));
     } catch (e: any) {
       toast({ title: "Gagal memuat", description: e.message, variant: "destructive" });
     } finally {
@@ -50,7 +58,14 @@ const AdminCurrencies = () => {
       toast({ title: "Kode dan nama wajib diisi", variant: "destructive" });
       return;
     }
-    const payload = { ...form, code: form.code.toUpperCase(), rateToIdr: Number(form.rateToIdr) || 1 };
+    const payload = {
+      code: form.code.toUpperCase(),
+      name: form.name,
+      symbol: form.symbol,
+      rateToIdr: Number(form.rateToIdr) || 1,
+      isDefault: form.isDefault,
+      isActive: form.isActive,
+    };
     try {
       if (editing) {
         await apiFetch(`/api/admin/currencies/${editing.id}`, {

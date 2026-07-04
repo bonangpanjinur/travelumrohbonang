@@ -93,24 +93,60 @@ export default function AdminPackageCosts() {
     revenue: number; net_profit: number; margin: number;
   }>>([]);
 
+  const mapCost = (c: any): Cost => ({
+    id: c.id,
+    package_id: c.packageId,
+    departure_id: c.departureId,
+    category: c.category,
+    item_name: c.itemName,
+    qty: c.qty,
+    unit: c.unit,
+    unit_cost: c.unitCost,
+    currency_code: c.currencyCode,
+    is_per_pax: c.isPerPax,
+    is_active: c.isActive,
+    notes: c.notes,
+  });
+
+  const mapPkgOpt = (p: any): PkgOpt => ({
+    id: p.id,
+    title: p.title,
+    category_id: p.categoryId,
+    package_type: p.packageType,
+  });
+
+  const mapDeparture = (d: any): Departure => ({
+    id: d.id,
+    package_id: d.packageId,
+    departure_date: d.departureDate,
+    quota: d.quota,
+    remaining_quota: d.remainingQuota,
+  });
+
+  const mapCurrency = (c: any): Currency => ({
+    code: c.code,
+    rate_to_idr: c.rateToIdr,
+    symbol: c.symbol,
+  });
+
   const refreshAllCosts = async () => {
-    const res = await apiFetch<{ data: Cost[] }>("/api/admin/costs/all");
-    setAllCosts(res.data || []);
+    const res = await apiFetch<{ data: any[] }>("/api/admin/costs/all");
+    setAllCosts((res.data || []).map(mapCost));
   };
 
   useEffect(() => {
     Promise.all([
-      apiFetch<{ data: PkgOpt[] }>("/api/packages?active=true"),
-      apiFetch<{ data: PkgCategory[] }>("/api/admin/masterdata/categories"),
-      apiFetch<{ data: Departure[] }>("/api/admin/departures"),
-      apiFetch<{ data: Currency[] }>("/api/admin/masterdata/currencies"),
-      apiFetch<{ data: Cost[] }>("/api/admin/costs/all"),
+      apiFetch<{ data: any[] }>("/api/packages?active=true"),
+      apiFetch<{ data: any[] }>("/api/admin/masterdata/categories"),
+      apiFetch<{ data: any[] }>("/api/admin/departures"),
+      apiFetch<{ data: any[] }>("/api/admin/masterdata/currencies"),
+      apiFetch<{ data: any[] }>("/api/admin/costs/all"),
     ]).then(([pk, pc, dp, cu, cs]) => {
-      setPackages(pk.data || []);
-      setPkgCategories(pc.data || []);
-      setDepartures((dp.data || []).filter((d: any) => d.status === 'active'));
-      setCurrencies(cu.data || []);
-      setAllCosts(cs.data || []);
+      setPackages((pk.data || []).map(mapPkgOpt));
+      setPkgCategories((pc.data || []).map((c: any) => ({ id: c.id, name: c.name })));
+      setDepartures((dp.data || []).filter((d: any) => d.status === 'active').map(mapDeparture));
+      setCurrencies((cu.data || []).map(mapCurrency));
+      setAllCosts((cs.data || []).map(mapCost));
     });
   }, []);
 
@@ -144,8 +180,8 @@ export default function AdminPackageCosts() {
     if (!pid) return;
     setLoading(true);
     try {
-      const res = await apiFetch<{ data: Cost[] }>(`/api/admin/costs/package/${pid}${filterDeparture !== "__all__" ? `?departureId=${filterDeparture}` : ""}`);
-      setCosts(res.data || []);
+      const res = await apiFetch<{ data: any[] }>(`/api/admin/costs/package/${pid}${filterDeparture !== "__all__" ? `?departureId=${filterDeparture}` : ""}`);
+      setCosts((res.data || []).map(mapCost));
     } catch {
       toast.error("Gagal memuat biaya");
     }
@@ -271,16 +307,16 @@ export default function AdminPackageCosts() {
       toast.error("Lengkapi data terlebih dahulu"); return;
     }
     const payload = {
-      package_id: selectedPkg,
-      departure_id: form.departure_id || null,
+      packageId: selectedPkg,
+      departureId: form.departure_id || null,
       category: form.category,
-      item_name: form.item_name,
+      itemName: form.item_name,
       qty: Number(form.qty || 1),
       unit: form.unit || "pax",
-      unit_cost: Number(form.unit_cost || 0),
-      currency_code: form.currency_code || "IDR",
-      is_per_pax: form.is_per_pax !== false,
-      is_active: form.is_active !== false,
+      unitCost: Number(form.unit_cost || 0),
+      currencyCode: form.currency_code || "IDR",
+      isPerPax: form.is_per_pax !== false,
+      isActive: form.is_active !== false,
       notes: form.notes || null,
     };
     try {
@@ -310,7 +346,7 @@ export default function AdminPackageCosts() {
     try {
       await apiFetch(`/api/admin/costs/${c.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ is_active: !(c.is_active !== false) }),
+        body: JSON.stringify({ isActive: !(c.is_active !== false) }),
       });
       toast.success(c.is_active !== false ? "Dinonaktifkan" : "Diaktifkan");
       loadCosts(selectedPkg);

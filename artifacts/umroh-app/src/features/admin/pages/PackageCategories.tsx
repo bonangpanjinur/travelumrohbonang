@@ -53,7 +53,16 @@ const AdminPackageCategories = () => {
     setLoading(true);
     try {
       const res = await apiFetch<{ data: any[] }>("/api/admin/masterdata/categories");
-      setCategories(res.data || []);
+      setCategories((res.data || []).map((c) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        parent_id: c.parentId,
+        sort_order: c.sortOrder,
+        is_active: c.isActive,
+        show_extra_hotels: c.showExtraHotels,
+        parent: c.parent,
+      })));
     } catch (error: any) {
       toast({ title: "Gagal memuat kategori", description: error.message, variant: "destructive" });
     }
@@ -86,10 +95,10 @@ const AdminPackageCategories = () => {
     const payload = {
       name: form.name.trim(),
       description: form.description.trim() || null,
-      parent_id: form.parent_id || null,
-      sort_order: form.sort_order,
-      is_active: form.is_active,
-      show_extra_hotels: form.show_extra_hotels,
+      parentId: form.parent_id || null,
+      sortOrder: form.sort_order,
+      isActive: form.is_active,
+      showExtraHotels: form.show_extra_hotels,
     };
 
     try {
@@ -128,7 +137,7 @@ const AdminPackageCategories = () => {
     try {
       await apiFetch(`/api/admin/masterdata/categories/${cat.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ is_active: !cat.is_active }),
+        body: JSON.stringify({ isActive: !cat.is_active }),
       });
       setCategories((prev) => prev.map((c) => c.id === cat.id ? { ...c, is_active: !c.is_active } : c));
     } catch {

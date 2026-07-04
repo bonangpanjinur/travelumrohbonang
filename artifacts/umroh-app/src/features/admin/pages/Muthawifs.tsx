@@ -58,8 +58,14 @@ const Muthawifs = () => {
 
   const fetchMuthawifs = async () => {
     try {
-      const res = await apiFetch<{ data: Muthawif[] }>("/api/admin/masterdata/muthawifs");
-      setMuthawifs(res.data || []);
+      const res = await apiFetch<{ data: any[] }>("/api/admin/masterdata/muthawifs");
+      setMuthawifs((res.data || []).map((m) => ({
+        id: m.id,
+        name: m.name,
+        phone: m.phone,
+        photo_url: m.photoUrl,
+        created_at: m.createdAt,
+      })));
     } catch {
       toast.error("Gagal memuat data muthawif");
     }
@@ -139,7 +145,7 @@ const Muthawifs = () => {
           body: JSON.stringify({
             name: formData.name.trim(),
             phone: formData.phone.trim() || null,
-            photo_url: formData.photo_url || null,
+            photoUrl: formData.photo_url || null,
           }),
         });
         toast.success("Muthawif berhasil diperbarui");
@@ -150,7 +156,7 @@ const Muthawifs = () => {
           body: JSON.stringify({
             name: formData.name.trim(),
             phone: formData.phone.trim() || null,
-            photo_url: formData.photo_url || null,
+            photoUrl: formData.photo_url || null,
           }),
         });
         toast.success("Muthawif berhasil ditambahkan");

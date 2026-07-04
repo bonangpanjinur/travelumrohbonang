@@ -63,8 +63,26 @@ const AdminBranches = () => {
 
   const fetchBranches = async () => {
     try {
-      const data = await apiFetch<Branch[]>("/api/admin/branches");
-      setBranches(data || []);
+      const data = await apiFetch<any[]>("/api/admin/branches");
+      setBranches((data || []).map((b) => ({
+        id: b.id,
+        name: b.name,
+        slug: b.slug,
+        address: b.address,
+        phone: b.phone,
+        email: b.email,
+        city: b.city,
+        region: b.region,
+        postal_code: b.postalCode,
+        country: b.country,
+        latitude: b.latitude,
+        longitude: b.longitude,
+        opening_hours: b.openingHours,
+        image_url: b.imageUrl,
+        map_url: b.mapUrl,
+        description: b.description,
+        is_active: b.isActive,
+      })));
     } catch (e) {
       console.error(e);
     } finally {
@@ -82,13 +100,13 @@ const AdminBranches = () => {
       email: form.email || null,
       city: form.city || null,
       region: form.region || null,
-      postal_code: form.postal_code || null,
+      postalCode: form.postal_code || null,
       country: form.country || "ID",
       latitude: form.latitude ? parseFloat(form.latitude) : null,
       longitude: form.longitude ? parseFloat(form.longitude) : null,
-      opening_hours: form.opening_hours || null,
-      image_url: form.image_url || null,
-      map_url: form.map_url || null,
+      openingHours: form.opening_hours || null,
+      imageUrl: form.image_url || null,
+      mapUrl: form.map_url || null,
       description: form.description || null,
     };
     try {
