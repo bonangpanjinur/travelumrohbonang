@@ -19,6 +19,8 @@ Aplikasi manajemen umroh lengkap — paket, booking, jemaah, pembayaran, dan CMS
 - `pnpm run build` — build semua package
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks & Zod schemas dari OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push schema DB ke Supabase (dev only)
+- `pnpm run verify:deploy-env` — cek semua environment variable wajib sebelum deploy ke Vercel
+- `GET /api/health` — cek konektivitas database & Supabase sekaligus (status `ok`/`degraded`, latensi per service) — gunakan untuk verifikasi cepat setelah deploy ke Vercel
 
 ## Stack
 

@@ -102,4 +102,25 @@ export const HealthCheckResponse = zod.object({
   "status": zod.string()
 })
 
+/**
+ * Returns combined database and Supabase connectivity status
+ * @summary Full health check
+ */
+export const FullHealthCheckResponse = zod.object({
+  "status": zod.enum(["ok", "degraded"]),
+  "timestamp": zod.string(),
+  "services": zod.object({
+    "database": zod.object({
+      "status": zod.enum(["ok", "error"]),
+      "latencyMs": zod.number().nullable(),
+      "error": zod.string().optional(),
+    }),
+    "supabase": zod.object({
+      "status": zod.enum(["ok", "error", "not_configured"]),
+      "latencyMs": zod.number().nullable(),
+      "error": zod.string().optional(),
+    }),
+  }),
+})
+
 
