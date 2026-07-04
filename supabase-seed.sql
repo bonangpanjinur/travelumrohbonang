@@ -742,6 +742,401 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================
+-- 21. BLOG POSTS — Artikel panduan & inspirasi umroh
+-- =============================================================
+
+INSERT INTO blog_posts (id, title, slug, excerpt, content, image_url, category, author, seo_title, seo_description, is_published, published_at, created_at)
+VALUES
+
+-- ─── Artikel 1 ───────────────────────────────────────────────
+('blog_01',
+ 'Panduan Lengkap Persiapan Umroh untuk Pemula: Dari Dokumen hingga Perlengkapan',
+ 'panduan-persiapan-umroh-pemula',
+ 'Umroh pertama Anda? Jangan khawatir. Artikel ini membahas tuntas semua yang perlu Anda siapkan — mulai dari persyaratan dokumen, vaksinasi wajib, perlengkapan bawaan, hingga tips mental dan spiritual sebelum berangkat.',
+ '<h2>Persiapan Dokumen</h2>
+<p>Persiapan dokumen adalah langkah pertama dan terpenting sebelum berangkat umroh. Pastikan semua dokumen berikut sudah lengkap minimal 2 bulan sebelum keberangkatan:</p>
+<ul>
+  <li><strong>Paspor aktif</strong> — berlaku minimal 6 bulan dari tanggal keberangkatan, kondisi baik (tidak rusak/basah)</li>
+  <li><strong>KTP asli</strong> — untuk proses administrasi di dalam negeri</li>
+  <li><strong>Kartu Keluarga (KK)</strong> — untuk verifikasi hubungan keluarga</li>
+  <li><strong>Foto terbaru 4×6</strong> — background putih, wajah 80%, tidak menggunakan kacamata, minimal 6 lembar</li>
+  <li><strong>Buku nikah</strong> — wajib untuk pasangan suami-istri yang berangkat bersama</li>
+  <li><strong>Akte lahir / KK</strong> — untuk anak-anak yang berangkat bersama orang tua</li>
+  <li><strong>Surat mahram</strong> — wajib untuk wanita di bawah 45 tahun yang berangkat tanpa suami</li>
+</ul>
+
+<h2>Vaksinasi Wajib</h2>
+<p>Pemerintah Arab Saudi mewajibkan beberapa vaksinasi sebelum memasuki wilayahnya:</p>
+<ul>
+  <li><strong>Vaksin Meningitis (ACYW135)</strong> — wajib, berlaku 3 tahun, suntik minimal 10 hari sebelum berangkat</li>
+  <li><strong>Vaksin COVID-19</strong> — pastikan sudah booster dan sesuai ketentuan terbaru Arab Saudi</li>
+  <li><strong>Vaksin Influenza</strong> — sangat disarankan mengingat padatnya jemaah dari seluruh dunia</li>
+</ul>
+<p>Buku kuning (International Certificate of Vaccination) harus dibawa sebagai bukti vaksinasi meningitis.</p>
+
+<h2>Perlengkapan yang Perlu Dibawa</h2>
+<h3>Pakaian Ihram (Pria)</h3>
+<p>Dua lembar kain putih tanpa jahitan untuk ihram. Pastikan kualitasnya tebal agar nyaman dipakai seharian. Lengkapi dengan ikat pinggang (hizami) untuk menjaga kain tetap rapi.</p>
+<h3>Pakaian Ihram (Wanita)</h3>
+<p>Wanita boleh menggunakan pakaian biasa yang menutup aurat sempurna berwarna apa saja. Pastikan longgar dan nyaman untuk aktivitas tawaf dan sa''i yang membutuhkan banyak gerakan.</p>
+<h3>Alas Kaki</h3>
+<p>Sandal atau sepatu yang nyaman dan kuat. Anda akan berjalan sangat jauh setiap harinya. Hindari alas kaki baru yang belum dipakai — bisa menyebabkan lecet.</p>
+<h3>Perlengkapan Kesehatan</h3>
+<ul>
+  <li>Masker (udara Makkah bisa sangat berdebu)</li>
+  <li>Obat-obatan pribadi secukupnya</li>
+  <li>Krim tabir surya SPF 50+ (suhu bisa mencapai 45°C di musim panas)</li>
+  <li>Botol semprot air untuk mendinginkan wajah</li>
+  <li>Oralit atau minuman elektrolit</li>
+</ul>
+
+<h2>Persiapan Mental dan Spiritual</h2>
+<p>Ibadah umroh bukan sekadar perjalanan fisik — ini adalah perjalanan jiwa. Beberapa persiapan spiritual yang perlu dilakukan:</p>
+<ul>
+  <li>Pelajari niat dan tata cara umroh dengan benar melalui buku panduan dan manasik</li>
+  <li>Hafal doa-doa penting: doa masuk masjid, doa tawaf, doa sa''i, dan doa di berbagai tempat mustajab</li>
+  <li>Perbanyak membaca Al-Quran dan dzikir sebelum berangkat</li>
+  <li>Minta maaf kepada orang-orang terdekat dan selesaikan urusan duniawi</li>
+  <li>Ikuti manasik yang diselenggarakan travel agen Anda — ini sangat membantu</li>
+</ul>
+
+<h2>Tips Praktis di Tanah Suci</h2>
+<p>Beberapa tips dari jemaah berpengalaman yang perlu Anda ketahui:</p>
+<ul>
+  <li><strong>Simpan nomor darurat</strong>: nomor hotel, guide, dan KJRI Jeddah (+966-12-661-4918)</li>
+  <li><strong>Bawa uang cash Riyal</strong>: tidak semua tempat menerima kartu kredit</li>
+  <li><strong>Jaga kondisi fisik</strong>: tidur cukup, makan teratur, jangan memaksakan ibadah saat sakit</li>
+  <li><strong>Hindari jam sibuk tawaf</strong>: setelah shalat wajib adalah waktu tersibuk — pilih waktu tengah malam untuk tawaf yang lebih khusyuk</li>
+  <li><strong>Simpan sandal di kantong plastik</strong> saat masuk masjid — bawa sendiri lebih aman</li>
+</ul>',
+ 'https://images.unsplash.com/photo-1564769662533-4f00a87b4056?w=1200&h=630&fit=crop',
+ 'Panduan',
+ 'Tim Redaksi UmrohPlus',
+ 'Panduan Lengkap Persiapan Umroh Pemula — Dokumen, Vaksin & Perlengkapan',
+ 'Panduan umroh pemula paling lengkap: persyaratan dokumen, vaksinasi wajib, daftar perlengkapan, dan tips spiritual sebelum berangkat ke Tanah Suci.',
+ true, '2026-06-01 08:00:00+07', now()),
+
+-- ─── Artikel 2 ───────────────────────────────────────────────
+('blog_02',
+ 'Tata Cara Umroh Lengkap Sesuai Sunnah: Niat, Tawaf, Sa''i, dan Tahallul',
+ 'tata-cara-umroh-lengkap-sesuai-sunnah',
+ 'Pahami seluruh rangkaian ibadah umroh secara mendalam: dari ihram di miqat, niat, tawaf 7 putaran, sa''i antara Shafa-Marwah, hingga tahallul. Dilengkapi bacaan doa di setiap tahapan.',
+ '<h2>Rukun Umroh yang Wajib Dipahami</h2>
+<p>Umroh terdiri dari 4 rukun utama yang wajib dilakukan secara berurutan. Meninggalkan salah satunya menyebabkan umroh tidak sah:</p>
+<ol>
+  <li><strong>Ihram</strong> — niat memulai ibadah umroh</li>
+  <li><strong>Tawaf</strong> — mengelilingi Ka''bah 7 putaran</li>
+  <li><strong>Sa''i</strong> — berlari-lari kecil antara Bukit Shafa dan Marwah</li>
+  <li><strong>Tahallul</strong> — mencukur atau memotong rambut</li>
+</ol>
+
+<h2>1. Ihram — Memulai Ibadah</h2>
+<p>Ihram adalah niat untuk memasuki ibadah umroh sambil mengenakan pakaian ihram. Dilakukan di miqat (batas tempat yang telah ditentukan).</p>
+<h3>Tempat Miqat untuk Jemaah Indonesia</h3>
+<ul>
+  <li><strong>Bandara KAIA Jeddah</strong>: Jemaah berihram di pesawat saat melintas di atas Yalamlam atau di bandara</li>
+  <li><strong>Bir Ali (Dzul Hulaifah)</strong>: Jika masuk dari arah Madinah</li>
+</ul>
+<h3>Bacaan Niat Ihram Umroh</h3>
+<p><em>"Labbaik Allahumma umratan"</em></p>
+<p>Artinya: "Aku penuhi panggilan-Mu ya Allah untuk melaksanakan umroh."</p>
+<p>Setelah niat, jemaah wajib menghindari larangan ihram: tidak boleh memakai wangi-wangian, memotong kuku/rambut, berhubungan suami-istri, dan berburu hewan.</p>
+
+<h2>2. Tawaf — Mengelilingi Ka''bah</h2>
+<p>Tawaf adalah mengelilingi Ka''bah sebanyak 7 putaran berlawanan arah jarum jam, dimulai dan diakhiri di Hajar Aswad (batu hitam di sudut Ka''bah).</p>
+<h3>Tata Cara Tawaf</h3>
+<ul>
+  <li>Posisikan Ka''bah di sebelah kiri Anda setiap saat</li>
+  <li>Mulai dari garis lurus sejajar Hajar Aswad (ditandai garis hijau di lantai)</li>
+  <li>Pada 3 putaran pertama, pria berjalan agak cepat (raml) — wanita berjalan biasa</li>
+  <li>Di sudut Yamani (sudut ketiga sebelum Hajar Aswad), usap dengan tangan kanan jika memungkinkan</li>
+</ul>
+<h3>Doa Antara Rukun Yamani dan Hajar Aswad</h3>
+<p><em>"Rabbana atina fid-dunya hasanah wa fil-akhirati hasanah wa qina adzabannar."</em></p>
+
+<h2>3. Sa''i — Berlari antara Shafa dan Marwah</h2>
+<p>Sa''i dilakukan 7 kali antara Bukit Shafa dan Marwah, mengikuti jejak Siti Hajar yang berlari mencari air untuk Nabi Ismail.</p>
+<h3>Hitungan Sa''i</h3>
+<ul>
+  <li>Shafa → Marwah = 1 kali</li>
+  <li>Marwah → Shafa = 2 kali</li>
+  <li>Dan seterusnya hingga 7 kali, berakhir di Marwah</li>
+</ul>
+<h3>Doa Memulai Sa''i di Bukit Shafa</h3>
+<p><em>"Innas-Shafa wal-Marwata min sha''airillah..."</em> (QS. Al-Baqarah: 158)</p>
+
+<h2>4. Tahallul — Mengakhiri Ihram</h2>
+<p>Tahallul dilakukan dengan mencukur seluruh rambut kepala (afdhal) atau memotong minimal 3 helai rambut. Setelah tahallul, semua larangan ihram gugur dan umroh dinyatakan selesai.</p>
+<p>Bagi wanita, cukup memotong rambut sepanjang ruas jari dari ujung rambut — tidak perlu dicukur habis.</p>
+
+<h2>Doa Setelah Umroh Selesai</h2>
+<p>Perbanyak doa dan syukur setelah menyelesaikan rangkaian umroh. Sempatkan shalat 2 rakaat di dekat Maqam Ibrahim setelah tawaf. Manfaatkan waktu di Tanah Suci untuk memperbanyak ibadah — setiap langkah di Masjidil Haram bernilai 100.000 pahala.</p>',
+ 'https://images.unsplash.com/photo-1537031931935-7f2eb41fec9d?w=1200&h=630&fit=crop',
+ 'Panduan Ibadah',
+ 'Ustadz Dr. Ahmad Syukri, Lc.',
+ 'Tata Cara Umroh Lengkap Sesuai Sunnah — Ihram, Tawaf, Sa''i, Tahallul',
+ 'Pelajari tata cara umroh yang benar: niat ihram di miqat, panduan tawaf 7 putaran, sa''i Shafa-Marwah, dan tahallul lengkap dengan bacaan doa.',
+ true, '2026-06-08 09:00:00+07', now()),
+
+-- ─── Artikel 3 ───────────────────────────────────────────────
+('blog_03',
+ 'Tips Menjaga Kesehatan Selama Umroh: Panduan Lengkap di Tanah Suci',
+ 'tips-menjaga-kesehatan-selama-umroh',
+ 'Jutaan jemaah berkumpul dari berbagai penjuru dunia — kondisi ini membuat kesehatan menjadi tantangan tersendiri. Pelajari cara menjaga stamina, mencegah penyakit, dan tetap fit sepanjang perjalanan umroh Anda.',
+ '<h2>Kondisi Cuaca di Tanah Suci</h2>
+<p>Makkah dan Madinah memiliki iklim yang sangat berbeda dengan Indonesia. Suhu bisa mencapai 45-48°C di musim panas (Juni-September) dan turun hingga 10°C di malam hari musim dingin. Pemahaman tentang kondisi cuaca ini sangat penting untuk persiapan kesehatan Anda.</p>
+
+<h2>Ancaman Utama Kesehatan Jemaah</h2>
+<h3>1. Dehidrasi</h3>
+<p>Penyebab utama jemaah jatuh sakit. Udara kering dan aktivitas fisik intens menguras cairan tubuh lebih cepat dari biasanya. Tanda-tanda dehidrasi: pusing, mulut kering, urine gelap, kelelahan berlebihan.</p>
+<p><strong>Solusi:</strong> Minum air minimal 2-3 liter per hari, bahkan jika tidak haus. Selalu bawa botol air kemana-mana. Di musim panas, tambahkan minuman elektrolit setiap hari.</p>
+
+<h3>2. Heat Stroke (Serangan Panas)</h3>
+<p>Sangat berbahaya dan bisa fatal. Gejala: suhu tubuh sangat tinggi, tidak berkeringat, kulit merah dan kering, kebingungan, hingga pingsan.</p>
+<p><strong>Pencegahan:</strong> Hindari keluar di siang hari antara pukul 11.00-15.00. Gunakan payung, topi, atau penutup kepala. Semprotkan air ke wajah dan leher secara berkala.</p>
+
+<h3>3. Infeksi Saluran Pernapasan</h3>
+<p>Padatnya jemaah dari berbagai negara meningkatkan risiko penularan penyakit pernapasan. ISPA, influenza, dan pneumonia adalah penyakit yang paling sering menyerang jemaah.</p>
+<p><strong>Pencegahan:</strong> Selalu kenakan masker di keramaian. Hindari menyentuh wajah setelah memegang permukaan umum. Cuci tangan sesering mungkin dengan sabun atau hand sanitizer.</p>
+
+<h3>4. Kelelahan Fisik</h3>
+<p>Aktivitas ibadah yang sangat padat — tawaf, sa''i, shalat berjamaah 5 waktu — sangat menguras energi, terutama bagi jemaah yang tidak terbiasa berjalan jauh.</p>
+
+<h2>Panduan Nutrisi di Tanah Suci</h2>
+<ul>
+  <li><strong>Makan teratur 3 kali sehari</strong> meski tidak lapar — jangan skip makan karena terlalu semangat beribadah</li>
+  <li><strong>Konsumsi buah-buahan</strong> yang tersedia melimpah di Makkah: kurma, pisang, jeruk, semangka</li>
+  <li><strong>Hindari makanan pedas berlebihan</strong> yang bisa memicu gangguan pencernaan</li>
+  <li><strong>Air zamzam</strong> sangat dianjurkan — minum sesering mungkin untuk menjaga stamina dan keberkahan</li>
+  <li><strong>Kurangi kopi dan teh</strong> — kafein membuat lebih sering buang air kecil dan memperparah dehidrasi</li>
+</ul>
+
+<h2>Daftar Obat Wajib Bawa</h2>
+<p>Siapkan kotak P3K pribadi dengan isi berikut:</p>
+<ul>
+  <li>Paracetamol / ibuprofen (demam dan nyeri)</li>
+  <li>Antidiare (Imodium atau oralit)</li>
+  <li>Antasida (maag/asam lambung)</li>
+  <li>Obat flu dan batuk</li>
+  <li>Salep antijamur (kelembaban tinggi bisa memicu jamur)</li>
+  <li>Plester luka dan perban</li>
+  <li>Obat tetes mata (mata kering karena udara panas)</li>
+  <li>Obat-obatan rutin pribadi (hipertensi, diabetes, dll.)</li>
+</ul>
+
+<h2>Tips Menjaga Stamina</h2>
+<ul>
+  <li>Tidur 6-8 jam sehari — jangan korbankan tidur meski ingin perbanyak ibadah malam</li>
+  <li>Gunakan lift atau eskalator bila tersedia untuk menghemat energi</li>
+  <li>Manfaatkan kursi roda yang tersedia gratis di Masjidil Haram untuk jemaah lansia</li>
+  <li>Beribadah sesuai kemampuan — Allah tidak membebani hamba melebihi kemampuannya</li>
+</ul>',
+ 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=1200&h=630&fit=crop',
+ 'Kesehatan',
+ 'Dr. Hj. Sari Dewi, SpPD',
+ 'Tips Menjaga Kesehatan Saat Umroh — Panduan Lengkap Jemaah',
+ 'Panduan kesehatan umroh: cara mencegah dehidrasi, heat stroke, infeksi pernapasan, daftar obat wajib bawa, dan tips menjaga stamina selama di Tanah Suci.',
+ true, '2026-06-15 10:00:00+07', now()),
+
+-- ─── Artikel 4 ───────────────────────────────────────────────
+('blog_04',
+ 'Keutamaan Umroh di Bulan Ramadhan: Pahala Setara Haji Bersama Rasulullah',
+ 'keutamaan-umroh-ramadhan-pahala-setara-haji',
+ 'Rasulullah SAW bersabda bahwa umroh di bulan Ramadhan pahalanya setara dengan haji bersama beliau. Pelajari keutamaan spiritual umroh Ramadhan, waktu terbaik berangkat, dan tips khusus ibadah di bulan suci.',
+ '<h2>Hadits Tentang Keutamaan Umroh Ramadhan</h2>
+<p>Dari Ibnu Abbas RA, Rasulullah SAW bersabda:</p>
+<blockquote>
+<p><em>"Umroh di bulan Ramadhan itu (pahalanya) seperti haji — atau seperti haji bersamaku."</em></p>
+<p>(HR. Bukhari no. 1863 dan Muslim no. 1256)</p>
+</blockquote>
+<p>Hadits ini diriwayatkan ketika Nabi SAW mengetahui seorang wanita Anshar bernama Ummu Sinan tidak bisa ikut haji bersama beliau karena uzur. Beliau menghiburnya dengan mengatakan bahwa umroh Ramadhan setara dengan haji bersama Rasulullah.</p>
+
+<h2>Keistimewaan Ibadah di Ramadhan</h2>
+<p>Bulan Ramadhan adalah bulan yang Allah jadikan penuh keberkahan. Di bulan ini, pahala setiap amal ibadah dilipatgandakan:</p>
+<ul>
+  <li>Pahala shalat wajib setara 70 kali shalat di bulan biasa</li>
+  <li>Pahala shalat sunnah setara shalat wajib di bulan biasa</li>
+  <li>Pintu surga dibuka, pintu neraka ditutup, setan dibelenggu</li>
+  <li>Terdapat Lailatul Qadar — satu malam yang lebih baik dari 1000 bulan (83 tahun ibadah)</li>
+</ul>
+
+<h2>Pengalaman Ibadah Eksklusif di Ramadhan</h2>
+<h3>Buka Puasa di Masjidil Haram</h3>
+<p>Ribuan nampan kurma, air zamzam, dan makanan disediakan gratis di seluruh pelataran Masjidil Haram menjelang maghrib. Berbuka bersama jutaan jemaah dari seluruh dunia adalah pengalaman spiritual yang tak tergantikan.</p>
+
+<h3>Shalat Tarawih 20 Rakaat</h3>
+<p>Shalat tarawih di Masjidil Haram dipimpin oleh imam-imam terbaik dunia dengan suara merdu yang memilukan. Setiap malam tarawih, imam membacakan beberapa juz Al-Quran — dalam satu Ramadhan penuh, seluruh Al-Quran dikhatamkan.</p>
+
+<h3>I''tikaf 10 Malam Terakhir</h3>
+<p>Paket Ramadhan UmrohPlus menyediakan waktu untuk i''tikaf di 10 malam terakhir Ramadhan — waktu paling utama untuk mencari Lailatul Qadar. Berdiam di masjid, memperbanyak doa, dzikir, dan tilawah Al-Quran.</p>
+
+<h3>Malam Takbiran dan Idul Fitri di Tanah Suci</h3>
+<p>Bagi yang berangkat di akhir Ramadhan, kesempatan merasakan malam takbiran dan shalat Idul Fitri di Masjidil Haram atau Masjid Nabawi adalah pengalaman sekali seumur hidup yang tidak ternilai harganya.</p>
+
+<h2>Tips Khusus Umroh Ramadhan</h2>
+<ul>
+  <li><strong>Pesan jauh-jauh hari</strong>: kursi umroh Ramadhan selalu penuh jauh sebelum musim — idealnya 6-12 bulan sebelumnya</li>
+  <li><strong>Pilih jadwal awal atau akhir Ramadhan</strong>: pertengahan Ramadhan adalah paling padat</li>
+  <li><strong>Atur waktu tawaf di luar jam shalat</strong>: gunakan waktu tengah malam setelah tarawih yang lebih lengang</li>
+  <li><strong>Jaga kondisi fisik</strong>: berpuasa sekaligus beribadah membutuhkan manajemen energi yang baik</li>
+  <li><strong>Bawa Al-Quran ukuran saku</strong>: manfaatkan setiap momen menunggu untuk tilawah</li>
+</ul>
+
+<h2>Kenapa Memilih Umroh Ramadhan UmrohPlus?</h2>
+<p>Paket Umroh Ramadhan UmrohPlus dirancang khusus untuk memaksimalkan pengalaman spiritual Anda di bulan mulia ini. Hotel pilihan kami berada sangat dekat dengan Masjidil Haram dan Masjid Nabawi, sehingga Anda bisa lebih banyak menghabiskan waktu dalam ibadah, bukan dalam perjalanan.</p>',
+ 'https://images.unsplash.com/photo-1605773527852-c546a8584ea3?w=1200&h=630&fit=crop',
+ 'Inspirasi',
+ 'Ustadz Muhammad Amin Fauzan, S.Ag.',
+ 'Keutamaan Umroh Ramadhan: Pahala Setara Haji Bersama Rasulullah SAW',
+ 'Pahami keutamaan umroh di bulan Ramadhan berdasarkan hadits sahih. Pengalaman tarawih, i''tikaf, dan buka puasa di Masjidil Haram yang tak terlupakan.',
+ true, '2026-06-22 08:30:00+07', now()),
+
+-- ─── Artikel 5 ───────────────────────────────────────────────
+('blog_05',
+ 'Ziarah Wajib di Makkah dan Madinah: Tempat-Tempat Bersejarah yang Harus Dikunjungi',
+ 'ziarah-tempat-bersejarah-makkah-madinah',
+ 'Selain tawaf dan sa''i, Tanah Suci menyimpan banyak tempat bersejarah Islam yang sarat makna. Dari Gua Hira dan Jabal Tsur di Makkah, hingga Masjid Quba dan Kebun Kurma di Madinah — panduan lengkap ziarah Anda.',
+ '<h2>Tempat Ziarah Utama di Makkah</h2>
+
+<h3>1. Jabal Nur dan Gua Hira</h3>
+<p>Di sinilah wahyu pertama Al-Quran turun kepada Nabi Muhammad SAW — Surat Al-Alaq ayat 1-5. Gua Hira berada di puncak Jabal Nur yang harus didaki sekitar 45 menit. Pemandangan kota Makkah dari atas sangat memukau, dan rasakan atmosfer spiritualitas tempat bersejarah ini.</p>
+<p><em>Catatan: Tidak ada kewajiban shalat khusus di sini — cukup berdoa dan bertafakur.</em></p>
+
+<h3>2. Jabal Tsur dan Gua Tsur</h3>
+<p>Tempat Nabi SAW dan Abu Bakar RA bersembunyi selama 3 hari saat hijrah ke Madinah. Dikisahkan seekor laba-laba membuat sarang dan merpati bersarang di mulut gua untuk melindungi Nabi dari kejaran kaum Quraisy.</p>
+
+<h3>3. Jabal Rahmah (Bukit Kasih Sayang)</h3>
+<p>Di Padang Arafah, bukit ini adalah tempat Nabi Adam dan Siti Hawa bertemu kembali setelah berpisah dari surga. Di puncak bukit terdapat tiang putih sebagai penanda. Area wukuf haji berada di sekitar bukit ini.</p>
+
+<h3>4. Masjid Ji''ranah</h3>
+<p>Tempat Rasulullah SAW berihram untuk umroh terakhir beliau setelah Fathu Makkah. Bagi yang ingin melakukan umroh tambahan selama di Makkah, Ji''ranah adalah salah satu miqat yang bisa digunakan.</p>
+
+<h3>5. Maqam Ibrahim</h3>
+<p>Batu tempat Nabi Ibrahim AS berdiri saat membangun Ka''bah. Jejak kaki beliau masih tampak tertinggal di atas batu tersebut. Shalat 2 rakaat di belakang Maqam Ibrahim setelah tawaf adalah sunnah.</p>
+
+<h2>Tempat Ziarah Utama di Madinah</h2>
+
+<h3>1. Masjid Nabawi dan Raudhah</h3>
+<p>Masjid Nabawi adalah masjid kedua yang paling suci dalam Islam, dibangun langsung oleh Rasulullah SAW. Di dalamnya terdapat Raudhah — taman surga — yang merupakan tempat paling mustajab untuk berdoa. Makam Rasulullah SAW beserta para sahabatnya (Abu Bakar dan Umar) juga berada di sini.</p>
+
+<h3>2. Masjid Quba</h3>
+<p>Masjid pertama yang dibangun dalam sejarah Islam. Rasulullah SAW bersabda: "Shalat 2 rakaat di Masjid Quba pahalanya setara dengan ibadah umroh." Shalat di sini adalah sunnah muakkad yang sangat sayang untuk dilewatkan.</p>
+
+<h3>3. Masjid Qiblatain (Masjid Dua Kiblat)</h3>
+<p>Tempat di mana Rasulullah SAW menerima perintah untuk mengubah arah kiblat dari Masjid Al-Aqsa di Yerusalem ke Ka''bah di Makkah. Di sinilah terjadi peristiwa bersejarah perpindahan kiblat di tengah shalat.</p>
+
+<h3>4. Pemakaman Baqi''</h3>
+<p>Makam para sahabat, istri-istri Rasulullah (Ummahatul Mukminin), dan keluarga Nabi. Di sini dimakamkan Siti Khadijah (di Makkah, Jannatul Mualla), Utsman bin Affan, dan ribuan sahabat lainnya. Berziarah ke Baqi'' adalah sunnah dengan membaca salam dan doa untuk penghuni kubur.</p>
+
+<h3>5. Kebun Kurma Madinah</h3>
+<p>Madinah adalah penghasil kurma terbaik dunia. Kunjungi kebun kurma dan pasar kurma untuk memilih berbagai varietas langsung dari petaninya — Ajwa, Medjool, Safawi, Sukari — sebagai oleh-oleh terbaik dari Tanah Suci.</p>
+
+<h2>Etika Ziarah yang Perlu Diperhatikan</h2>
+<ul>
+  <li>Niatkan ziarah untuk mengambil ibrah (pelajaran) dan mendoakan kaum muslimin</li>
+  <li>Tidak berlebihan dalam berdoa di kuburan atau meminta kepada orang yang sudah meninggal</li>
+  <li>Jaga kebersihan dan ketertiban di setiap tempat ziarah</li>
+  <li>Ikuti panduan muthawif Anda — mereka tahu lokasi dan waktu terbaik untuk setiap ziarah</li>
+</ul>',
+ 'https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=1200&h=630&fit=crop',
+ 'Destinasi',
+ 'Tim Redaksi UmrohPlus',
+ 'Panduan Ziarah Makkah & Madinah — Tempat Bersejarah Islam Wajib Kunjungi',
+ 'Panduan lengkap ziarah ke tempat bersejarah di Makkah (Gua Hira, Jabal Tsur, Arafah) dan Madinah (Raudhah, Masjid Quba, Baqi'') saat umroh.',
+ true, '2026-06-29 09:00:00+07', now()),
+
+-- ─── Artikel 6 ───────────────────────────────────────────────
+('blog_06',
+ 'Panduan Lengkap Memilih Paket Umroh yang Tepat: Reguler, Plus, atau VIP?',
+ 'cara-memilih-paket-umroh-reguler-plus-vip',
+ 'Bingung memilih antara paket reguler, plus, atau VIP? Artikel ini membantu Anda membuat keputusan terbaik berdasarkan anggaran, kebutuhan, dan prioritas ibadah Anda.',
+ '<h2>Memahami Perbedaan Tipe Paket Umroh</h2>
+<p>Sebelum memilih paket, pahami terlebih dahulu apa yang menjadi prioritas Anda: apakah kedekatan hotel ke masjid, kualitas akomodasi, durasi waktu, atau efisiensi anggaran. Berikut perbandingan lengkapnya:</p>
+
+<h2>Paket Umroh Reguler</h2>
+<h3>Cocok untuk siapa?</h3>
+<ul>
+  <li>Jemaah yang ingin umroh dengan anggaran terjangkau</li>
+  <li>Usia produktif dengan kondisi fisik prima</li>
+  <li>Tidak menjadikan jarak hotel sebagai prioritas utama</li>
+</ul>
+<h3>Yang biasanya termasuk:</h3>
+<ul>
+  <li>Hotel bintang 4 dengan jarak 500m-1km dari Masjidil Haram</li>
+  <li>Durasi 9 hari (4 malam Makkah, 3 malam Madinah)</li>
+  <li>Penerbangan kelas ekonomi</li>
+  <li>Makan 2-3 kali sehari (prasmanan)</li>
+  <li>Transportasi bus AC bersama</li>
+</ul>
+<h3>Harga Paket Reguler UmrohPlus:</h3>
+<p>Mulai dari <strong>Rp 27.500.000</strong> per orang (kamar quadruple)</p>
+
+<h2>Paket Umroh Plus</h2>
+<h3>Cocok untuk siapa?</h3>
+<ul>
+  <li>Jemaah yang menginginkan kenyamanan lebih tanpa harga VIP</li>
+  <li>Pasangan suami-istri atau keluarga kecil</li>
+  <li>Yang ingin durasi lebih panjang untuk ibadah lebih leluasa</li>
+</ul>
+<h3>Yang biasanya termasuk:</h3>
+<ul>
+  <li>Hotel bintang 5 dengan jarak 200-300m dari Masjidil Haram</li>
+  <li>Durasi 12 hari (5 malam Makkah, 4 malam Madinah)</li>
+  <li>Penerbangan kelas ekonomi pilihan (Garuda Indonesia)</li>
+  <li>Makan 3 kali sehari dengan menu lebih beragam</li>
+  <li>Ziarah lengkap Makkah-Madinah</li>
+</ul>
+<h3>Harga Paket Plus UmrohPlus:</h3>
+<p>Mulai dari <strong>Rp 34.500.000</strong> per orang (kamar quadruple)</p>
+
+<h2>Paket Umroh VIP</h2>
+<h3>Cocok untuk siapa?</h3>
+<ul>
+  <li>Jemaah lansia yang membutuhkan kenyamanan maksimal</li>
+  <li>Jemaah yang ingin pengalaman ibadah paling premium</li>
+  <li>Honeymoon islami atau hadiah istimewa untuk orang tua</li>
+</ul>
+<h3>Yang biasanya termasuk:</h3>
+<ul>
+  <li>Hotel bintang 5 tepat di dalam atau bersebelahan dengan Masjidil Haram</li>
+  <li>Durasi 12 hari dengan jadwal fleksibel</li>
+  <li>Penerbangan kelas bisnis atau ekonomi premium</li>
+  <li>Layanan concierge pribadi</li>
+  <li>Kamar superior dengan view Ka''bah (untuk paket tertentu)</li>
+  <li>Akses lounge bandara</li>
+</ul>
+<h3>Harga Paket VIP UmrohPlus:</h3>
+<p>Mulai dari <strong>Rp 44.000.000</strong> per orang (kamar quadruple)</p>
+
+<h2>Tipe Kamar: Quadruple, Triple, Double, atau Single?</h2>
+<p>Pilihan tipe kamar sangat mempengaruhi harga dan kenyamanan:</p>
+<ul>
+  <li><strong>Quadruple (4 orang/kamar)</strong>: Paling hemat, cocok untuk grup atau keluarga besar. Kurangi biaya akomodasi hingga 40%.</li>
+  <li><strong>Triple (3 orang/kamar)</strong>: Keseimbangan antara hemat dan nyaman. Ideal untuk 3 bersaudara atau teman.</li>
+  <li><strong>Double (2 orang/kamar)</strong>: Untuk pasangan suami-istri atau yang ingin privasi lebih. Paling populer.</li>
+  <li><strong>Single (1 orang/kamar)</strong>: Privasi penuh, bebas mengatur jadwal sendiri. Harga premium namun kenyamanan maksimal.</li>
+</ul>
+
+<h2>Checklist Memilih Travel Umroh Terpercaya</h2>
+<p>Sebelum memutuskan, pastikan travel Anda memenuhi kriteria berikut:</p>
+<ul>
+  <li>✅ Terdaftar resmi di Kemenag RI (cek di website resmi Kemenag)</li>
+  <li>✅ Memiliki track record jelas — berapa ribu jemaah sudah diberangkatkan</li>
+  <li>✅ Harga transparan tanpa biaya tersembunyi</li>
+  <li>✅ Kontrak tertulis yang jelas mencantumkan semua fasilitas</li>
+  <li>✅ Responsif dan mudah dihubungi sebelum keberangkatan</li>
+  <li>✅ Ada muthawif profesional bersertifikat yang mendampingi selama perjalanan</li>
+</ul>',
+ 'https://images.unsplash.com/photo-1564769662533-4f00a87b4056?w=1200&h=630&fit=crop',
+ 'Tips & Trik',
+ 'Tim Redaksi UmrohPlus',
+ 'Cara Memilih Paket Umroh yang Tepat: Reguler vs Plus vs VIP',
+ 'Panduan praktis memilih paket umroh sesuai kebutuhan dan anggaran. Perbandingan lengkap paket reguler, plus, dan VIP beserta tips memilih travel terpercaya.',
+ true, '2026-07-01 08:00:00+07', now())
+
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
 -- VERIFIKASI — Hitung total data yang berhasil di-insert
 -- =============================================================
 
@@ -757,6 +1152,7 @@ UNION ALL SELECT 'packages',            COUNT(*) FROM packages
 UNION ALL SELECT 'package_departures',  COUNT(*) FROM package_departures
 UNION ALL SELECT 'departure_prices',    COUNT(*) FROM departure_prices
 UNION ALL SELECT 'package_commissions', COUNT(*) FROM package_commissions
+UNION ALL SELECT 'blog_posts',          COUNT(*) FROM blog_posts
 UNION ALL SELECT 'site_settings',       COUNT(*) FROM site_settings
 UNION ALL SELECT 'services',            COUNT(*) FROM services
 UNION ALL SELECT 'advantages',          COUNT(*) FROM advantages
