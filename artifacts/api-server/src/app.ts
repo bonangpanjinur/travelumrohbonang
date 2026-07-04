@@ -82,4 +82,15 @@ app.use("/uploads", express.static(uploadsDir));
 
 app.use("/api", router);
 
+// ── 404 catch-all (unknown routes) ───────────────────────────────────────────
+app.use((_req, res) => {
+  res.status(404).json({ message: "Not found" });
+});
+
+// ── Global error handler ──────────────────────────────────────────────────────
+app.use((err: Error, _req: import("express").Request, res: import("express").Response, _next: import("express").NextFunction) => {
+  console.error("[app] unhandled error:", err?.message ?? err);
+  res.status(500).json({ message: "Internal server error" });
+});
+
 export default app;

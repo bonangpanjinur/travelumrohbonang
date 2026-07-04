@@ -10,18 +10,23 @@ const PUBLIC_READ_TABLES = new Set([
   "packages", "package_categories", "package_departures", "departure_prices",
   "package_hotels", "hotels", "airlines", "airports", "muthawifs", "branches",
   "testimonials", "faqs", "blog_posts", "gallery", "site_settings", "tenant_sites",
-  "itineraries", "currencies", "departure_galleries", "manasik_materials",
+  "itineraries", "itinerary_days", "currencies", "departure_gallery", "manasik_materials",
   "services", "guide_steps", "advantages", "navigation_items", "floating_buttons",
   "pages", "package_reviews", "package_commissions", "package_inclusions",
   "tenant_site_packages", "pilgrim_testimonials", "slug_redirects",
+  "seo_overrides", "coupons", "agents", "template_pricing",
 ]);
 
 // Tables that require the user to be authenticated for any access.
 const AUTH_TABLES = new Set([
   "profiles", "bookings", "booking_rooms", "booking_pilgrims", "booking_payments",
-  "agents", "wishlists", "notifications", "pilgrim_documents", "contracts",
+  "wishlists", "notifications", "pilgrim_documents", "contracts",
   "crm_contacts", "audit_logs", "error_logs", "request_log",
-  "template_upgrade_orders",
+  "template_upgrade_orders", "affiliate_clicks", "user_roles",
+  "leads", "lead_follow_ups", "loyalty_balances", "loyalty_points",
+  "financial_transactions", "chat_messages", "pilgrim_doc_access_logs",
+  "package_costs", "payment_proof_access_logs", "payments", "agent_commissions",
+  "flight_details", "installment_schedules", "payment_gateway_transactions",
 ]);
 
 // All tables allowed through the proxy (union of both sets).
@@ -58,7 +63,7 @@ const FORWARD_FKS: Record<string, Record<string, string>> = {
 
 // Reverse FK: nested_table has FK col → main_table.id  (array result)
 const REVERSE_FKS: Record<string, Record<string, string>> = {
-  package_departures: { departure_prices: "departure_id", departure_galleries: "departure_id" },
+  package_departures: { departure_prices: "departure_id", departure_gallery: "departure_id" },
   packages: {
     package_hotels: "package_id",
     package_departures: "package_id",

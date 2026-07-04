@@ -35,7 +35,7 @@ const TestimonialsSection = () => {
 
       // Fetch background pattern
       const { data: settingsData } = await supabase
-        .from("settings")
+        .from("site_settings")
         .select("value")
         .eq("key", "background_pattern")
         .single();

@@ -35,7 +35,7 @@ const PromoPdfButton = ({ packageData }: Props) => {
       .maybeSingle()
       .then(({ data }) => setAgent(data as any));
     supabase
-      .from("settings")
+      .from("site_settings")
       .select("key, value")
       .in("key", ["company_name", "contact_phone"])
       .then(({ data }) => {

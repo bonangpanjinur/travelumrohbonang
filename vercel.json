@@ -2,6 +2,8 @@
   "buildCommand": "pnpm --filter @workspace/umroh-app run build",
   "outputDirectory": "artifacts/umroh-app/dist/public",
   "rewrites": [
+    { "source": "/rest/v1/(.*)", "destination": "/api" },
+    { "source": "/storage/v1/(.*)", "destination": "/api" },
     { "source": "/api/(.*)", "destination": "/api" }
   ],
   "crons": [
