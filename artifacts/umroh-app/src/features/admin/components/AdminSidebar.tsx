@@ -33,7 +33,7 @@ const AdminSidebar = ({
     const map: Record<string, boolean> = {};
     menuGroups.forEach((group) => {
       const hasActive = group.items.some(item => location.pathname === item.href);
-      if (group.label === "Utama" || hasActive) {
+      if (group.labelKey === "menu.group.main" || hasActive) {
         map[group.label] = false;
       } else {
         map[group.label] = true;
@@ -104,7 +104,7 @@ const AdminSidebar = ({
                     onClick={() => toggleGroup(group.label)}
                     className="flex items-center justify-between w-full px-3 py-2 text-[10px] uppercase tracking-wider text-primary-foreground/40 font-semibold hover:text-primary-foreground/60 transition-colors"
                   >
-                    {group.label}
+                    {t(group.labelKey)}
                     <ChevronDown className={`w-3 h-3 transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
                   </button>
                   {!isCollapsed && (
@@ -123,7 +123,7 @@ const AdminSidebar = ({
                               }`}
                             >
                               <item.icon className="w-4 h-4 shrink-0" />
-                              <span className="flex-1">{item.label}</span>
+                              <span className="flex-1">{t(item.labelKey)}</span>
                             </Link>
                           </li>
                         );
