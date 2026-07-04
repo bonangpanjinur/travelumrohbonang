@@ -203,12 +203,12 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO navigation_items (id, label, url, parent_id, sort_order, is_active, open_in_new_tab, created_at)
 VALUES
-  ('nav_01', 'Beranda',           '/',                  NULL, 1, true, false, now()),
-  ('nav_02', 'Paket Perjalanan',  '/packages',          NULL, 2, true, false, now()),
-  ('nav_03', 'Galeri',            '/gallery',           NULL, 3, true, false, now()),
-  ('nav_04', 'Blog',              '/blog',              NULL, 4, true, false, now()),
-  ('nav_05', 'Tentang Kami',      '/about',             NULL, 5, true, false, now()),
-  ('nav_06', 'Kontak',            '/contact',           NULL, 6, true, false, now())
+  ('nav_01', 'Beranda',           '/',             NULL, 1, true, false, now()),
+  ('nav_02', 'Paket Perjalanan',  '/paket',        NULL, 2, true, false, now()),
+  ('nav_03', 'Galeri',            '/galeri',       NULL, 3, true, false, now()),
+  ('nav_04', 'Blog',              '/blog',         NULL, 4, true, false, now()),
+  ('nav_05', 'Tentang Kami',      '/tentang-kami', NULL, 5, true, false, now()),
+  ('nav_06', 'Kontak',            '/kontak',       NULL, 6, true, false, now())
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================
@@ -466,13 +466,297 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================
+-- 16. MASTER DATA — Hotel, Maskapai, Bandara, Muthawif
+-- =============================================================
+
+-- Hotels
+INSERT INTO hotels (id, name, city, stars, image_url, description, created_at)
+VALUES
+  ('htl_swissotel',   'Swissotel Al Maqam Makkah',           'Makkah',  5, 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop', 'Hotel bintang 5 tepat di dalam Masjidil Haram, pemandangan langsung Ka''bah dari kamar',                           now()),
+  ('htl_hilton_mk',   'Hilton Suites Makkah',                 'Makkah',  5, 'https://images.unsplash.com/photo-1551882547-ff40c63fe2e2?w=600&h=400&fit=crop', 'Hotel mewah 5 bintang berjarak 200m dari Masjidil Haram dengan fasilitas lengkap dan restoran halal premium',      now()),
+  ('htl_pullman',     'Pullman ZamZam Makkah',                'Makkah',  5, 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=600&h=400&fit=crop', 'Hotel ikonik di Abraj Al-Bait Tower, berjarak hanya 50 meter dari Masjidil Haram dengan view Ka''bah spektakuler', now()),
+  ('htl_dartaqwa',    'Dar Al Taqwa Hotel Madinah',           'Madinah', 5, 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=600&h=400&fit=crop', 'Hotel bintang 5 di Madinah berjarak 50 meter dari Masjid Nabawi, pilihan favorit jemaah Indonesia',               now()),
+  ('htl_movenpick',   'Anwar Al Madinah Mövenpick Hotel',     'Madinah', 5, 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=600&h=400&fit=crop', 'Hotel premium di jantung kota Madinah, langsung terhubung ke Masjid Nabawi via jembatan tertutup',                 now()),
+  ('htl_rawda',       'Al Rawda Royal Inn Madinah',           'Madinah', 4, 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&h=400&fit=crop', 'Hotel bintang 4 nyaman di Madinah berjarak 300m dari Masjid Nabawi, cocok untuk paket reguler',                    now()),
+  ('htl_novotel_mk',  'Novotel Makkah Al Shohada',            'Makkah',  4, 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=600&h=400&fit=crop', 'Hotel bintang 4 strategis di Makkah berjarak 500m dari Masjidil Haram, pilihan tepat untuk paket hemat berkualitas', now())
+ON CONFLICT (id) DO NOTHING;
+
+-- Airlines
+INSERT INTO airlines (id, name, code, logo_url, created_at)
+VALUES
+  ('arl_ga',  'Garuda Indonesia',  'GA', 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Garuda_Indonesia_Logo.svg/200px-Garuda_Indonesia_Logo.svg.png', now()),
+  ('arl_sv',  'Saudi Airlines',    'SV', 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Saudia_Airlines_Logo.svg/200px-Saudia_Airlines_Logo.svg.png',   now()),
+  ('arl_sq',  'Singapore Airlines','SQ', 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Singapore_Airlines_Logo_2.svg/200px-Singapore_Airlines_Logo_2.svg.png', now()),
+  ('arl_jt',  'Lion Air',          'JT', 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Lion_Air_logo.svg/200px-Lion_Air_logo.svg.png',                  now())
+ON CONFLICT (id) DO NOTHING;
+
+-- Airports
+INSERT INTO airports (id, name, code, city, created_at)
+VALUES
+  ('apt_cgk', 'Bandara Internasional Soekarno-Hatta',      'CGK', 'Tangerang',      now()),
+  ('apt_sub', 'Bandara Internasional Juanda',               'SUB', 'Surabaya',       now()),
+  ('apt_upg', 'Bandara Internasional Sultan Hasanuddin',    'UPG', 'Makassar',       now()),
+  ('apt_kno', 'Bandara Internasional Kualanamu',            'KNO', 'Medan',          now()),
+  ('apt_jed', 'Bandara Internasional King Abdul Aziz',      'JED', 'Jeddah',         now()),
+  ('apt_med', 'Bandara Amir Muhammad bin Abdulaziz',        'MED', 'Madinah',        now())
+ON CONFLICT (id) DO NOTHING;
+
+-- Muthawifs (pembimbing ibadah)
+INSERT INTO muthawifs (id, name, phone, photo_url, bio, is_active, created_at)
+VALUES
+  ('mtw_01', 'Ustadz Dr. Ahmad Syukri, Lc.',
+   '08111234567',
+   'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=200&h=200&fit=crop&crop=face',
+   'Lulusan Universitas Islam Madinah, berpengalaman 15 tahun membimbing jemaah umroh dan haji. Hafidz Quran 30 juz. Dikenal sabar, ramah, dan menguasai sejarah Tanah Suci secara mendalam.',
+   true, now()),
+
+  ('mtw_02', 'Ustadz Muhammad Amin Fauzan, S.Ag.',
+   '08222345678',
+   'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face',
+   'Alumni Universitas Al-Azhar Kairo dengan pengalaman 10 tahun sebagai muthawif profesional. Spesialis bimbingan doa dan dzikir selama umroh. Penulis buku panduan ibadah umroh.',
+   true, now()),
+
+  ('mtw_03', 'Ustadzah Hj. Fatimah Azzahra, M.Ag.',
+   '08333456789',
+   'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=200&fit=crop&crop=face',
+   'Muthawifah berpengalaman 12 tahun khusus mendampingi jemaah wanita dan keluarga. Magister Ilmu Agama Islam dengan spesialisasi fiqih ibadah perempuan. Fasih bahasa Arab dan Inggris.',
+   true, now())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- 17. PACKAGES — 5 paket umroh lengkap
+-- =============================================================
+
+INSERT INTO packages (id, title, slug, description, image_url, duration_days, package_type, category_id, hotel_makkah_id, hotel_madinah_id, airline_id, airport_id, minimum_dp, dp_deadline_days, full_deadline_days, is_active, created_at)
+VALUES
+  -- Paket 1: Umroh Reguler 9 Hari
+  ('pkg_reguler',
+   'Umroh Reguler 9 Hari',
+   'umroh-reguler-9-hari',
+   'Paket umroh standar terjangkau dengan fasilitas lengkap dan bimbingan ustadz berpengalaman. Cocok untuk jemaah yang ingin beribadah khusyuk dengan anggaran efisien. Hotel bintang 4 berjarak dekat dari kedua masjid suci, transportasi AC eksklusif, dan visa terjamin.',
+   'https://images.unsplash.com/photo-1564769662533-4f00a87b4056?w=800&h=500&fit=crop',
+   9, 'reguler', 'cat_reguler', 'htl_novotel_mk', 'htl_rawda', 'arl_ga', 'apt_cgk',
+   5000000, 60, 45, true, now()),
+
+  -- Paket 2: Umroh Plus 12 Hari
+  ('pkg_plus',
+   'Umroh Plus 12 Hari',
+   'umroh-plus-12-hari',
+   'Paket umroh premium dengan hotel bintang 5 lebih dekat ke Masjidil Haram dan Masjid Nabawi. Durasi 12 hari memberikan waktu ibadah lebih leluasa. Termasuk ziarah lengkap, makan 3 kali sehari, dan muthawif profesional berdedikasi.',
+   'https://images.unsplash.com/photo-1537031931935-7f2eb41fec9d?w=800&h=500&fit=crop',
+   12, 'plus', 'cat_plus', 'htl_hilton_mk', 'htl_dartaqwa', 'arl_ga', 'apt_cgk',
+   7500000, 60, 45, true, now()),
+
+  -- Paket 3: Umroh VIP 12 Hari
+  ('pkg_vip',
+   'Umroh VIP 12 Hari',
+   'umroh-vip-12-hari',
+   'Pengalaman umroh paling eksklusif dengan hotel bintang 5 kelas dunia — Swissotel Al Maqam dan Mövenpick Madinah. Layanan concierge pribadi, akses lounge bandara, makan di restoran premium, dan fasilitas spa. Untuk jemaah yang menginginkan kenyamanan tanpa kompromi.',
+   'https://images.unsplash.com/photo-1596394723269-b2cbca4e6e33?w=800&h=500&fit=crop',
+   12, 'vip', 'cat_vip', 'htl_swissotel', 'htl_movenpick', 'arl_ga', 'apt_cgk',
+   10000000, 90, 60, true, now()),
+
+  -- Paket 4: Umroh Ramadhan 15 Hari
+  ('pkg_ramadhan',
+   'Umroh Ramadhan 15 Hari',
+   'umroh-ramadhan-15-hari',
+   'Rasakan keistimewaan Ramadhan di Tanah Suci selama 15 hari. Shalat tarawih di Masjidil Haram, buka puasa berjamaah, i''tikaf di masjid, dan malam Lailatul Qadar yang penuh berkah. Paket terpopuler kami — kuota terbatas setiap tahun.',
+   'https://images.unsplash.com/photo-1605773527852-c546a8584ea3?w=800&h=500&fit=crop',
+   15, 'ramadhan', 'cat_ramadhan', 'htl_pullman', 'htl_dartaqwa', 'arl_sv', 'apt_cgk',
+   10000000, 90, 60, true, now()),
+
+  -- Paket 5: Umroh Keluarga 12 Hari
+  ('pkg_keluarga',
+   'Umroh Keluarga 12 Hari',
+   'umroh-keluarga-12-hari',
+   'Paket umroh dirancang khusus untuk keluarga dengan anak-anak. Kamar family, program edukasi manasik untuk anak, pendampingan khusus anak-anak di tempat ibadah, dan kegiatan keluarga islami. Bekal spiritual terbaik untuk generasi penerus.',
+   'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&h=500&fit=crop',
+   12, 'keluarga', 'cat_keluarga', 'htl_hilton_mk', 'htl_dartaqwa', 'arl_ga', 'apt_cgk',
+   7500000, 60, 45, true, now())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- 18. PACKAGE DEPARTURES — Jadwal keberangkatan
+-- =============================================================
+
+INSERT INTO package_departures (id, package_id, departure_date, return_date, quota, remaining_quota, status, muthawif_id, created_at)
+VALUES
+  -- Jadwal Umroh Reguler 9 Hari
+  ('dep_reg_aug10',  'pkg_reguler', '2026-08-10', '2026-08-18', 45, 23, 'open',  'mtw_02', now()),
+  ('dep_reg_sep07',  'pkg_reguler', '2026-09-07', '2026-09-15', 45, 38, 'open',  'mtw_01', now()),
+  ('dep_reg_oct05',  'pkg_reguler', '2026-10-05', '2026-10-13', 45, 45, 'open',  'mtw_02', now()),
+  ('dep_reg_nov02',  'pkg_reguler', '2026-11-02', '2026-11-10', 45, 42, 'open',  'mtw_01', now()),
+  ('dep_reg_dec07',  'pkg_reguler', '2026-12-07', '2026-12-15', 45, 45, 'open',  'mtw_02', now()),
+
+  -- Jadwal Umroh Plus 12 Hari
+  ('dep_plus_aug24', 'pkg_plus',    '2026-08-24', '2026-09-04', 40, 12, 'open',  'mtw_01', now()),
+  ('dep_plus_sep21', 'pkg_plus',    '2026-09-21', '2026-10-02', 40, 27, 'open',  'mtw_03', now()),
+  ('dep_plus_oct19', 'pkg_plus',    '2026-10-19', '2026-10-30', 40, 40, 'open',  'mtw_01', now()),
+  ('dep_plus_nov16', 'pkg_plus',    '2026-11-16', '2026-11-27', 40, 35, 'open',  'mtw_03', now()),
+  ('dep_plus_dec21', 'pkg_plus',    '2026-12-21', '2027-01-01', 40, 40, 'open',  'mtw_01', now()),
+
+  -- Jadwal Umroh VIP 12 Hari
+  ('dep_vip_aug24',  'pkg_vip',     '2026-08-24', '2026-09-04', 25,  5, 'open',  'mtw_01', now()),
+  ('dep_vip_oct19',  'pkg_vip',     '2026-10-19', '2026-10-30', 25, 18, 'open',  'mtw_01', now()),
+  ('dep_vip_dec21',  'pkg_vip',     '2026-12-21', '2027-01-01', 25, 25, 'open',  'mtw_01', now()),
+
+  -- Jadwal Umroh Ramadhan 15 Hari
+  ('dep_rmdn_feb15', 'pkg_ramadhan','2027-02-15', '2027-03-01', 50,  8, 'open',  'mtw_01', now()),
+  ('dep_rmdn_mar01', 'pkg_ramadhan','2027-03-01', '2027-03-15', 50, 22, 'open',  'mtw_03', now()),
+  ('dep_rmdn_mar10', 'pkg_ramadhan','2027-03-10', '2027-03-24', 50, 50, 'open',  'mtw_02', now()),
+
+  -- Jadwal Umroh Keluarga 12 Hari
+  ('dep_kel_sep07',  'pkg_keluarga','2026-09-07', '2026-09-18', 30, 20, 'open',  'mtw_03', now()),
+  ('dep_kel_nov02',  'pkg_keluarga','2026-11-02', '2026-11-13', 30, 28, 'open',  'mtw_03', now()),
+  ('dep_kel_dec21',  'pkg_keluarga','2026-12-21', '2027-01-01', 30, 30, 'open',  'mtw_03', now())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- 19. DEPARTURE PRICES — Harga per tipe kamar
+-- =============================================================
+
+INSERT INTO departure_prices (id, departure_id, room_type, price, created_at)
+VALUES
+  -- ─── Umroh Reguler 9 Hari ────────────────────────────────
+  -- Keberangkatan 10 Agustus 2026
+  ('dp_reg_aug10_quad',   'dep_reg_aug10',  'quadruple', 27500000, now()),
+  ('dp_reg_aug10_triple', 'dep_reg_aug10',  'triple',    31000000, now()),
+  ('dp_reg_aug10_double', 'dep_reg_aug10',  'double',    37500000, now()),
+  ('dp_reg_aug10_single', 'dep_reg_aug10',  'single',    54000000, now()),
+  -- Keberangkatan 7 September 2026
+  ('dp_reg_sep07_quad',   'dep_reg_sep07',  'quadruple', 27500000, now()),
+  ('dp_reg_sep07_triple', 'dep_reg_sep07',  'triple',    31000000, now()),
+  ('dp_reg_sep07_double', 'dep_reg_sep07',  'double',    37500000, now()),
+  ('dp_reg_sep07_single', 'dep_reg_sep07',  'single',    54000000, now()),
+  -- Keberangkatan 5 Oktober 2026
+  ('dp_reg_oct05_quad',   'dep_reg_oct05',  'quadruple', 28000000, now()),
+  ('dp_reg_oct05_triple', 'dep_reg_oct05',  'triple',    31500000, now()),
+  ('dp_reg_oct05_double', 'dep_reg_oct05',  'double',    38000000, now()),
+  ('dp_reg_oct05_single', 'dep_reg_oct05',  'single',    55000000, now()),
+  -- Keberangkatan 2 November 2026
+  ('dp_reg_nov02_quad',   'dep_reg_nov02',  'quadruple', 28000000, now()),
+  ('dp_reg_nov02_triple', 'dep_reg_nov02',  'triple',    31500000, now()),
+  ('dp_reg_nov02_double', 'dep_reg_nov02',  'double',    38000000, now()),
+  ('dp_reg_nov02_single', 'dep_reg_nov02',  'single',    55000000, now()),
+  -- Keberangkatan 7 Desember 2026
+  ('dp_reg_dec07_quad',   'dep_reg_dec07',  'quadruple', 29000000, now()),
+  ('dp_reg_dec07_triple', 'dep_reg_dec07',  'triple',    32500000, now()),
+  ('dp_reg_dec07_double', 'dep_reg_dec07',  'double',    39000000, now()),
+  ('dp_reg_dec07_single', 'dep_reg_dec07',  'single',    56000000, now()),
+
+  -- ─── Umroh Plus 12 Hari ──────────────────────────────────
+  -- Keberangkatan 24 Agustus 2026
+  ('dp_plus_aug24_quad',   'dep_plus_aug24', 'quadruple', 34500000, now()),
+  ('dp_plus_aug24_triple', 'dep_plus_aug24', 'triple',    39000000, now()),
+  ('dp_plus_aug24_double', 'dep_plus_aug24', 'double',    47000000, now()),
+  ('dp_plus_aug24_single', 'dep_plus_aug24', 'single',    67000000, now()),
+  -- Keberangkatan 21 September 2026
+  ('dp_plus_sep21_quad',   'dep_plus_sep21', 'quadruple', 34500000, now()),
+  ('dp_plus_sep21_triple', 'dep_plus_sep21', 'triple',    39000000, now()),
+  ('dp_plus_sep21_double', 'dep_plus_sep21', 'double',    47000000, now()),
+  ('dp_plus_sep21_single', 'dep_plus_sep21', 'single',    67000000, now()),
+  -- Keberangkatan 19 Oktober 2026
+  ('dp_plus_oct19_quad',   'dep_plus_oct19', 'quadruple', 35000000, now()),
+  ('dp_plus_oct19_triple', 'dep_plus_oct19', 'triple',    39500000, now()),
+  ('dp_plus_oct19_double', 'dep_plus_oct19', 'double',    48000000, now()),
+  ('dp_plus_oct19_single', 'dep_plus_oct19', 'single',    68000000, now()),
+  -- Keberangkatan 16 November 2026
+  ('dp_plus_nov16_quad',   'dep_plus_nov16', 'quadruple', 35000000, now()),
+  ('dp_plus_nov16_triple', 'dep_plus_nov16', 'triple',    39500000, now()),
+  ('dp_plus_nov16_double', 'dep_plus_nov16', 'double',    48000000, now()),
+  ('dp_plus_nov16_single', 'dep_plus_nov16', 'single',    68000000, now()),
+  -- Keberangkatan 21 Desember 2026
+  ('dp_plus_dec21_quad',   'dep_plus_dec21', 'quadruple', 36000000, now()),
+  ('dp_plus_dec21_triple', 'dep_plus_dec21', 'triple',    40500000, now()),
+  ('dp_plus_dec21_double', 'dep_plus_dec21', 'double',    49000000, now()),
+  ('dp_plus_dec21_single', 'dep_plus_dec21', 'single',    70000000, now()),
+
+  -- ─── Umroh VIP 12 Hari ───────────────────────────────────
+  -- Keberangkatan 24 Agustus 2026
+  ('dp_vip_aug24_quad',   'dep_vip_aug24',  'quadruple', 44000000, now()),
+  ('dp_vip_aug24_triple', 'dep_vip_aug24',  'triple',    51000000, now()),
+  ('dp_vip_aug24_double', 'dep_vip_aug24',  'double',    61000000, now()),
+  ('dp_vip_aug24_single', 'dep_vip_aug24',  'single',    84000000, now()),
+  -- Keberangkatan 19 Oktober 2026
+  ('dp_vip_oct19_quad',   'dep_vip_oct19',  'quadruple', 45000000, now()),
+  ('dp_vip_oct19_triple', 'dep_vip_oct19',  'triple',    52000000, now()),
+  ('dp_vip_oct19_double', 'dep_vip_oct19',  'double',    62000000, now()),
+  ('dp_vip_oct19_single', 'dep_vip_oct19',  'single',    85000000, now()),
+  -- Keberangkatan 21 Desember 2026
+  ('dp_vip_dec21_quad',   'dep_vip_dec21',  'quadruple', 46000000, now()),
+  ('dp_vip_dec21_triple', 'dep_vip_dec21',  'triple',    53000000, now()),
+  ('dp_vip_dec21_double', 'dep_vip_dec21',  'double',    63000000, now()),
+  ('dp_vip_dec21_single', 'dep_vip_dec21',  'single',    87000000, now()),
+
+  -- ─── Umroh Ramadhan 15 Hari ──────────────────────────────
+  -- Keberangkatan 15 Februari 2027
+  ('dp_rmdn_feb15_quad',   'dep_rmdn_feb15','quadruple', 44000000, now()),
+  ('dp_rmdn_feb15_triple', 'dep_rmdn_feb15','triple',    51000000, now()),
+  ('dp_rmdn_feb15_double', 'dep_rmdn_feb15','double',    60000000, now()),
+  ('dp_rmdn_feb15_single', 'dep_rmdn_feb15','single',    82000000, now()),
+  -- Keberangkatan 1 Maret 2027
+  ('dp_rmdn_mar01_quad',   'dep_rmdn_mar01','quadruple', 45000000, now()),
+  ('dp_rmdn_mar01_triple', 'dep_rmdn_mar01','triple',    52000000, now()),
+  ('dp_rmdn_mar01_double', 'dep_rmdn_mar01','double',    62000000, now()),
+  ('dp_rmdn_mar01_single', 'dep_rmdn_mar01','single',    85000000, now()),
+  -- Keberangkatan 10 Maret 2027
+  ('dp_rmdn_mar10_quad',   'dep_rmdn_mar10','quadruple', 48000000, now()),
+  ('dp_rmdn_mar10_triple', 'dep_rmdn_mar10','triple',    55000000, now()),
+  ('dp_rmdn_mar10_double', 'dep_rmdn_mar10','double',    65000000, now()),
+  ('dp_rmdn_mar10_single', 'dep_rmdn_mar10','single',    90000000, now()),
+
+  -- ─── Umroh Keluarga 12 Hari ──────────────────────────────
+  -- Keberangkatan 7 September 2026
+  ('dp_kel_sep07_quad',   'dep_kel_sep07',  'quadruple', 33000000, now()),
+  ('dp_kel_sep07_triple', 'dep_kel_sep07',  'triple',    37500000, now()),
+  ('dp_kel_sep07_double', 'dep_kel_sep07',  'double',    45000000, now()),
+  ('dp_kel_sep07_single', 'dep_kel_sep07',  'single',    64000000, now()),
+  -- Keberangkatan 2 November 2026
+  ('dp_kel_nov02_quad',   'dep_kel_nov02',  'quadruple', 33000000, now()),
+  ('dp_kel_nov02_triple', 'dep_kel_nov02',  'triple',    37500000, now()),
+  ('dp_kel_nov02_double', 'dep_kel_nov02',  'double',    45000000, now()),
+  ('dp_kel_nov02_single', 'dep_kel_nov02',  'single',    64000000, now()),
+  -- Keberangkatan 21 Desember 2026
+  ('dp_kel_dec21_quad',   'dep_kel_dec21',  'quadruple', 34000000, now()),
+  ('dp_kel_dec21_triple', 'dep_kel_dec21',  'triple',    38500000, now()),
+  ('dp_kel_dec21_double', 'dep_kel_dec21',  'double',    46000000, now()),
+  ('dp_kel_dec21_single', 'dep_kel_dec21',  'single',    66000000, now())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- 20. PACKAGE COMMISSIONS — Komisi agen per paket
+-- =============================================================
+
+INSERT INTO package_commissions (id, package_id, label, commission_amount, created_at)
+VALUES
+  ('pcm_reg_1',  'pkg_reguler',  'Komisi Agen Level 1',  750000,  now()),
+  ('pcm_reg_2',  'pkg_reguler',  'Komisi Agen Level 2',  400000,  now()),
+  ('pcm_plus_1', 'pkg_plus',     'Komisi Agen Level 1',  1200000, now()),
+  ('pcm_plus_2', 'pkg_plus',     'Komisi Agen Level 2',  600000,  now()),
+  ('pcm_vip_1',  'pkg_vip',      'Komisi Agen Level 1',  2000000, now()),
+  ('pcm_vip_2',  'pkg_vip',      'Komisi Agen Level 2',  1000000, now()),
+  ('pcm_rmdn_1', 'pkg_ramadhan', 'Komisi Agen Level 1',  1800000, now()),
+  ('pcm_rmdn_2', 'pkg_ramadhan', 'Komisi Agen Level 2',  900000,  now()),
+  ('pcm_kel_1',  'pkg_keluarga', 'Komisi Agen Level 1',  1000000, now()),
+  ('pcm_kel_2',  'pkg_keluarga', 'Komisi Agen Level 2',  500000,  now())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
 -- VERIFIKASI — Hitung total data yang berhasil di-insert
 -- =============================================================
 
 SELECT
   'currencies'         AS tabel, COUNT(*) AS total FROM currencies
 UNION ALL SELECT 'package_categories',  COUNT(*) FROM package_categories
+UNION ALL SELECT 'hotels',              COUNT(*) FROM hotels
+UNION ALL SELECT 'airlines',            COUNT(*) FROM airlines
+UNION ALL SELECT 'airports',            COUNT(*) FROM airports
+UNION ALL SELECT 'muthawifs',           COUNT(*) FROM muthawifs
 UNION ALL SELECT 'branches',            COUNT(*) FROM branches
+UNION ALL SELECT 'packages',            COUNT(*) FROM packages
+UNION ALL SELECT 'package_departures',  COUNT(*) FROM package_departures
+UNION ALL SELECT 'departure_prices',    COUNT(*) FROM departure_prices
+UNION ALL SELECT 'package_commissions', COUNT(*) FROM package_commissions
 UNION ALL SELECT 'site_settings',       COUNT(*) FROM site_settings
 UNION ALL SELECT 'services',            COUNT(*) FROM services
 UNION ALL SELECT 'advantages',          COUNT(*) FROM advantages
