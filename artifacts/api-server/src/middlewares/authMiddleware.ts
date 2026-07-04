@@ -1,14 +1,6 @@
-import * as oidc from "openid-client";
 import { type Request, type Response, type NextFunction } from "express";
 import type { AuthUser } from "@workspace/api-zod";
-import {
-  clearSession,
-  getOidcConfig,
-  getSessionId,
-  getSession,
-  updateSession,
-  type SessionData,
-} from "../lib/auth";
+import { isAdminEmail } from "../lib/adminAllowlist";
 
 declare global {
   namespace Express {
@@ -16,7 +8,6 @@ declare global {
 
     interface Request {
       isAuthenticated(): this is AuthedRequest;
-
       user?: User | undefined;
     }
 
@@ -26,69 +17,83 @@ declare global {
   }
 }
 
-async function refreshIfExpired(
-  sid: string,
-  session: SessionData,
-): Promise<SessionData | null> {
-  const now = Math.floor(Date.now() / 1000);
-  if (!session.expires_at || now <= session.expires_at) return session;
+const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
+const SUPABASE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
+  "";
 
-  if (!session.refresh_token) return null;
+const tokenCache = new Map<string, { user: AuthUser; expiresAt: number }>();
+const CACHE_TTL_MS = 60_000;
+
+function getTokenFromRequest(req: Request): string | undefined {
+  const authHeader = req.headers["authorization"];
+  if (authHeader?.startsWith("Bearer ")) {
+    const t = authHeader.slice(7).trim();
+    if (t && t !== "local-dev-key") return t;
+  }
+  return undefined;
+}
+
+async function resolveUser(token: string): Promise<AuthUser | null> {
+  const cached = tokenCache.get(token);
+  if (cached && Date.now() < cached.expiresAt) return cached.user;
+
+  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
 
   try {
-    const config = await getOidcConfig();
-    const tokens = await oidc.refreshTokenGrant(
-      config,
-      session.refresh_token,
-    );
-    session.access_token = tokens.access_token;
-    session.refresh_token = tokens.refresh_token ?? session.refresh_token;
-    session.expires_at = tokens.expiresIn()
-      ? now + tokens.expiresIn()!
-      : session.expires_at;
-    await updateSession(sid, session);
-    return session;
-  } catch (err) {
-    // Log so expired-session failures are diagnosable
-    console.error("[auth] OIDC token refresh failed:", err instanceof Error ? err.message : err);
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_KEY,
+      },
+    });
+
+    if (!res.ok) return null;
+
+    const su = (await res.json()) as {
+      id: string;
+      email?: string;
+      user_metadata?: Record<string, unknown>;
+    };
+
+    if (!su?.id) return null;
+
+    const user: AuthUser = {
+      id: su.id,
+      email: su.email ?? null,
+      firstName:
+        (su.user_metadata?.["first_name"] as string | undefined) ?? null,
+      lastName:
+        (su.user_metadata?.["last_name"] as string | undefined) ?? null,
+      profileImageUrl:
+        (su.user_metadata?.["avatar_url"] as string | undefined) ??
+        (su.user_metadata?.["picture"] as string | undefined) ??
+        null,
+      role: isAdminEmail(su.email) ? "admin" : "user",
+    };
+
+    tokenCache.set(token, { user, expiresAt: Date.now() + CACHE_TTL_MS });
+    return user;
+  } catch {
     return null;
   }
 }
 
 export async function authMiddleware(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction,
 ) {
   req.isAuthenticated = function (this: Request) {
     return this.user != null;
   } as Request["isAuthenticated"];
 
-  try {
-    const sid = getSessionId(req);
-    if (!sid) {
-      next();
-      return;
-    }
-
-    const session = await getSession(sid);
-    if (!session?.user?.id) {
-      await clearSession(res, sid);
-      next();
-      return;
-    }
-
-    const refreshed = await refreshIfExpired(sid, session);
-    if (!refreshed) {
-      await clearSession(res, sid);
-      next();
-      return;
-    }
-
-    req.user = refreshed.user;
-    next();
-  } catch (err) {
-    console.error("[auth] middleware error:", err instanceof Error ? err.message : err);
-    next();
+  const token = getTokenFromRequest(req);
+  if (token) {
+    const user = await resolveUser(token);
+    if (user) req.user = user;
   }
+
+  next();
 }
