@@ -1,23 +1,31 @@
 import { Router, Request, Response } from "express";
 import { pool } from "@workspace/db";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
 // ── Allowed table whitelist ──────────────────────────────────────────────────
-
-const ALLOWED_TABLES = new Set([
+// Tables accessible via GET (public read) — safe for unauthenticated access.
+const PUBLIC_READ_TABLES = new Set([
   "packages", "package_categories", "package_departures", "departure_prices",
   "package_hotels", "hotels", "airlines", "airports", "muthawifs", "branches",
-  "profiles", "bookings", "booking_rooms", "booking_pilgrims", "booking_payments",
   "testimonials", "faqs", "blog_posts", "gallery", "site_settings", "tenant_sites",
-  "agents", "wishlists", "notifications", "pilgrim_documents", "itineraries",
-  "currencies", "departure_galleries", "audit_logs", "error_logs", "request_log",
-  "manasik_materials", "services", "guide_steps", "advantages", "navigation_items",
-  "floating_buttons", "pages", "package_reviews", "contracts", "crm_contacts",
-  "package_commissions", "package_inclusions", "sessions", "users",
-  "tenant_site_packages", "testimonials", "pilgrim_testimonials", "slug_redirects",
+  "itineraries", "currencies", "departure_galleries", "manasik_materials",
+  "services", "guide_steps", "advantages", "navigation_items", "floating_buttons",
+  "pages", "package_reviews", "package_commissions", "package_inclusions",
+  "tenant_site_packages", "pilgrim_testimonials", "slug_redirects",
+]);
+
+// Tables that require the user to be authenticated for any access.
+const AUTH_TABLES = new Set([
+  "profiles", "bookings", "booking_rooms", "booking_pilgrims", "booking_payments",
+  "agents", "wishlists", "notifications", "pilgrim_documents", "contracts",
+  "crm_contacts", "audit_logs", "error_logs", "request_log",
   "template_upgrade_orders",
 ]);
+
+// All tables allowed through the proxy (union of both sets).
+const ALLOWED_TABLES = new Set([...PUBLIC_READ_TABLES, ...AUTH_TABLES]);
 
 // ── FK maps for nested selects ───────────────────────────────────────────────
 
@@ -290,6 +298,11 @@ router.get("/:table", async (req: Request, res: Response) => {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
   }
 
+  // Tables in AUTH_TABLES require authentication even for reads.
+  if (AUTH_TABLES.has(table) && !req.isAuthenticated()) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+
   try {
     const q = req.query as Record<string, string>;
     const values: unknown[] = [];
@@ -335,7 +348,7 @@ router.get("/:table", async (req: Request, res: Response) => {
 
 // ── POST (INSERT / UPSERT) ───────────────────────────────────────────────────
 
-router.post("/:table", async (req: Request, res: Response) => {
+router.post("/:table", requireAuth, async (req: Request, res: Response) => {
   const { table } = req.params as Record<string, string>;
   if (!ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
@@ -399,7 +412,7 @@ router.post("/:table", async (req: Request, res: Response) => {
 
 // ── PATCH (UPDATE) ───────────────────────────────────────────────────────────
 
-router.patch("/:table", async (req: Request, res: Response) => {
+router.patch("/:table", requireAuth, async (req: Request, res: Response) => {
   const { table } = req.params as Record<string, string>;
   if (!ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
@@ -439,7 +452,7 @@ router.patch("/:table", async (req: Request, res: Response) => {
 
 // ── DELETE ───────────────────────────────────────────────────────────────────
 
-router.delete("/:table", async (req: Request, res: Response) => {
+router.delete("/:table", requireAuth, async (req: Request, res: Response) => {
   const { table } = req.params as Record<string, string>;
   if (!ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
@@ -461,7 +474,7 @@ router.delete("/:table", async (req: Request, res: Response) => {
 
 // ── RPC ──────────────────────────────────────────────────────────────────────
 
-router.post("/rpc/:funcname", async (req: Request, res: Response) => {
+router.post("/rpc/:funcname", requireAuth, async (req: Request, res: Response) => {
   const { funcname } = req.params;
   try {
     switch (funcname) {

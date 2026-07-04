@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
@@ -36,7 +37,7 @@ function getWildcardPath(req: Request): string {
 
 // Express 5 / path-to-regexp v8: wildcards use *name (no colon)
 // POST /storage/v1/object/:bucket/*filePath
-router.post("/object/:bucket/*filePath", (req: Request, res: Response) => {
+router.post("/object/:bucket/*filePath", requireAuth, (req: Request, res: Response) => {
   const { bucket } = req.params as Record<string, string>;
   const filePath = getWildcardPath(req);
   if (!filePath) return res.status(400).json({ error: "Missing file path" });
@@ -66,7 +67,7 @@ router.post("/object/:bucket/*filePath", (req: Request, res: Response) => {
 });
 
 // PUT /storage/v1/object/:bucket/*filePath
-router.put("/object/:bucket/*filePath", (req: Request, res: Response) => {
+router.put("/object/:bucket/*filePath", requireAuth, (req: Request, res: Response) => {
   const { bucket } = req.params as Record<string, string>;
   const filePath = getWildcardPath(req);
   if (!filePath) return res.status(400).json({ error: "Missing file path" });
@@ -113,7 +114,7 @@ router.get("/object/public/:bucket/*filePath", (req: Request, res: Response) => 
 });
 
 // DELETE /storage/v1/object/:bucket/*filePath
-router.delete("/object/:bucket/*filePath", (req: Request, res: Response) => {
+router.delete("/object/:bucket/*filePath", requireAuth, (req: Request, res: Response) => {
   const { bucket } = req.params as Record<string, string>;
   const filePath = getWildcardPath(req);
 
