@@ -23,11 +23,11 @@ export default function AdminLoyalty() {
       const [bal, hist, prof] = await Promise.all([
         apiFetch<any[]>("/api/admin/loyalty/balances"),
         apiFetch<any[]>("/api/admin/loyalty/points"),
-        apiFetch<any[]>("/api/admin/users"),
+        apiFetch<{ data: any[]; total: number }>("/api/admin/users"),
       ]);
       setBalances(bal || []);
       setHistory(hist || []);
-      setUsers(prof || []);
+      setUsers(prof?.data || []);
     } catch (e: any) {
       toast.error("Gagal memuat data");
     }

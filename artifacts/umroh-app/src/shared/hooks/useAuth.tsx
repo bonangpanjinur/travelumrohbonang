@@ -30,7 +30,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   isAdmin: boolean;
-  role: string | null;
+  role: AppRole | null;
   refreshRole: () => Promise<void>;
   login: () => void;
   signOut: () => Promise<void>;

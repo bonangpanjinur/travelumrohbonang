@@ -17,9 +17,13 @@ type Tokens = {
   sidebarPrimary?: string;
 };
 
-/** Convert a 6-digit hex color to an HSL string like "220 80% 45%" */
+/** Convert a 3- or 6-digit hex color to an HSL string like "220 80% 45%" */
 export function hexToHsl(hex: string): string | null {
-  const clean = hex.replace("#", "");
+  let clean = hex.replace("#", "").trim();
+  // Expand 3-char shorthand (#abc → #aabbcc)
+  if (/^[0-9a-fA-F]{3}$/.test(clean)) {
+    clean = clean.split("").map((c) => c + c).join("");
+  }
   if (!/^[0-9a-fA-F]{6}$/.test(clean)) return null;
   const r = parseInt(clean.slice(0, 2), 16) / 255;
   const g = parseInt(clean.slice(2, 4), 16) / 255;

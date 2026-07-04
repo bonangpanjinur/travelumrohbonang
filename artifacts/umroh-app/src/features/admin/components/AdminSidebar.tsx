@@ -94,7 +94,7 @@ const AdminSidebar = ({
               const isCollapsed = collapsedGroups[group.label] ?? false;
               const filteredItems = group.items.filter(item => {
                 if (!item.roles) return true;
-                return role && item.roles.includes(role.toLowerCase());
+                return !!role && item.roles.includes(role);
               });
               if (filteredItems.length === 0) return null;
 

@@ -26,7 +26,7 @@ interface BranchOption { id: string; name: string; }
 
 const AdminUsers = () => {
   const { role } = useAuth();
-  const isSuperAdmin = role === "super_admin" || role === "superadmin";
+  const isSuperAdmin = role === "super_admin";
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
