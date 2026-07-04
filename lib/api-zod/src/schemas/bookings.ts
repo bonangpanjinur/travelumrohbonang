@@ -31,6 +31,7 @@ export const BookingWithDetailsSchema = BookingSchema.extend({
   packageTitle: z.string().nullable(),
   packageSlug: z.string().nullable(),
   departureDate: z.string().nullable(),
+  returnDate: z.string().nullable().optional(),
 });
 
 export const BookingListResponse = z.object({
@@ -66,6 +67,9 @@ export const BookingPilgrimSchema = z.object({
   email: z.string().nullable(),
   gender: z.string().nullable(),
   nik: z.string().nullable(),
+  birthDate: z.string().nullable().optional(),
+  passportNumber: z.string().nullable().optional(),
+  passportExpiry: z.string().nullable().optional(),
 });
 
 export const CreateBookingPilgrimItem = z.object({

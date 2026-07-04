@@ -1,8 +1,7 @@
 import { Router, Request, Response } from "express";
-import pg from "pg";
+import { pool } from "@workspace/db";
 
 const router = Router();
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
 // ── Allowed table whitelist ──────────────────────────────────────────────────
 

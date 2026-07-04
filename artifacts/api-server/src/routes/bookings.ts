@@ -83,6 +83,73 @@ router.get("/", async (req, res) => {
   }
 });
 
+// --- Refunds (must be before /:id to avoid /:id swallowing "refunds" as an id) ---
+
+router.get("/refunds", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const data = await db
+      .select({
+        id: refundRequests.id,
+        userId: refundRequests.userId,
+        bookingId: refundRequests.bookingId,
+        reason: refundRequests.reason,
+        amount: refundRequests.amount,
+        bankName: refundRequests.bankName,
+        bankAccount: refundRequests.bankAccount,
+        accountHolder: refundRequests.accountHolder,
+        status: refundRequests.status,
+        adminNotes: refundRequests.adminNotes,
+        createdAt: refundRequests.createdAt,
+        bookingCode: bookings.bookingCode,
+      })
+      .from(refundRequests)
+      .leftJoin(bookings, eq(refundRequests.bookingId, bookings.id))
+      .where(eq(refundRequests.userId, userId))
+      .orderBy(desc(refundRequests.createdAt));
+
+    res.json(data);
+  } catch {
+    res.status(500).json({ error: "Failed to fetch refunds" });
+  }
+});
+
+router.post("/refunds", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const {
+      bookingId,
+      reason,
+      amount,
+      bankName,
+      bankAccount,
+      accountHolder,
+    } = req.body;
+
+    const [created] = await db
+      .insert(refundRequests)
+      .values({
+        id: crypto.randomUUID(),
+        userId,
+        bookingId,
+        reason,
+        amount,
+        bankName,
+        bankAccount,
+        accountHolder,
+        status: "pending",
+        createdAt: new Date(),
+      })
+      .returning();
+
+    res.status(201).json(created);
+  } catch {
+    res.status(500).json({ error: "Failed to create refund request" });
+  }
+});
+
+// --- Single booking (after static sub-routes) ---
+
 router.get("/:id", async (req, res) => {
   try {
     if (!req.isAuthenticated()) {
@@ -291,13 +358,7 @@ router.get("/:id/payments", async (req, res) => {
     const id = req.params.id;
     const userId = req.user!.id;
 
-    const data = await db
-      .select()
-      .from(payments)
-      .where(and(eq(payments.bookingId, id)))
-      .orderBy(desc(payments.createdAt));
-
-    // Verify ownership of the booking
+    // Verify ownership before fetching any data
     const [booking] = await db
       .select({ userId: bookings.userId })
       .from(bookings)
@@ -308,6 +369,12 @@ router.get("/:id/payments", async (req, res) => {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
+
+    const data = await db
+      .select()
+      .from(payments)
+      .where(and(eq(payments.bookingId, id)))
+      .orderBy(desc(payments.createdAt));
 
     res.json(data);
   } catch {
@@ -374,71 +441,6 @@ router.post("/payments/proof-access-log", async (req, res) => {
     res.status(204).end();
   } catch {
     res.status(500).json({ error: "Failed to log access" });
-  }
-});
-
-// --- Refunds ---
-
-router.get("/refunds", async (req, res) => {
-  try {
-    const userId = req.user!.id;
-    const data = await db
-      .select({
-        id: refundRequests.id,
-        userId: refundRequests.userId,
-        bookingId: refundRequests.bookingId,
-        reason: refundRequests.reason,
-        amount: refundRequests.amount,
-        bankName: refundRequests.bankName,
-        bankAccount: refundRequests.bankAccount,
-        accountHolder: refundRequests.accountHolder,
-        status: refundRequests.status,
-        adminNotes: refundRequests.adminNotes,
-        createdAt: refundRequests.createdAt,
-        bookingCode: bookings.bookingCode,
-      })
-      .from(refundRequests)
-      .leftJoin(bookings, eq(refundRequests.bookingId, bookings.id))
-      .where(eq(refundRequests.userId, userId))
-      .orderBy(desc(refundRequests.createdAt));
-
-    res.json(data);
-  } catch {
-    res.status(500).json({ error: "Failed to fetch refunds" });
-  }
-});
-
-router.post("/refunds", async (req, res) => {
-  try {
-    const userId = req.user!.id;
-    const {
-      bookingId,
-      reason,
-      amount,
-      bankName,
-      bankAccount,
-      accountHolder,
-    } = req.body;
-
-    const [created] = await db
-      .insert(refundRequests)
-      .values({
-        id: crypto.randomUUID(),
-        userId,
-        bookingId,
-        reason,
-        amount,
-        bankName,
-        bankAccount,
-        accountHolder,
-        status: "pending",
-        createdAt: new Date(),
-      })
-      .returning();
-
-    res.status(201).json(created);
-  } catch {
-    res.status(500).json({ error: "Failed to create refund request" });
   }
 });
 

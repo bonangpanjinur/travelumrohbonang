@@ -48,7 +48,9 @@ async function refreshIfExpired(
       : session.expires_at;
     await updateSession(sid, session);
     return session;
-  } catch {
+  } catch (err) {
+    // Log so expired-session failures are diagnosable
+    console.error("[auth] OIDC token refresh failed:", err instanceof Error ? err.message : err);
     return null;
   }
 }
