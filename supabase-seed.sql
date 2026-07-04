@@ -277,6 +277,195 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================
+-- 14. TESTIMONIALS — Testimoni jemaah
+-- =============================================================
+
+INSERT INTO testimonials (id, name, location, package_name, photo_url, rating, content, travel_date, is_active, sort_order, created_at)
+VALUES
+  ('tml_01',
+   'Hj. Siti Rahayu',
+   'Jakarta Selatan',
+   'Umroh Plus 12 Hari',
+   'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop&crop=face',
+   5,
+   'Alhamdulillah, perjalanan umroh bersama UmrohPlus sangat berkesan. Hotel dekat Masjidil Haram, muthawif sabar dan berpengalaman, semua urusan dokumen dan visa lancar tanpa hambatan. Saya dan suami sangat puas dan insya Allah akan kembali lagi.',
+   'Maret 2024',
+   true, 1, now()),
+
+  ('tml_02',
+   'H. Ahmad Fauzi',
+   'Bandung',
+   'Umroh Reguler 9 Hari',
+   'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&crop=face',
+   5,
+   'Ini umroh pertama saya dan keluarga. Pelayanan tim UmrohPlus luar biasa dari awal hingga akhir. Manasik sebelum berangkat sangat membantu kami yang baru pertama kali. Akomodasi nyaman, makanan enak, transportasi tepat waktu. Terima kasih UmrohPlus!',
+   'Januari 2024',
+   true, 2, now()),
+
+  ('tml_03',
+   'Dewi Lestari',
+   'Surabaya',
+   'Umroh Ramadhan 15 Hari',
+   'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=200&fit=crop&crop=face',
+   5,
+   'Subhanallah, umroh Ramadhan bersama UmrohPlus adalah pengalaman spiritual yang tak terlupakan. I''tikaf di 10 hari terakhir Ramadhan, buka puasa berjamaah di Masjidil Haram, tarawih sepanjang malam. Tim UmrohPlus sangat responsif dan perhatian kepada seluruh jemaah.',
+   'April 2024',
+   true, 3, now()),
+
+  ('tml_04',
+   'H. Bambang Santoso',
+   'Semarang',
+   'Umroh VIP 12 Hari',
+   'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face',
+   5,
+   'Paket VIP UmrohPlus benar-benar premium. Hotel hanya 50 meter dari Masjidil Haram, kamar luas dan nyaman untuk kami sekeluarga. Guide sangat profesional, hafal seluruh doa dan bacaan. Tidak ada kata penyesalan memilih UmrohPlus, harga sesuai kualitas.',
+   'Februari 2024',
+   true, 4, now()),
+
+  ('tml_05',
+   'Hj. Fatimah Zahra',
+   'Medan',
+   'Umroh Plus 12 Hari',
+   'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face',
+   5,
+   'Umroh kedua saya dan tetap pilih UmrohPlus. Pelayanan konsisten berkualitas tinggi. Yang paling saya suka adalah pendampingan muthawif yang sabar menjelaskan makna setiap ritual. Pulang dengan hati tenang dan penuh syukur. Sangat direkomendasikan!',
+   'November 2023',
+   true, 5, now()),
+
+  ('tml_06',
+   'Rizky Hidayat',
+   'Yogyakarta',
+   'Umroh Reguler 9 Hari',
+   'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face',
+   5,
+   'Saya berangkat bersama orang tua yang sudah lansia. Tim UmrohPlus sangat perhatian dan sabar mendampingi beliau. Tersedia kursi roda, dibantu saat tawaf dan sa''i, kamar di lantai rendah. Melihat orang tua saya khusyuk beribadah adalah kebahagiaan terbesar.',
+   'Oktober 2023',
+   true, 6, now()),
+
+  ('tml_07',
+   'Hj. Nur Ainun',
+   'Makassar',
+   'Umroh Keluarga 12 Hari',
+   'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=200&h=200&fit=crop&crop=face',
+   5,
+   'Kami berangkat berempat: saya, suami, dan dua anak remaja. UmrohPlus menyediakan program khusus anak muda yang membuat anak-anak antusias beribadah. Mereka pulang dengan semangat keislaman yang lebih baik. Investasi terbaik untuk keluarga kami.',
+   'Desember 2023',
+   true, 7, now()),
+
+  ('tml_08',
+   'H. Irwan Maulana',
+   'Palembang',
+   'Umroh Plus 12 Hari',
+   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face',
+   5,
+   'Proses pendaftaran mudah, dokumen diurus tim profesional, berangkat tepat waktu, pulang selamat. Itu standar minimum yang terpenuhi UmrohPlus. Di atas itu, mereka memberikan pengalaman spiritual yang mendalam. Ustadz pembimbing kami luar biasa ilmunya.',
+   'September 2023',
+   true, 8, now())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
+-- 15. GALLERY — Foto perjalanan umroh
+-- =============================================================
+
+INSERT INTO gallery (id, image_url, title, description, category, sort_order, is_active, created_at)
+VALUES
+  -- Kategori: Makkah
+  ('gal_01',
+   'https://images.unsplash.com/photo-1564769662533-4f00a87b4056?w=800&h=600&fit=crop',
+   'Masjidil Haram dari Udara',
+   'Pemandangan Masjidil Haram dan Ka''bah dari ketinggian, keindahan rumah Allah yang mengagumkan',
+   'makkah', 1, true, now()),
+
+  ('gal_02',
+   'https://images.unsplash.com/photo-1537031931935-7f2eb41fec9d?w=800&h=600&fit=crop',
+   'Tawaf di Ka''bah',
+   'Jamaah melaksanakan tawaf mengelilingi Ka''bah, ritual inti ibadah umroh yang penuh makna',
+   'makkah', 2, true, now()),
+
+  ('gal_03',
+   'https://images.unsplash.com/photo-1573483830994-8f07b6975cf0?w=800&h=600&fit=crop',
+   'Gerbang Masjidil Haram',
+   'Salah satu gerbang megah Masjidil Haram yang menyambut jutaan jemaah dari seluruh dunia',
+   'makkah', 3, true, now()),
+
+  ('gal_04',
+   'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&h=600&fit=crop',
+   'Bukit Shafa — Tempat Sa''i',
+   'Lokasi pelaksanaan sa''i antara Bukit Shafa dan Marwah, mengikuti jejak Siti Hajar',
+   'makkah', 4, true, now()),
+
+  -- Kategori: Madinah
+  ('gal_05',
+   'https://images.unsplash.com/photo-1596394723269-b2cbca4e6e33?w=800&h=600&fit=crop',
+   'Masjid Nabawi di Malam Hari',
+   'Keindahan Masjid Nabawi di Madinah saat malam hari, kubah hijau bersinar penuh keagungan',
+   'madinah', 5, true, now()),
+
+  ('gal_06',
+   'https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=800&h=600&fit=crop',
+   'Payung Raksasa Masjid Nabawi',
+   'Payung elektrik raksasa ikonik yang melindungi jemaah dari terik matahari di pelataran Masjid Nabawi',
+   'madinah', 6, true, now()),
+
+  ('gal_07',
+   'https://images.unsplash.com/photo-1605773527852-c546a8584ea3?w=800&h=600&fit=crop',
+   'Raudhah — Taman Surga',
+   'Area Raudhah di dalam Masjid Nabawi, tempat yang sangat mustajab untuk berdoa',
+   'madinah', 7, true, now()),
+
+  -- Kategori: Jamaah
+  ('gal_08',
+   'https://images.unsplash.com/photo-1565688528990-7c2f9a0ef1b8?w=800&h=600&fit=crop',
+   'Momen Kebersamaan Jamaah',
+   'Para jemaah UmrohPlus berfoto bersama di depan Masjidil Haram, momen tak terlupakan',
+   'jamaah', 8, true, now()),
+
+  ('gal_09',
+   'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?w=800&h=600&fit=crop',
+   'Doa Bersama Setelah Tawaf',
+   'Jemaah UmrohPlus berdoa bersama setelah melaksanakan tawaf, dipimpin muthawif berpengalaman',
+   'jamaah', 9, true, now()),
+
+  ('gal_10',
+   'https://images.unsplash.com/photo-1591604466107-ec97de577aff?w=800&h=600&fit=crop',
+   'Sesi Manasik Sebelum Berangkat',
+   'Peserta manasik UmrohPlus menerima bimbingan langsung dari ustadz sebelum keberangkatan',
+   'jamaah', 10, true, now()),
+
+  -- Kategori: Hotel
+  ('gal_11',
+   'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&h=600&fit=crop',
+   'Hotel Bintang 5 di Makkah',
+   'Akomodasi premium yang kami sediakan untuk jemaah paket VIP, hanya langkah kaki dari Masjidil Haram',
+   'hotel', 11, true, now()),
+
+  ('gal_12',
+   'https://images.unsplash.com/photo-1551882547-ff40c63fe2e2?w=800&h=600&fit=crop',
+   'Kamar Hotel Nyaman',
+   'Kamar hotel bintang 5 yang lapang dan nyaman untuk beristirahat setelah ibadah seharian',
+   'hotel', 12, true, now()),
+
+  -- Kategori: Perjalanan
+  ('gal_13',
+   'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&h=600&fit=crop',
+   'Perjalanan Menuju Tanah Suci',
+   'Armada penerbangan yang membawa jemaah UmrohPlus menuju Tanah Suci dengan aman dan nyaman',
+   'perjalanan', 13, true, now()),
+
+  ('gal_14',
+   'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&h=600&fit=crop',
+   'Bus Transportasi Eksklusif',
+   'Armada bus ber-AC eksklusif yang digunakan untuk mobilitas jemaah selama di Makkah dan Madinah',
+   'perjalanan', 14, true, now()),
+
+  ('gal_15',
+   'https://images.unsplash.com/photo-1532375810709-75b1da00537c?w=800&h=600&fit=crop',
+   'Matahari Terbit di Arafah',
+   'Keindahan panorama matahari terbit di padang Arafah, ketenangan yang tak bisa dilukiskan kata-kata',
+   'perjalanan', 15, true, now())
+ON CONFLICT (id) DO NOTHING;
+
+-- =============================================================
 -- VERIFIKASI — Hitung total data yang berhasil di-insert
 -- =============================================================
 
@@ -294,4 +483,6 @@ UNION ALL SELECT 'navigation_items',    COUNT(*) FROM navigation_items
 UNION ALL SELECT 'pages',               COUNT(*) FROM pages
 UNION ALL SELECT 'seo_overrides',       COUNT(*) FROM seo_overrides
 UNION ALL SELECT 'manasik_materials',   COUNT(*) FROM manasik_materials
+UNION ALL SELECT 'testimonials',        COUNT(*) FROM testimonials
+UNION ALL SELECT 'gallery',             COUNT(*) FROM gallery
 ORDER BY tabel;
