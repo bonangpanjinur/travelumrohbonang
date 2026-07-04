@@ -20,10 +20,14 @@ let oidcConfig: client.Configuration | null = null;
 
 export async function getOidcConfig(): Promise<client.Configuration> {
   if (!oidcConfig) {
-    oidcConfig = await client.discovery(
-      new URL(ISSUER_URL),
-      process.env.REPL_ID!,
-    );
+    const replId = process.env.REPL_ID;
+    if (!replId) {
+      throw new Error(
+        "REPL_ID environment variable is not set. " +
+          "Add REPL_ID to your deployment environment variables to enable Replit OIDC auth.",
+      );
+    }
+    oidcConfig = await client.discovery(new URL(ISSUER_URL), replId);
   }
   return oidcConfig;
 }

@@ -92,7 +92,13 @@ router.get("/auth/user", (req: Request, res: Response) => {
 });
 
 router.get("/login", async (req: Request, res: Response) => {
-  const config = await getOidcConfig();
+  let config: Awaited<ReturnType<typeof getOidcConfig>>;
+  try {
+    config = await getOidcConfig();
+  } catch (err) {
+    res.status(503).json({ error: "Authentication service unavailable. REPL_ID is not configured." });
+    return;
+  }
   const callbackUrl = `${getOrigin(req)}/api/callback`;
 
   const returnTo = getSafeReturnTo(req.query.returnTo);
@@ -123,7 +129,13 @@ router.get("/login", async (req: Request, res: Response) => {
 // Query params are not validated because the OIDC provider may include
 // parameters not expressed in the schema.
 router.get("/callback", async (req: Request, res: Response) => {
-  const config = await getOidcConfig();
+  let config: Awaited<ReturnType<typeof getOidcConfig>>;
+  try {
+    config = await getOidcConfig();
+  } catch {
+    res.redirect("/");
+    return;
+  }
   const callbackUrl = `${getOrigin(req)}/api/callback`;
 
   const codeVerifier = req.cookies?.code_verifier;
@@ -190,14 +202,22 @@ router.get("/callback", async (req: Request, res: Response) => {
 });
 
 router.get("/logout", async (req: Request, res: Response) => {
-  const config = await getOidcConfig();
   const origin = getOrigin(req);
-
   const sid = getSessionId(req);
   await clearSession(res, sid);
 
+  let config: Awaited<ReturnType<typeof getOidcConfig>>;
+  const replId = process.env.REPL_ID;
+  try {
+    config = await getOidcConfig();
+  } catch {
+    // REPL_ID not set — session already cleared, just redirect home
+    res.redirect(origin);
+    return;
+  }
+
   const endSessionUrl = oidc.buildEndSessionUrl(config, {
-    client_id: process.env.REPL_ID!,
+    client_id: replId!,
     post_logout_redirect_uri: origin,
   });
 
