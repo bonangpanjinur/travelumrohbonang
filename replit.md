@@ -2,14 +2,15 @@
 
 Aplikasi manajemen umroh lengkap — paket, booking, jemaah, pembayaran, dan CMS, dibangun di atas Supabase dan PostgreSQL.
 
-## Replit Setup Status (as of import)
+## Replit Setup Status
 
 - **Dependencies**: `pnpm install` completes cleanly ✅
-- **Workflows configured**:
+- **Workflows running**:
   - `Start application` → `PORT=5000 pnpm --filter @workspace/umroh-app dev` (frontend, port 5000)
   - `API Server` → `PORT=8080 pnpm --filter @workspace/api-server dev` (API, port 8080)
-- **Known issue**: ~20 TypeScript errors in `artifacts/api-server/src/routes/admin/` block a clean build (missing `@types/uuid`, TS7030 missing returns, Drizzle type mismatches). See Task #2 to fix these.
-- **To run the app**: Supabase credentials must be added first — see Environment Variables section below.
+- **Template system**: 3 variants (Classic, Modern, Luxury) + custom color picker in admin Settings → Template tab
+- **RBAC**: Full role hierarchy (super_admin → admin → branch_manager → staff → agent → buyer) enforced frontend + backend
+- **To run the app**: Supabase credentials already set in `.replit` userenv. `DATABASE_URL` auto-provided by Replit PostgreSQL.
 
 ## Run & Operate
 
@@ -86,6 +87,8 @@ Frontend dan API otomatis di-deploy bersama di satu domain:
 - **Supabase sebagai sumber auth**: API server memverifikasi JWT Supabase di setiap request (`requireAuth` middleware), bukan menyimpan session sendiri.
 - **Semua fitur premium dibuka**: Flag `premium: true` dihapus dari `adminMenuConfig.ts`; tidak ada route guard berbasis langganan.
 - **Drizzle over raw SQL**: Schema sebagai TypeScript, type-safe queries, mudah di-push ke Supabase Postgres.
+- **RBAC role lookup**: `/api/auth/user` dan `authMiddleware` membaca role aktual dari tabel `user_roles` (bukan hanya email allowlist). Role hierarchy: `super_admin > admin > branch_manager > staff > agent > buyer`. Role-assignment API dilindungi `requireSuperAdmin`.
+- **Dynamic theme**: `useActiveTemplate` membaca `site_settings` (key=`template`, category=`appearance`) dan menerapkan CSS variables ke `:root` secara real-time via Supabase channel. Custom hex colors dikonversi ke HSL dan override template preset.
 
 ## User Preferences
 

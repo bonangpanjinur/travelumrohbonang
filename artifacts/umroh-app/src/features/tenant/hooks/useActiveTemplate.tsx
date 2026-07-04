@@ -17,6 +17,43 @@ type Tokens = {
   sidebarPrimary?: string;
 };
 
+/** Convert a 6-digit hex color to an HSL string like "220 80% 45%" */
+export function hexToHsl(hex: string): string | null {
+  const clean = hex.replace("#", "");
+  if (!/^[0-9a-fA-F]{6}$/.test(clean)) return null;
+  const r = parseInt(clean.slice(0, 2), 16) / 255;
+  const g = parseInt(clean.slice(2, 4), 16) / 255;
+  const b = parseInt(clean.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+/** Convert HSL string "h s% l%" to hex */
+export function hslToHex(hsl: string): string {
+  const parts = hsl.trim().split(/\s+/);
+  const h = parseFloat(parts[0]) / 360;
+  const s = parseFloat(parts[1]) / 100;
+  const l = parseFloat(parts[2]) / 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h * 12) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
 const TEMPLATE_PRESETS: Record<string, Tokens> = {
   classic: { primary: "0 55% 25%", accent: "38 75% 55%", ring: "38 75% 55%", sidebarBg: "0 55% 25%", sidebarPrimary: "38 75% 55%" },
   modern:  { primary: "215 28% 27%", accent: "217 91% 60%", ring: "217 91% 60%", sidebarBg: "215 28% 20%", sidebarPrimary: "217 91% 60%" },
@@ -95,11 +132,30 @@ export function useActiveTemplate() {
         if (!tpl || typeof tpl !== "object") return;
 
         const template = String(tpl.active_template || "classic");
-        const scheme = String(tpl.color_scheme || "");
         const font = String(tpl.font_style || "");
+        const customPrimaryHex = tpl.custom_primary_hex as string | undefined;
+        const customAccentHex = tpl.custom_accent_hex as string | undefined;
 
-        const tokens =
-          COLOR_SCHEME_PRESETS[scheme] || TEMPLATE_PRESETS[template] || TEMPLATE_PRESETS.classic;
+        // Start from template preset
+        const baseTokens = TEMPLATE_PRESETS[template] ?? TEMPLATE_PRESETS.classic;
+        const tokens: Tokens = { ...baseTokens };
+
+        // Apply custom colors if admin specified them
+        if (customPrimaryHex) {
+          const hsl = hexToHsl(customPrimaryHex);
+          if (hsl) {
+            tokens.primary = hsl;
+            tokens.sidebarBg = hsl;
+          }
+        }
+        if (customAccentHex) {
+          const hsl = hexToHsl(customAccentHex);
+          if (hsl) {
+            tokens.accent = hsl;
+            tokens.ring = hsl;
+            tokens.sidebarPrimary = hsl;
+          }
+        }
         applyTokens(tokens);
 
         const fontPreset = FONT_PRESETS[font];

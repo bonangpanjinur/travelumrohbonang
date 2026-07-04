@@ -8,13 +8,22 @@ import {
 } from "react";
 import { supabaseAuth } from "@/shared/integrations/supabase/auth-client";
 
+export type AppRole =
+  | "super_admin"
+  | "admin"
+  | "branch_manager"
+  | "staff"
+  | "agent"
+  | "buyer"
+  | "user";
+
 export interface AuthUser {
   id: string;
   email: string | null;
   firstName: string | null;
   lastName: string | null;
   profileImageUrl: string | null;
-  role: "admin" | "user";
+  role: AppRole;
 }
 
 interface AuthContextType {
@@ -72,7 +81,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const role = user?.role ?? null;
-  const isAdmin = role === "admin";
+  // Any role other than buyer/user gets admin panel access
+  const isAdmin = !!(role && role !== "user" && role !== "buyer");
 
   const refreshRole = useCallback(async () => {
     const {

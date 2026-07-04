@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db, agents, agentCommissions, agentWithdrawals, affiliateClicks, userRoles, eq, desc } from "@workspace/db";
+import { requireSuperAdmin } from "../../middlewares/requireAdmin";
 
 const router = Router();
 
@@ -85,8 +86,8 @@ router.get("/affiliate-clicks", async (req, res) => {
   }
 });
 
-// User Roles (Management)
-router.get("/roles", async (req, res) => {
+// User Roles (Management) — read available to all admins, write is super_admin only
+router.get("/roles", async (_req, res) => {
   try {
     const data = await db.select().from(userRoles);
     res.json(data);
@@ -95,7 +96,7 @@ router.get("/roles", async (req, res) => {
   }
 });
 
-router.post("/roles", async (req, res) => {
+router.post("/roles", requireSuperAdmin, async (req, res) => {
   try {
     const id = crypto.randomUUID();
     const [data] = await db.insert(userRoles).values({
@@ -109,9 +110,9 @@ router.post("/roles", async (req, res) => {
   }
 });
 
-router.delete("/roles/:id", async (req, res) => {
+router.delete("/roles/:id", requireSuperAdmin, async (req, res) => {
   try {
-    await db.delete(userRoles).where(eq(userRoles.id, req.params.id));
+    await db.delete(userRoles).where(eq(userRoles.id, req.params.id as string));
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete user role" });

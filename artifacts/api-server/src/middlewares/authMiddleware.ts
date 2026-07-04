@@ -1,6 +1,8 @@
 import { type Request, type Response, type NextFunction } from "express";
 import type { AuthUser } from "@workspace/api-zod";
 import { isAdminEmail } from "../lib/adminAllowlist";
+import { db, userRoles } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 declare global {
   namespace Express {
@@ -59,6 +61,19 @@ async function resolveUser(token: string): Promise<AuthUser | null> {
 
     if (!su?.id) return null;
 
+    // Look up explicit role from user_roles table first
+    let role: string = isAdminEmail(su.email) ? "admin" : "user";
+    try {
+      const [dbRole] = await db
+        .select()
+        .from(userRoles)
+        .where(eq(userRoles.userId, su.id))
+        .limit(1);
+      if (dbRole?.role) role = dbRole.role;
+    } catch {
+      // DB unavailable — keep email-based fallback
+    }
+
     const user: AuthUser = {
       id: su.id,
       email: su.email ?? null,
@@ -70,7 +85,7 @@ async function resolveUser(token: string): Promise<AuthUser | null> {
         (su.user_metadata?.["avatar_url"] as string | undefined) ??
         (su.user_metadata?.["picture"] as string | undefined) ??
         null,
-      role: isAdminEmail(su.email) ? "admin" : "user",
+      role: role as AuthUser["role"],
     };
 
     tokenCache.set(token, { user, expiresAt: Date.now() + CACHE_TTL_MS });

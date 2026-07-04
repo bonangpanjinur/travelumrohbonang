@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { GetCurrentAuthUserResponse } from "@workspace/api-zod";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, userRoles } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { isAdminEmail } from "../lib/adminAllowlist";
 
@@ -48,7 +48,18 @@ router.get("/auth/user", async (req: Request, res: Response) => {
     console.error("[auth] upsertUser failed:", err instanceof Error ? err.message : err);
   }
 
-  const role = isAdminEmail(req.user.email) ? "admin" as const : "user" as const;
+  // Prefer explicit role from user_roles table; fall back to email-based check
+  let role: string = isAdminEmail(req.user.email) ? "admin" : "user";
+  try {
+    const [dbRole] = await db
+      .select()
+      .from(userRoles)
+      .where(eq(userRoles.userId, req.user.id))
+      .limit(1);
+    if (dbRole?.role) role = dbRole.role;
+  } catch {
+    // DB unavailable — keep email-based fallback
+  }
 
   res.json(
     GetCurrentAuthUserResponse.parse({

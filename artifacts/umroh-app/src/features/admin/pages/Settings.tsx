@@ -70,6 +70,8 @@ interface TemplateSettings {
   active_template: string;
   color_scheme: string;
   font_style: string;
+  custom_primary_hex?: string;
+  custom_accent_hex?: string;
 }
 
 interface BankSettings {
@@ -101,43 +103,32 @@ interface PaymentGatewaySettings {
 }
 
 
-// Template definitions
+// Template definitions — 3 variants
 const templates = [
   {
     id: "classic",
     name: "Classic Umroh",
     description: "Tampilan elegan dan profesional dengan nuansa hijau emas",
     preview: "linear-gradient(135deg, #0D4715 0%, #1a5c20 50%, #D4AF37 100%)",
-    colors: { primary: "emerald", accent: "gold" },
+    defaultPrimary: "#0D4715",
+    defaultAccent: "#D4AF37",
   },
   {
     id: "modern",
     name: "Modern Minimalist",
-    description: "Desain bersih dan modern dengan sentuhan minimalis",
-    preview: "linear-gradient(135deg, #1e293b 0%, #334155 50%, #94a3b8 100%)",
-    colors: { primary: "slate", accent: "blue" },
+    description: "Desain bersih dan modern dengan sentuhan biru profesional",
+    preview: "linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #60a5fa 100%)",
+    defaultPrimary: "#1e3a5f",
+    defaultAccent: "#2563eb",
   },
   {
     id: "luxury",
     name: "Luxury Premium",
     description: "Tampilan mewah untuk paket premium dan VIP",
     preview: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #e94560 100%)",
-    colors: { primary: "indigo", accent: "rose" },
+    defaultPrimary: "#1a1a2e",
+    defaultAccent: "#e94560",
   },
-  {
-    id: "nature",
-    name: "Nature Fresh",
-    description: "Nuansa alam yang segar dan menenangkan",
-    preview: "linear-gradient(135deg, #134e4a 0%, #0f766e 50%, #5eead4 100%)",
-    colors: { primary: "teal", accent: "cyan" },
-  },
-];
-
-const colorSchemes = [
-  { id: "default", name: "Default (Hijau Emas)", value: "emerald-gold" },
-  { id: "blue", name: "Biru Profesional", value: "blue-slate" },
-  { id: "purple", name: "Ungu Elegan", value: "purple-violet" },
-  { id: "warm", name: "Hangat & Ramah", value: "orange-amber" },
 ];
 
 const fontStyles = [
@@ -213,6 +204,8 @@ const defaultTemplate: TemplateSettings = {
   active_template: "classic",
   color_scheme: "default",
   font_style: "classic",
+  custom_primary_hex: "",
+  custom_accent_hex: "",
 };
 
 const defaultBank: BankSettings = {
@@ -402,65 +395,166 @@ const AdminSettings = () => {
 
         {/* Template Settings */}
         <TabsContent value="template">
-          <div className="bg-card border border-border rounded-xl p-6 space-y-6">
+          <div className="bg-card border border-border rounded-xl p-6 space-y-8">
+            {/* Header */}
             <div>
-              <h2 className="text-lg font-semibold">Pilih Template</h2>
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Layout className="w-5 h-5 text-primary" />
+                Pilih Template Website
+              </h2>
               <p className="text-muted-foreground text-sm mt-1">
-                Pilih template dasar lalu sesuaikan dengan kebutuhan Anda
+                Pilih satu dari 3 template lalu sesuaikan warna dan tipografi sesuai brand Anda. Perubahan langsung terlihat di website.
               </p>
             </div>
-            
-            <div className="grid md:grid-cols-2 gap-4">
-              {templates.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setTemplate({ ...template, active_template: t.id })}
-                  className={cn(
-                    "relative text-left p-4 rounded-xl border-2 transition-all hover:shadow-lg",
-                    template.active_template === t.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
-                  )}
-                >
-                  {template.active_template === t.id && (
-                    <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                      <Check className="w-4 h-4 text-primary-foreground" />
+
+            {/* Template Cards — 3 variants */}
+            <div className="grid md:grid-cols-3 gap-4">
+              {templates.map((t) => {
+                const isActive = template.active_template === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTemplate({
+                      ...template,
+                      active_template: t.id,
+                      custom_primary_hex: "",
+                      custom_accent_hex: "",
+                    })}
+                    className={cn(
+                      "relative text-left p-4 rounded-xl border-2 transition-all hover:shadow-lg group",
+                      isActive
+                        ? "border-primary bg-primary/5 shadow-md"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    {isActive && (
+                      <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow">
+                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                      </div>
+                    )}
+                    {/* Preview gradient */}
+                    <div
+                      className="w-full h-24 rounded-lg mb-3 transition-transform group-hover:scale-[1.02]"
+                      style={{ background: t.preview }}
+                    >
+                      {/* Mini UI mockup */}
+                      <div className="h-full p-2 flex flex-col justify-end">
+                        <div className="flex gap-1 mb-1">
+                          <div className="h-1.5 w-8 rounded-full bg-white/60" />
+                          <div className="h-1.5 w-12 rounded-full bg-white/40" />
+                        </div>
+                        <div className="h-1 w-16 rounded-full bg-white/30" />
+                      </div>
                     </div>
-                  )}
-                  <div
-                    className="w-full h-20 rounded-lg mb-3"
-                    style={{ background: t.preview }}
-                  />
-                  <h3 className="font-semibold">{t.name}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{t.description}</p>
-                </button>
-              ))}
+                    {/* Color dots */}
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <div className="w-4 h-4 rounded-full border-2 border-white shadow" style={{ background: t.defaultPrimary }} />
+                      <div className="w-4 h-4 rounded-full border-2 border-white shadow" style={{ background: t.defaultAccent }} />
+                    </div>
+                    <h3 className="font-semibold text-sm">{t.name}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{t.description}</p>
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 pt-4 border-t">
-              <div className="space-y-3">
-                <Label>Skema Warna</Label>
-                <Select
-                  value={template.color_scheme}
-                  onValueChange={(val) => setTemplate({ ...template, color_scheme: val })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {colorSchemes.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Pilih kombinasi warna untuk website Anda
+            {/* Custom Colors */}
+            <div className="border rounded-xl p-5 space-y-4">
+              <div>
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  <Palette className="w-4 h-4 text-primary" />
+                  Kustomisasi Warna
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Override warna template dengan warna brand Anda sendiri. Kosongkan untuk menggunakan warna default template.
                 </p>
               </div>
+              <div className="grid sm:grid-cols-2 gap-5">
+                {/* Primary color */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Warna Utama (Primary)</Label>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <input
+                        type="color"
+                        value={template.custom_primary_hex || templates.find(t => t.id === template.active_template)?.defaultPrimary || "#0D4715"}
+                        onChange={(e) => setTemplate({ ...template, custom_primary_hex: e.target.value })}
+                        className="w-10 h-10 rounded-lg cursor-pointer border border-border p-0.5 bg-transparent"
+                      />
+                    </div>
+                    <Input
+                      value={template.custom_primary_hex || ""}
+                      onChange={(e) => setTemplate({ ...template, custom_primary_hex: e.target.value })}
+                      placeholder={templates.find(t => t.id === template.active_template)?.defaultPrimary || "#0D4715"}
+                      className="font-mono text-sm"
+                      maxLength={7}
+                    />
+                    {template.custom_primary_hex && (
+                      <button
+                        type="button"
+                        onClick={() => setTemplate({ ...template, custom_primary_hex: "" })}
+                        className="text-xs text-muted-foreground hover:text-destructive shrink-0"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Digunakan untuk sidebar, tombol, dan elemen utama</p>
+                </div>
+                {/* Accent color */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Warna Aksen (Accent)</Label>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <input
+                        type="color"
+                        value={template.custom_accent_hex || templates.find(t => t.id === template.active_template)?.defaultAccent || "#D4AF37"}
+                        onChange={(e) => setTemplate({ ...template, custom_accent_hex: e.target.value })}
+                        className="w-10 h-10 rounded-lg cursor-pointer border border-border p-0.5 bg-transparent"
+                      />
+                    </div>
+                    <Input
+                      value={template.custom_accent_hex || ""}
+                      onChange={(e) => setTemplate({ ...template, custom_accent_hex: e.target.value })}
+                      placeholder={templates.find(t => t.id === template.active_template)?.defaultAccent || "#D4AF37"}
+                      className="font-mono text-sm"
+                      maxLength={7}
+                    />
+                    {template.custom_accent_hex && (
+                      <button
+                        type="button"
+                        onClick={() => setTemplate({ ...template, custom_accent_hex: "" })}
+                        className="text-xs text-muted-foreground hover:text-destructive shrink-0"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Digunakan untuk highlight, ikon, dan elemen aksen</p>
+                </div>
+              </div>
 
+              {/* Live preview swatch */}
+              {(template.custom_primary_hex || template.custom_accent_hex) && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <div className="flex gap-2">
+                    <div
+                      className="w-8 h-8 rounded-md shadow border border-white"
+                      style={{ background: template.custom_primary_hex || templates.find(t => t.id === template.active_template)?.defaultPrimary }}
+                    />
+                    <div
+                      className="w-8 h-8 rounded-md shadow border border-white"
+                      style={{ background: template.custom_accent_hex || templates.find(t => t.id === template.active_template)?.defaultAccent }}
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground">Preview warna kustom Anda</span>
+                </div>
+              )}
+            </div>
+
+            {/* Font Style */}
+            <div className="grid md:grid-cols-2 gap-6 pt-2 border-t">
               <div className="space-y-3">
                 <Label>Gaya Font</Label>
                 <Select
@@ -486,7 +580,7 @@ const AdminSettings = () => {
 
             <Button onClick={() => saveSetting("template", "appearance", template)} disabled={saving} className="gradient-gold text-primary">
               <Save className="w-4 h-4 mr-2" />
-              {saving ? "Menyimpan..." : "Simpan Template"}
+              {saving ? "Menyimpan..." : "Simpan Template & Warna"}
             </Button>
           </div>
         </TabsContent>
