@@ -62,6 +62,12 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
+VITE_SUPABASE_URL = "https://reuwfhuaabdhxjkomred.supabase.co"
+VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJldXdmaHVhYWJkaHhqa29tcmVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MDU4MDEsImV4cCI6MjA5ODQ4MTgwMX0.MfRk_2HzBqhMH0Hnp-8sbcBPOD4bUpC9ix-DDzwV6kc"
+VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJldXdmaHVhYWJkaHhqa29tcmVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MDU4MDEsImV4cCI6MjA5ODQ4MTgwMX0.MfRk_2HzBqhMH0Hnp-8sbcBPOD4bUpC9ix-DDzwV6kc"
+VITE_SUPABASE_PROJECT_ID = "reuwfhuaabdhxjkomred"
+SUPABASE_URL = "https://reuwfhuaabdhxjkomred.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJldXdmaHVhYWJkaHhqa29tcmVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MDU4MDEsImV4cCI6MjA5ODQ4MTgwMX0.MfRk_2HzBqhMH0Hnp-8sbcBPOD4bUpC9ix-DDzwV6kc"
 
 [userenv.development]
 ADMIN_EMAILS = "bpanjinur63@gmail.com"
