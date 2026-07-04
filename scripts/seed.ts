@@ -477,6 +477,18 @@ async function seed() {
   ]);
   console.log("   ✓ 6 foto galeri");
 
+  // ─── 13B. MATA UANG (MULTI-CURRENCY) ───────────────────────────────
+  console.log("13b. Menyemai mata uang...");
+  await db.delete(schema.currencies);
+  await db.insert(schema.currencies).values([
+    { id: uid("cur"), code: "IDR", name: "Rupiah Indonesia", symbol: "Rp", rateToIdr: 1, isDefault: true, isActive: true, createdAt: now },
+    { id: uid("cur"), code: "USD", name: "Dolar Amerika", symbol: "$", rateToIdr: 15800, isDefault: false, isActive: true, createdAt: now },
+    { id: uid("cur"), code: "SAR", name: "Riyal Saudi", symbol: "﷼", rateToIdr: 4210, isDefault: false, isActive: true, createdAt: now },
+    { id: uid("cur"), code: "MYR", name: "Ringgit Malaysia", symbol: "RM", rateToIdr: 3550, isDefault: false, isActive: true, createdAt: now },
+    { id: uid("cur"), code: "SGD", name: "Dolar Singapura", symbol: "S$", rateToIdr: 11750, isDefault: false, isActive: true, createdAt: now },
+  ]);
+  console.log("   ✓ 5 mata uang");
+
   // ─── 14. PENGATURAN SITUS ─────────────────────────────────────────
   console.log("14. Menyemai pengaturan situs...");
   await db.delete(schema.siteSettings);

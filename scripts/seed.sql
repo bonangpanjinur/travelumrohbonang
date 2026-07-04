@@ -224,6 +224,15 @@ INSERT INTO gallery (id, title, category, image_url, sort_order, is_active, crea
   ('gal_005', 'Jabal Nur — Gua Hira',          'wisata',  'https://images.unsplash.com/photo-1569451840618-9a2c6295bcef?w=800', 5, TRUE, NOW()),
   ('gal_006', 'Suasana iftar di Masjidil Haram','makkah', 'https://images.unsplash.com/photo-1608501947097-86951ad73fea?w=800', 6, TRUE, NOW());
 
+-- ── 13B. MATA UANG (MULTI-CURRENCY) ─────────────────────────────
+TRUNCATE currencies CASCADE;
+INSERT INTO currencies (id, code, name, symbol, rate_to_idr, is_default, is_active, created_at) VALUES
+  ('cur_idr', 'IDR', 'Rupiah Indonesia',  'Rp', 1,     TRUE,  TRUE, NOW()),
+  ('cur_usd', 'USD', 'Dolar Amerika',     '$',  15800, FALSE, TRUE, NOW()),
+  ('cur_sar', 'SAR', 'Riyal Saudi',       '﷼',  4210,  FALSE, TRUE, NOW()),
+  ('cur_myr', 'MYR', 'Ringgit Malaysia',  'RM', 3550,  FALSE, TRUE, NOW()),
+  ('cur_sgd', 'SGD', 'Dolar Singapura',   'S$', 11750, FALSE, TRUE, NOW());
+
 -- ── 14. PENGATURAN SITUS ────────────────────────────────────────
 TRUNCATE site_settings CASCADE;
 INSERT INTO site_settings (id, key, category, value, created_at) VALUES
