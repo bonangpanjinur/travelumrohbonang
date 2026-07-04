@@ -81,9 +81,9 @@ const AdminBookings = () => {
           <Button variant="outline" onClick={() => {
             const headers = ["Kode Booking", "Nama", "Email", "Paket", "Total Harga", "Status", "Tanggal"];
             const rows = bookings.map(b => [
-              b.bookingCode, (b as any).userName || "-", (b as any).userEmail || "-",
-              (b as any).packageTitle || "-", String(b.totalPrice),
-              b.status || "draft", b.createdAt ? new Date(b.createdAt).toISOString().slice(0, 10) : ""
+              b.booking_code, (b as any).userName || "-", (b as any).userEmail || "-",
+              (b as any).packageTitle || "-", String(b.total_price),
+              b.status || "draft", b.created_at ? new Date(b.created_at).toISOString().slice(0, 10) : ""
             ]);
             exportToCsv("bookings", headers, rows);
           }}>

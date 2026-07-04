@@ -41,7 +41,7 @@ const AdminCurrencies = () => {
   const openNew = () => { setEditing(null); setForm(empty); setOpen(true); };
   const openEdit = (c: Currency) => {
     setEditing(c);
-    setForm({ code: c.code, name: c.name, symbol: c.symbol, rateToIdr: c.rateToIdr, isDefault: c.isDefault, isActive: c.isActive });
+    setForm({ code: c.code, name: c.name, symbol: c.symbol, rateToIdr: c.rate_to_idr, isDefault: c.is_default, isActive: c.is_active });
     setOpen(true);
   };
 
@@ -122,10 +122,10 @@ const AdminCurrencies = () => {
                       <TableCell className="font-mono font-medium">{c.code}</TableCell>
                       <TableCell>{c.name}</TableCell>
                       <TableCell>{c.symbol}</TableCell>
-                      <TableCell>{new Intl.NumberFormat("id-ID").format(c.rateToIdr)}</TableCell>
+                      <TableCell>{new Intl.NumberFormat("id-ID").format(c.rate_to_idr)}</TableCell>
                       <TableCell className="space-x-1">
-                        {c.isDefault && <Badge variant="default">Default</Badge>}
-                        {c.isActive ? <Badge variant="secondary">Aktif</Badge> : <Badge variant="outline">Nonaktif</Badge>}
+                        {c.is_default && <Badge variant="default">Default</Badge>}
+                        {c.is_active ? <Badge variant="secondary">Aktif</Badge> : <Badge variant="outline">Nonaktif</Badge>}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="ghost" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></Button>

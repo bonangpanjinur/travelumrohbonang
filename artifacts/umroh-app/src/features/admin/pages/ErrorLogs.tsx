@@ -62,7 +62,7 @@ const AdminErrorLogs = () => {
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Badge variant={log.level === "error" ? "destructive" : "secondary"}>{log.level}</Badge>
                   <span className="text-muted-foreground font-normal text-xs">
-                    {format(new Date(log.created_at), "dd MMM yyyy HH:mm:ss")}
+                    {format(new Date(log.createdAt), "dd MMM yyyy HH:mm:ss")}
                   </span>
                 </CardTitle>
               </CardHeader>

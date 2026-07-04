@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/shared/lib/apiClient";
+import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -150,7 +151,7 @@ const AdminAgents = () => {
     try {
       await apiFetch(`/api/admin/agents/${agent.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ isActive: !agent.isActive }),
+        body: JSON.stringify({ isActive: !agent.is_active }),
       });
       fetchData();
     } catch (e) {

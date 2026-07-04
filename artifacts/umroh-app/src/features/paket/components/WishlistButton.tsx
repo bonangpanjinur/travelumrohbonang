@@ -12,10 +12,14 @@ export default function WishlistButton({ packageId, variant = "outline" }: { pac
   const onClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const res = await toggle(packageId);
+    const res: any = await toggle(packageId);
     if (res.needsAuth) {
       toast.info("Login dulu untuk menyimpan ke wishlist");
       navigate("/auth");
+      return;
+    }
+    if (res.error) {
+      toast.error("Gagal memperbarui wishlist");
       return;
     }
     toast.success(res.added ? "Ditambahkan ke wishlist" : "Dihapus dari wishlist");

@@ -191,12 +191,12 @@ const AdminSlugRedirects = () => {
             <TableBody>
               {rows.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell>{tenantLabel(r.tenant_site_id || r.tenantSiteId || null)}</TableCell>
-                  <TableCell>{resourceLabel[r.resource_type || r.resourceType]}</TableCell>
+                  <TableCell>{tenantLabel(r.tenant_site_id || null)}</TableCell>
+                  <TableCell>{resourceLabel[r.resource_type]}</TableCell>
                   <TableCell className="font-mono text-sm">
-                    <span className="text-muted-foreground line-through">{r.old_slug || r.oldSlug}</span>
+                    <span className="text-muted-foreground line-through">{r.old_slug}</span>
                     <ArrowRight className="inline w-3 h-3 mx-2" />
-                    <span className="text-foreground">{r.new_slug || r.newSlug}</span>
+                    <span className="text-foreground">{r.new_slug}</span>
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => setDeleteId(r.id)}>

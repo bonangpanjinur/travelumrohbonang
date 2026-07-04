@@ -173,7 +173,7 @@ const AdminCRM = () => {
   // Follow-up mutations
   const saveFollowUpMutation = useMutation({
     mutationFn: async (data: FollowUpForm) => {
-      await apiFetch(`/api/admin/crm/leads/${data.leadId}/follow-ups`, {
+      await apiFetch(`/api/admin/crm/leads/${data.lead_id}/follow-ups`, {
         method: "POST",
         body: JSON.stringify(data),
       });
@@ -209,7 +209,7 @@ const AdminCRM = () => {
   };
 
   const handleAddFollowUp = (leadId: string) => {
-    setFollowUpForm({ ...defaultFollowUpForm, leadId: leadId });
+    setFollowUpForm({ ...defaultFollowUpForm, lead_id: leadId });
     setFollowUpDialogOpen(true);
   };
 
