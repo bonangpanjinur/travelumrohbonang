@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, doublePrecision } from "drizzle-orm/pg-core";
 
 export const packageCategories = pgTable("package_categories", {
   id: text("id").primaryKey(),
@@ -61,9 +61,20 @@ export const muthawifs = pgTable("muthawifs", {
 export const branches = pgTable("branches", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  slug: text("slug"),
   address: text("address"),
   phone: text("phone"),
   email: text("email"),
+  city: text("city"),
+  region: text("region"),
+  postalCode: text("postal_code"),
+  country: text("country"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  openingHours: text("opening_hours"),
+  imageUrl: text("image_url"),
+  mapUrl: text("map_url"),
+  description: text("description"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }),
 });

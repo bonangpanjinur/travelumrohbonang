@@ -16,10 +16,12 @@ import {
   PaginationPrevious,
 } from "@/shared/components/ui/pagination";
 import { apiFetch } from "@/shared/lib/apiClient";
+import { useToast } from "@/shared/hooks/use-toast";
 
 const PAGE_SIZE = 20;
 
 const AdminBookings = () => {
+  const { toast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -35,8 +37,12 @@ const AdminBookings = () => {
     apiFetch<any[]>("/api/packages/branches").then((data) => {
         setBranches(data || []);
     }).catch(e => {
-        // Fallback or ignore if endpoint doesn't exist yet, but branches are masterdata
-        // For now assume we have a way to fetch them
+        console.error("Gagal memuat daftar cabang:", e);
+        toast({
+          title: "Gagal memuat cabang",
+          description: "Filter cabang mungkin tidak lengkap. Coba muat ulang halaman.",
+          variant: "destructive",
+        });
     });
   }, []);
 
@@ -81,8 +87,8 @@ const AdminBookings = () => {
           <Button variant="outline" onClick={() => {
             const headers = ["Kode Booking", "Nama", "Email", "Paket", "Total Harga", "Status", "Tanggal"];
             const rows = bookings.map(b => [
-              b.booking_code, (b as any).userName || "-", (b as any).userEmail || "-",
-              (b as any).packageTitle || "-", String(b.total_price),
+              b.booking_code, b.profile?.name || "-", b.profile?.email || "-",
+              b.package?.title || "-", String(b.total_price),
               b.status || "draft", b.created_at ? new Date(b.created_at).toISOString().slice(0, 10) : ""
             ]);
             exportToCsv("bookings", headers, rows);

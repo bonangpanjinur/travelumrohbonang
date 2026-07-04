@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { apiFetch } from "@/shared/lib/apiClient";
+import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -93,14 +94,53 @@ const AdminGallery = () => {
           continue;
         }
 
-        // Note: For now, we still use Supabase Storage if no API for upload exists.
-        // But the task says "Migrate CMS domain off Supabase", which usually refers to the Database.
-        // If I need to migrate storage too, I'd need a backend endpoint for it.
-        // Since no instructions on storage migration were given, I'll keep the storage calls but replace database calls.
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        const filePath = `gallery/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("cms-images")
+          .upload(filePath, file);
+
+        if (uploadError) {
+          toast({
+            title: "Gagal mengupload",
+            description: `${file.name}: ${uploadError.message}`,
+            variant: "destructive",
+          });
+          continue;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from("cms-images")
+          .getPublicUrl(filePath);
+
+        await apiFetch("/api/admin/content/gallery", {
+          method: "POST",
+          body: JSON.stringify({
+            title: form.title || null,
+            description: form.description || null,
+            image_url: publicUrl,
+            category: form.category,
+            sort_order: images.length,
+            is_active: true,
+          }),
+        });
       }
-    } catch (error) {
+
+      toast({ title: "Gambar berhasil diupload" });
+      setForm({ title: "", description: "", category: "umroh" });
+      setIsOpen(false);
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Gagal mengupload gambar",
+        description: error?.message,
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 

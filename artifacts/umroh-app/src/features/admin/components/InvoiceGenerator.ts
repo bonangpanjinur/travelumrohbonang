@@ -34,7 +34,7 @@ export const fetchInvoiceData = async (bookingId: string): Promise<InvoiceData |
     supabase.from("booking_pilgrims").select("name, gender").eq("booking_id", bookingId),
     supabase.from("booking_rooms").select("room_type, quantity, price, subtotal").eq("booking_id", bookingId),
     supabase.from("payments").select("payment_type, amount, status, paid_at").eq("booking_id", bookingId).order("created_at"),
-    supabase.from("site_settings").select("value").eq("key", "branding").eq("category", "general").single(),
+    supabase.from("site_settings").select("value").eq("key", "branding").eq("category", "general").maybeSingle(),
   ]);
 
   if (!bookingRes.data) return null;

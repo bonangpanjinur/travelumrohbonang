@@ -27,7 +27,7 @@ const BackgroundPattern = ({
         .select("value")
         .eq("key", "background")
         .eq("category", "appearance")
-        .single();
+        .maybeSingle();
 
       if (data?.value && typeof data.value === 'object' && !Array.isArray(data.value)) {
         const val = data.value as Record<string, unknown>;

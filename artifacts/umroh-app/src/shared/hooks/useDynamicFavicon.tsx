@@ -9,7 +9,7 @@ export const useDynamicFavicon = () => {
         .select("value")
         .eq("key", "branding")
         .eq("category", "general")
-        .single();
+        .maybeSingle();
 
       if (data?.value && typeof data.value === "object") {
         const branding = data.value as { favicon_url?: string };

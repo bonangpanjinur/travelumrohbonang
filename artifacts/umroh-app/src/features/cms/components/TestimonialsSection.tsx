@@ -38,9 +38,9 @@ const TestimonialsSection = () => {
         .from("site_settings")
         .select("value")
         .eq("key", "background_pattern")
-        .single();
+        .maybeSingle();
 
-      if (settingsData?.value) {
+      if (settingsData?.value && typeof settingsData.value === "string") {
         setBackgroundPattern(settingsData.value);
       }
 

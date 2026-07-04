@@ -53,23 +53,34 @@ const BlogDetail = () => {
     const fetchPost = async () => {
       if (!slug) return;
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("blog_posts")
         .select("*")
         .eq("slug", slug)
         .eq("is_published", true)
         .maybeSingle();
 
+      if (error) {
+        console.error("Gagal memuat artikel:", error);
+        toast.error("Gagal memuat artikel. Coba muat ulang halaman.");
+        setLoading(false);
+        return;
+      }
+
       if (data) {
         setPost(data as BlogPost);
 
         // Fetch related posts
-        const { data: related } = await supabase
+        const { data: related, error: relatedError } = await supabase
           .from("blog_posts")
           .select("id, title, slug, image_url, excerpt, published_at")
           .eq("is_published", true)
           .neq("id", data.id)
           .limit(3);
+
+        if (relatedError) {
+          console.error("Gagal memuat artikel terkait:", relatedError);
+        }
 
         setRelatedPosts((related || []) as RelatedPost[]);
       } else {

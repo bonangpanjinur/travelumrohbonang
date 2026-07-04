@@ -258,7 +258,11 @@ const AdminPayments = () => {
                           </Button>
                         ) : <span className="text-muted-foreground text-sm">Tidak ada</span>}
                       </TableCell>
-                      <TableCell className="text-sm">{format(new Date(payment.createdAt), "d MMM yyyy HH:mm", { locale: localeId })}</TableCell>
+                      <TableCell className="text-sm">
+                        {payment.createdAt && !isNaN(new Date(payment.createdAt).getTime())
+                          ? format(new Date(payment.createdAt), "d MMM yyyy HH:mm", { locale: localeId })
+                          : "-"}
+                      </TableCell>
                       <TableCell>{getStatusBadge(payment.status || "pending")}</TableCell>
                       <TableCell className="text-right">
                         {payment.status === "pending" && (

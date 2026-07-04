@@ -259,9 +259,18 @@ const AdminSettings = () => {
   }, []);
 
   const fetchSettings = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("site_settings")
       .select("*");
+
+    if (error) {
+      console.error("Gagal memuat pengaturan:", error);
+      toast({
+        title: "Gagal memuat pengaturan",
+        description: "Coba muat ulang halaman.",
+        variant: "destructive",
+      });
+    }
 
     if (data) {
       data.forEach((setting) => {

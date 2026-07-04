@@ -99,8 +99,13 @@ const AdminPilgrims = () => {
       );
     } catch (err) {
       console.error(err);
+      toast({
+        title: "Gagal memuat daftar booking",
+        description: "Dropdown booking mungkin kosong. Coba muat ulang halaman.",
+        variant: "destructive",
+      });
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchPilgrims();

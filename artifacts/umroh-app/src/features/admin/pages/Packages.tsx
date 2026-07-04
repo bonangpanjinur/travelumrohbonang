@@ -38,6 +38,7 @@ interface Package {
   hotel_madinah_id: string | null;
   airline_id: string | null;
   airport_id: string | null;
+  image_url?: string | null;
 }
 
 interface Option { id: string; name: string; show_extra_hotels?: boolean | null; is_active?: boolean | null; }
@@ -244,7 +245,7 @@ const AdminPackages = () => {
       hotel_madinah_id: pkg.hotel_madinah_id || "",
       airline_id: pkg.airline_id || "",
       airport_id: pkg.airport_id || "",
-      image_url: (pkg as any).image_url || "",
+      image_url: pkg.image_url || "",
     });
     await fetchExtraHotels(pkg.id);
     // Capture the freshly-loaded DB values as the clean baseline AFTER all

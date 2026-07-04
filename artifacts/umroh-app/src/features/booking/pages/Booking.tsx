@@ -201,6 +201,7 @@ const Booking = () => {
 
   const handleSubmit = async () => {
     if (!user || !pkg || !departure) return;
+    if (submitting) return;
 
     if (!captchaToken) {
       toast({ title: "Verifikasi captcha", description: "Selesaikan captcha sebelum konfirmasi booking.", variant: "destructive" });
