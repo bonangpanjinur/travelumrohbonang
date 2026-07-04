@@ -3,5 +3,8 @@
   "outputDirectory": "artifacts/umroh-app/dist/public",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" }
+  ],
+  "crons": [
+    { "path": "/api/cron/health-check", "schedule": "*/5 * * * *" }
   ]
 }

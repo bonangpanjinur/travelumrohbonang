@@ -54,6 +54,8 @@ const OPTIONAL = [
   { key: "VITE_SENTRY_DSN", hint: "Opsional — error monitoring" },
   { key: "VITE_TURNSTILE_SITE_KEY", hint: "Opsional — CAPTCHA" },
   { key: "LOG_LEVEL", hint: "Opsional — default 'info'" },
+  { key: "CRON_SECRET", hint: "Melindungi /api/cron/health-check — sangat disarankan untuk production" },
+  { key: "ALERT_WEBHOOK_URL", hint: "Slack/Discord webhook untuk notifikasi jika health check degraded" },
 ];
 
 function mask(value) {
