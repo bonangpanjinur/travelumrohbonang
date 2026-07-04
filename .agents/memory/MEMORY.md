@@ -4,3 +4,4 @@
 - [Express 5 wildcard routes](express5-wildcard-routes.md) — use `*name` (no colon) for catch-all routes; `/*` and `/:param*` throw at startup in path-to-regexp v8.
 - [esbuild pg externalization](esbuild-pg-external.md) — `pg` must be in esbuild external list AND a direct dep of the bundle target package; otherwise runtime throws ERR_MODULE_NOT_FOUND.
 - [Supabase backend auth on Node 20](supabase-backend-auth.md) — never use createClient() on the API server (Node 20, no native WebSocket → crash). Use direct fetch to /auth/v1/user instead.
+- [Umroh app stack](umroh-app-stack.md) — app still runs on Supabase Auth (not Replit Auth); data layer runs on Replit Postgres via a local REST shim. Don't swap auth on routine re-imports.
