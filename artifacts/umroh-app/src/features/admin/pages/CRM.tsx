@@ -93,10 +93,13 @@ const AdminCRM = () => {
       const allLeads = await apiFetch<any[]>("/api/admin/crm/leads");
       const followUpsPromises = allLeads.map(l => apiFetch<any[]>(`/api/admin/crm/leads/${l.id}/follow-ups`));
       const followUpsResults = await Promise.all(followUpsPromises);
-      return followUpsResults.flat().map((f, i) => ({
-        ...f,
-        leads: { name: allLeads[i % allLeads.length].name, phone: allLeads[i % allLeads.length].phone } // Simplified logic
-      }));
+      return followUpsResults.flatMap((leadFollowUps, leadIndex) => {
+        const lead = allLeads[leadIndex];
+        return leadFollowUps.map((f) => ({
+          ...f,
+          leads: { name: lead.name, phone: lead.phone },
+        }));
+      });
     },
   });
 

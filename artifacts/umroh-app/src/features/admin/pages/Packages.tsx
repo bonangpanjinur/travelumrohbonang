@@ -75,6 +75,27 @@ type FormData = typeof EMPTY_FORM;
 // Draft combines the main form + the extra-hotels list
 type PackageDraft = FormData & { __extraHotels: ExtraHotel[] };
 
+// API returns camelCase (from Drizzle schema); UI works with snake_case.
+const mapPackageFromApi = (p: any): Package => ({
+  id: p.id,
+  title: p.title,
+  slug: p.slug,
+  description: p.description,
+  package_type: p.packageType,
+  duration_days: p.durationDays,
+  minimum_dp: p.minimumDp,
+  dp_deadline_days: p.dpDeadlineDays,
+  full_deadline_days: p.fullDeadlineDays,
+  is_active: p.isActive,
+  created_at: p.createdAt,
+  category_id: p.categoryId,
+  hotel_makkah_id: p.hotelMakkahId,
+  hotel_madinah_id: p.hotelMadinahId,
+  airline_id: p.airlineId,
+  airport_id: p.airportId,
+  image_url: p.imageUrl,
+});
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const AdminPackages = () => {
@@ -132,26 +153,40 @@ const AdminPackages = () => {
 
   const fetchOptions = async () => {
     const [catRes, hotelRes, airlineRes, airportRes] = await Promise.all([
-      apiFetch<{ data: Option[] }>("/api/admin/masterdata/categories"),
-      apiFetch<{ data: HotelOption[] }>("/api/admin/masterdata/hotels"),
-      apiFetch<{ data: Option[] }>("/api/admin/masterdata/airlines"),
-      apiFetch<{ data: (Option & { code: string | null })[] }>("/api/admin/masterdata/airports"),
+      apiFetch<{ data: any[] }>("/api/admin/masterdata/categories"),
+      apiFetch<{ data: any[] }>("/api/admin/masterdata/hotels"),
+      apiFetch<{ data: any[] }>("/api/admin/masterdata/airlines"),
+      apiFetch<{ data: any[] }>("/api/admin/masterdata/airports"),
     ]);
-    setCategories(catRes.data || []);
-    setHotels(hotelRes.data || []);
-    setAirlines(airlineRes.data || []);
-    setAirports(airportRes.data || []);
+    setCategories((catRes.data || []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      show_extra_hotels: c.showExtraHotels,
+      is_active: c.isActive,
+    })));
+    setHotels((hotelRes.data || []).map((h) => ({
+      id: h.id,
+      name: h.name,
+      city: h.city,
+    })));
+    setAirlines((airlineRes.data || []).map((a) => ({ id: a.id, name: a.name })));
+    setAirports((airportRes.data || []).map((a) => ({ id: a.id, name: a.name, code: a.code })));
   };
 
   const fetchPackages = async () => {
-    const { data } = await apiFetch<{ data: Package[] }>("/api/admin/packages");
-    setPackages(data || []);
+    const { data } = await apiFetch<{ data: any[] }>("/api/admin/packages");
+    setPackages((data || []).map(mapPackageFromApi));
     setLoading(false);
   };
 
   const fetchExtraHotels = async (packageId: string) => {
-    const { data } = await apiFetch<{ data: ExtraHotel[] }>(`/api/admin/packages/${packageId}/extra-hotels`);
-    setExtraHotels(data || []);
+    const { data } = await apiFetch<{ data: any[] }>(`/api/admin/packages/${packageId}/extra-hotels`);
+    setExtraHotels((data || []).map((eh) => ({
+      id: eh.id,
+      hotel_id: eh.hotelId,
+      label: eh.label,
+      sort_order: eh.sortOrder,
+    })));
   };
 
   // Check if selected category needs extra hotels (driven by admin setting, not name matching)
@@ -164,22 +199,23 @@ const AdminPackages = () => {
   // ── Form helpers ──────────────────────────────────────────────────────────
 
   const buildPayload = () => {
+    // API (Zod/Drizzle) expects camelCase field names.
     const payload: Record<string, unknown> = {
       title: form.title,
       slug: form.slug || (form.title ?? "").toLowerCase().replace(/\s+/g, "-"),
       description: form.description || null,
-      package_type: form.package_type || null,
-      duration_days: form.duration_days,
-      category_id: form.category_id || null,
-      hotel_makkah_id: form.hotel_makkah_id || null,
-      hotel_madinah_id: form.hotel_madinah_id || null,
-      airline_id: form.airline_id || null,
-      airport_id: form.airport_id || null,
-      image_url: form.image_url || null,
+      packageType: form.package_type || null,
+      durationDays: form.duration_days,
+      categoryId: form.category_id || null,
+      hotelMakkahId: form.hotel_makkah_id || null,
+      hotelMadinahId: form.hotel_madinah_id || null,
+      airlineId: form.airline_id || null,
+      airportId: form.airport_id || null,
+      imageUrl: form.image_url || null,
     };
-    if (form.minimum_dp !== 0) payload.minimum_dp = form.minimum_dp;
-    if (form.dp_deadline_days !== 30) payload.dp_deadline_days = form.dp_deadline_days;
-    if (form.full_deadline_days !== 7) payload.full_deadline_days = form.full_deadline_days;
+    if (form.minimum_dp !== 0) payload.minimumDp = form.minimum_dp;
+    if (form.dp_deadline_days !== 30) payload.dpDeadlineDays = form.dp_deadline_days;
+    if (form.full_deadline_days !== 7) payload.fullDeadlineDays = form.full_deadline_days;
     return payload;
   };
 
@@ -188,9 +224,9 @@ const AdminPackages = () => {
       method: "POST",
       body: JSON.stringify({
         hotels: extraHotels.map((eh, i) => ({
-          hotel_id: eh.hotel_id,
+          hotelId: eh.hotel_id,
           label: eh.label || null,
-          sort_order: i,
+          sortOrder: i,
         })),
       }),
     });

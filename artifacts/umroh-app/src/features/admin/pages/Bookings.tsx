@@ -34,7 +34,7 @@ const AdminBookings = () => {
   const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
-    apiFetch<any[]>("/api/packages/branches").then((data) => {
+    apiFetch<any[]>("/api/admin/branches").then((data) => {
         setBranches(data || []);
     }).catch(e => {
         console.error("Gagal memuat daftar cabang:", e);
@@ -58,10 +58,25 @@ const AdminBookings = () => {
     setLoading(true);
     try {
       const offset = page * PAGE_SIZE;
-      const res = await apiFetch<{ data: Booking[]; total: number }>(
+      const res = await apiFetch<{ data: any[]; total: number }>(
         `/api/admin/bookings?status=${filter}&search=${search.trim()}&branchId=${branchFilter}&limit=${PAGE_SIZE}&offset=${offset}`
       );
-      setBookings(res.data || []);
+      const mapped: Booking[] = (res.data || []).map((b) => ({
+        id: b.id,
+        booking_code: b.bookingCode,
+        total_price: Number(b.totalPrice) || 0,
+        status: b.status,
+        created_at: b.createdAt,
+        package_id: b.packageId,
+        pic_type: b.picType,
+        pic_id: b.picId,
+        branch_id: b.branchId,
+        package: b.packageTitle ? { title: b.packageTitle } : null,
+        departure: b.departureDate ? { departure_date: b.departureDate } : null,
+        profile: b.userName || b.userEmail ? { name: b.userName, email: b.userEmail } : null,
+        branch: b.branchName ? { name: b.branchName } : null,
+      }));
+      setBookings(mapped);
       setTotalCount(res.total || 0);
     } catch (e) {
       console.error(e);
