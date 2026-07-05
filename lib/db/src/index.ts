@@ -15,7 +15,12 @@ const isSupabase = /supabase\.(com|co)/.test(process.env.DATABASE_URL ?? "");
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL || "postgres://localhost/placeholder",
-  ssl: isSupabase ? { rejectUnauthorized: true } : undefined,
+  // Supabase's pooler (PgBouncer, port 6543) presents a certificate chain that
+  // Node's default trust store does not always validate, causing every query
+  // to fail at the SSL handshake step in serverless environments (Vercel).
+  // `rejectUnauthorized: false` still encrypts the connection, it just skips
+  // strict CA verification — the standard approach for Supabase Postgres.
+  ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
   // Keep pool small for serverless (Vercel) environments.
   max: 3,
   idleTimeoutMillis: 10_000,
