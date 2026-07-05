@@ -41,3 +41,29 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row
   execute function public.handle_new_user();
+
+-- ─────────────────────────────────────────────────────────────────
+-- BACKFILL: isi profiles + user_roles untuk user yang SUDAH ada di
+-- auth.users sebelum trigger ini dibuat (mis. yang daftar lewat form
+-- sebelum SQL ini dijalankan). Aman dijalankan berkali-kali.
+-- ─────────────────────────────────────────────────────────────────
+
+insert into public.profiles (id, name, email, created_at)
+select
+  u.id::text,
+  coalesce(u.raw_user_meta_data->>'name', split_part(u.email, '@', 1)),
+  u.email,
+  u.created_at
+from auth.users u
+on conflict (id) do nothing;
+
+insert into public.user_roles (id, user_id, role, created_at)
+select
+  gen_random_uuid()::text,
+  u.id::text,
+  'buyer',
+  u.created_at
+from auth.users u
+where not exists (
+  select 1 from public.user_roles ur where ur.user_id = u.id::text
+);
