@@ -65,13 +65,6 @@ const TEMPLATE_PRESETS: Record<string, Tokens> = {
   nature:  { primary: "175 70% 19%", accent: "187 85% 53%", ring: "187 85% 53%", sidebarBg: "175 70% 15%", sidebarPrimary: "187 85% 53%" },
 };
 
-const COLOR_SCHEME_PRESETS: Record<string, Tokens> = {
-  "emerald-gold":  { primary: "150 70% 16%", accent: "45 65% 53%", ring: "45 65% 53%", sidebarBg: "150 70% 13%", sidebarPrimary: "45 65% 53%" },
-  "blue-slate":    { primary: "215 60% 30%", accent: "217 91% 60%", ring: "217 91% 60%", sidebarBg: "215 60% 22%", sidebarPrimary: "217 91% 60%" },
-  "purple-violet": { primary: "262 60% 30%", accent: "270 80% 60%", ring: "270 80% 60%", sidebarBg: "262 60% 22%", sidebarPrimary: "270 80% 60%" },
-  "orange-amber":  { primary: "20 80% 35%",  accent: "38 92% 55%",  ring: "38 92% 55%",  sidebarBg: "20 80% 28%",  sidebarPrimary: "38 92% 55%" },
-};
-
 const FONT_PRESETS: Record<string, { display: string; body: string; href?: string }> = {
   playfair: {
     display: "'Playfair Display', serif",
@@ -89,6 +82,12 @@ const FONT_PRESETS: Record<string, { display: string; body: string; href?: strin
   },
 };
 
+const FONT_STYLE_LEGACY_MAP: Record<string, string> = {
+  classic: "playfair",
+  modern: "inter",
+  elegant: "cormorant",
+};
+
 function ensureFontLink(href?: string) {
   if (!href || typeof document === "undefined") return;
   const id = `font-${btoa(href).replace(/[^a-z0-9]/gi, "").slice(0, 16)}`;
@@ -100,6 +99,15 @@ function ensureFontLink(href?: string) {
   document.head.appendChild(link);
 }
 
+/** Shift the lightness of an "h s% l%" triplet by a delta (clamped 0-100). */
+function shiftLightness(hsl: string, delta: number): string {
+  const parts = hsl.trim().split(/\s+/);
+  const h = parts[0];
+  const s = parts[1];
+  const l = Math.max(0, Math.min(100, parseFloat(parts[2]) + delta));
+  return `${h} ${s} ${Math.round(l)}%`;
+}
+
 function applyTokens(tokens: Tokens) {
   const root = document.documentElement;
   root.style.setProperty("--primary", tokens.primary);
@@ -109,7 +117,11 @@ function applyTokens(tokens: Tokens) {
   if (tokens.sidebarPrimary) root.style.setProperty("--sidebar-primary", tokens.sidebarPrimary);
   // Re-derive companion tokens used across the design system
   root.style.setProperty("--gold", tokens.accent);
+  root.style.setProperty("--gold-light", shiftLightness(tokens.accent, 20));
+  root.style.setProperty("--gold-dark", shiftLightness(tokens.accent, -15));
   root.style.setProperty("--elegant-black", tokens.primary);
+  root.style.setProperty("--elegant-black-light", shiftLightness(tokens.primary, 10));
+  root.style.setProperty("--elegant-black-dark", shiftLightness(tokens.primary, -12));
 }
 
 export function useActiveTemplate() {
@@ -136,7 +148,8 @@ export function useActiveTemplate() {
         if (!tpl || typeof tpl !== "object") return;
 
         const template = String(tpl.active_template || "classic");
-        const font = String(tpl.font_style || "");
+        const rawFont = String(tpl.font_style || "");
+        const font = FONT_STYLE_LEGACY_MAP[rawFont] || rawFont;
         const customPrimaryHex = tpl.custom_primary_hex as string | undefined;
         const customAccentHex = tpl.custom_accent_hex as string | undefined;
 

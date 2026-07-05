@@ -68,10 +68,19 @@ interface BackgroundSettings {
 
 interface TemplateSettings {
   active_template: string;
-  color_scheme: string;
   font_style: string;
   custom_primary_hex?: string;
   custom_accent_hex?: string;
+}
+
+const FONT_STYLE_LEGACY_MAP: Record<string, string> = {
+  classic: "playfair",
+  modern: "inter",
+  elegant: "cormorant",
+};
+
+function normalizeFontStyle(value: string): string {
+  return FONT_STYLE_LEGACY_MAP[value] || value;
 }
 
 interface BankSettings {
@@ -202,8 +211,7 @@ const defaultBackground: BackgroundSettings = {
 
 const defaultTemplate: TemplateSettings = {
   active_template: "classic",
-  color_scheme: "default",
-  font_style: "classic",
+  font_style: "playfair",
   custom_primary_hex: "",
   custom_accent_hex: "",
 };
@@ -295,9 +303,12 @@ const AdminSettings = () => {
           case "background":
             setBackground({ ...defaultBackground, ...(value as object) });
             break;
-          case "template":
-            setTemplate({ ...defaultTemplate, ...(value as object) });
+          case "template": {
+            const loadedTemplate = { ...defaultTemplate, ...(value as object) } as TemplateSettings;
+            loadedTemplate.font_style = normalizeFontStyle(loadedTemplate.font_style);
+            setTemplate(loadedTemplate);
             break;
+          }
           case "bank":
             setBank({ ...defaultBank, ...(value as object) });
             break;
@@ -589,7 +600,7 @@ const AdminSettings = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {fontStyles.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>
+                      <SelectItem key={f.id} value={f.value}>
                         {f.name}
                       </SelectItem>
                     ))}
@@ -606,7 +617,7 @@ const AdminSettings = () => {
               const activeTemplate = templates.find(t => t.id === template.active_template);
               const primaryColor = template.custom_primary_hex || activeTemplate?.defaultPrimary || "#0D4715";
               const accentColor = template.custom_accent_hex || activeTemplate?.defaultAccent || "#D4AF37";
-              const fontClass = template.font_style === "modern" ? "font-sans" : template.font_style === "elegant" ? "font-serif" : "font-display";
+              const fontClass = template.font_style === "inter" ? "font-sans" : template.font_style === "cormorant" ? "font-serif" : "font-display";
               return (
                 <div className="p-4 bg-muted/50 rounded-lg border-t">
                   <Label className="text-base font-medium">Live Preview</Label>
