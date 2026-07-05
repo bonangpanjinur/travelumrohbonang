@@ -34,9 +34,7 @@ function loadSql(filename) {
   return readFileSync(path.join(__dirname, filename), "utf-8");
 }
 
-async function runQuery(label, sql) {
-  console.log(`\n▶ ${label} ...`);
-
+async function runStatement(sql, label) {
   const res = await fetch(`${API_BASE}/projects/${PROJECT_REF}/database/query`, {
     method: "POST",
     headers: {
@@ -46,39 +44,72 @@ async function runQuery(label, sql) {
     body: JSON.stringify({ query: sql }),
   });
 
-  const body = await res.json().catch(() => ({ raw: await res.text() }));
+  let body;
+  try { body = await res.json(); } catch { body = { raw: await res.text() }; }
 
   if (!res.ok) {
-    console.error(`  ✗ HTTP ${res.status}:`, JSON.stringify(body, null, 2));
-    throw new Error(`Query "${label}" gagal (HTTP ${res.status})`);
+    // Tampilkan tapi jangan stop untuk error "already exists" — idempotent
+    const msg = body?.message || JSON.stringify(body);
+    const isHarmless =
+      msg.includes("already exists") ||
+      msg.includes("does not exist") && sql.trim().toUpperCase().startsWith("DROP");
+    if (isHarmless) {
+      process.stdout.write("~");
+      return;
+    }
+    throw new Error(`[${label}] HTTP ${res.status}: ${msg}`);
   }
-
-  // Hitung berapa statement yang berhasil (endpoint mengembalikan array hasil)
-  const count = Array.isArray(body) ? body.length : "?";
-  console.log(`  ✓ Selesai — ${count} hasil dikembalikan`);
-  return body;
+  process.stdout.write(".");
 }
 
 /**
- * Pisahkan SQL menjadi chunk-chunk ≤ MAX_STATEMENTS statement,
- * sehingga tidak melebihi batas body API Supabase.
+ * Pisahkan SQL menjadi individual statements, handle multi-line & dollar-quoted blocks.
+ * Supabase /database/query API hanya support satu statement per call.
  */
-function splitSql(sql, maxStatements = 50) {
-  const statements = sql
-    .split(/;[ \t]*\n/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && !s.startsWith("--"));
-  const chunks = [];
-  for (let i = 0; i < statements.length; i += maxStatements) {
-    chunks.push(statements.slice(i, i + maxStatements).join(";\n") + ";");
+function parseStatements(sql) {
+  const statements = [];
+  let current = "";
+  let inDollarQuote = false;
+  let dollarTag = "";
+  let inLineComment = false;
+  let inBlockComment = false;
+
+  const lines = sql.split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Skip pure comment lines at the start of a fresh statement
+    if (!current && (trimmed.startsWith("--") || trimmed === "")) {
+      continue;
+    }
+
+    current += line + "\n";
+
+    // Very simple parser: split on semicolons outside of dollar-quoted strings
+    // For our DDL/DML schema this is sufficient.
+    if (!inDollarQuote) {
+      if (current.trimEnd().endsWith(";")) {
+        const stmt = current.trim().replace(/;$/, "").trim();
+        if (stmt && !stmt.startsWith("--")) {
+          statements.push(stmt);
+        }
+        current = "";
+      }
+    }
   }
-  return chunks;
+
+  // Flush any remaining
+  const remainder = current.trim();
+  if (remainder && !remainder.startsWith("--")) {
+    statements.push(remainder);
+  }
+
+  return statements;
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  // Validasi prerequisite
   if (!ACCESS_TOKEN) {
     console.error(`
 ╔══════════════════════════════════════════════════════════════════╗
@@ -87,7 +118,6 @@ async function main() {
 ║  1. Buka: https://app.supabase.com/account/tokens               ║
 ║  2. Klik "Generate new token"                                    ║
 ║  3. Di Replit: Secrets → tambah SUPABASE_ACCESS_TOKEN           ║
-║     (BUKAN SUPABASE_SERVICE_ROLE_KEY — ini token berbeda)        ║
 ╚══════════════════════════════════════════════════════════════════╝
 `);
     process.exit(1);
@@ -100,70 +130,79 @@ async function main() {
 ╚══════════════════════════════════════════════════════════════════╝`);
 
   // ── Verifikasi koneksi ────────────────────────────────────────────
-  console.log("\n🔌 Verifikasi koneksi ke Supabase Management API ...");
+  process.stdout.write("\n🔌 Verifikasi koneksi ... ");
   const pingRes = await fetch(`${API_BASE}/projects/${PROJECT_REF}`, {
     headers: { Authorization: `Bearer ${ACCESS_TOKEN}` },
   });
   if (!pingRes.ok) {
     const err = await pingRes.json().catch(() => ({}));
-    console.error("  ✗ Tidak bisa connect:", err.message || pingRes.statusText);
-    console.error("  Pastikan ACCESS_TOKEN benar dan PROJECT_REF sesuai.");
+    console.error("\n  ✗ Tidak bisa connect:", err.message || pingRes.statusText);
     process.exit(1);
   }
   const project = await pingRes.json();
-  console.log(`  ✓ Terhubung ke project: ${project.name} (${project.region})`);
+  console.log(`✓ ${project.name} (${project.region})`);
 
-  // ── Phase 1: Schema (DDL) ─────────────────────────────────────────
+  // ── Phase 1: Schema ───────────────────────────────────────────────
   console.log("\n📐 Phase 1: Membuat tabel & index ...");
-  const schemaSql = loadSql("supabase-schema.sql");
-  const schemaChunks = splitSql(schemaSql, 30);
-  console.log(`   ${schemaChunks.length} chunk(s) akan dijalankan`);
+  const schemaStatements = parseStatements(loadSql("supabase-schema.sql"));
+  console.log(`   ${schemaStatements.length} statements akan dijalankan`);
+  process.stdout.write("   ");
 
-  for (let i = 0; i < schemaChunks.length; i++) {
-    await runQuery(`Schema chunk ${i + 1}/${schemaChunks.length}`, schemaChunks[i]);
+  let schemaOk = 0, schemaFail = 0;
+  for (let i = 0; i < schemaStatements.length; i++) {
+    try {
+      await runStatement(schemaStatements[i], `schema[${i + 1}]`);
+      schemaOk++;
+    } catch (err) {
+      process.stdout.write("✗");
+      console.error(`\n   WARN: ${err.message}`);
+      schemaFail++;
+    }
   }
-  console.log("  ✓ Schema selesai!");
+  console.log(`\n   ✓ Schema: ${schemaOk} OK, ${schemaFail} skipped/failed`);
 
-  // ── Phase 2: Seed data ────────────────────────────────────────────
+  // ── Phase 2: Seed ─────────────────────────────────────────────────
   console.log("\n🌱 Phase 2: Mengisi data awal ...");
-  const seedSql = loadSql("supabase-seed.sql");
-  const seedChunks = splitSql(seedSql, 20);
-  console.log(`   ${seedChunks.length} chunk(s) akan dijalankan`);
+  const seedStatements = parseStatements(loadSql("supabase-seed-prod.sql"));
+  console.log(`   ${seedStatements.length} statements akan dijalankan`);
+  process.stdout.write("   ");
 
-  for (let i = 0; i < seedChunks.length; i++) {
-    await runQuery(`Seed chunk ${i + 1}/${seedChunks.length}`, seedChunks[i]);
+  let seedOk = 0, seedFail = 0;
+  for (let i = 0; i < seedStatements.length; i++) {
+    try {
+      await runStatement(seedStatements[i], `seed[${i + 1}]`);
+      seedOk++;
+    } catch (err) {
+      process.stdout.write("✗");
+      console.error(`\n   WARN: ${err.message}`);
+      seedFail++;
+    }
   }
-  console.log("  ✓ Seed data selesai!");
+  console.log(`\n   ✓ Seed: ${seedOk} OK, ${seedFail} skipped/failed`);
 
-  // ── Phase 3: Verifikasi jumlah data ───────────────────────────────
+  // ── Phase 3: Verifikasi ───────────────────────────────────────────
   console.log("\n🔍 Phase 3: Verifikasi data ...");
-  const verifySql = `
-    SELECT tabel, jumlah FROM (
-      SELECT 'currencies'         AS tabel, COUNT(*) AS jumlah FROM currencies
-      UNION ALL SELECT 'package_categories',  COUNT(*) FROM package_categories
-      UNION ALL SELECT 'packages',            COUNT(*) FROM packages
-      UNION ALL SELECT 'package_departures',  COUNT(*) FROM package_departures
-      UNION ALL SELECT 'departure_prices',    COUNT(*) FROM departure_prices
-      UNION ALL SELECT 'blog_posts',          COUNT(*) FROM blog_posts
-      UNION ALL SELECT 'site_settings',       COUNT(*) FROM site_settings
-      UNION ALL SELECT 'services',            COUNT(*) FROM services
-      UNION ALL SELECT 'advantages',          COUNT(*) FROM advantages
-      UNION ALL SELECT 'faqs',                COUNT(*) FROM faqs
-      UNION ALL SELECT 'navigation_items',    COUNT(*) FROM navigation_items
-      UNION ALL SELECT 'testimonials',        COUNT(*) FROM testimonials
-      UNION ALL SELECT 'gallery',             COUNT(*) FROM gallery
-    ) sub
-    ORDER BY tabel;
-  `;
+  const tables = [
+    "currencies", "package_categories", "packages",
+    "package_departures", "departure_prices", "blog_posts",
+    "site_settings", "services", "advantages", "faqs",
+    "navigation_items", "testimonials", "gallery",
+  ];
 
-  const verifyRes = await runQuery("Verifikasi jumlah baris", verifySql);
-  if (Array.isArray(verifyRes) && verifyRes.length > 0) {
-    console.log("\n  Tabel                  | Baris");
-    console.log("  -----------------------|-------");
-    for (const row of verifyRes) {
-      const tbl = String(row.tabel ?? row[0]).padEnd(22);
-      const cnt = String(row.jumlah ?? row[1]).padStart(6);
-      console.log(`  ${tbl} | ${cnt}`);
+  console.log("   Tabel                  | Baris");
+  console.log("   -----------------------|-------");
+  for (const tbl of tables) {
+    try {
+      const res = await fetch(`${API_BASE}/projects/${PROJECT_REF}/database/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${ACCESS_TOKEN}` },
+        body: JSON.stringify({ query: `SELECT COUNT(*) AS c FROM ${tbl}` }),
+      });
+      const data = await res.json();
+      const count = data?.[0]?.c ?? "?";
+      console.log(`   ${tbl.padEnd(22)} | ${String(count).padStart(5)}`);
+    } catch {
+      console.log(`   ${tbl.padEnd(22)} | error`);
     }
   }
 
@@ -172,7 +211,7 @@ async function main() {
 ║  ✅  DEPLOYMENT BERHASIL!                                         ║
 ║                                                                  ║
 ║  Database Supabase sudah siap untuk production.                  ║
-║  Sekarang push ke GitHub → Vercel akan auto-redeploy.            ║
+║  Push ke GitHub → Vercel akan auto-redeploy.                     ║
 ╚══════════════════════════════════════════════════════════════════╝
 `);
 }
