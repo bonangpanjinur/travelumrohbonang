@@ -993,6 +993,57 @@ const AdminSettings = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Live Preview */}
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <Label className="text-base font-medium">Live Preview</Label>
+                <p className="text-sm text-muted-foreground mb-4">Pratinjau langsung sebelum disimpan</p>
+
+                <div className="space-y-4">
+                  {/* Browser tab preview */}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1.5">Tab Browser</p>
+                    <div className="inline-flex items-center gap-2 bg-background border border-border rounded-t-lg px-3 py-2 max-w-[220px]">
+                      {branding.favicon_url ? (
+                        <img src={branding.favicon_url} alt="Favicon preview" className="w-4 h-4 object-contain shrink-0" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-sm bg-muted-foreground/30 shrink-0" />
+                      )}
+                      <span className="text-xs truncate">{branding.company_name || "Nama Perusahaan"}</span>
+                    </div>
+                  </div>
+
+                  {/* Navbar preview */}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1.5">Navbar</p>
+                    <div className="flex items-center gap-2 bg-primary rounded-lg px-4 py-3">
+                      {(branding.display_mode === "logo_only" || branding.display_mode === "both") && (
+                        branding.logo_url ? (
+                          <img src={branding.logo_url} alt="Logo preview" className="h-8 w-auto object-contain" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center">
+                            <span className="font-display font-bold text-lg text-primary">
+                              {(branding.company_name || "U").charAt(0)}
+                            </span>
+                          </div>
+                        )
+                      )}
+                      {(branding.display_mode === "text_only" || branding.display_mode === "both") && (
+                        <div>
+                          <span className="font-display text-xl font-bold text-primary-foreground">
+                            {branding.company_name || "Nama Perusahaan"}
+                          </span>
+                          {branding.tagline && (
+                            <span className="block text-[10px] text-gold-light tracking-widest uppercase -mt-1">
+                              {branding.tagline}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <Button onClick={() => saveSetting("branding", "general", branding)} disabled={saving} className="gradient-gold text-primary">
