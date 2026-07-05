@@ -83,6 +83,12 @@ function normalizeFontStyle(value: string): string {
   return FONT_STYLE_LEGACY_MAP[value] || value;
 }
 
+/** Validates a hex color string like "#fff" or "#a1b2c3". Empty string is considered valid (means "use default"). */
+function isValidHex(value: string): boolean {
+  if (!value) return true;
+  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
+}
+
 interface BankSettings {
   bank_name: string;
   bank_account: string;
@@ -262,6 +268,7 @@ const AdminSettings = () => {
   const [showMidtransKey, setShowMidtransKey] = useState(false);
   const [showXenditKey, setShowXenditKey] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [hexErrors, setHexErrors] = useState<{ primary?: string; accent?: string }>({});
 
   useEffect(() => {
     fetchSettings();
@@ -535,21 +542,35 @@ const AdminSettings = () => {
                     </div>
                     <Input
                       value={template.custom_primary_hex || ""}
-                      onChange={(e) => setTemplate({ ...template, custom_primary_hex: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTemplate({ ...template, custom_primary_hex: val });
+                        setHexErrors((prev) => ({
+                          ...prev,
+                          primary: isValidHex(val) ? undefined : "Format harus #RGB atau #RRGGBB, contoh: #D4AF37",
+                        }));
+                      }}
                       placeholder={templates.find(t => t.id === template.active_template)?.defaultPrimary || "#0D4715"}
-                      className="font-mono text-sm"
+                      className={cn("font-mono text-sm", hexErrors.primary && "border-destructive focus-visible:ring-destructive")}
                       maxLength={7}
+                      aria-invalid={!!hexErrors.primary}
                     />
                     {template.custom_primary_hex && (
                       <button
                         type="button"
-                        onClick={() => setTemplate({ ...template, custom_primary_hex: "" })}
+                        onClick={() => {
+                          setTemplate({ ...template, custom_primary_hex: "" });
+                          setHexErrors((prev) => ({ ...prev, primary: undefined }));
+                        }}
                         className="text-xs text-muted-foreground hover:text-destructive shrink-0"
                       >
                         Reset
                       </button>
                     )}
                   </div>
+                  {hexErrors.primary && (
+                    <p className="text-xs text-destructive">{hexErrors.primary}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">Digunakan untuk sidebar, tombol, dan elemen utama</p>
                 </div>
                 {/* Accent color */}
@@ -566,15 +587,26 @@ const AdminSettings = () => {
                     </div>
                     <Input
                       value={template.custom_accent_hex || ""}
-                      onChange={(e) => setTemplate({ ...template, custom_accent_hex: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTemplate({ ...template, custom_accent_hex: val });
+                        setHexErrors((prev) => ({
+                          ...prev,
+                          accent: isValidHex(val) ? undefined : "Format harus #RGB atau #RRGGBB, contoh: #D4AF37",
+                        }));
+                      }}
                       placeholder={templates.find(t => t.id === template.active_template)?.defaultAccent || "#D4AF37"}
-                      className="font-mono text-sm"
+                      className={cn("font-mono text-sm", hexErrors.accent && "border-destructive focus-visible:ring-destructive")}
                       maxLength={7}
+                      aria-invalid={!!hexErrors.accent}
                     />
                     {template.custom_accent_hex && (
                       <button
                         type="button"
-                        onClick={() => setTemplate({ ...template, custom_accent_hex: "" })}
+                        onClick={() => {
+                          setTemplate({ ...template, custom_accent_hex: "" });
+                          setHexErrors((prev) => ({ ...prev, accent: undefined }));
+                        }}
                         className="text-xs text-muted-foreground hover:text-destructive shrink-0"
                       >
                         Reset
@@ -683,7 +715,16 @@ const AdminSettings = () => {
               );
             })()}
 
-            <Button onClick={() => saveSetting("template", "appearance", template)} disabled={saving} className="gradient-gold text-primary">
+            {(hexErrors.primary || hexErrors.accent) && (
+              <p className="text-xs text-destructive">
+                Perbaiki format kode warna sebelum menyimpan.
+              </p>
+            )}
+            <Button
+              onClick={() => saveSetting("template", "appearance", template)}
+              disabled={saving || !!hexErrors.primary || !!hexErrors.accent}
+              className="gradient-gold text-primary"
+            >
               <Save className="w-4 h-4 mr-2" />
               {saving ? "Menyimpan..." : "Simpan Template & Warna"}
             </Button>
