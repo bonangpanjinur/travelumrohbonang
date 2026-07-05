@@ -42,14 +42,11 @@ const REQUIRED = [
     key: "VITE_SUPABASE_PROJECT_ID",
     hint: "Subdomain dari URL Supabase, contoh 'abcdef' dari https://abcdef.supabase.co",
   },
-  {
-    key: "REPL_ID",
-    hint: "Diperlukan untuk login (Replit OIDC). Salin dari Replit → tab Secrets project ini",
-  },
 ];
 
 const OPTIONAL = [
-  { key: "ISSUER_URL", hint: "Default: https://replit.com/oidc — hanya isi jika pakai provider OIDC lain" },
+  { key: "REPL_ID", hint: "TIDAK diperlukan di Vercel — hanya dipakai untuk dev-tool Replit, otomatis nonaktif di production. Login aplikasi 100% pakai Supabase JWT" },
+  { key: "ISSUER_URL", hint: "TIDAK dipakai — sisa dari setup lama, aman diabaikan" },
   { key: "VITE_API_URL", hint: "Kosongkan di Vercel (frontend & API satu domain)" },
   { key: "VITE_SENTRY_DSN", hint: "Opsional — error monitoring" },
   { key: "VITE_TURNSTILE_SITE_KEY", hint: "Opsional — CAPTCHA" },
