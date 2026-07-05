@@ -8,9 +8,7 @@ const DATA_URL =
     : (import.meta.env.VITE_SUPABASE_URL ?? 'http://localhost:5000');
 
 const SUPABASE_KEY =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  'local-dev-key';
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'local-dev-key';
 
 export const supabase = createClient<Database>(DATA_URL, SUPABASE_KEY, {
   auth: {

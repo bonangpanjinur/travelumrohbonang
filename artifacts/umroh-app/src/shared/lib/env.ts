@@ -42,7 +42,7 @@ export function getAppOrigin(): string {
  */
 export const supabaseConfig = {
   url: getEnv('VITE_SUPABASE_URL'),
-  anonKey: getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('VITE_SUPABASE_PUBLISHABLE_KEY'),
+  anonKey: getEnv('VITE_SUPABASE_ANON_KEY'),
   projectId: getEnv('VITE_SUPABASE_PROJECT_ID'),
 };
 
@@ -77,7 +77,7 @@ export function validateEnvironment(): { valid: boolean; errors: string[] } {
   }
 
   if (!supabaseConfig.anonKey) {
-    errors.push('VITE_SUPABASE_ANON_KEY or VITE_SUPABASE_PUBLISHABLE_KEY is required');
+    errors.push('VITE_SUPABASE_ANON_KEY is required');
   }
 
   return {

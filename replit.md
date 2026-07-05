@@ -55,12 +55,12 @@ vercel.json              — Konfigurasi deployment Vercel
 | Variabel | Keterangan | Status |
 |---|---|---|
 | `DATABASE_URL` | Replit built-in PostgreSQL | ✅ Auto-provided oleh Replit |
-| `SUPABASE_URL` | URL Supabase (untuk auth saja) | ❗ Perlu diisi jika pakai auth |
-| `SUPABASE_ANON_KEY` | Anon key Supabase | ❗ Perlu diisi jika pakai auth |
-| `VITE_SUPABASE_URL` | URL Supabase untuk frontend | ❗ Perlu diisi jika pakai auth |
-| `VITE_SUPABASE_ANON_KEY` | Anon key frontend | ❗ Perlu diisi jika pakai auth |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Sama dengan anon key | ❗ Perlu diisi jika pakai auth |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key — wajib, tidak ada varian VITE_ | ❗ Perlu diisi jika pakai auth |
+| `VITE_SUPABASE_URL` | URL Supabase — dipakai frontend & server (server fallback ke ini) | ❗ Perlu diisi jika pakai auth |
+| `VITE_SUPABASE_ANON_KEY` | Anon key — dipakai frontend & server (server fallback ke ini) | ❗ Perlu diisi jika pakai auth |
 | `VITE_SUPABASE_PROJECT_ID` | Subdomain project Supabase | ❗ Perlu diisi jika pakai auth |
+
+> `SUPABASE_URL`/`SUPABASE_ANON_KEY` (tanpa prefix) dan `VITE_SUPABASE_PUBLISHABLE_KEY` **tidak perlu diisi lagi** — sudah digabung/fallback otomatis ke variabel `VITE_SUPABASE_*` di atas (lihat `artifacts/api-server/src/lib/supabaseEnv.ts`).
 
 > **Database di Replit**: `DATABASE_URL` sudah otomatis tersedia dari Replit built-in PostgreSQL. Semua 61 tabel sudah dibuat via `drizzle-kit push`. Tidak perlu setup manual.
 

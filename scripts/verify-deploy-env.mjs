@@ -27,10 +27,6 @@ const REQUIRED = [
     hint: "Dipakai frontend DAN server (server otomatis fallback ke variabel ini jika SUPABASE_ANON_KEY tidak diisi) — cukup isi sekali",
   },
   {
-    key: "VITE_SUPABASE_PUBLISHABLE_KEY",
-    hint: "Nilainya sama dengan VITE_SUPABASE_ANON_KEY",
-  },
-  {
     key: "VITE_SUPABASE_PROJECT_ID",
     hint: "Subdomain dari URL Supabase, contoh 'abcdef' dari https://abcdef.supabase.co",
   },
@@ -39,6 +35,7 @@ const REQUIRED = [
 const OPTIONAL = [
   { key: "SUPABASE_URL", hint: "TIDAK perlu diisi terpisah — server otomatis pakai VITE_SUPABASE_URL jika ini kosong. Isi hanya jika ingin nilai berbeda dari frontend" },
   { key: "SUPABASE_ANON_KEY", hint: "TIDAK perlu diisi terpisah — server otomatis pakai VITE_SUPABASE_ANON_KEY jika ini kosong" },
+  { key: "VITE_SUPABASE_PUBLISHABLE_KEY", hint: "Sudah digabung ke VITE_SUPABASE_ANON_KEY — aman diabaikan/dihapus" },
   { key: "REPL_ID", hint: "TIDAK diperlukan di Vercel — hanya dipakai untuk dev-tool Replit, otomatis nonaktif di production. Login aplikasi 100% pakai Supabase JWT" },
   { key: "ISSUER_URL", hint: "TIDAK dipakai — sisa dari setup lama, aman diabaikan" },
   { key: "VITE_API_URL", hint: "Kosongkan di Vercel (frontend & API satu domain)" },
