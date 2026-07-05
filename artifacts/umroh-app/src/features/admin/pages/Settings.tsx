@@ -253,6 +253,7 @@ const AdminSettings = () => {
   const [paymentGateway, setPaymentGateway] = useState<PaymentGatewaySettings>(defaultPaymentGateway);
   const [showMidtransKey, setShowMidtransKey] = useState(false);
   const [showXenditKey, setShowXenditKey] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -336,6 +337,23 @@ const AdminSettings = () => {
     setSaving(false);
   };
 
+  const handleResetAppearance = async () => {
+    const confirmed = window.confirm(
+      "Kembalikan Template, Warna, Font, dan Branding ke pengaturan bawaan sistem? Perubahan yang belum disimpan akan hilang."
+    );
+    if (!confirmed) return;
+
+    setResetting(true);
+    setTemplate(defaultTemplate);
+    setBranding(defaultBranding);
+
+    await saveSetting("template", "appearance", defaultTemplate);
+    await saveSetting("branding", "general", defaultBranding);
+
+    toast({ title: "Tampilan dikembalikan ke default!" });
+    setResetting(false);
+  };
+
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     onSuccess: (url: string) => void
@@ -406,14 +424,26 @@ const AdminSettings = () => {
         <TabsContent value="template">
           <div className="bg-card border border-border rounded-xl p-6 space-y-8">
             {/* Header */}
-            <div>
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Layout className="w-5 h-5 text-primary" />
-                Pilih Template Website
-              </h2>
-              <p className="text-muted-foreground text-sm mt-1">
-                Pilih satu dari 3 template lalu sesuaikan warna dan tipografi sesuai brand Anda. Perubahan langsung terlihat di website.
-              </p>
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Layout className="w-5 h-5 text-primary" />
+                  Pilih Template Website
+                </h2>
+                <p className="text-muted-foreground text-sm mt-1">
+                  Pilih satu dari 3 template lalu sesuaikan warna dan tipografi sesuai brand Anda. Perubahan langsung terlihat di website.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleResetAppearance}
+                disabled={resetting || saving}
+                className="shrink-0"
+              >
+                {resetting ? "Mereset..." : "Reset ke Default"}
+              </Button>
             </div>
 
             {/* Template Cards — 3 variants */}
