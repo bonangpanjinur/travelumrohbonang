@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { type Json } from "@/shared/integrations/supabase/types";
 import { IconPicker } from "@/shared/components/ui/icon-picker";
 import { cn } from "@/shared/lib/utils";
+import { hslToHex } from "@/features/tenant/hooks/useActiveTemplate";
 
 interface HeroSettings {
   background_url: string;
@@ -88,6 +89,45 @@ function isValidHex(value: string): boolean {
   if (!value) return true;
   return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
 }
+
+/** Fixed foreground colors used for text/icons rendered on top of --primary and --accent (see index.css). */
+const PRIMARY_FOREGROUND_HEX = hslToHex("38 40% 95%");
+const ACCENT_FOREGROUND_HEX = hslToHex("0 25% 12%");
+
+function hexToRgbTuple(hex: string): [number, number, number] | null {
+  let clean = hex.replace("#", "").trim();
+  if (/^[0-9a-fA-F]{3}$/.test(clean)) {
+    clean = clean.split("").map((c) => c + c).join("");
+  }
+  if (!/^[0-9a-fA-F]{6}$/.test(clean)) return null;
+  return [
+    parseInt(clean.slice(0, 2), 16),
+    parseInt(clean.slice(2, 4), 16),
+    parseInt(clean.slice(4, 6), 16),
+  ];
+}
+
+function relativeLuminance([r, g, b]: [number, number, number]): number {
+  const [rs, gs, bs] = [r, g, b].map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+/** WCAG contrast ratio (1 to 21) between two hex colors. Returns null if either hex is invalid. */
+function contrastRatio(hexA: string, hexB: string): number | null {
+  const rgbA = hexToRgbTuple(hexA);
+  const rgbB = hexToRgbTuple(hexB);
+  if (!rgbA || !rgbB) return null;
+  const lumA = relativeLuminance(rgbA);
+  const lumB = relativeLuminance(rgbB);
+  const lighter = Math.max(lumA, lumB);
+  const darker = Math.min(lumA, lumB);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+const MIN_READABLE_CONTRAST = 4.5;
 
 interface BankSettings {
   bank_name: string;
@@ -617,6 +657,42 @@ const AdminSettings = () => {
                 </div>
               </div>
 
+              {/* Contrast warnings */}
+              {(() => {
+                const activeTemplate = templates.find(t => t.id === template.active_template);
+                const primaryColor = template.custom_primary_hex || activeTemplate?.defaultPrimary || "#0D4715";
+                const accentColor = template.custom_accent_hex || activeTemplate?.defaultAccent || "#D4AF37";
+                const warnings: string[] = [];
+
+                if (isValidHex(primaryColor) && primaryColor) {
+                  const ratio = contrastRatio(primaryColor, PRIMARY_FOREGROUND_HEX);
+                  if (ratio !== null && ratio < MIN_READABLE_CONTRAST) {
+                    warnings.push(
+                      `Warna Utama terlalu terang/gelap — kontras teks di atasnya hanya ${ratio.toFixed(1)}:1 (disarankan minimal ${MIN_READABLE_CONTRAST}:1), teks bisa sulit dibaca.`
+                    );
+                  }
+                }
+                if (isValidHex(accentColor) && accentColor) {
+                  const ratio = contrastRatio(accentColor, ACCENT_FOREGROUND_HEX);
+                  if (ratio !== null && ratio < MIN_READABLE_CONTRAST) {
+                    warnings.push(
+                      `Warna Aksen terlalu terang/gelap — kontras teks di atasnya hanya ${ratio.toFixed(1)}:1 (disarankan minimal ${MIN_READABLE_CONTRAST}:1), teks bisa sulit dibaca.`
+                    );
+                  }
+                }
+
+                if (warnings.length === 0) return null;
+                return (
+                  <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 space-y-1.5">
+                    <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                      ⚠️ Peringatan Kontras Warna
+                    </p>
+                    {warnings.map((w, i) => (
+                      <p key={i} className="text-xs text-amber-700 dark:text-amber-400">{w}</p>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Font Style */}
