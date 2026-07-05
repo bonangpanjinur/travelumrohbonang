@@ -544,22 +544,6 @@ const AdminSettings = () => {
                 </div>
               </div>
 
-              {/* Live preview swatch */}
-              {(template.custom_primary_hex || template.custom_accent_hex) && (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="flex gap-2">
-                    <div
-                      className="w-8 h-8 rounded-md shadow border border-white"
-                      style={{ background: template.custom_primary_hex || templates.find(t => t.id === template.active_template)?.defaultPrimary }}
-                    />
-                    <div
-                      className="w-8 h-8 rounded-md shadow border border-white"
-                      style={{ background: template.custom_accent_hex || templates.find(t => t.id === template.active_template)?.defaultAccent }}
-                    />
-                  </div>
-                  <span className="text-xs text-muted-foreground">Preview warna kustom Anda</span>
-                </div>
-              )}
             </div>
 
             {/* Font Style */}
@@ -586,6 +570,77 @@ const AdminSettings = () => {
                 </p>
               </div>
             </div>
+
+            {/* Live Preview */}
+            {(() => {
+              const activeTemplate = templates.find(t => t.id === template.active_template);
+              const primaryColor = template.custom_primary_hex || activeTemplate?.defaultPrimary || "#0D4715";
+              const accentColor = template.custom_accent_hex || activeTemplate?.defaultAccent || "#D4AF37";
+              const fontClass = template.font_style === "modern" ? "font-sans" : template.font_style === "elegant" ? "font-serif" : "font-display";
+              return (
+                <div className="p-4 bg-muted/50 rounded-lg border-t">
+                  <Label className="text-base font-medium">Live Preview</Label>
+                  <p className="text-sm text-muted-foreground mb-4">Pratinjau tema warna &amp; font sebelum disimpan</p>
+
+                  <div className="rounded-xl overflow-hidden border border-border shadow-sm">
+                    {/* Mock navbar */}
+                    <div
+                      className="flex items-center justify-between px-5 py-3"
+                      style={{ background: primaryColor }}
+                    >
+                      <span className={cn("text-lg font-bold text-white", fontClass)}>
+                        {branding.company_name || "UmrohPlus"}
+                      </span>
+                      <div className="hidden sm:flex items-center gap-4 text-xs text-white/80">
+                        <span>Paket</span>
+                        <span>Tentang</span>
+                        <span>Blog</span>
+                        <button
+                          type="button"
+                          className={cn("px-3 py-1.5 rounded-full text-xs font-semibold", fontClass)}
+                          style={{ background: accentColor, color: "#1a1a1a" }}
+                        >
+                          Daftar
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Mock hero + card */}
+                    <div className="bg-background p-5 space-y-4">
+                      <div>
+                        <h3 className={cn("text-xl font-bold", fontClass)} style={{ color: primaryColor }}>
+                          Wujudkan Perjalanan Umroh Impian
+                        </h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Paket lengkap, nyaman, dan terpercaya untuk ibadah Anda.
+                        </p>
+                        <button
+                          type="button"
+                          className={cn("mt-3 px-4 py-2 rounded-lg text-sm font-semibold", fontClass)}
+                          style={{ background: accentColor, color: "#1a1a1a" }}
+                        >
+                          Lihat Paket
+                        </button>
+                      </div>
+
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        {[1, 2].map((i) => (
+                          <div key={i} className="border border-border rounded-lg overflow-hidden">
+                            <div className="h-16" style={{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})` }} />
+                            <div className="p-3">
+                              <p className={cn("text-sm font-semibold", fontClass)}>Paket Umroh {i === 1 ? "Reguler" : "VIP"}</p>
+                              <p className="text-xs mt-1 font-medium" style={{ color: accentColor }}>
+                                Mulai Rp {i === 1 ? "25" : "45"} Juta
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             <Button onClick={() => saveSetting("template", "appearance", template)} disabled={saving} className="gradient-gold text-primary">
               <Save className="w-4 h-4 mr-2" />
