@@ -5,8 +5,5 @@
     { "source": "/rest/v1/(.*)", "destination": "/api" },
     { "source": "/storage/v1/(.*)", "destination": "/api" },
     { "source": "/api/(.*)", "destination": "/api" }
-  ],
-  "crons": [
-    { "path": "/api/cron/health-check", "schedule": "*/5 * * * *" }
   ]
 }
