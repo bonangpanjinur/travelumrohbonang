@@ -1,6 +1,7 @@
 import { Router, type RequestHandler } from "express";
 import { db, bookings, pool, sql } from "@workspace/db";
 import { getRequestMetrics } from "../../lib/requestMetrics";
+import { SUPABASE_URL, SUPABASE_SERVER_KEY } from "../../lib/supabaseEnv";
 
 const router = Router();
 
@@ -57,10 +58,7 @@ const systemHealth: RequestHandler = async (_req, res) => {
       ...(dbError ? { error: dbError } : {}),
     },
     supabaseAuth: {
-      configured: Boolean(
-        process.env.SUPABASE_URL &&
-          (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY),
-      ),
+      configured: Boolean(SUPABASE_URL && SUPABASE_SERVER_KEY),
     },
     bookings: {
       total: totalBookings,

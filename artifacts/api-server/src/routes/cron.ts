@@ -1,6 +1,7 @@
 import { Router, type RequestHandler } from "express";
 import { pool } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { SUPABASE_URL, SUPABASE_SERVER_KEY } from "../lib/supabaseEnv";
 
 const router = Router();
 
@@ -32,8 +33,8 @@ async function checkSupabase(): Promise<{
   latencyMs: number | null;
   error?: string;
 }> {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const supabaseUrl = SUPABASE_URL || undefined;
+  const supabaseKey = SUPABASE_SERVER_KEY || undefined;
 
   if (!supabaseUrl || !supabaseKey) {
     return {

@@ -15,24 +15,16 @@ const REQUIRED = [
     hint: "Connection string Supabase Postgres (mode Transaction, port 6543). Supabase Dashboard → Project Settings → Database → Connection string → URI",
   },
   {
-    key: "SUPABASE_URL",
-    hint: "Supabase Dashboard → Project Settings → API → Project URL",
-  },
-  {
-    key: "SUPABASE_ANON_KEY",
-    hint: "Supabase Dashboard → Project Settings → API → anon public key",
-  },
-  {
     key: "SUPABASE_SERVICE_ROLE_KEY",
-    hint: "Supabase Dashboard → Project Settings → API → service_role key (JANGAN pernah expose ke frontend)",
+    hint: "Supabase Dashboard → Project Settings → API → service_role key (JANGAN pernah expose ke frontend). Tidak ada varian VITE_ untuk ini — wajib diisi terpisah",
   },
   {
     key: "VITE_SUPABASE_URL",
-    hint: "Sama dengan SUPABASE_URL, tapi dengan prefix VITE_ agar terbaca di frontend",
+    hint: "Dipakai frontend DAN server (server otomatis fallback ke variabel ini jika SUPABASE_URL tidak diisi) — cukup isi sekali",
   },
   {
     key: "VITE_SUPABASE_ANON_KEY",
-    hint: "Sama dengan SUPABASE_ANON_KEY, dengan prefix VITE_",
+    hint: "Dipakai frontend DAN server (server otomatis fallback ke variabel ini jika SUPABASE_ANON_KEY tidak diisi) — cukup isi sekali",
   },
   {
     key: "VITE_SUPABASE_PUBLISHABLE_KEY",
@@ -45,6 +37,8 @@ const REQUIRED = [
 ];
 
 const OPTIONAL = [
+  { key: "SUPABASE_URL", hint: "TIDAK perlu diisi terpisah — server otomatis pakai VITE_SUPABASE_URL jika ini kosong. Isi hanya jika ingin nilai berbeda dari frontend" },
+  { key: "SUPABASE_ANON_KEY", hint: "TIDAK perlu diisi terpisah — server otomatis pakai VITE_SUPABASE_ANON_KEY jika ini kosong" },
   { key: "REPL_ID", hint: "TIDAK diperlukan di Vercel — hanya dipakai untuk dev-tool Replit, otomatis nonaktif di production. Login aplikasi 100% pakai Supabase JWT" },
   { key: "ISSUER_URL", hint: "TIDAK dipakai — sisa dari setup lama, aman diabaikan" },
   { key: "VITE_API_URL", hint: "Kosongkan di Vercel (frontend & API satu domain)" },

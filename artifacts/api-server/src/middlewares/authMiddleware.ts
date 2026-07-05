@@ -19,11 +19,7 @@ declare global {
   }
 }
 
-const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
-const SUPABASE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_ANON_KEY ||
-  "";
+import { SUPABASE_URL, SUPABASE_SERVER_KEY as SUPABASE_KEY } from "../lib/supabaseEnv";
 
 const tokenCache = new Map<string, { user: AuthUser; expiresAt: number }>();
 const CACHE_TTL_MS = 60_000;
