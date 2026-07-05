@@ -10,7 +10,8 @@
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "lint": "eslint artifacts/umroh-app/src artifacts/api-server/src lib --ext .ts,.tsx",
     "lint:fix": "eslint artifacts/umroh-app/src artifacts/api-server/src lib --ext .ts,.tsx --fix",
-    "verify:deploy-env": "node scripts/verify-deploy-env.mjs"
+    "verify:deploy-env": "node scripts/verify-deploy-env.mjs",
+    "deploy:supabase": "node push-to-supabase.mjs"
   },
   "private": true,
   "devDependencies": {
