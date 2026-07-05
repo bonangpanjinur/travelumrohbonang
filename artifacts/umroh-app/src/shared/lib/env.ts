@@ -34,7 +34,7 @@ export function getAppOrigin(): string {
   }
   
   // Default fallback for development/preview
-  return 'https://umroh-gateway.lovable.app';
+  return '';
 }
 
 /**

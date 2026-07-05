@@ -35,4 +35,4 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
-Sitemap: https://umroh-gateway.lovable.app/sitemap.xml
+Sitemap: /sitemap.xml

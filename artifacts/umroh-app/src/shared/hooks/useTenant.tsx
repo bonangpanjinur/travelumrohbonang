@@ -43,15 +43,20 @@ export const useTenant = () => useContext(TenantContext);
 
 /**
  * Extracts subdomain from hostname.
- * e.g. "cabang-jakarta.umroh-gateway.lovable.app" => "cabang-jakarta"
- * or "cabang-jakarta.yourdomain.com" => "cabang-jakarta"
+ * e.g. "cabang-jakarta.yourdomain.com" => "cabang-jakarta"
  * Returns null for main site (no subdomain or www)
  */
 function getSubdomain(): string | null {
   const hostname = window.location.hostname;
   
-  // localhost or IP - no tenant
-  if (hostname === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+  // localhost, IP, or Replit dev domains - no tenant
+  if (
+    hostname === "localhost" ||
+    /^\d+\.\d+\.\d+\.\d+$/.test(hostname) ||
+    hostname.endsWith(".replit.dev") ||
+    hostname.endsWith(".repl.co") ||
+    hostname.endsWith(".replit.app")
+  ) {
     // Allow testing via query param
     const params = new URLSearchParams(window.location.search);
     return params.get("tenant");
@@ -59,16 +64,11 @@ function getSubdomain(): string | null {
 
   const parts = hostname.split(".");
   
-  // For lovable.app preview domains: xxx.lovable.app (3 parts = main site)
   // For custom domains: sub.domain.com (3+ parts, first is subdomain)
   if (parts.length >= 3) {
     const sub = parts[0];
     // Skip common non-tenant subdomains
-    if (["www", "api", "admin", "id-preview--8b092382-a23b-4640-b4ae-5e404be3b948"].includes(sub)) {
-      return null;
-    }
-    // Skip lovable preview subdomains
-    if (sub.startsWith("id-preview--")) {
+    if (["www", "api", "admin"].includes(sub)) {
       return null;
     }
     return sub;

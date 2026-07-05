@@ -38,8 +38,8 @@ export async function logError({ message, stack, level = "error", context, error
 
 export function installGlobalErrorHandlers() {
   if (typeof window === "undefined") return;
-  if ((window as any).__lovableErrorHandlersInstalled) return;
-  (window as any).__lovableErrorHandlersInstalled = true;
+  if ((window as any).__globalErrorHandlersInstalled) return;
+  (window as any).__globalErrorHandlersInstalled = true;
 
   window.addEventListener("error", (event) => {
     logError({
