@@ -1,34 +1,52 @@
 import { Router, type Request, type Response } from "express";
 import { GetCurrentAuthUserResponse } from "@workspace/api-zod";
-import { db, usersTable, userRoles } from "@workspace/db";
-import { eq } from "drizzle-orm";
 import { isAdminEmail } from "../lib/adminAllowlist";
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../lib/supabaseEnv";
 
 const router = Router();
 
-async function upsertUser(params: {
-  id: string;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  profileImageUrl: string | null;
-}) {
-  const [user] = await db
-    .insert(usersTable)
-    .values(params)
-    .onConflictDoUpdate({
-      target: usersTable.id,
-      set: {
-        email: params.email,
-        firstName: params.firstName,
-        lastName: params.lastName,
-        profileImageUrl: params.profileImageUrl,
-        updatedAt: new Date(),
+// ── Supabase HTTP helpers (no DATABASE_URL / pool needed) ────────────────────
+
+async function getSupabaseRole(userId: string): Promise<string | null> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_roles?user_id=eq.${userId}&limit=1`,
+      {
+        headers: {
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          Accept: "application/json",
+        },
       },
-    })
-    .returning();
-  return user;
+    );
+    if (!res.ok) return null;
+    const rows = (await res.json()) as Array<{ role: string }>;
+    return rows[0]?.role ?? null;
+  } catch {
+    return null;
+  }
 }
+
+async function createSupabaseRole(userId: string, role: string): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/user_roles`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        "Content-Type": "application/json",
+        Prefer: "resolution=ignore-duplicates",
+      },
+      body: JSON.stringify({ user_id: userId, role }),
+    });
+  } catch {
+    // best-effort
+  }
+}
+
+// ── GET /auth/user ────────────────────────────────────────────────────────────
 
 router.get("/auth/user", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) {
@@ -36,29 +54,15 @@ router.get("/auth/user", async (req: Request, res: Response) => {
     return;
   }
 
-  try {
-    await upsertUser({
-      id: req.user.id,
-      email: req.user.email,
-      firstName: req.user.firstName,
-      lastName: req.user.lastName,
-      profileImageUrl: req.user.profileImageUrl,
-    });
-  } catch (err) {
-    console.error("[auth] upsertUser failed:", err instanceof Error ? err.message : err);
-  }
+  const { id, email } = req.user;
 
-  // Prefer explicit role from user_roles table; fall back to email-based check
-  let role: string = isAdminEmail(req.user.email) ? "admin" : "user";
-  try {
-    const [dbRole] = await db
-      .select()
-      .from(userRoles)
-      .where(eq(userRoles.userId, req.user.id))
-      .limit(1);
-    if (dbRole?.role) role = dbRole.role;
-  } catch {
-    // DB unavailable — keep email-based fallback
+  // Look up role from user_roles table via Supabase HTTP (no DATABASE_URL needed)
+  let role = await getSupabaseRole(id);
+
+  if (!role) {
+    // First login — assign default role and persist it
+    role = isAdminEmail(email) ? "admin" : "buyer";
+    await createSupabaseRole(id, role);
   }
 
   res.json(

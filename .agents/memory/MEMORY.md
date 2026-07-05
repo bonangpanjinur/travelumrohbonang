@@ -6,3 +6,4 @@
 - [Supabase backend auth on Node 20](supabase-backend-auth.md) — never use createClient() on the API server (Node 20, no native WebSocket → crash). Use direct fetch to /auth/v1/user instead.
 - [Umroh app stack](umroh-app-stack.md) — app still runs on Supabase Auth (not Replit Auth); data layer runs on Replit Postgres via a local REST shim. Don't swap auth on routine re-imports.
 - [Admin API camelCase mismatch](api-camelcase-mismatch.md) — `/api/admin/*` routes return camelCase (Drizzle) but some admin pages expect snake_case; fix per-page with a map function, never globally in apiFetch.
+- [Vercel DATABASE_URL not needed](vercel-supabase-http-proxy.md) — when DATABASE_URL is absent (Vercel), rest.ts and auth.ts must use Supabase HTTP REST API with service role key instead of pool.query(); pool connection timeouts kill the entire Vercel serverless function even inside try-catch.

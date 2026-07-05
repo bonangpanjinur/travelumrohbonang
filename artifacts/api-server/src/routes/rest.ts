@@ -1,6 +1,63 @@
 import { Router, Request, Response } from "express";
 import { pool } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth";
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../lib/supabaseEnv";
+
+// When DATABASE_URL is not a real Postgres URL (e.g. Vercel without DATABASE_URL set),
+// fall back to forwarding requests to Supabase's REST API (PostgREST) directly.
+// This avoids connection timeouts that would cause Vercel serverless functions to 500.
+const USE_SUPABASE_HTTP =
+  !process.env.DATABASE_URL ||
+  process.env.DATABASE_URL.includes("localhost/placeholder") ||
+  process.env.DATABASE_URL === "postgres://localhost/placeholder";
+
+async function supabaseForward(
+  req: Request,
+  res: Response,
+  table: string,
+): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    res.status(503).json({
+      error: "Supabase not configured",
+      detail: "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set",
+    });
+    return;
+  }
+
+  // Reconstruct the query string and forward to PostgREST
+  const qs = new URLSearchParams(req.query as Record<string, string>).toString();
+  const url = `${SUPABASE_URL}/rest/v1/${table}${qs ? `?${qs}` : ""}`;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    apikey: SUPABASE_SERVICE_ROLE_KEY,
+  };
+  if (req.headers["prefer"]) headers["Prefer"] = req.headers["prefer"] as string;
+  if (req.headers["range"]) headers["Range"] = req.headers["range"] as string;
+  if (req.headers["accept"]) headers["Accept"] = req.headers["accept"] as string;
+
+  try {
+    const sbRes = await fetch(url, {
+      method: req.method,
+      headers,
+      body:
+        req.method !== "GET" && req.method !== "HEAD"
+          ? JSON.stringify(req.body)
+          : undefined,
+    });
+
+    const contentRange = sbRes.headers.get("content-range");
+    if (contentRange) res.setHeader("Content-Range", contentRange);
+    const contentType = sbRes.headers.get("content-type") ?? "application/json";
+    res.setHeader("Content-Type", contentType);
+
+    const body = await sbRes.text();
+    res.status(sbRes.status).end(body);
+  } catch (err) {
+    res.status(502).json({ error: "Supabase proxy error", detail: String(err) });
+  }
+}
 
 const router = Router();
 
@@ -308,6 +365,12 @@ router.get("/:table", async (req: Request, res: Response) => {
     return res.status(401).json({ message: "Authentication required" });
   }
 
+  // Supabase HTTP proxy mode (Vercel: no DATABASE_URL)
+  if (USE_SUPABASE_HTTP) {
+    await supabaseForward(req, res, table);
+    return;
+  }
+
   try {
     const q = req.query as Record<string, string>;
     const values: unknown[] = [];
@@ -357,6 +420,11 @@ router.post("/:table", requireAuth, async (req: Request, res: Response) => {
   const { table } = req.params as Record<string, string>;
   if (!ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
+  }
+
+  if (USE_SUPABASE_HTTP) {
+    await supabaseForward(req, res, table);
+    return;
   }
 
   try {
@@ -423,6 +491,11 @@ router.patch("/:table", requireAuth, async (req: Request, res: Response) => {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
   }
 
+  if (USE_SUPABASE_HTTP) {
+    await supabaseForward(req, res, table);
+    return;
+  }
+
   try {
     const prefer = (req.headers["prefer"] as string) || "";
     const accept = req.headers["accept"] || "";
@@ -461,6 +534,11 @@ router.delete("/:table", requireAuth, async (req: Request, res: Response) => {
   const { table } = req.params as Record<string, string>;
   if (!ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
+  }
+
+  if (USE_SUPABASE_HTTP) {
+    await supabaseForward(req, res, table);
+    return;
   }
 
   try {

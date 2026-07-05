@@ -1,8 +1,7 @@
 import { type Request, type Response, type NextFunction } from "express";
 import type { AuthUser } from "@workspace/api-zod";
 import { isAdminEmail } from "../lib/adminAllowlist";
-import { db, userRoles } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { SUPABASE_URL, SUPABASE_SERVER_KEY as SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY } from "../lib/supabaseEnv";
 
 declare global {
   namespace Express {
@@ -19,8 +18,6 @@ declare global {
   }
 }
 
-import { SUPABASE_URL, SUPABASE_SERVER_KEY as SUPABASE_KEY } from "../lib/supabaseEnv";
-
 const tokenCache = new Map<string, { user: AuthUser; expiresAt: number }>();
 const CACHE_TTL_MS = 60_000;
 
@@ -31,6 +28,45 @@ function getTokenFromRequest(req: Request): string | undefined {
     if (t && t !== "local-dev-key") return t;
   }
   return undefined;
+}
+
+async function getSupabaseRole(userId: string): Promise<string | null> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_roles?user_id=eq.${userId}&limit=1`,
+      {
+        headers: {
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          Accept: "application/json",
+        },
+      },
+    );
+    if (!res.ok) return null;
+    const rows = (await res.json()) as Array<{ role: string }>;
+    return rows[0]?.role ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function createSupabaseRole(userId: string, role: string): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/user_roles`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        "Content-Type": "application/json",
+        Prefer: "resolution=ignore-duplicates",
+      },
+      body: JSON.stringify({ user_id: userId, role }),
+    });
+  } catch {
+    // best-effort
+  }
 }
 
 async function resolveUser(token: string): Promise<AuthUser | null> {
@@ -57,17 +93,13 @@ async function resolveUser(token: string): Promise<AuthUser | null> {
 
     if (!su?.id) return null;
 
-    // Look up explicit role from user_roles table first
-    let role: string = isAdminEmail(su.email) ? "admin" : "user";
-    try {
-      const [dbRole] = await db
-        .select()
-        .from(userRoles)
-        .where(eq(userRoles.userId, su.id))
-        .limit(1);
-      if (dbRole?.role) role = dbRole.role;
-    } catch {
-      // DB unavailable — keep email-based fallback
+    // Look up role from user_roles via Supabase HTTP (no DATABASE_URL needed)
+    let role = await getSupabaseRole(su.id);
+
+    if (!role) {
+      // First login — assign and persist default role
+      role = isAdminEmail(su.email) ? "admin" : "buyer";
+      await createSupabaseRole(su.id, role);
     }
 
     const user: AuthUser = {
