@@ -1,0 +1,447 @@
+index-Baxr4XHc.js:25 Environment variable VITE_SUPABASE_PROJECT_ID is not defined
+Id @ index-Baxr4XHc.js:25
+(anonymous) @ index-Baxr4XHc.js:25
+index-Baxr4XHc.js:25 Environment variable VITE_TURNSTILE_SITE_KEY is not defined
+Id @ index-Baxr4XHc.js:25
+(anonymous) @ index-Baxr4XHc.js:25
+index-Baxr4XHc.js:25 Environment variable VITE_SENTRY_DSN is not defined
+Id @ index-Baxr4XHc.js:25
+(anonymous) @ index-Baxr4XHc.js:25
+index-Baxr4XHc.js:157 [sentry] VITE_SENTRY_DSN not set — Sentry disabled.
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-Baxr4XHc.js:9
+(anonymous) @ index-Baxr4XHc.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_useSession @ vendor-supabase-CDZEb6nQ.js:44
+await in _useSession
+_emitInitialSession @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+onAuthStateChange @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ index-Baxr4XHc.js:9
+Mm @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+K_ @ index-Baxr4XHc.js:8
+Mx @ index-Baxr4XHc.js:8
+Y_ @ index-Baxr4XHc.js:8
+Lm @ index-Baxr4XHc.js:8
+H_ @ index-Baxr4XHc.js:8
+F_ @ index-Baxr4XHc.js:8
+D_ @ index-Baxr4XHc.js:8
+M_ @ index-Baxr4XHc.js:8
+X_ @ index-Baxr4XHc.js:8
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+vendor-supabase-CDZEb6nQ.js:9 WebSocket connection to 'wss://travelvins.vercel.app/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJldXdmaHVhYWJkaHhqa29tcmVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MDU4MDEsImV4cCI6MjA5ODQ4MTgwMX0.MfRk_2HzBqhMH0Hnp-8sbcBPOD4bUpC9ix-DDzwV6kc&vsn=2.0.0' failed: 
+transportConnect @ vendor-supabase-CDZEb6nQ.js:9
+connect @ vendor-supabase-CDZEb6nQ.js:9
+connect @ vendor-supabase-CDZEb6nQ.js:9
+connect @ vendor-supabase-CDZEb6nQ.js:14
+subscribe @ vendor-supabase-CDZEb6nQ.js:9
+(anonymous) @ index-Baxr4XHc.js:9
+Mm @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+K_ @ index-Baxr4XHc.js:8
+Mx @ index-Baxr4XHc.js:8
+Y_ @ index-Baxr4XHc.js:8
+Lm @ index-Baxr4XHc.js:8
+H_ @ index-Baxr4XHc.js:8
+F_ @ index-Baxr4XHc.js:8
+D_ @ index-Baxr4XHc.js:8
+M_ @ index-Baxr4XHc.js:8
+X_ @ index-Baxr4XHc.js:8
+Z @ index-Baxr4XHc.js:1
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/rest/v1/currencies?select=*&is_active=eq.true&order=is_default.desc%2Ccode.asc 500 (Internal Server Error)
+fetch @ index-Baxr4XHc.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/rest/v1/site_settings?select=key%2Cvalue&category=eq.appearance&key=in.%28template%29 500 (Internal Server Error)
+fetch @ index-Baxr4XHc.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general 500 (Internal Server Error)
+fetch @ index-Baxr4XHc.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-Baxr4XHc.js:9
+(anonymous) @ index-Baxr4XHc.js:9
+Promise.then
+(anonymous) @ index-Baxr4XHc.js:9
+Mm @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+cl @ index-Baxr4XHc.js:8
+k_ @ index-Baxr4XHc.js:8
+K_ @ index-Baxr4XHc.js:8
+Mx @ index-Baxr4XHc.js:8
+Y_ @ index-Baxr4XHc.js:8
+Lm @ index-Baxr4XHc.js:8
+H_ @ index-Baxr4XHc.js:8
+F_ @ index-Baxr4XHc.js:8
+D_ @ index-Baxr4XHc.js:8
+M_ @ index-Baxr4XHc.js:8
+X_ @ index-Baxr4XHc.js:8
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/rest/v1/tenant_sites?select=*&subdomain=eq.travelvins&is_active=eq.true 500 (Internal Server Error)
+fetch @ index-Baxr4XHc.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/rest/v1/tenant_sites?select=*&custom_domain=eq.travelvins.vercel.app&is_active=eq.true 500 (Internal Server Error)
+fetch @ index-Baxr4XHc.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+vendor-supabase-CDZEb6nQ.js:9 WebSocket connection to 'wss://travelvins.vercel.app/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJldXdmaHVhYWJkaHhqa29tcmVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MDU4MDEsImV4cCI6MjA5ODQ4MTgwMX0.MfRk_2HzBqhMH0Hnp-8sbcBPOD4bUpC9ix-DDzwV6kc&vsn=2.0.0' failed: 
+transportConnect @ vendor-supabase-CDZEb6nQ.js:9
+connect @ vendor-supabase-CDZEb6nQ.js:9
+connect @ vendor-supabase-CDZEb6nQ.js:9
+connect @ vendor-supabase-CDZEb6nQ.js:14
+_reconnectAuth @ vendor-supabase-CDZEb6nQ.js:27
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general 500 (Internal Server Error)
+fetch @ index-Baxr4XHc.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fauth 500 (Internal Server Error)
+fetch @ index-Baxr4XHc.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/rest/v1/site_settings?select=value&key=eq.seo 500 (Internal Server Error)
+fetch @ index-Baxr4XHc.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-Baxr4XHc.js:9
+(anonymous) @ index-Baxr4XHc.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+signInWithPassword @ vendor-supabase-CDZEb6nQ.js:43
+await in signInWithPassword
+_ @ index-Baxr4XHc.js:39
+Q_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+Ei @ index-Baxr4XHc.js:8
+wy @ index-Baxr4XHc.js:8
+Oy @ index-Baxr4XHc.js:9
+HI @ index-Baxr4XHc.js:9
+vendor-supabase-CDZEb6nQ.js:9 WebSocket connection to 'wss://travelvins.vercel.app/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJldXdmaHVhYWJkaHhqa29tcmVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MDU4MDEsImV4cCI6MjA5ODQ4MTgwMX0.MfRk_2HzBqhMH0Hnp-8sbcBPOD4bUpC9ix-DDzwV6kc&vsn=2.0.0' failed: 
+transportConnect @ vendor-supabase-CDZEb6nQ.js:9
+connect @ vendor-supabase-CDZEb6nQ.js:9
+connect @ vendor-supabase-CDZEb6nQ.js:9
+connect @ vendor-supabase-CDZEb6nQ.js:14
+_reconnectAuth @ vendor-supabase-CDZEb6nQ.js:27
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fauth 500 (Internal Server Error)
+fetch @ index-Baxr4XHc.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/rest/v1/site_settings?select=value&key=eq.seo 500 (Internal Server Error)
+fetch @ index-Baxr4XHc.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general 500 (Internal Server Error)
+fetch @ index-Baxr4XHc.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8
+index-Baxr4XHc.js:9  GET https://travelvins.vercel.app/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fdashboard 500 (Internal Server Error)
+fetch @ index-Baxr4XHc.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+Z @ index-Baxr4XHc.js:1
+postMessage
+J @ index-Baxr4XHc.js:1
+s.unstable_scheduleCallback @ index-Baxr4XHc.js:1
+W_ @ index-Baxr4XHc.js:8
+G_ @ index-Baxr4XHc.js:8
+(anonymous) @ index-Baxr4XHc.js:8

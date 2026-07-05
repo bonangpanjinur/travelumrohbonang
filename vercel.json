@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @workspace/umroh-app run build",
+  "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/umroh-app run build",
   "outputDirectory": "artifacts/umroh-app/dist/public",
   "rewrites": [
     { "source": "/rest/v1/(.*)", "destination": "/api" },
