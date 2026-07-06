@@ -14,6 +14,13 @@ import { authMiddleware } from "./middlewares/authMiddleware";
 
 const app = express();
 
+// Trust the first hop proxy (Vercel's edge network / Replit's proxy) so that
+// req.ip and the X-Forwarded-For header are read correctly. Without this,
+// express-rate-limit throws a ValidationError on every single request when
+// it detects X-Forwarded-For but "trust proxy" is disabled — which manifests
+// as a blanket 500 on all routes in production.
+app.set("trust proxy", 1);
+
 // Build a strict CORS allowlist from environment or fall back to same-origin.
 // ALLOWED_ORIGINS can be a comma-separated list, e.g.:
 //   https://umrohplus.vercel.app,https://www.umrohplus.com
