@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
@@ -98,7 +98,12 @@ const Paket = () => {
     fetchData();
   }, []);
 
+  const isFirstMainCategoryRender = useRef(true);
   useEffect(() => {
+    if (isFirstMainCategoryRender.current) {
+      isFirstMainCategoryRender.current = false;
+      return;
+    }
     setSelectedSubCategory("all");
   }, [selectedMainCategory]);
 

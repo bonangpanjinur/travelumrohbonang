@@ -519,7 +519,10 @@ router.patch("/:table", requireAuth, async (req: Request, res: Response) => {
     if (!wantsReturn) return res.status(204).send();
 
     if (accept.includes("pgrst.object")) {
-      return res.json(result.rows[0] || {});
+      if (!result.rows.length) {
+        return res.status(404).json({ code: "PGRST116", message: "The result contains 0 rows" });
+      }
+      return res.json(result.rows[0]);
     }
     return res.json(result.rows);
   } catch (err: any) {

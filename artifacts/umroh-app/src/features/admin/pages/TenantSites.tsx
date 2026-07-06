@@ -112,6 +112,9 @@ const TenantSitesAdmin = () => {
       supabase.from("branches").select("id, name").eq("is_active", true),
       supabase.from("agents").select("id, name").eq("is_active", true),
     ]);
+    if (sitesRes.error) toast.error(sitesRes.error.message || "Gagal memuat situs");
+    if (branchesRes.error) toast.error(branchesRes.error.message || "Gagal memuat cabang");
+    if (agentsRes.error) toast.error(agentsRes.error.message || "Gagal memuat agen");
     if (sitesRes.data) setSites(sitesRes.data as TenantSite[]);
     if (branchesRes.data) setBranches(branchesRes.data);
     if (agentsRes.data) setAgents(agentsRes.data);

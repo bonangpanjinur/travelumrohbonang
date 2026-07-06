@@ -33,13 +33,14 @@ export async function resolveAffiliateAgentId(): Promise<string | null> {
 
 export async function trackAffiliateClick(agentId: string, code: string, landingPath: string) {
   try {
-    await supabase.from("affiliate_clicks").insert({
+    const { error } = await supabase.from("affiliate_clicks").insert({
       agent_id: agentId,
       referral_code: code,
       landing_path: landingPath,
       user_agent: navigator.userAgent.slice(0, 500),
     });
-  } catch {
-    // swallow
+    if (error) console.error("Failed to track affiliate click:", error.message);
+  } catch (err) {
+    console.error("Failed to track affiliate click:", err);
   }
 }

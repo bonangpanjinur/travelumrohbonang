@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { toast } from "sonner";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
 import { motion } from "framer-motion";
@@ -35,11 +36,16 @@ const Blog = () => {
 
   useEffect(() => {
     const fetchPosts = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("blog_posts")
         .select("*")
         .eq("is_published", true)
         .order("published_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching blog posts:", error);
+        toast.error("Gagal memuat artikel blog");
+      }
 
       const postsData = (data || []) as BlogPost[];
       setPosts(postsData);

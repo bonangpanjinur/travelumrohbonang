@@ -202,7 +202,11 @@ router.post("/", async (req, res) => {
       roomType,
     } = req.body;
 
-    const bookingCode = `BNG-ADM-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    let bookingCode = `BNG-ADM-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    const existingCode = await db.select({ id: bookings.id }).from(bookings).where(eq(bookings.bookingCode, bookingCode)).limit(1);
+    if (existingCode.length) {
+      bookingCode = `BNG-ADM-${Date.now().toString(36).toUpperCase()}`;
+    }
 
     const [booking] = await db
       .insert(bookings)

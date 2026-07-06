@@ -212,21 +212,23 @@ const AdminCreateBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
 
       if (bErr) throw bErr;
 
-      await supabase.from("booking_rooms").insert({
+      const { error: roomErr } = await supabase.from("booking_rooms").insert({
         booking_id: booking.id,
         room_type: form.room_type,
         price: totalPrice,
         quantity: 1,
         subtotal: totalPrice,
       });
+      if (roomErr) throw roomErr;
 
       if (form.customer_name && !form.user_id) {
-        await supabase.from("booking_pilgrims").insert({
+        const { error: pilgrimErr } = await supabase.from("booking_pilgrims").insert({
           booking_id: booking.id,
           name: form.customer_name,
           gender: "male",
           email: form.customer_email || null,
         });
+        if (pilgrimErr) throw pilgrimErr;
       }
 
       clearDraft();
@@ -234,7 +236,11 @@ const AdminCreateBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
       onSuccess();
       handleClose(false);
     } catch (e: any) {
-      toast({ title: "Gagal membuat booking", description: e.message, variant: "destructive" });
+      toast({
+        title: "Gagal membuat booking",
+        description: `${e.message} — mohon cek data booking secara manual, kemungkinan ada data yang tidak lengkap tersimpan.`,
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }

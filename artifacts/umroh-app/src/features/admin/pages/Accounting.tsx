@@ -110,7 +110,7 @@ const AdminAccounting = () => {
         type: data.type,
         category: data.category,
         description: data.description || null,
-        amount: Number(data.amount),
+        amount: Number.isFinite(parseFloat(String(data.amount))) ? parseFloat(String(data.amount)) : 0,
         transaction_date: data.transaction_date,
         reference_number: data.reference_number || null,
         created_by: user?.id,
@@ -289,7 +289,10 @@ const AdminAccounting = () => {
           if (!key) return;
           if (!monthlyData[key]) {
             const [y, m] = key.split("-");
-            const label = format(new Date(Number(y), Number(m) - 1), "MMM yyyy", { locale: localeId });
+            const parsedDate = new Date(Number(y), Number(m) - 1);
+            const label = isNaN(parsedDate.getTime())
+              ? key
+              : format(parsedDate, "MMM yyyy", { locale: localeId });
             monthlyData[key] = { month: label, pemasukan: 0, pengeluaran: 0 };
           }
           if (t.type === "income") monthlyData[key].pemasukan += Number(t.amount);

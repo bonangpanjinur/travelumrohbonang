@@ -105,7 +105,7 @@ const Booking = () => {
     const fetchData = async () => {
       // Fetch package, departure, branches, and agents in parallel
       const [pkgRes, branchRes, agentRes] = await Promise.all([
-        supabase.from("packages").select("id, title, slug").eq("slug", slug!).single(),
+        supabase.from("packages").select("id, title, slug").eq("slug", slug!).maybeSingle(),
         supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
         supabase.from("agents").select("id, name, branch_id, branch:branches(name)").eq("is_active", true).order("name")
       ]);
@@ -120,7 +120,7 @@ const Booking = () => {
           .from("package_departures")
           .select(`*, prices:departure_prices(room_type, price)`)
           .eq("id", departureId!)
-          .single();
+          .maybeSingle();
 
         if (depData) {
           setDeparture(depData as unknown as Departure);

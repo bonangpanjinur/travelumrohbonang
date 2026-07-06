@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Badge } from "@/shared/components/ui/badge";
 import { DollarSign, Building2, User, Users } from "lucide-react";
+import { toast } from "sonner";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
@@ -59,7 +60,7 @@ const CommissionReport = ({ startDate, endDate }: CommissionReportProps) => {
     setLoading(true);
 
     // 1. Get bookings with PIC in the period (exclude cancelled)
-    const { data: bookings } = await supabase
+    const { data: bookings, error: bookingsError } = await supabase
       .from("bookings")
       .select("id, booking_code, package_id, pic_id, pic_type")
       .not("pic_id", "is", null)
@@ -67,6 +68,12 @@ const CommissionReport = ({ startDate, endDate }: CommissionReportProps) => {
       .neq("status", "cancelled")
       .gte("created_at", startDate.toISOString())
       .lte("created_at", endDate.toISOString());
+
+    if (bookingsError) {
+      toast.error(bookingsError.message || "Gagal memuat data komisi");
+      setLoading(false);
+      return;
+    }
 
     if (!bookings || bookings.length === 0) {
       setRows([]);
@@ -80,51 +87,39 @@ const CommissionReport = ({ startDate, endDate }: CommissionReportProps) => {
     const packageIds = [...new Set(bookings.map((b) => b.package_id).filter(Boolean))];
     const picIds = [...new Set(bookings.map((b) => b.pic_id).filter(Boolean))];
 
-    // 2. Get pilgrim counts per booking
-    const { data: pilgrims } = await supabase
-      .from("booking_pilgrims")
-      .select("booking_id")
-      .in("booking_id", bookingIds);
+    // 2-5. Fetch pilgrim counts, commission rates, package titles, and PIC names in parallel.
+    const [pilgrimsRes, commissionsRes, packagesRes, agentsRes, branchesRes, profilesRes] = await Promise.all([
+      supabase.from("booking_pilgrims").select("booking_id").in("booking_id", bookingIds),
+      supabase.from("package_commissions").select("package_id, pic_type, commission_amount").in("package_id", packageIds as string[]),
+      supabase.from("packages").select("id, title").in("id", packageIds as string[]),
+      picIds.length > 0 ? supabase.from("agents").select("id, name").in("id", picIds as string[]) : Promise.resolve({ data: [], error: null }),
+      picIds.length > 0 ? supabase.from("branches").select("id, name").in("id", picIds as string[]) : Promise.resolve({ data: [], error: null }),
+      picIds.length > 0 ? supabase.from("profiles").select("id, name").in("id", picIds as string[]) : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    const firstError = [pilgrimsRes, commissionsRes, packagesRes, agentsRes, branchesRes, profilesRes]
+      .find((r) => r.error)?.error;
+    if (firstError) {
+      toast.error(firstError.message || "Gagal memuat sebagian data komisi");
+    }
 
     const pilgrimCounts: Record<string, number> = {};
-    pilgrims?.forEach((p) => {
+    pilgrimsRes.data?.forEach((p) => {
       if (p.booking_id) pilgrimCounts[p.booking_id] = (pilgrimCounts[p.booking_id] || 0) + 1;
     });
 
-    // 3. Get commission rates
-    const { data: commissions } = await supabase
-      .from("package_commissions")
-      .select("package_id, pic_type, commission_amount")
-      .in("package_id", packageIds as string[]);
-
     const commissionMap: Record<string, number> = {};
-    commissions?.forEach((c) => {
+    commissionsRes.data?.forEach((c) => {
       commissionMap[`${c.package_id}_${c.pic_type}`] = c.commission_amount;
     });
 
-    // 4. Get package titles
-    const { data: packages } = await supabase
-      .from("packages")
-      .select("id, title")
-      .in("id", packageIds as string[]);
-
     const packageMap: Record<string, string> = {};
-    packages?.forEach((p) => { packageMap[p.id] = p.title; });
+    packagesRes.data?.forEach((p) => { packageMap[p.id] = p.title; });
 
-    // 5. Get PIC names (agents, branches — we check both tables)
     const picNameMap: Record<string, string> = {};
-
-    if (picIds.length > 0) {
-      const { data: agents } = await supabase.from("agents").select("id, name").in("id", picIds as string[]);
-      agents?.forEach((a) => { picNameMap[a.id] = a.name; });
-
-      const { data: branches } = await supabase.from("branches").select("id, name").in("id", picIds as string[]);
-      branches?.forEach((b) => { picNameMap[b.id] = b.name; });
-
-      // For karyawan, check profiles
-      const { data: profiles } = await supabase.from("profiles").select("id, name").in("id", picIds as string[]);
-      profiles?.forEach((p) => { picNameMap[p.id] = p.name; });
-    }
+    agentsRes.data?.forEach((a: any) => { picNameMap[a.id] = a.name; });
+    branchesRes.data?.forEach((b: any) => { picNameMap[b.id] = b.name; });
+    profilesRes.data?.forEach((p: any) => { picNameMap[p.id] = p.name; });
 
     // 6. Build rows
     const resultRows: CommissionRow[] = [];

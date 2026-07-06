@@ -37,7 +37,11 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("branches").select("id, name").eq("is_active", true).order("name").then(({ data }) => {
+    supabase.from("branches").select("id, name").eq("is_active", true).order("name").then(({ data, error }) => {
+      if (error) {
+        toast.error("Gagal memuat daftar cabang");
+        return;
+      }
       setBranches(data || []);
     });
   }, []);
@@ -57,14 +61,17 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
   };
 
   useEffect(() => {
+    let active = true;
     const fetchDetails = async () => {
       setLoading(true);
 
       // Fetch pilgrims
-      const { data: pilgrimsData } = await supabase
+      const { data: pilgrimsData, error: pilgrimsError } = await supabase
         .from("booking_pilgrims")
         .select("id, name, gender")
         .eq("booking_id", bookingId);
+      if (!active) return;
+      if (pilgrimsError) toast.error("Gagal memuat data jemaah");
       setPilgrims(pilgrimsData || []);
 
       // Fetch commission rate
@@ -75,6 +82,7 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
           .eq("package_id", packageId)
           .eq("pic_type", picType)
           .maybeSingle();
+        if (!active) return;
         setCommissionRate(commData?.commission_amount || 0);
       }
 
@@ -82,20 +90,24 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
       if (picId && picType) {
         if (picType === "agen") {
           const { data } = await supabase.from("agents").select("name").eq("id", picId).maybeSingle();
+          if (!active) return;
           setPicName(data?.name || "-");
         } else if (picType === "cabang") {
           const { data } = await supabase.from("branches").select("name").eq("id", picId).maybeSingle();
+          if (!active) return;
           setPicName(data?.name || "-");
         } else if (picType === "karyawan") {
           const { data } = await supabase.from("profiles").select("name").eq("id", picId).maybeSingle();
+          if (!active) return;
           setPicName(data?.name || "-");
         }
       }
 
-      setLoading(false);
+      if (active) setLoading(false);
     };
 
     fetchDetails();
+    return () => { active = false; };
   }, [bookingId, packageId, picType, picId]);
 
   if (loading) {

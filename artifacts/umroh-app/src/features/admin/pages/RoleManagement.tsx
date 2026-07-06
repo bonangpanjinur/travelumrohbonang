@@ -185,16 +185,16 @@ const RoleManagement = () => {
     setSaving(userId);
     try {
       const user = users.find((u) => u.id === userId);
-      // Delete existing role if any
-      if (user?.roleId) {
-        await apiFetch(`/api/admin/agents/roles/${user.roleId}`, { method: "DELETE" });
-      }
-      // Insert new role (unless resetting to buyer with no record)
+      // Create the new role first, then remove the old one — avoids a window
+      // where the user has no role at all if the second request fails.
       if (newRole !== "buyer") {
         await apiFetch("/api/admin/agents/roles", {
           method: "POST",
           body: JSON.stringify({ userId, role: newRole }),
         });
+      }
+      if (user?.roleId) {
+        await apiFetch(`/api/admin/agents/roles/${user.roleId}`, { method: "DELETE" });
       }
       await logAudit({
         action: "role_changed",

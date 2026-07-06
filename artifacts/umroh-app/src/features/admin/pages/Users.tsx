@@ -84,11 +84,12 @@ const AdminUsers = () => {
 
       setUsers(combined);
 
-      const { data: branchData } = await supabase
+      const { data: branchData, error: branchError } = await supabase
         .from("branches")
         .select("id, name")
         .eq("is_active", true)
         .order("name");
+      if (branchError) throw branchError;
       setBranches(branchData || []);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -105,25 +106,12 @@ const AdminUsers = () => {
   const handleRoleChange = async (userId: string, newRole: string) => {
     setUpdatingId(userId);
     try {
-      // Check if user already has a role entry
-      const { data: existing } = await supabase
+      // Atomic upsert on user_id avoids a race between the existence check
+      // and the subsequent insert/update.
+      const { error } = await supabase
         .from("user_roles")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from("user_roles")
-          .update({ role: newRole })
-          .eq("user_id", userId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("user_roles")
-          .insert({ user_id: userId, role: newRole });
-        if (error) throw error;
-      }
+        .upsert({ user_id: userId, role: newRole }, { onConflict: "user_id" });
+      if (error) throw error;
 
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))

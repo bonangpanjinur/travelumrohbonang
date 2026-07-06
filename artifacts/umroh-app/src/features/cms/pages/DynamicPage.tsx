@@ -35,7 +35,7 @@ const DynamicPage = () => {
         .select("*")
         .eq("slug", slug!)
         .eq("is_active", true) // Using is_active as per current schema
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
         setNotFound(true);

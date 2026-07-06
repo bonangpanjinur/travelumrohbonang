@@ -80,6 +80,6 @@ router.use("/bookings", requireOperational, adminBookingsRouter);
 router.use("/bookings/:bookingId/payments", requireOperational, adminPaymentsRouter);
 router.use("/bookings/:bookingId/documents", requireOperational, adminDocumentsRouter);
 router.use("/documents", requireOperational, adminDocumentsRouter);
-router.use("/refunds", requireStaff, adminRefundsRouter);
+router.use("/refunds", requireAdmin, adminRefundsRouter);
 
 export default router;
