@@ -2,6 +2,7 @@ import { type Request, type Response, type NextFunction } from "express";
 import type { AuthUser } from "@workspace/api-zod";
 import { isAdminEmail } from "../lib/adminAllowlist";
 import { SUPABASE_URL, SUPABASE_SERVER_KEY as SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY } from "../lib/supabaseEnv";
+import { pool } from "@workspace/db";
 
 declare global {
   namespace Express {
@@ -30,6 +31,47 @@ function getTokenFromRequest(req: Request): string | undefined {
   return undefined;
 }
 
+/**
+ * Query role from local Postgres when DATABASE_URL is a real connection
+ * (i.e. development / Replit). Returns null on any error so the caller
+ * can fall back to the Supabase HTTP path.
+ */
+async function getLocalRole(userId: string): Promise<string | null> {
+  const dbUrl = process.env.DATABASE_URL ?? "";
+  if (!dbUrl || dbUrl.includes("localhost/placeholder")) return null;
+  try {
+    const result = await pool.query<{ role: string }>(
+      "SELECT role FROM user_roles WHERE user_id = $1 LIMIT 1",
+      [userId],
+    );
+    return result.rows[0]?.role ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Upsert role in local Postgres.
+ */
+async function setLocalRole(userId: string, role: string): Promise<void> {
+  const dbUrl = process.env.DATABASE_URL ?? "";
+  if (!dbUrl || dbUrl.includes("localhost/placeholder")) return;
+  try {
+    await pool.query(
+      `INSERT INTO user_roles (id, user_id, role, created_at)
+       VALUES (gen_random_uuid(), $1, $2, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET role = EXCLUDED.role`,
+      [userId, role],
+    );
+  } catch (err) {
+    console.error("[authMiddleware] setLocalRole failed:", err);
+  }
+}
+
+/**
+ * Query role from Supabase HTTP REST (used when DATABASE_URL is absent,
+ * e.g. on Vercel serverless). Falls back gracefully to null on any error.
+ */
 async function getSupabaseRole(userId: string): Promise<string | null> {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
   try {
@@ -51,7 +93,52 @@ async function getSupabaseRole(userId: string): Promise<string | null> {
   }
 }
 
-async function createSupabaseRole(userId: string, role: string): Promise<void> {
+// Role hierarchy: lower index = higher privilege.
+// Used to pick the more restrictive role when two stores disagree.
+const ROLE_RANK: Record<string, number> = {
+  super_admin: 0,
+  admin: 1,
+  branch_manager: 2,
+  staff: 3,
+  agent: 4,
+  buyer: 5,
+  user: 6,
+};
+
+function moreRestrictiveRole(a: string | null, b: string | null): string | null {
+  if (!a) return b;
+  if (!b) return a;
+  // Higher rank number = less privilege. Pick the one with the higher rank value
+  // so that a Supabase demotion immediately takes effect even if local is stale.
+  return (ROLE_RANK[a] ?? 99) >= (ROLE_RANK[b] ?? 99) ? a : b;
+}
+
+/**
+ * Unified role getter.
+ *
+ * When both stores are reachable, Supabase is treated as the authoritative
+ * source for REVOCATION: if Supabase returns a less-privileged role than
+ * local Postgres, the less-privileged role wins immediately (no stale escalation).
+ *
+ * When only one store is reachable the available value is used.
+ */
+async function getUserRole(userId: string): Promise<string | null> {
+  const [localRole, supabaseRole] = await Promise.all([
+    getLocalRole(userId),
+    getSupabaseRole(userId),
+  ]);
+  return moreRestrictiveRole(localRole, supabaseRole);
+}
+
+/**
+ * Persist role to local Postgres AND Supabase HTTP so both stores stay in sync.
+ * Errors are logged but never thrown — a failed write must not block the request.
+ */
+async function persistRole(userId: string, role: string): Promise<void> {
+  // 1. Local Postgres (dev / Replit)
+  await setLocalRole(userId, role);
+
+  // 2. Supabase HTTP (production / Vercel fallback)
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
   try {
     // PostgREST upsert requires BOTH ?on_conflict=<col> in the URL AND
@@ -76,12 +163,11 @@ async function createSupabaseRole(userId: string, role: string): Promise<void> {
     if (!res.ok) {
       const body = await res.text().catch(() => "<unreadable>");
       console.error(
-        `[authMiddleware] createSupabaseRole failed — status ${res.status}: ${body}`,
+        `[authMiddleware] persistRole (Supabase) failed — status ${res.status}: ${body}`,
       );
     }
   } catch (err) {
-    // Network / parse error — log so sync failures are observable
-    console.error("[authMiddleware] createSupabaseRole threw:", err);
+    console.error("[authMiddleware] persistRole (Supabase) threw:", err);
   }
 }
 
@@ -109,15 +195,27 @@ async function resolveUser(token: string): Promise<AuthUser | null> {
 
     if (!su?.id) return null;
 
-    // Look up role from user_roles via Supabase HTTP (no DATABASE_URL needed)
-    let role = await getSupabaseRole(su.id);
+    // Resolve role: local Postgres first (fast), then Supabase HTTP (fallback)
+    let role = await getUserRole(su.id);
     // true = role came from DB (reliable); false = fallback default (don't cache long)
-    const roleIsConfirmed = !!role;
+    let roleIsConfirmed = !!role;
 
-    if (!role) {
-      // First login — assign and persist default role
-      role = isAdminEmail(su.email) ? "admin" : "buyer";
-      await createSupabaseRole(su.id, role);
+    if (isAdminEmail(su.email)) {
+      // Admin-email override: ADMIN_EMAILS always get at least super_admin,
+      // regardless of what the DB has stored. This handles the common case
+      // where Supabase's on_auth_user_created trigger pre-assigned "buyer"
+      // before ADMIN_EMAILS was configured, or when role is simply missing.
+      if (!role || role === "buyer" || role === "user") {
+        role = "super_admin";
+        await persistRole(su.id, role);
+        // Evict any stale cached token entry so the old role isn't served again.
+        tokenCache.delete(token);
+        roleIsConfirmed = true;
+      }
+    } else if (!role) {
+      // Non-admin first login — assign buyer role.
+      role = "buyer";
+      await persistRole(su.id, role);
     }
 
     const user: AuthUser = {

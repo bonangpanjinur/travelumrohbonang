@@ -10,3 +10,5 @@
 - [Stale tsc incremental cache hides errors](tsc-incremental-cache-hides-errors.md) — `pnpm run typecheck` can report 0 errors while real errors exist due to stale `.tsbuildinfo`; delete them before trusting a "clean" result after broad changes.
 - [Unregistered routes pattern](unregistered-routes-pattern.md) — route files must be mounted in routes/index.ts; rest.ts/storage.ts go directly in app.ts. Includes IDOR fix in pilgrim-documents and rate-limiter consolidation rule.
 - [PostgREST upsert on non-PK unique column](supabase-rest-upsert.md) — must include ?on_conflict=<col> in URL AND Prefer: merge-duplicates; also provide id (no DB DEFAULT on user_roles.id).
+- [Role resolution strategy](role-resolution-strategy.md) — local-first speed + Supabase-wins-on-demotion; use getUserRole(), never getLocalRole/getSupabaseRole directly.
+- [SQL triggers quota logic](sql-triggers-quota-logic.md) — 8 business logic triggers in business_logic_triggers.sql; dollar-quote $ corruption fix pattern; quota hard guard via FOR UPDATE lock.

@@ -116,10 +116,12 @@ create table if not exists public."booking_pilgrims" (
   "gender" text,
   "id" uuid primary key default gen_random_uuid(),
   "name" text not null,
+  "nationality" text,
   "nik" text,
   "passport_expiry" text,
   "passport_number" text,
-  "phone" text
+  "phone" text,
+  "room_type" text
 );
 
 create table if not exists public."booking_rooms" (

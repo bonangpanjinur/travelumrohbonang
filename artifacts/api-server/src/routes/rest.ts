@@ -86,7 +86,7 @@ const PUBLIC_READ_TABLES = new Set([
   "testimonials", "faqs", "blog_posts", "gallery", "site_settings", "tenant_sites",
   "itineraries", "itinerary_days", "currencies", "departure_gallery", "manasik_materials",
   "services", "guide_steps", "advantages", "navigation_items", "floating_buttons",
-  "pages", "package_reviews", "package_commissions", "package_inclusions",
+  "pages", "package_reviews", "package_commissions",
   "tenant_site_packages", "pilgrim_testimonials", "slug_redirects",
   "seo_overrides", "coupons", "agents", "template_pricing",
 ]);
@@ -142,7 +142,6 @@ const REVERSE_FKS: Record<string, Record<string, string>> = {
     package_hotels: "package_id",
     package_departures: "package_id",
     package_commissions: "package_id",
-    package_inclusions: "package_id",
     faqs: "package_id",
     tenant_site_packages: "package_id",
   },

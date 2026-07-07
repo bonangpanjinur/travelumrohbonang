@@ -32,9 +32,11 @@ router.get("/my", async (req: any, res) => {
         name: bookingPilgrims.name,
         passportNumber: bookingPilgrims.passportNumber,
         gender: bookingPilgrims.gender,
+        nik: bookingPilgrims.nik,
         birthDate: bookingPilgrims.birthDate,
         nationality: bookingPilgrims.nationality,
         roomType: bookingPilgrims.roomType,
+        passportExpiry: bookingPilgrims.passportExpiry,
         createdAt: bookingPilgrims.createdAt,
       })
       .from(bookingPilgrims)
