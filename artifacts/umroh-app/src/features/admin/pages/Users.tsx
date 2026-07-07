@@ -108,9 +108,14 @@ const AdminUsers = () => {
     try {
       // Atomic upsert on user_id avoids a race between the existence check
       // and the subsequent insert/update.
+      // id is required (TEXT PRIMARY KEY, no DB default) — crypto.randomUUID()
+      // is ignored on UPDATE (conflict on user_id) but needed for INSERT path.
       const { error } = await supabase
         .from("user_roles")
-        .upsert({ user_id: userId, role: newRole }, { onConflict: "user_id" });
+        .upsert(
+          { id: crypto.randomUUID(), user_id: userId, role: newRole },
+          { onConflict: "user_id" },
+        );
       if (error) throw error;
 
       setUsers((prev) =>

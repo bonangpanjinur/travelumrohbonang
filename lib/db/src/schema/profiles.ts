@@ -11,7 +11,7 @@ export const profiles = pgTable("profiles", {
   phone: text("phone"),
   avatarUrl: text("avatar_url"),
   branchId: text("branch_id"),
-  totpEnabled: boolean("totp_enabled").notNull(),
+  totpEnabled: boolean("totp_enabled").notNull().default(false),
   totpSecret: text("totp_secret"),
   totpBackupCodes: text("totp_backup_codes"),
   createdAt: timestamp("created_at", { withTimezone: true }),

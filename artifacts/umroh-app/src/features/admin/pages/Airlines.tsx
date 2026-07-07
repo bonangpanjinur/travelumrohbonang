@@ -12,7 +12,7 @@ import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 interface Airline {
   id: string;
   name: string;
-  logo_url: string | null;
+  logoUrl: string | null;
 }
 
 const AdminAirlines = () => {
@@ -23,7 +23,7 @@ const AdminAirlines = () => {
   const { toast } = useToast();
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  const [form, setForm] = useState({ name: "", logo_url: "" });
+  const [form, setForm] = useState({ name: "", logoUrl: "" });
 
   useEffect(() => {
     fetchAirlines();
@@ -66,7 +66,7 @@ const AdminAirlines = () => {
 
   const handleEdit = (airline: Airline) => {
     setEditing(airline);
-    setForm({ name: airline.name, logo_url: (airline as any).logo_url || "" });
+    setForm({ name: airline.name, logoUrl: airline.logoUrl || "" });
     setIsOpen(true);
   };
 
@@ -86,7 +86,7 @@ const AdminAirlines = () => {
 
   const resetForm = () => {
     setEditing(null);
-    setForm({ name: "", logo_url: "" });
+    setForm({ name: "", logoUrl: "" });
   };
 
   return (
@@ -109,7 +109,7 @@ const AdminAirlines = () => {
               </div>
               <div>
                 <Label>Logo URL</Label>
-                <Input value={form.logo_url} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} placeholder="https://..." className="mt-1" />
+                <Input value={form.logoUrl} onChange={(e) => setForm({ ...form, logoUrl: e.target.value })} placeholder="https://..." className="mt-1" />
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>

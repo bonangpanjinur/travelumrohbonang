@@ -16,7 +16,7 @@ interface Hotel {
   id: string;
   name: string;
   city: string;
-  star: number;
+  stars: number;
 }
 
 const AdminHotels = () => {
@@ -38,7 +38,7 @@ const AdminHotels = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { resetPage(); }, [search]);
 
-  const [form, setForm] = useState({ name: "", city: "", star: 5 });
+  const [form, setForm] = useState({ name: "", city: "", stars: 5 });
 
   useEffect(() => {
     fetchHotels();
@@ -81,7 +81,7 @@ const AdminHotels = () => {
 
   const handleEdit = (hotel: Hotel) => {
     setEditing(hotel);
-    setForm({ name: hotel.name, city: hotel.city || "", star: (hotel as any).stars || (hotel as any).star || 5 });
+    setForm({ name: hotel.name, city: hotel.city || "", stars: hotel.stars || 5 });
     setIsOpen(true);
   };
 
@@ -97,7 +97,7 @@ const AdminHotels = () => {
 
   const resetForm = () => {
     setEditing(null);
-    setForm({ name: "", city: "", star: 5 });
+    setForm({ name: "", city: "", stars: 5 });
   };
 
   return (
@@ -131,7 +131,7 @@ const AdminHotels = () => {
                 </div>
                 <div>
                   <Label>Bintang</Label>
-                  <Input type="number" min={1} max={5} value={form.star} onChange={(e) => setForm({ ...form, star: parseInt(e.target.value) })} className="mt-1" />
+                  <Input type="number" min={1} max={5} value={form.stars} onChange={(e) => setForm({ ...form, stars: parseInt(e.target.value) })} className="mt-1" />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
@@ -168,7 +168,7 @@ const AdminHotels = () => {
                     <TableCell>{h.city || "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-0.5">
-                        {[...Array(h.star || 0)].map((_, i) => (
+                        {[...Array(h.stars || 0)].map((_, i) => (
                           <Star key={i} className="w-3 h-3 fill-gold text-gold" />
                         ))}
                       </div>

@@ -31,6 +31,27 @@ interface Agent {
   branch?: { name: string } | null;
 }
 
+// API returns Drizzle camelCase; map to the snake_case interface used by JSX.
+function mapAgentFromApi(a: any): Agent {
+  return {
+    id: a.id,
+    name: a.name,
+    phone: a.phone ?? null,
+    email: a.email ?? null,
+    referral_code: a.referralCode ?? a.referral_code ?? null,
+    user_id: a.userId ?? a.user_id ?? null,
+    branch_id: a.branchId ?? a.branch_id ?? null,
+    // numeric Drizzle type is returned as string from Postgres
+    commission_percent:
+      a.commissionPercent != null
+        ? Number(a.commissionPercent)
+        : a.commission_percent != null
+          ? Number(a.commission_percent)
+          : null,
+    is_active: a.isActive ?? a.is_active ?? true,
+  };
+}
+
 interface Branch {
   id: string;
   name: string;
@@ -68,7 +89,7 @@ const AdminAgents = () => {
         apiFetch<Branch[]>("/api/admin/branches"),
       ]);
       
-      setAgents(agentsRes || []);
+      setAgents((agentsRes || []).map(mapAgentFromApi));
       setBranches(branchesRes || []);
     } catch (e) {
       console.error(e);
@@ -80,14 +101,15 @@ const AdminAgents = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Use camelCase keys — Drizzle's insert/update expects the schema field names
     const payload: any = {
       name: form.name,
       phone: form.phone || null,
       email: form.email || null,
-      referral_code: form.referral_code || null,
-      branch_id: form.branch_id || null,
-      commission_percent: form.commission_percent || 0,
-      is_active: form.is_active,
+      referralCode: form.referral_code || null,
+      branchId: form.branch_id || null,
+      commissionPercent: form.commission_percent || 0,
+      isActive: form.is_active,
     };
 
     // Try to find a user account by email and link it
@@ -97,7 +119,7 @@ const AdminAgents = () => {
         .select("id")
         .eq("email", form.email)
         .maybeSingle();
-      if (userProfile?.id) payload.user_id = userProfile.id;
+      if (userProfile?.id) payload.userId = userProfile.id;
     }
 
     try {

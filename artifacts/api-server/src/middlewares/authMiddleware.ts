@@ -54,18 +54,34 @@ async function getSupabaseRole(userId: string): Promise<string | null> {
 async function createSupabaseRole(userId: string, role: string): Promise<void> {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/user_roles`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        apikey: SUPABASE_SERVICE_ROLE_KEY,
-        "Content-Type": "application/json",
-        Prefer: "resolution=ignore-duplicates",
+    // PostgREST upsert requires BOTH ?on_conflict=<col> in the URL AND
+    // Prefer: resolution=merge-duplicates to handle the unique constraint on
+    // user_id correctly (not just the PK). Without the query param PostgREST
+    // cannot determine which unique constraint to use for the merge.
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/user_roles?on_conflict=user_id`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates",
+        },
+        // id is required (TEXT PRIMARY KEY, no DB default) — generate here.
+        // On UPDATE path (conflict on user_id) the id is ignored by PostgREST.
+        body: JSON.stringify({ id: crypto.randomUUID(), user_id: userId, role }),
       },
-      body: JSON.stringify({ user_id: userId, role }),
-    });
-  } catch {
-    // best-effort
+    );
+    if (!res.ok) {
+      const body = await res.text().catch(() => "<unreadable>");
+      console.error(
+        `[authMiddleware] createSupabaseRole failed — status ${res.status}: ${body}`,
+      );
+    }
+  } catch (err) {
+    // Network / parse error — log so sync failures are observable
+    console.error("[authMiddleware] createSupabaseRole threw:", err);
   }
 }
 

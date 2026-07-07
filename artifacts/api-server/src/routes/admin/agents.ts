@@ -38,6 +38,16 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
+router.delete("/:id", async (req, res) => {
+  try {
+    const [deleted] = await db.delete(agents).where(eq(agents.id, req.params.id as string)).returning();
+    if (!deleted) return res.status(404).json({ error: "Agent not found" });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete agent" });
+  }
+});
+
 // Commissions
 router.get("/commissions", async (req, res) => {
   try {

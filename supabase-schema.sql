@@ -227,7 +227,7 @@ CREATE TABLE IF NOT EXISTS agents (
 );
 
 CREATE TABLE IF NOT EXISTS user_roles (
-  id         TEXT PRIMARY KEY,
+  id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   user_id    TEXT NOT NULL,
   role       TEXT NOT NULL,
   created_at TIMESTAMPTZ
