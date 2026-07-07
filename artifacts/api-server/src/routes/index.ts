@@ -11,6 +11,7 @@ import cmsRouter from "./cms";
 import contractsRouter from "./contracts";
 import logsRouter from "./logs";
 import pilgrimDocumentsRouter from "./pilgrim-documents";
+import pilgrimsRouter from "./pilgrims";
 import notificationsRouter from "./notifications";
 import wishlistsRouter from "./wishlists";
 import { strictLimiter, writeLimiter } from "../middlewares/rateLimiter";
@@ -48,6 +49,8 @@ router.use("/contracts", strictLimiter, contractsRouter);
 router.use("/pilgrim-documents", strictLimiter);
 router.post("/pilgrim-documents", writeLimiter);
 router.use("/pilgrim-documents", pilgrimDocumentsRouter);
+
+router.use("/pilgrims", strictLimiter, pilgrimsRouter);
 
 router.use("/notifications", strictLimiter, notificationsRouter);
 

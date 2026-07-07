@@ -44,8 +44,10 @@ const MyDocuments = () => {
   const fetchData = async () => {
     if (!user) return;
     try {
-      const bookings = await apiFetch<any[]>("/api/bookings");
-      if (!bookings?.length) {
+      // /api/bookings returns { data: [...], total: number }
+      const bookingsResp = await apiFetch<{ data: any[]; total: number }>("/api/bookings");
+      const bookingsList = bookingsResp?.data ?? [];
+      if (!bookingsList.length) {
         setLoadingData(false);
         return;
       }

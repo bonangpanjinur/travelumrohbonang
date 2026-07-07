@@ -28,9 +28,26 @@ async function supabaseForward(
   const qs = new URLSearchParams(req.query as Record<string, string>).toString();
   const url = `${SUPABASE_URL}/rest/v1/${table}${qs ? `?${qs}` : ""}`;
 
+  // Determine the token to use when forwarding to PostgREST.
+  // Auth-gated tables MUST use the user's own JWT so that Supabase RLS applies.
+  // Public tables use the service-role key for unrestricted read access.
+  // Never fall back to service-role for AUTH_TABLES — that would bypass RLS.
+  let token: string;
+  if (AUTH_TABLES.has(table)) {
+    const userJwt = req.headers.authorization?.replace(/^Bearer\s+/i, "") ?? null;
+    if (!userJwt) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    token = userJwt;
+  } else {
+    token = SUPABASE_SERVICE_ROLE_KEY;
+  }
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    Authorization: `Bearer ${token}`,
+    // apikey is always the service/anon key — it identifies the project, not the user
     apikey: SUPABASE_SERVICE_ROLE_KEY,
   };
   if (req.headers["prefer"]) headers["Prefer"] = req.headers["prefer"] as string;

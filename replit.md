@@ -62,7 +62,7 @@ vercel.json              — Konfigurasi deployment Vercel
 
 > `SUPABASE_URL`/`SUPABASE_ANON_KEY` (tanpa prefix) dan `VITE_SUPABASE_PUBLISHABLE_KEY` **tidak perlu diisi lagi** — sudah digabung/fallback otomatis ke variabel `VITE_SUPABASE_*` di atas (lihat `artifacts/api-server/src/lib/supabaseEnv.ts`).
 
-> **Database di Replit**: `DATABASE_URL` sudah otomatis tersedia dari Replit built-in PostgreSQL. Semua 61 tabel sudah dibuat via `drizzle-kit push`. Tidak perlu setup manual.
+> **Database di Replit**: `DATABASE_URL` sudah otomatis tersedia dari Replit built-in PostgreSQL. Semua 66 tabel sudah dibuat via `drizzle-kit push` dan seed data awal sudah dimuat via `psql $DATABASE_URL -f scripts/seed.sql`. Tidak perlu setup manual.
 
 ### Di Vercel (production/deployment)
 
