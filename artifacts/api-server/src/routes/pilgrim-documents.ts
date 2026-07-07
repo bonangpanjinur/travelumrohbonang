@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, pilgrimDocuments, pilgrimDocAccessLogs, bookings, bookingPilgrims, eq, and } from "@workspace/db";
+import { db, pilgrimDocuments, pilgrimDocAccessLogs, bookings, bookingPilgrims, eq, and, inArray } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth";
 
 interface AuthRequest extends Request {
@@ -36,7 +36,7 @@ router.get("/", async (req: any, res) => {
     const pilgrims = await db
       .select({ id: bookingPilgrims.id })
       .from(bookingPilgrims)
-      .where(and(...bookingIds.map(id => eq(bookingPilgrims.bookingId, id))));
+      .where(inArray(bookingPilgrims.bookingId, bookingIds));
       
     if (pilgrims.length === 0) {
         return res.json([]);
@@ -47,7 +47,7 @@ router.get("/", async (req: any, res) => {
     const docs = await db
       .select()
       .from(pilgrimDocuments)
-      .where(and(...pilgrimIds.map(id => eq(pilgrimDocuments.pilgrimId, id))));
+      .where(inArray(pilgrimDocuments.pilgrimId, pilgrimIds));
 
     res.json(docs);
   } catch (error) {
@@ -70,6 +70,17 @@ router.post("/", async (req: any, res) => {
       .limit(1);
 
     if (!booking) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    // Verify pilgrimId belongs to this specific booking (prevents IDOR overwrite)
+    const [pilgrim] = await db
+      .select({ id: bookingPilgrims.id })
+      .from(bookingPilgrims)
+      .where(and(eq(bookingPilgrims.id, pilgrimId), eq(bookingPilgrims.bookingId, bookingId)))
+      .limit(1);
+
+    if (!pilgrim) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
