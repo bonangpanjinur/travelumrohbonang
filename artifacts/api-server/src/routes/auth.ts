@@ -1,78 +1,43 @@
-import { Router, type Request, type Response } from "express";
+import { Router } from "express";
 import { GetCurrentAuthUserResponse } from "@workspace/api-zod";
-import { isAdminEmail } from "../lib/adminAllowlist";
-import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../lib/supabaseEnv";
 
 const router = Router();
 
-// ── Supabase HTTP helpers (no DATABASE_URL / pool needed) ────────────────────
-
-async function getSupabaseRole(userId: string): Promise<string | null> {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_roles?user_id=eq.${userId}&limit=1`,
-      {
-        headers: {
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          apikey: SUPABASE_SERVICE_ROLE_KEY,
-          Accept: "application/json",
-        },
-      },
-    );
-    if (!res.ok) return null;
-    const rows = (await res.json()) as Array<{ role: string }>;
-    return rows[0]?.role ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function createSupabaseRole(userId: string, role: string): Promise<void> {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return;
-  try {
-    await fetch(`${SUPABASE_URL}/rest/v1/user_roles`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        apikey: SUPABASE_SERVICE_ROLE_KEY,
-        "Content-Type": "application/json",
-        Prefer: "resolution=ignore-duplicates",
-      },
-      body: JSON.stringify({ user_id: userId, role }),
-    });
-  } catch {
-    // best-effort
-  }
-}
-
 // ── GET /auth/user ────────────────────────────────────────────────────────────
+//
+// Returns the currently-authenticated user (resolved by authMiddleware) or
+// { user: null } if unauthenticated. Never throws — any error is caught and
+// returned as { user: null } so the frontend never receives a 500 from here.
 
-router.get("/auth/user", async (req: Request, res: Response) => {
-  if (!req.isAuthenticated()) {
-    res.json(GetCurrentAuthUserResponse.parse({ user: null }));
-    return;
+router.get("/auth/user", async (req, res) => {
+  try {
+    if (!req.isAuthenticated()) {
+      const parsed = GetCurrentAuthUserResponse.safeParse({ user: null });
+      res.json(parsed.success ? parsed.data : { user: null });
+      return;
+    }
+
+    // authMiddleware already resolved the user (including role lookup).
+    // Re-use req.user directly — no need to hit the DB again.
+    const parsed = GetCurrentAuthUserResponse.safeParse({ user: req.user });
+
+    if (!parsed.success) {
+      // Zod validation failed (e.g. unexpected role value from DB).
+      // Return unauthenticated rather than leaking unvalidated data or 500.
+      console.error("[auth/user] Zod parse failed:", parsed.error.issues);
+      res.json({ user: null });
+      return;
+    }
+
+    res.json(parsed.data);
+  } catch (err) {
+    console.error("[auth/user] unexpected error:", err);
+    // Return unauthenticated rather than 500 so the client can handle it.
+    res.json({ user: null });
   }
-
-  const { id, email } = req.user;
-
-  // Look up role from user_roles table via Supabase HTTP (no DATABASE_URL needed)
-  let role = await getSupabaseRole(id);
-
-  if (!role) {
-    // First login — assign default role and persist it
-    role = isAdminEmail(email) ? "admin" : "buyer";
-    await createSupabaseRole(id, role);
-  }
-
-  res.json(
-    GetCurrentAuthUserResponse.parse({
-      user: { ...req.user, role },
-    }),
-  );
 });
 
-router.get("/logout", (_req: Request, res: Response) => {
+router.get("/logout", (_req, res) => {
   res.redirect("/");
 });
 

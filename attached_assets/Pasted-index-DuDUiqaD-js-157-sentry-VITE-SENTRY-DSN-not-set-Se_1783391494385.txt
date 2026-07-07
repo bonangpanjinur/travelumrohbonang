@@ -1,0 +1,516 @@
+index-DuDUiqaD.js:157 [sentry] VITE_SENTRY_DSN not set — Sentry disabled.
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_useSession @ vendor-supabase-CDZEb6nQ.js:44
+await in _useSession
+_emitInitialSession @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+onAuthStateChange @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ index-DuDUiqaD.js:9
+Mm @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+$_ @ index-DuDUiqaD.js:8
+Mx @ index-DuDUiqaD.js:8
+J_ @ index-DuDUiqaD.js:8
+Lm @ index-DuDUiqaD.js:8
+V_ @ index-DuDUiqaD.js:8
+U_ @ index-DuDUiqaD.js:8
+R_ @ index-DuDUiqaD.js:8
+D_ @ index-DuDUiqaD.js:8
+Y_ @ index-DuDUiqaD.js:8
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/rest/v1/site_settings?select=key%2Cvalue&category=eq.appearance&key=in.%28template%29 500 (Internal Server Error)
+fetch @ index-DuDUiqaD.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+Promise.then
+(anonymous) @ index-DuDUiqaD.js:9
+Mm @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+cl @ index-DuDUiqaD.js:8
+__ @ index-DuDUiqaD.js:8
+$_ @ index-DuDUiqaD.js:8
+Mx @ index-DuDUiqaD.js:8
+J_ @ index-DuDUiqaD.js:8
+Lm @ index-DuDUiqaD.js:8
+V_ @ index-DuDUiqaD.js:8
+U_ @ index-DuDUiqaD.js:8
+R_ @ index-DuDUiqaD.js:8
+D_ @ index-DuDUiqaD.js:8
+Y_ @ index-DuDUiqaD.js:8
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/rest/v1/currencies?select=*&is_active=eq.true&order=is_default.desc%2Ccode.asc 500 (Internal Server Error)
+fetch @ index-DuDUiqaD.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/rest/v1/tenant_sites?select=*&subdomain=eq.travelvins&is_active=eq.true 500 (Internal Server Error)
+fetch @ index-DuDUiqaD.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general 500 (Internal Server Error)
+fetch @ index-DuDUiqaD.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/rest/v1/tenant_sites?select=*&custom_domain=eq.travelvins.vercel.app&is_active=eq.true 500 (Internal Server Error)
+fetch @ index-DuDUiqaD.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fauth 500 (Internal Server Error)
+fetch @ index-DuDUiqaD.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general 500 (Internal Server Error)
+fetch @ index-DuDUiqaD.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/rest/v1/site_settings?select=value&key=eq.seo 500 (Internal Server Error)
+fetch @ index-DuDUiqaD.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+_recoverAndRefresh @ vendor-supabase-CDZEb6nQ.js:44
+await in _recoverAndRefresh
+_onVisibilityChanged @ vendor-supabase-CDZEb6nQ.js:44
+await in _onVisibilityChanged
+visibilityChangedCallback @ vendor-supabase-CDZEb6nQ.js:44
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+_recoverAndRefresh @ vendor-supabase-CDZEb6nQ.js:44
+await in _recoverAndRefresh
+_onVisibilityChanged @ vendor-supabase-CDZEb6nQ.js:44
+await in _onVisibilityChanged
+visibilityChangedCallback @ vendor-supabase-CDZEb6nQ.js:44
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+_recoverAndRefresh @ vendor-supabase-CDZEb6nQ.js:44
+await in _recoverAndRefresh
+_onVisibilityChanged @ vendor-supabase-CDZEb6nQ.js:44
+await in _onVisibilityChanged
+visibilityChangedCallback @ vendor-supabase-CDZEb6nQ.js:44
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+_recoverAndRefresh @ vendor-supabase-CDZEb6nQ.js:44
+await in _recoverAndRefresh
+_onVisibilityChanged @ vendor-supabase-CDZEb6nQ.js:44
+await in _onVisibilityChanged
+visibilityChangedCallback @ vendor-supabase-CDZEb6nQ.js:44
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+_recoverAndRefresh @ vendor-supabase-CDZEb6nQ.js:44
+await in _recoverAndRefresh
+_onVisibilityChanged @ vendor-supabase-CDZEb6nQ.js:44
+await in _onVisibilityChanged
+visibilityChangedCallback @ vendor-supabase-CDZEb6nQ.js:44
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+_recoverAndRefresh @ vendor-supabase-CDZEb6nQ.js:44
+await in _recoverAndRefresh
+_onVisibilityChanged @ vendor-supabase-CDZEb6nQ.js:44
+await in _onVisibilityChanged
+visibilityChangedCallback @ vendor-supabase-CDZEb6nQ.js:44
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+_recoverAndRefresh @ vendor-supabase-CDZEb6nQ.js:44
+await in _recoverAndRefresh
+_onVisibilityChanged @ vendor-supabase-CDZEb6nQ.js:44
+await in _onVisibilityChanged
+visibilityChangedCallback @ vendor-supabase-CDZEb6nQ.js:44
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+_recoverAndRefresh @ vendor-supabase-CDZEb6nQ.js:44
+await in _recoverAndRefresh
+_onVisibilityChanged @ vendor-supabase-CDZEb6nQ.js:44
+await in _onVisibilityChanged
+visibilityChangedCallback @ vendor-supabase-CDZEb6nQ.js:44
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+_recoverAndRefresh @ vendor-supabase-CDZEb6nQ.js:44
+await in _recoverAndRefresh
+_onVisibilityChanged @ vendor-supabase-CDZEb6nQ.js:44
+await in _onVisibilityChanged
+visibilityChangedCallback @ vendor-supabase-CDZEb6nQ.js:44
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+signInWithPassword @ vendor-supabase-CDZEb6nQ.js:43
+await in signInWithPassword
+_ @ index-DuDUiqaD.js:39
+eS @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+Ei @ index-DuDUiqaD.js:8
+wy @ index-DuDUiqaD.js:8
+Oy @ index-DuDUiqaD.js:9
+VI @ index-DuDUiqaD.js:9
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fdashboard 500 (Internal Server Error)
+fetch @ index-DuDUiqaD.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/rest/v1/site_settings?select=value&key=eq.seo 500 (Internal Server Error)
+fetch @ index-DuDUiqaD.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general 500 (Internal Server Error)
+fetch @ index-DuDUiqaD.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fauth 500 (Internal Server Error)
+fetch @ index-DuDUiqaD.js:9
+await in fetch
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+await in (anonymous)
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:1
+then @ vendor-supabase-CDZEb6nQ.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+ee @ index-DuDUiqaD.js:1
+postMessage
+Q @ index-DuDUiqaD.js:1
+s.unstable_scheduleCallback @ index-DuDUiqaD.js:1
+X_ @ index-DuDUiqaD.js:8
+W_ @ index-DuDUiqaD.js:8
+(anonymous) @ index-DuDUiqaD.js:8
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+_recoverAndRefresh @ vendor-supabase-CDZEb6nQ.js:44
+await in _recoverAndRefresh
+_onVisibilityChanged @ vendor-supabase-CDZEb6nQ.js:44
+await in _onVisibilityChanged
+visibilityChangedCallback @ vendor-supabase-CDZEb6nQ.js:44
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+_recoverAndRefresh @ vendor-supabase-CDZEb6nQ.js:44
+await in _recoverAndRefresh
+_onVisibilityChanged @ vendor-supabase-CDZEb6nQ.js:44
+await in _onVisibilityChanged
+visibilityChangedCallback @ vendor-supabase-CDZEb6nQ.js:44
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+_recoverAndRefresh @ vendor-supabase-CDZEb6nQ.js:44
+await in _recoverAndRefresh
+_onVisibilityChanged @ vendor-supabase-CDZEb6nQ.js:44
+await in _onVisibilityChanged
+visibilityChangedCallback @ vendor-supabase-CDZEb6nQ.js:44
+index-DuDUiqaD.js:9  GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+tv @ index-DuDUiqaD.js:9
+(anonymous) @ index-DuDUiqaD.js:9
+(anonymous) @ vendor-supabase-CDZEb6nQ.js:44
+_notifyAllSubscribers @ vendor-supabase-CDZEb6nQ.js:44
+_recoverAndRefresh @ vendor-supabase-CDZEb6nQ.js:44
+await in _recoverAndRefresh
+_onVisibilityChanged @ vendor-supabase-CDZEb6nQ.js:44
+await in _onVisibilityChanged
+visibilityChangedCallback @ vendor-supabase-CDZEb6nQ.js:44
