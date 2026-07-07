@@ -89,13 +89,24 @@ CREATE TABLE IF NOT EXISTS airports (
 );
 
 CREATE TABLE IF NOT EXISTS branches (
-  id         TEXT PRIMARY KEY,
-  name       TEXT    NOT NULL,
-  address    TEXT,
-  phone      TEXT,
-  email      TEXT,
-  is_active  BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ
+  id            TEXT PRIMARY KEY,
+  name          TEXT    NOT NULL,
+  slug          TEXT,
+  address       TEXT,
+  phone         TEXT,
+  email         TEXT,
+  city          TEXT,
+  region        TEXT,
+  postal_code   TEXT,
+  country       TEXT,
+  latitude      DOUBLE PRECISION,
+  longitude     DOUBLE PRECISION,
+  opening_hours TEXT,
+  image_url     TEXT,
+  map_url       TEXT,
+  description   TEXT,
+  is_active     BOOLEAN NOT NULL DEFAULT true,
+  created_at    TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS muthawifs (
