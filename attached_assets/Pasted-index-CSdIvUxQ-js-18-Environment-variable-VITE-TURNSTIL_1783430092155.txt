@@ -1,0 +1,52 @@
+index-CSdIvUxQ.js:18 Environment variable VITE_TURNSTILE_SITE_KEY is not defined
+Id	@	index-CSdIvUxQ.js:18
+index-CSdIvUxQ.js:18 Environment variable VITE_SENTRY_DSN is not defined
+Id	@	index-CSdIvUxQ.js:18
+index-CSdIvUxQ.js:150 [sentry] VITE_SENTRY_DSN not set — Sentry disabled.
+rest/v1/currencies?s…t.desc%2Ccode.asc:1 
+ Failed to load resource: the server responded with a status of 500 ()
+api/auth/user:1 
+ Failed to load resource: the server responded with a status of 500 ()
+index-CSdIvUxQ.js:9 [useAuth] /api/auth/user returned 500 — using JWT claim fallback
+rest/v1/tenant_sites…is_active=eq.true:1 
+ Failed to load resource: the server responded with a status of 500 ()
+api/auth/user:1 
+ Failed to load resource: the server responded with a status of 500 ()
+index-CSdIvUxQ.js:9 [useAuth] /api/auth/user returned 500 — using JWT claim fallback
+rest/v1/site_setting…in.%28template%29:1 
+ Failed to load resource: the server responded with a status of 500 ()
+site_settings:1 
+ Failed to load resource: the server responded with a status of 500 ()
+rest/v1/tenant_sites…is_active=eq.true:1 
+ Failed to load resource: the server responded with a status of 500 ()
+site_settings:1 
+ Failed to load resource: the server responded with a status of 500 ()
+seo_overrides:1 
+ Failed to load resource: the server responded with a status of 500 ()
+pages:1 
+ Failed to load resource: the server responded with a status of 500 ()
+site_settings:1 
+ Failed to load resource: the server responded with a status of 500 ()
+navigation_items:1 
+ Failed to load resource: the server responded with a status of 500 ()
+profiles:1 
+ Failed to load resource: the server responded with a status of 500 ()
+notifications:1 
+ Failed to load resource: the server responded with a status of 500 ()
+site_settings:1 
+ Failed to load resource: the server responded with a status of 500 ()
+blog_posts:1 
+ Failed to load resource: the server responded with a status of 500 ()
+pages:1 
+ Failed to load resource: the server responded with a status of 500 ()
+site_settings:1 
+ Failed to load resource: the server responded with a status of 500 ()
+index-CSdIvUxQ.js:144 Error fetching blog posts: 
+{message: 'A server error has occurred\n\nFUNCTION_INVOCATION_FAILED\n\nsin1::d2rwk-1783430066425-013b34a7d481\n'}
+index-CSdIvUxQ.js:9 
+ GET https://travelvins.vercel.app/api/auth/user 500 (Internal Server Error)
+index-CSdIvUxQ.js:9 [useAuth] /api/auth/user returned 500 — using JWT claim fallback
+index-CSdIvUxQ.js:9 
+ GET https://travelvins.vercel.app/rest/v1/notifications?select=*&user_id=eq.8f2d6d1a-0ed9-4775-b2d9-19a3fb9a8626&order=created_at.desc&limit=20 500 (Internal Server Error)
+index-CSdIvUxQ.js:9 
+ GET https://travelvins.vercel.app/rest/v1/profiles?select=name%2Cavatar_url&id=eq.8f2d6d1a-0ed9-4775-b2d9-19a3fb9a8626 500 (Internal Server Error)

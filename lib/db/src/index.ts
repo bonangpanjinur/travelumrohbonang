@@ -26,6 +26,15 @@ export const pool = new Pool({
   idleTimeoutMillis: 10_000,
   connectionTimeoutMillis: 5_000,
 });
+
+// CRITICAL: pg.Pool emits 'error' on background client failures.
+// Without this handler the event is unhandled → Node.js crashes the process.
+// In serverless environments (Vercel) this causes FUNCTION_INVOCATION_FAILED
+// for every request, even ones that never touch the DB.
+pool.on("error", (err) => {
+  // Log but never throw — a stale idle connection must not kill the server.
+  console.error("[db] pool background error (ignored):", err.message);
+});
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";

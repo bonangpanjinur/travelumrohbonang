@@ -68,6 +68,11 @@ async function setLocalRole(userId: string, role: string): Promise<void> {
   }
 }
 
+/** AbortSignal that times out after `ms` milliseconds. */
+function timeoutSignal(ms: number): AbortSignal {
+  return AbortSignal.timeout(ms);
+}
+
 /**
  * Query role from Supabase HTTP REST (used when DATABASE_URL is absent,
  * e.g. on Vercel serverless). Falls back gracefully to null on any error.
@@ -78,6 +83,7 @@ async function getSupabaseRole(userId: string): Promise<string | null> {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/user_roles?user_id=eq.${userId}&limit=1`,
       {
+        signal: timeoutSignal(8_000),
         headers: {
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           apikey: SUPABASE_SERVICE_ROLE_KEY,
@@ -149,6 +155,7 @@ async function persistRole(userId: string, role: string): Promise<void> {
       `${SUPABASE_URL}/rest/v1/user_roles?on_conflict=user_id`,
       {
         method: "POST",
+        signal: timeoutSignal(8_000),
         headers: {
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
           apikey: SUPABASE_SERVICE_ROLE_KEY,
@@ -179,6 +186,7 @@ async function resolveUser(token: string): Promise<AuthUser | null> {
 
   try {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      signal: timeoutSignal(8_000),
       headers: {
         Authorization: `Bearer ${token}`,
         apikey: SUPABASE_KEY,

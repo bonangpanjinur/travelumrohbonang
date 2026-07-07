@@ -57,6 +57,7 @@ async function supabaseForward(
   try {
     const sbRes = await fetch(url, {
       method: req.method,
+      signal: AbortSignal.timeout(12_000),
       headers,
       body:
         req.method !== "GET" && req.method !== "HEAD"

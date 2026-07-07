@@ -12,3 +12,4 @@
 - [PostgREST upsert on non-PK unique column](supabase-rest-upsert.md) — must include ?on_conflict=<col> in URL AND Prefer: merge-duplicates; also provide id (no DB DEFAULT on user_roles.id).
 - [Role resolution strategy](role-resolution-strategy.md) — local-first speed + Supabase-wins-on-demotion; use getUserRole(), never getLocalRole/getSupabaseRole directly.
 - [SQL triggers quota logic](sql-triggers-quota-logic.md) — 8 business logic triggers in business_logic_triggers.sql; dollar-quote $ corruption fix pattern; quota hard guard via FOR UPDATE lock.
+- [pg.Pool error handler + fetch timeouts](pg-pool-error-handler.md) — pool.on('error') required or bg failures crash Vercel; all Supabase fetch() calls need AbortSignal.timeout(ms).

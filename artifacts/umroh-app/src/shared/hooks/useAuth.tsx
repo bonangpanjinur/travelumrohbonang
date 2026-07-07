@@ -104,8 +104,10 @@ function buildUserFromToken(token: string): AuthUser | null {
  * - 2xx + user object → return it (accurate, has DB role).
  * - 2xx + null user  → return null (server says not authenticated).
  * - 401 / 403        → return null (token rejected; force re-auth).
- * - 5xx / network err→ decode JWT claims as a temporary fallback user so the
- *   user can enter the app without an infinite redirect loop. Backend still
+ * - 503              → Supabase not configured on server; use JWT claim fallback
+ *   so the user isn't logged out in local/dev environments without Supabase.
+ * - other 5xx / network err → decode JWT claims as a temporary fallback user so
+ *   the user can enter the app without an infinite redirect loop. Backend still
  *   enforces role on every admin API call, so this is safe.
  */
 async function fetchAuthUser(token: string): Promise<AuthUser | null> {
