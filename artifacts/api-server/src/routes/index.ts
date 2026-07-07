@@ -1,6 +1,5 @@
 import { Router } from "express";
 import healthRouter from "./health";
-import cronRouter from "./cron";
 import authRouter from "./auth";
 import packagesRouter from "./packages";
 import faqsRouter from "./faqs";
@@ -12,7 +11,6 @@ import { strictLimiter, writeLimiter } from "../middlewares/rateLimiter";
 const router = Router();
 
 router.use(healthRouter);
-router.use(cronRouter);
 router.use(authRouter);
 router.use("/packages", packagesRouter);
 router.use("/faqs", faqsRouter);

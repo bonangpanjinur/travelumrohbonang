@@ -1,4 +1,7 @@
-import { pgTable, text, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable, text, boolean, jsonb, timestamp,
+  index, uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export const siteSettings = pgTable("site_settings", {
   id: text("id").primaryKey(),
@@ -6,7 +9,10 @@ export const siteSettings = pgTable("site_settings", {
   category: text("category"),
   value: jsonb("value"),
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  index("idx_site_settings_key").on(t.key),
+  index("idx_site_settings_key_category").on(t.key, t.category),
+]);
 
 export const seoOverrides = pgTable("seo_overrides", {
   id: text("id").primaryKey(),
@@ -18,4 +24,6 @@ export const seoOverrides = pgTable("seo_overrides", {
   noindex: boolean("noindex").notNull().default(false),
   keywords: text("keywords"),
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  uniqueIndex("uq_seo_overrides_path").on(t.path),
+]);

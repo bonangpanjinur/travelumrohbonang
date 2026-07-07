@@ -1,4 +1,9 @@
-import { pgTable, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable, text, integer, boolean, timestamp,
+  index, uniqueIndex,
+} from "drizzle-orm/pg-core";
+import { packages } from "./packages";
+import { bookings } from "./bookings";
 
 export const testimonials = pgTable("testimonials", {
   id: text("id").primaryKey(),
@@ -16,31 +21,38 @@ export const testimonials = pgTable("testimonials", {
 
 export const pilgrimTestimonials = pgTable("pilgrim_testimonials", {
   id: text("id").primaryKey(),
-  bookingId: text("booking_id").notNull(),
-  userId: text("user_id").notNull(),
+  bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),         // references auth.users — no local FK
   rating: integer("rating"),
   message: text("message"),
   isApproved: boolean("is_approved").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  index("idx_pilgrim_testimonials_booking_id").on(t.bookingId),
+]);
 
 export const packageReviews = pgTable("package_reviews", {
   id: text("id").primaryKey(),
-  packageId: text("package_id").notNull(),
-  userId: text("user_id").notNull(),
+  packageId: text("package_id").notNull().references(() => packages.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull(),         // references auth.users — no local FK
   rating: integer("rating"),
   title: text("title"),
   comment: text("comment"),
   isApproved: boolean("is_approved").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  index("idx_package_reviews_package_id").on(t.packageId),
+]);
 
 export const wishlists = pgTable("wishlists", {
   id: text("id").primaryKey(),
-  userId: text("user_id").notNull(),
-  packageId: text("package_id").notNull(),
+  userId: text("user_id").notNull(),         // references auth.users — no local FK
+  packageId: text("package_id").notNull().references(() => packages.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  index("idx_wishlists_package_id").on(t.packageId),
+  index("idx_wishlists_user_id").on(t.userId),
+]);
 
 export const blogPosts = pgTable("blog_posts", {
   id: text("id").primaryKey(),
@@ -56,7 +68,10 @@ export const blogPosts = pgTable("blog_posts", {
   isPublished: boolean("is_published").notNull().default(false),
   publishedAt: timestamp("published_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  uniqueIndex("uq_blog_posts_slug").on(t.slug),
+  index("idx_blog_posts_is_published").on(t.isPublished),
+]);
 
 export const gallery = pgTable("gallery", {
   id: text("id").primaryKey(),
@@ -74,11 +89,14 @@ export const faqs = pgTable("faqs", {
   question: text("question").notNull(),
   answer: text("answer").notNull(),
   scope: text("scope"),
-  packageId: text("package_id"),
+  packageId: text("package_id").references(() => packages.id, { onDelete: "set null" }),
   sortOrder: integer("sort_order"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  index("idx_faqs_scope").on(t.scope),
+  index("idx_faqs_package_id").on(t.packageId),
+]);
 
 export const pages = pgTable("pages", {
   id: text("id").primaryKey(),
@@ -89,7 +107,9 @@ export const pages = pgTable("pages", {
   seoDescription: text("seo_description"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  uniqueIndex("uq_pages_slug").on(t.slug),
+]);
 
 export const manasikMaterials = pgTable("manasik_materials", {
   id: text("id").primaryKey(),
@@ -136,12 +156,14 @@ export const navigationItems = pgTable("navigation_items", {
   id: text("id").primaryKey(),
   label: text("label").notNull(),
   url: text("url").notNull(),
-  parentId: text("parent_id"),
+  parentId: text("parent_id").references((): any => navigationItems.id, { onDelete: "set null" }),
   sortOrder: integer("sort_order").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
   openInNewTab: boolean("open_in_new_tab").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  index("idx_navigation_items_parent_id").on(t.parentId),
+]);
 
 export const floatingButtons = pgTable("floating_buttons", {
   id: text("id").primaryKey(),

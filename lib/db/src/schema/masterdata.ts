@@ -1,16 +1,22 @@
-import { pgTable, text, integer, boolean, timestamp, doublePrecision } from "drizzle-orm/pg-core";
+import {
+  pgTable, text, integer, boolean, timestamp, doublePrecision,
+  index, uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export const packageCategories = pgTable("package_categories", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  parentId: text("parent_id"),
+  parentId: text("parent_id").references((): any => packageCategories.id, { onDelete: "set null" }),
   icon: text("icon"),
   showExtraHotels: boolean("show_extra_hotels").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   sortOrder: integer("sort_order"),
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  index("idx_package_categories_parent_id").on(t.parentId),
+  index("idx_package_categories_is_active").on(t.isActive),
+]);
 
 export const hotels = pgTable("hotels", {
   id: text("id").primaryKey(),
@@ -41,12 +47,15 @@ export const airports = pgTable("airports", {
 export const packageHotels = pgTable("package_hotels", {
   id: text("id").primaryKey(),
   packageId: text("package_id").notNull(),
-  hotelId: text("hotel_id").notNull(),
+  hotelId: text("hotel_id").notNull().references(() => hotels.id, { onDelete: "cascade" }),
   city: text("city"),
   label: text("label"),
   sortOrder: integer("sort_order"),
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  index("idx_package_hotels_package_id").on(t.packageId),
+  index("idx_package_hotels_hotel_id").on(t.hotelId),
+]);
 
 export const muthawifs = pgTable("muthawifs", {
   id: text("id").primaryKey(),
@@ -77,7 +86,9 @@ export const branches = pgTable("branches", {
   description: text("description"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  uniqueIndex("uq_branches_slug").on(t.slug),
+]);
 
 export const currencies = pgTable("currencies", {
   id: text("id").primaryKey(),
@@ -88,4 +99,6 @@ export const currencies = pgTable("currencies", {
   isDefault: boolean("is_default").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  uniqueIndex("uq_currencies_code").on(t.code),
+]);
