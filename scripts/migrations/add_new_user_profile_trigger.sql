@@ -7,6 +7,9 @@
 -- table plus this trigger to mirror the essentials into the public schema.
 --
 -- Safe to re-run (uses CREATE OR REPLACE / IF NOT EXISTS).
+--
+-- NOTE: In Supabase, auth.users.id is type UUID.
+--       profiles.id and user_roles.user_id must accept UUID (no ::text cast).
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -17,7 +20,7 @@ as $$
 begin
   insert into public.profiles (id, name, email, created_at)
   values (
-    new.id::text,
+    new.id,
     coalesce(
       new.raw_user_meta_data->>'name',
       split_part(new.email, '@', 1)
@@ -28,7 +31,7 @@ begin
   on conflict (id) do nothing;
 
   insert into public.user_roles (id, user_id, role, created_at)
-  values (gen_random_uuid()::text, new.id::text, 'buyer', now())
+  values (gen_random_uuid(), new.id, 'buyer', now())
   on conflict do nothing;
 
   return new;
@@ -50,7 +53,7 @@ create trigger on_auth_user_created
 
 insert into public.profiles (id, name, email, created_at)
 select
-  u.id::text,
+  u.id,
   coalesce(u.raw_user_meta_data->>'name', split_part(u.email, '@', 1)),
   u.email,
   u.created_at
@@ -59,11 +62,11 @@ on conflict (id) do nothing;
 
 insert into public.user_roles (id, user_id, role, created_at)
 select
-  gen_random_uuid()::text,
-  u.id::text,
+  gen_random_uuid(),
+  u.id,
   'buyer',
   u.created_at
 from auth.users u
 where not exists (
-  select 1 from public.user_roles ur where ur.user_id = u.id::text
+  select 1 from public.user_roles ur where ur.user_id = u.id
 );
