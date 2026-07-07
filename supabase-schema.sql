@@ -1082,3 +1082,9 @@ ALTER TABLE currencies      ADD  CONSTRAINT uq_currencies_code      UNIQUE (code
 
 ALTER TABLE tenant_sites    DROP CONSTRAINT IF EXISTS uq_tenant_sites_subdomain;
 ALTER TABLE tenant_sites    ADD  CONSTRAINT uq_tenant_sites_subdomain UNIQUE (subdomain);
+
+ALTER TABLE branches  DROP CONSTRAINT IF EXISTS uq_branches_slug;
+ALTER TABLE branches  ADD  CONSTRAINT uq_branches_slug  UNIQUE (slug);
+
+ALTER TABLE profiles  DROP CONSTRAINT IF EXISTS uq_profiles_email;
+ALTER TABLE profiles  ADD  CONSTRAINT uq_profiles_email UNIQUE (email);
