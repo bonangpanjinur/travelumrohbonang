@@ -111,6 +111,8 @@ async function resolveUser(token: string): Promise<AuthUser | null> {
 
     // Look up role from user_roles via Supabase HTTP (no DATABASE_URL needed)
     let role = await getSupabaseRole(su.id);
+    // true = role came from DB (reliable); false = fallback default (don't cache long)
+    const roleIsConfirmed = !!role;
 
     if (!role) {
       // First login — assign and persist default role
@@ -132,7 +134,12 @@ async function resolveUser(token: string): Promise<AuthUser | null> {
       role: role as AuthUser["role"],
     };
 
-    tokenCache.set(token, { user, expiresAt: Date.now() + CACHE_TTL_MS });
+    // Only cache when role came from DB. If we fell back to a default
+    // (e.g. SUPABASE_SERVICE_ROLE_KEY was temporarily missing), don't cache
+    // so the next request retries the DB lookup immediately.
+    if (roleIsConfirmed) {
+      tokenCache.set(token, { user, expiresAt: Date.now() + CACHE_TTL_MS });
+    }
     return user;
   } catch {
     return null;
