@@ -115,7 +115,7 @@ export const menuGroups: MenuGroup[] = [
     label: "Keuangan",
     labelKey: "menu.group.finance",
     items: [
-      { label: "Pembayaran", labelKey: "menu.payments", href: "/admin/payments", icon: CreditCard, roles: FINANCE },
+      { label: "Pembayaran", labelKey: "menu.payments", href: "/admin/payments", icon: CreditCard, roles: OPERATIONAL },
       { label: "Cicilan", labelKey: "menu.installments", href: "/admin/installments", icon: Receipt, roles: FINANCE },
       { label: "HPP & Profitabilitas", labelKey: "menu.cost_profitability", href: "/admin/package-costs", icon: Calculator, roles: SUPER_ADMIN_ADMIN },
       { label: "Akuntansi & Keuangan", labelKey: "menu.accounting", href: "/admin/accounting", icon: BarChart3, roles: SUPER_ADMIN_ADMIN },
