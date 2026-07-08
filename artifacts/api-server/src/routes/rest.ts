@@ -79,6 +79,13 @@ async function supabaseForward(
 
 const router = Router();
 
+// Roles allowed to perform write (POST/PATCH/DELETE) operations on
+// PUBLIC_READ_TABLES. AUTH_TABLES are gated only by authentication (users
+// manage their own rows); public tables are admin-only for writes.
+const WRITE_STAFF_ROLES = new Set([
+  "super_admin", "admin", "branch_manager", "staff",
+]);
+
 // ── Allowed table whitelist ──────────────────────────────────────────────────
 // Tables accessible via GET (public read) — safe for unauthenticated access.
 const PUBLIC_READ_TABLES = new Set([
@@ -439,6 +446,15 @@ router.post("/:table", requireAuth, async (req: Request, res: Response) => {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
   }
 
+  // B4: staff-level role required to write to admin-owned public tables.
+  // AUTH_TABLES are user-scoped (users manage their own rows) so only auth is needed.
+  if (PUBLIC_READ_TABLES.has(table)) {
+    const userRole = (req as any).user?.role as string | undefined;
+    if (!userRole || !WRITE_STAFF_ROLES.has(userRole)) {
+      return res.status(403).json({ message: "Staff access required to write to this table" });
+    }
+  }
+
   if (USE_SUPABASE_HTTP) {
     await supabaseForward(req, res, table);
     return;
@@ -450,6 +466,11 @@ router.post("/:table", requireAuth, async (req: Request, res: Response) => {
     const wantsReturn = prefer.includes("return=representation") || accept.includes("pgrst.object");
     const isUpsert = prefer.includes("resolution=merge-duplicates");
     const ignoreConflict = prefer.includes("resolution=ignore-duplicates");
+
+    // B3: honour PostgREST-compatible ?on_conflict=col so callers can upsert
+    // on any unique column, not just "id". Falls back to "id" when omitted.
+    const rawConflict = (req.query.on_conflict as string | undefined) ?? "id";
+    const conflictCol = safeCol(rawConflict) ? rawConflict : "id";
 
     const body = req.body;
     const isSingle = !Array.isArray(body);
@@ -466,15 +487,16 @@ router.post("/:table", requireAuth, async (req: Request, res: Response) => {
       if (!cols.length) continue;
 
       const colNames = cols.map((c) => `"${c}"`).join(", ");
-      const placeholders = cols.map((_, i) => `$${i + 1}`).join(", ");
+      const placeholders = cols.map((_, i) => `${i + 1}`).join(", ");
       const vals = cols.map((c) => row[c]);
 
       let sql = `INSERT INTO "${table}" (${colNames}) VALUES (${placeholders})`;
 
       if (isUpsert) {
-        const updateCols = cols.filter((c) => c !== "id");
+        // Exclude the conflict column from the SET list to avoid self-assignment.
+        const updateCols = cols.filter((c) => c !== conflictCol);
         if (updateCols.length) {
-          sql += ` ON CONFLICT (id) DO UPDATE SET ${updateCols.map((c) => `"${c}" = EXCLUDED."${c}"`).join(", ")}`;
+          sql += ` ON CONFLICT ("${conflictCol}") DO UPDATE SET ${updateCols.map((c) => `"${c}" = EXCLUDED."${c}"`).join(", ")}`;
         }
       } else if (ignoreConflict) {
         sql += ` ON CONFLICT DO NOTHING`;
@@ -506,6 +528,13 @@ router.patch("/:table", requireAuth, async (req: Request, res: Response) => {
   const { table } = req.params as Record<string, string>;
   if (!ALLOWED_TABLES.has(table)) {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
+  }
+
+  if (PUBLIC_READ_TABLES.has(table)) {
+    const userRole = (req as any).user?.role as string | undefined;
+    if (!userRole || !WRITE_STAFF_ROLES.has(userRole)) {
+      return res.status(403).json({ message: "Staff access required to write to this table" });
+    }
   }
 
   if (USE_SUPABASE_HTTP) {
@@ -556,6 +585,13 @@ router.delete("/:table", requireAuth, async (req: Request, res: Response) => {
     return res.status(400).json({ message: `Table "${table}" not allowed` });
   }
 
+  if (PUBLIC_READ_TABLES.has(table)) {
+    const userRole = (req as any).user?.role as string | undefined;
+    if (!userRole || !WRITE_STAFF_ROLES.has(userRole)) {
+      return res.status(403).json({ message: "Staff access required to write to this table" });
+    }
+  }
+
   if (USE_SUPABASE_HTTP) {
     await supabaseForward(req, res, table);
     return;
@@ -586,14 +622,18 @@ router.post("/rpc/:funcname", requireAuth, async (req: Request, res: Response) =
         const yy = d.getFullYear().toString().slice(2);
         const mm = String(d.getMonth() + 1).padStart(2, "0");
         const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-        // Ensure uniqueness by checking the bookings table
         let code = `BK${yy}${mm}${rand}`;
-        const { rows } = await pool.query(
-          `SELECT id FROM bookings WHERE booking_code = $1 LIMIT 1`,
-          [code]
-        );
-        if (rows.length) {
-          code = `BK${yy}${mm}${Date.now().toString(36).slice(-4).toUpperCase()}`;
+        // B5: On Vercel (USE_SUPABASE_HTTP), pool.query() is unavailable.
+        // The random suffix already provides sufficient uniqueness for booking codes;
+        // skip the DB collision check and return immediately.
+        if (!USE_SUPABASE_HTTP) {
+          const { rows } = await pool.query(
+            `SELECT id FROM bookings WHERE booking_code = $1 LIMIT 1`,
+            [code]
+          );
+          if (rows.length) {
+            code = `BK${yy}${mm}${Date.now().toString(36).slice(-4).toUpperCase()}`;
+          }
         }
         return res.json(code);
       }

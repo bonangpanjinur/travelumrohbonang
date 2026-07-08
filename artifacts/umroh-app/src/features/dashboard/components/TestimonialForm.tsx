@@ -24,7 +24,9 @@ const TestimonialForm = ({ bookingId, packageTitle, onSubmitted }: Props) => {
 
   useEffect(() => {
     if (!user) return;
-    apiFetch<{ data: any[] }>(`/api/admin/content/pilgrim-testimonials?booking_id=${bookingId}&user_id=${user.id}`)
+    // Uses the user-accessible endpoint (not the admin endpoint) so regular
+    // pilgrims can check/submit their own testimonials without needing admin role.
+    apiFetch<{ data: any[] }>(`/api/pilgrim-testimonials?booking_id=${bookingId}`)
       .then(({ data }) => setExists(data && data.length > 0))
       .catch(() => setExists(false));
   }, [user, bookingId]);
@@ -39,7 +41,7 @@ const TestimonialForm = ({ bookingId, packageTitle, onSubmitted }: Props) => {
     }
     setSubmitting(true);
     try {
-      await apiFetch("/api/admin/content/pilgrim-testimonials", {
+      await apiFetch("/api/pilgrim-testimonials", {
         method: "POST",
         body: JSON.stringify({
           bookingId,

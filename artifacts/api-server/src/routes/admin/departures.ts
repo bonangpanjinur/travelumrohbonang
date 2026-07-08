@@ -12,11 +12,15 @@ import {
   and,
 } from "@workspace/db";
 
-const router = Router();
+// mergeParams: true so req.params.packageId from parent router is accessible here
+const router = Router({ mergeParams: true });
 
 router.get("/", async (req, res) => {
   try {
-    const data = await db
+    // When mounted under /packages/:packageId/departures, filter by that package.
+    const { packageId } = req.params as Record<string, string>;
+
+    const baseQuery = db
       .select({
         id: packageDepartures.id,
         packageId: packageDepartures.packageId,
@@ -29,8 +33,11 @@ router.get("/", async (req, res) => {
         packageTitle: packages.title,
       })
       .from(packageDepartures)
-      .leftJoin(packages, eq(packageDepartures.packageId, packages.id))
-      .orderBy(packageDepartures.departureDate);
+      .leftJoin(packages, eq(packageDepartures.packageId, packages.id));
+
+    const data = packageId
+      ? await baseQuery.where(eq(packageDepartures.packageId, packageId)).orderBy(packageDepartures.departureDate)
+      : await baseQuery.orderBy(packageDepartures.departureDate);
 
     const departuresWithPrices = await Promise.all(
       data.map(async (dep: any) => {

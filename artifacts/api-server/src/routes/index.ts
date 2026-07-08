@@ -14,6 +14,7 @@ import pilgrimDocumentsRouter from "./pilgrim-documents";
 import pilgrimsRouter from "./pilgrims";
 import notificationsRouter from "./notifications";
 import wishlistsRouter from "./wishlists";
+import pilgrimTestimonialsRouter from "./pilgrim-testimonials";
 import { strictLimiter, writeLimiter } from "../middlewares/rateLimiter";
 
 const router = Router();
@@ -57,6 +58,8 @@ router.use("/notifications", strictLimiter, notificationsRouter);
 router.use("/wishlists", strictLimiter);
 router.post("/wishlists/toggle", writeLimiter);
 router.use("/wishlists", wishlistsRouter);
+
+router.use("/pilgrim-testimonials", strictLimiter, pilgrimTestimonialsRouter);
 
 // Client-side logging (no auth required — best-effort; write-rate-limited at router level)
 router.use("/logs", writeLimiter, logsRouter);
