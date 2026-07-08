@@ -125,6 +125,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Histori Akses Bukti", labelKey: "menu.proof_access_logs", href: "/admin/proof-access-logs", icon: ShieldCheck, roles: SUPER_ADMIN_ADMIN },
       { label: "Pencairan Komisi Agen", labelKey: "menu.agent_withdrawals", href: "/admin/agent-withdrawals", icon: Wallet, roles: SUPER_ADMIN_ADMIN },
       { label: "Refund Jamaah", labelKey: "menu.refunds", href: "/admin/refunds", icon: Receipt, roles: SUPER_ADMIN_ADMIN },
+      { label: "Kontrak Jamaah", labelKey: "menu.contracts", href: "/admin/contracts", icon: FileCheck, roles: ALL_STAFF },
     ],
   },
   {

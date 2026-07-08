@@ -87,12 +87,12 @@ const AdminAgentWithdrawals = () => {
                   <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Belum ada pengajuan</TableCell></TableRow>
                 ) : items.map((w) => (
                   <TableRow key={w.id}>
-                    <TableCell className="text-sm">{format(new Date(w.created_at), "dd MMM yyyy HH:mm", { locale: localeId })}</TableCell>
-                    <TableCell><div className="text-sm font-medium">{w.agents?.name}</div><div className="text-xs text-muted-foreground">{w.agents?.email || w.agents?.phone}</div></TableCell>
-                    <TableCell className="text-sm">{w.bank_name}<br /><span className="font-mono text-xs">{w.bank_account}</span><br /><span className="text-xs text-muted-foreground">{w.account_holder}</span></TableCell>
+                    <TableCell className="text-sm">{w.createdAt ? format(new Date(w.createdAt), "dd MMM yyyy HH:mm", { locale: localeId }) : "-"}</TableCell>
+                    <TableCell><div className="text-sm font-medium">{w.agentName}</div><div className="text-xs text-muted-foreground">{w.agentEmail || w.agentPhone}</div></TableCell>
+                    <TableCell className="text-sm">{w.bankName || "-"}<br /><span className="font-mono text-xs">{w.bankAccount}</span><br /><span className="text-xs text-muted-foreground">{w.accountHolder}</span></TableCell>
                     <TableCell className="text-right font-bold">Rp {Number(w.amount).toLocaleString("id-ID")}</TableCell>
-                    <TableCell><Badge className={statusVariant[w.status]}>{w.status}</Badge></TableCell>
-                    <TableCell><Button size="sm" variant="outline" onClick={() => { setSelected(w); setAdminNotes(w.admin_notes || ""); setProofUrl(w.proof_url || ""); }}>Detail</Button></TableCell>
+                    <TableCell><Badge className={statusVariant[w.status] || ""}>{w.status}</Badge></TableCell>
+                    <TableCell><Button size="sm" variant="outline" onClick={() => { setSelected(w); setAdminNotes(w.adminNotes || ""); setProofUrl(w.proofUrl || ""); }}>Detail</Button></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -106,9 +106,9 @@ const AdminAgentWithdrawals = () => {
           <DialogHeader><DialogTitle>Detail Pengajuan</DialogTitle></DialogHeader>
           {selected && (
             <div className="space-y-3 text-sm">
-              <div><span className="text-muted-foreground">Agen:</span> <strong>{selected.agents?.name}</strong></div>
+              <div><span className="text-muted-foreground">Agen:</span> <strong>{selected.agentName}</strong></div>
               <div><span className="text-muted-foreground">Nominal:</span> <strong>Rp {Number(selected.amount).toLocaleString("id-ID")}</strong></div>
-              <div><span className="text-muted-foreground">Rekening:</span> {selected.bank_name} · {selected.bank_account} · {selected.account_holder}</div>
+              <div><span className="text-muted-foreground">Rekening:</span> {selected.bankName} · {selected.bankAccount} · {selected.accountHolder}</div>
               {selected.notes && <div><span className="text-muted-foreground">Catatan agen:</span> {selected.notes}</div>}
               <div><Label>Catatan Admin</Label><Textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={2} /></div>
               <div><Label>URL Bukti Transfer (untuk status Paid)</Label><Input value={proofUrl} onChange={(e) => setProofUrl(e.target.value)} placeholder="https://..." /></div>

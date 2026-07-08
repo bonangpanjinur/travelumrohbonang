@@ -29,7 +29,18 @@ export interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
+  /**
+   * True if the user can access the admin panel (super_admin, admin,
+   * branch_manager, staff, agent). Note: `agent` is included here because
+   * agents have a subset of admin pages (bookings, documents, etc).
+   * For UI that should only be visible to super_admin/admin, use `isFullAdmin`.
+   */
   isAdmin: boolean;
+  /**
+   * P1-3: True only for super_admin + admin roles — matches backend `requireAdmin`.
+   * Use this for UI elements that are gated by full admin privilege.
+   */
+  isFullAdmin: boolean;
   role: AppRole | null;
   refreshRole: () => Promise<void>;
   login: () => void;
@@ -171,6 +182,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const role = user?.role ?? null;
   // Any role other than buyer/user gets admin panel access.
   const isAdmin = !!(role && role !== "user" && role !== "buyer");
+  // P1-3: Matches backend requireAdmin gate (super_admin + admin only).
+  const isFullAdmin = role === "super_admin" || role === "admin";
 
   const refreshRole = useCallback(async () => {
     const {
@@ -187,14 +200,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = useCallback(async () => {
+    // P3-8: Clear 2FA sessionStorage flag before signing out so it doesn't
+    // persist into the next login session.
+    if (user?.id) {
+      sessionStorage.removeItem(`admin_2fa_verified_${user.id}`);
+    }
     await supabaseAuth.auth.signOut();
     setUser(null);
     window.location.href = "/";
-  }, []);
+  }, [user]);
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, isAdmin, role, refreshRole, login, signOut }}
+      value={{ user, loading, isAdmin, isFullAdmin, role, refreshRole, login, signOut }}
     >
       {children}
     </AuthContext.Provider>

@@ -78,6 +78,7 @@ import AdminManifest from "./features/admin/pages/Manifest";
 import AdminProofAccessLogs from "./features/admin/pages/PaymentProofAccessLogs";
 import AdminAgentWithdrawals from "./features/admin/pages/AgentWithdrawals";
 import AdminRefunds from "./features/admin/pages/Refunds";
+import AdminContracts from "./features/admin/pages/AdminContracts";
 import AdminAuditLogs from "./features/admin/pages/AuditLogs";
 import AdminSystemHealth from "./features/admin/pages/SystemHealth";
 import AdminSlugRedirects from "./features/admin/pages/SlugRedirects";
@@ -109,6 +110,7 @@ import AdminPackageCategories from "./features/admin/pages/PackageCategories";
 import AdminMenuPermissions from "./features/admin/pages/MenuPermissions";
 import { useEffect } from "react";
 import { installGlobalErrorHandlers } from "@/shared/lib/errorLogger";
+import ErrorBoundary from "@/shared/components/common/ErrorBoundary";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
@@ -208,6 +210,7 @@ const AppContent = () => {
           <Route path="proof-access-logs" element={<AdminProofAccessLogs />} />
           <Route path="agent-withdrawals" element={<AdminAgentWithdrawals />} />
           <Route path="refunds" element={<AdminRefunds />} />
+          <Route path="contracts" element={<AdminContracts />} />
           <Route path="audit-logs" element={<AdminAuditLogs />} />
           <Route path="system-health" element={<AdminSystemHealth />} />
           <Route path="role-management" element={<AdminRoleManagement />} />
@@ -249,7 +252,9 @@ const App = () => (
                   <Toaster />
                   <Sonner />
                   <BrowserRouter>
-                    <AppContent />
+                    <ErrorBoundary>
+                      <AppContent />
+                    </ErrorBoundary>
                   </BrowserRouter>
                 </TooltipProvider>
               </CurrencyProvider>

@@ -39,6 +39,8 @@ import adminIntegrationsRouter from "./integrations";
 import adminChatsRouter from "./chats";
 import adminMenuPermissionsRouter from "./menu-permissions";
 import adminAnalyticsRouter from "./analytics";
+import adminContractsRouter from "./contracts";
+import adminPaymentGatewayRouter from "./payment-gateway";
 
 const router = Router();
 
@@ -87,5 +89,11 @@ router.use("/bookings/:bookingId/payments", requireOperational, adminPaymentsRou
 router.use("/bookings/:bookingId/documents", requireOperational, adminDocumentsRouter);
 router.use("/documents", requireOperational, adminDocumentsRouter);
 router.use("/refunds", requireAdmin, adminRefundsRouter);
+
+// ── P2-5: Contracts (staff+ read, admin-only delete handled inside router) ────
+router.use("/contracts", requireStaff, adminContractsRouter);
+
+// ── P1-2: Payment Gateway (webhook routes exposed at app level in index.ts) ───
+router.use("/payment-gateway", requireAdmin, adminPaymentGatewayRouter);
 
 export default router;

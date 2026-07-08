@@ -1,29 +1,11 @@
 import { type RequestHandler } from "express";
-
-// ── Role sets ────────────────────────────────────────────────────────────────
-
-/** Full admin roles — can access all admin APIs */
-const FULL_ADMIN_ROLES = new Set(["super_admin", "admin"]);
-
-/** Staff-level roles — can access operational endpoints only */
-const STAFF_ROLES = new Set([
-  "super_admin",
-  "admin",
-  "branch_manager",
-  "staff",
-]);
-
-/** Operational roles — packages, bookings, agents can also read/submit */
-const OPERATIONAL_ROLES = new Set([
-  "super_admin",
-  "admin",
-  "branch_manager",
-  "staff",
-  "agent",
-]);
-
-/** Finance roles — super_admin, admin, branch_manager. Used on money/reporting endpoints. */
-const FINANCE_ROLES = new Set(["super_admin", "admin", "branch_manager"]);
+// P3-9: Role sets are now defined once in roleConstants.ts and imported here.
+import {
+  FULL_ADMIN_ROLES,
+  STAFF_ROLES,
+  OPERATIONAL_ROLES,
+  FINANCE_ROLES,
+} from "../lib/roleConstants";
 
 // ── Middleware ───────────────────────────────────────────────────────────────
 

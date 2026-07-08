@@ -4,6 +4,33 @@ import {
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
 
+// ── Payment Gateway Transactions ─────────────────────────────────────────────
+// P1-2: Stores all payment gateway transactions (Midtrans / Xendit).
+// Created via /api/admin/payment-gateway/transactions endpoint.
+export const paymentGatewayTransactions = pgTable("payment_gateway_transactions", {
+  id: text("id").primaryKey(),
+  bookingId: text("booking_id").references(() => bookings.id, { onDelete: "set null" }),
+  gateway: text("gateway").notNull(),                  // midtrans | xendit
+  orderId: text("order_id").notNull(),
+  gatewayTransactionId: text("gateway_transaction_id"),
+  amount: integer("amount").notNull(),
+  paymentMethod: text("payment_method"),               // bank_transfer | qris
+  bankCode: text("bank_code"),
+  vaNumber: text("va_number"),
+  status: text("status").notNull().default("pending"), // pending | paid | expired | cancelled | failed
+  customerName: text("customer_name"),
+  customerEmail: text("customer_email"),
+  expiryTime: timestamp("expiry_time", { withTimezone: true }),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  rawResponse: text("raw_response"),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
+}, (t) => [
+  index("idx_pgt_booking_id").on(t.bookingId),
+  index("idx_pgt_status").on(t.status),
+  index("idx_pgt_order_id").on(t.orderId),
+]);
+
 export const payments = pgTable("payments", {
   id: text("id").primaryKey(),
   bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),

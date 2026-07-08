@@ -3,6 +3,7 @@ import type { AuthUser } from "@workspace/api-zod";
 import { isAdminEmail } from "../lib/adminAllowlist";
 import { SUPABASE_URL, SUPABASE_SERVER_KEY as SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY } from "../lib/supabaseEnv";
 import { pool } from "@workspace/db";
+import { ROLE_RANK } from "../lib/roleConstants";
 
 declare global {
   namespace Express {
@@ -98,18 +99,6 @@ async function getSupabaseRole(userId: string): Promise<string | null> {
     return null;
   }
 }
-
-// Role hierarchy: lower index = higher privilege.
-// Used to pick the more restrictive role when two stores disagree.
-const ROLE_RANK: Record<string, number> = {
-  super_admin: 0,
-  admin: 1,
-  branch_manager: 2,
-  staff: 3,
-  agent: 4,
-  buyer: 5,
-  user: 6,
-};
 
 function moreRestrictiveRole(a: string | null, b: string | null): string | null {
   if (!a) return b;

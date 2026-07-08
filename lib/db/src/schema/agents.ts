@@ -50,8 +50,16 @@ export const agentWithdrawals = pgTable("agent_withdrawals", {
   id: text("id").primaryKey(),
   agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
   amount: integer("amount").notNull(),
-  status: text("status").notNull().default("pending"),
-  bankDetails: text("bank_details"),
+  status: text("status").notNull().default("requested"), // requested | approved | rejected | paid
+  // Separate bank fields (legacy `bank_details` text field kept for migration compatibility)
+  bankName: text("bank_name"),
+  bankAccount: text("bank_account"),
+  accountHolder: text("account_holder"),
+  notes: text("notes"),                // agen's notes
+  adminNotes: text("admin_notes"),
+  proofUrl: text("proof_url"),         // admin uploads transfer proof
+  processedBy: text("processed_by"),
+  processedAt: timestamp("processed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_agent_withdrawals_agent_id").on(t.agentId),

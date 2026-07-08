@@ -15,6 +15,7 @@ import pilgrimsRouter from "./pilgrims";
 import notificationsRouter from "./notifications";
 import wishlistsRouter from "./wishlists";
 import pilgrimTestimonialsRouter from "./pilgrim-testimonials";
+import paymentGatewayWebhooksRouter from "./payment-gateway-webhooks";
 import { strictLimiter, writeLimiter } from "../middlewares/rateLimiter";
 
 const router = Router();
@@ -60,6 +61,12 @@ router.post("/wishlists/toggle", writeLimiter);
 router.use("/wishlists", wishlistsRouter);
 
 router.use("/pilgrim-testimonials", strictLimiter, pilgrimTestimonialsRouter);
+
+// Payment gateway webhooks — PUBLIC (server-to-server from Midtrans/Xendit, no JWT)
+// Signature verification happens inside the router.
+// Configure Midtrans notification URL: https://<host>/api/payments/webhook/midtrans
+// Configure Xendit callback URL:       https://<host>/api/payments/webhook/xendit
+router.use("/payments/webhook", writeLimiter, paymentGatewayWebhooksRouter);
 
 // Client-side logging (no auth required — best-effort; write-rate-limited at router level)
 router.use("/logs", writeLimiter, logsRouter);

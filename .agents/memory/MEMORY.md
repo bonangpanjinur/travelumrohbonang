@@ -16,3 +16,5 @@
 - [pg.Pool error handler + fetch timeouts](pg-pool-error-handler.md) — pool.on('error') required or bg failures crash Vercel; all Supabase fetch() calls need AbortSignal.timeout(ms).
 - [Supabase DATABASE_URL split-brain](supabase-database-url-split-brain.md) — Replit import auto-binds DATABASE_URL to its own empty Postgres; use SUPABASE_DATABASE_URL (pooler host, not direct/IPv6) instead; missing FK constraints break PostgREST embeds with PGRST200.
 - [Generic REST proxy auth gaps](generic-rest-proxy-auth-gaps.md) — /rest/v1 AUTH_TABLES only checks isAuthenticated(), not row ownership; adding a user-scoped table there reopens IDORs even if a dedicated route was already fixed.
+- [Payment gateway architecture](payment-gateway-architecture.md) — admin routes gated, webhook routes PUBLIC at /api/payments/webhook/*; SHA512 + callback-token verification; env-only credentials.
+- [Agent withdrawals schema](agent-withdrawals-schema.md) — separate bank/admin/proof columns (not a JSON blob); PATCH validates status/adminNotes/proofUrl only; admin GET joins agents table for name/email.

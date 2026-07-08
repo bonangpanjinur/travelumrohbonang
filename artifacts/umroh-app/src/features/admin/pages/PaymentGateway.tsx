@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -64,31 +64,24 @@ const PaymentGateway = () => {
   const [customerName, setCustomerName] = useState<string>("");
   const [customerEmail, setCustomerEmail] = useState<string>("");
 
-  // Fetch transactions
+  // Fetch transactions from Express API (P1-2: replaces supabase.functions.invoke)
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["gateway-transactions", search, statusFilter],
     queryFn: async () => {
-      let query = supabase
-        .from("payment_gateway_transactions")
-        .select("*, bookings(booking_code, packages(title))")
-        .order("created_at", { ascending: false });
-
+      const data = await apiFetch<any[]>("/api/admin/payment-gateway/transactions");
+      let result = data || [];
       if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
+        result = result.filter((tx: any) => tx.status === statusFilter);
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
       if (search) {
-        return (data || []).filter((tx: any) =>
-          tx.gateway_transaction_id?.toLowerCase().includes(search.toLowerCase()) ||
-          tx.va_number?.includes(search) ||
-          tx.bookings?.booking_code?.toLowerCase().includes(search.toLowerCase())
+        const q = search.toLowerCase();
+        result = result.filter((tx: any) =>
+          tx.gatewayTransactionId?.toLowerCase().includes(q) ||
+          tx.vaNumber?.includes(search) ||
+          tx.bookingCode?.toLowerCase().includes(q)
         );
       }
-
-      return data || [];
+      return result;
     },
   });
 
@@ -96,37 +89,26 @@ const PaymentGateway = () => {
   const { data: bookings = [] } = useQuery({
     queryKey: ["bookings-for-gateway"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("id, booking_code, total_price, status, profiles(name, email)")
-        .in("status", ["pending", "draft", "confirmed"])
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data || [];
+      const data = await apiFetch<any[]>("/api/bookings") || [];
+      return data.filter((b: any) => ["pending", "draft", "confirmed"].includes(b.status));
     },
   });
 
-  // Create payment mutation
+  // Create payment mutation — calls Express API
   const createPaymentMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("payment-gateway", {
-        body: {
-          action: "create_payment",
+      return await apiFetch<any>("/api/admin/payment-gateway/transactions", {
+        method: "POST",
+        body: JSON.stringify({
           gateway: selectedGateway,
-          booking_id: selectedBookingId || null,
+          bookingId: selectedBookingId || null,
           amount: parseFloat(paymentAmount),
-          bank_code: selectedBank,
-          payment_method: selectedMethod,
-          customer_name: customerName,
-          customer_email: customerEmail,
-          order_id: `TRX-${Date.now()}`,
-        },
+          bankCode: selectedBank || null,
+          paymentMethod: selectedMethod,
+          customerName,
+          customerEmail,
+        }),
       });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["gateway-transactions"] });
@@ -138,18 +120,13 @@ const PaymentGateway = () => {
     onError: (e: any) => toast.error("Gagal membuat pembayaran: " + e.message),
   });
 
-  // Check status mutation
+  // Check status mutation — polls gateway for current status
   const checkStatusMutation = useMutation({
-    mutationFn: async ({ gateway, txId }: { gateway: string; txId: string }) => {
-      const { data, error } = await supabase.functions.invoke("payment-gateway", {
-        body: {
-          action: "check_status",
-          gateway,
-          order_id: txId,
-        },
+    mutationFn: async ({ txId }: { gateway: string; txId: string }) => {
+      return await apiFetch<any>(`/api/admin/payment-gateway/transactions/${txId}/check`, {
+        method: "POST",
+        body: JSON.stringify({}),
       });
-      if (error) throw error;
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gateway-transactions"] });
@@ -184,9 +161,9 @@ const PaymentGateway = () => {
     setSelectedBookingId(bookingId);
     const booking = bookings.find((b: any) => b.id === bookingId);
     if (booking) {
-      setPaymentAmount(String(booking.total_price));
-      setCustomerName((booking as any).profiles?.name || "");
-      setCustomerEmail((booking as any).profiles?.email || "");
+      setPaymentAmount(String(booking.totalPrice));
+      setCustomerName(booking.pilgrimName || booking.buyerName || "");
+      setCustomerEmail(booking.buyerEmail || "");
     }
   };
 
@@ -295,16 +272,16 @@ const PaymentGateway = () => {
                     const StatusIcon = config.icon;
                     return (
                       <TableRow key={tx.id}>
-                        <TableCell className="font-mono text-xs">{tx.gateway_transaction_id}</TableCell>
+                        <TableCell className="font-mono text-xs">{tx.gatewayTransactionId || "-"}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="uppercase text-xs">{tx.gateway}</Badge>
                         </TableCell>
-                        <TableCell className="text-sm">{tx.bookings?.booking_code || "-"}</TableCell>
-                        <TableCell className="text-sm capitalize">{tx.payment_method?.replace("_", " ") || "-"} {tx.bank_code ? `(${tx.bank_code.toUpperCase()})` : ""}</TableCell>
+                        <TableCell className="text-sm">{tx.bookingCode || "-"}</TableCell>
+                        <TableCell className="text-sm capitalize">{tx.paymentMethod?.replace("_", " ") || "-"} {tx.bankCode ? `(${tx.bankCode.toUpperCase()})` : ""}</TableCell>
                         <TableCell>
-                          {tx.va_number ? (
-                            <button onClick={() => copyToClipboard(tx.va_number)} className="flex items-center gap-1 font-mono text-xs hover:text-primary">
-                              {tx.va_number} <Copy className="w-3 h-3" />
+                          {tx.vaNumber ? (
+                            <button onClick={() => copyToClipboard(tx.vaNumber)} className="flex items-center gap-1 font-mono text-xs hover:text-primary">
+                              {tx.vaNumber} <Copy className="w-3 h-3" />
                             </button>
                           ) : "-"}
                         </TableCell>
@@ -315,12 +292,12 @@ const PaymentGateway = () => {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {tx.created_at ? format(new Date(tx.created_at), "dd MMM yyyy HH:mm", { locale: localeId }) : "-"}
+                          {tx.createdAt ? format(new Date(tx.createdAt), "dd MMM yyyy HH:mm", { locale: localeId }) : "-"}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
-                            {tx.status === "pending" && tx.gateway === "midtrans" && (
-                              <Button size="sm" variant="outline" onClick={() => checkStatusMutation.mutate({ gateway: tx.gateway, txId: tx.gateway_transaction_id })}>
+                            {tx.status === "pending" && (
+                              <Button size="sm" variant="outline" onClick={() => checkStatusMutation.mutate({ gateway: tx.gateway, txId: tx.id })}>
                                 <RefreshCw className="w-3 h-3" />
                               </Button>
                             )}
@@ -434,11 +411,11 @@ const PaymentGateway = () => {
           </DialogHeader>
           {detailDialog && (
             <div className="space-y-3">
-              {detailDialog.va_number && (
+              {detailDialog.vaNumber && (
                 <div className="p-4 rounded-lg bg-muted text-center">
                   <p className="text-xs text-muted-foreground mb-1">Virtual Account Number</p>
-                  <p className="text-2xl font-mono font-bold tracking-wider">{detailDialog.va_number}</p>
-                  <Button size="sm" variant="ghost" className="mt-2" onClick={() => copyToClipboard(detailDialog.va_number)}>
+                  <p className="text-2xl font-mono font-bold tracking-wider">{detailDialog.vaNumber}</p>
+                  <Button size="sm" variant="ghost" className="mt-2" onClick={() => copyToClipboard(detailDialog.vaNumber)}>
                     <Copy className="w-3 h-3 mr-1" /> Salin
                   </Button>
                 </div>
@@ -447,7 +424,7 @@ const PaymentGateway = () => {
                 <div><span className="text-muted-foreground">Gateway:</span></div>
                 <div className="font-medium uppercase">{detailDialog.gateway}</div>
                 <div><span className="text-muted-foreground">ID Transaksi:</span></div>
-                <div className="font-mono text-xs">{detailDialog.gateway_transaction_id || detailDialog.transaction_id}</div>
+                <div className="font-mono text-xs">{detailDialog.gatewayTransactionId || "-"}</div>
                 <div><span className="text-muted-foreground">Jumlah:</span></div>
                 <div className="font-medium">Rp {Number(detailDialog.amount).toLocaleString("id-ID")}</div>
                 <div><span className="text-muted-foreground">Status:</span></div>
@@ -457,10 +434,10 @@ const PaymentGateway = () => {
                     return <Badge variant={config.variant}>{config.label}</Badge>;
                   })()}
                 </div>
-                {detailDialog.expiry_time && (
+                {detailDialog.expiryTime && (
                   <>
                     <div><span className="text-muted-foreground">Expired:</span></div>
-                    <div className="text-xs">{format(new Date(detailDialog.expiry_time), "dd MMM yyyy HH:mm", { locale: localeId })}</div>
+                    <div className="text-xs">{format(new Date(detailDialog.expiryTime), "dd MMM yyyy HH:mm", { locale: localeId })}</div>
                   </>
                 )}
               </div>
