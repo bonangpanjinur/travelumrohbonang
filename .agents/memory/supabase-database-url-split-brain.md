@@ -39,3 +39,16 @@ relationship found in schema cache"), even though the column and referenced tabl
 data is consistent. Fix: check `pg_constraint` for `contype='f'` on the table, verify no orphaned
 rows first, then `ALTER TABLE ... ADD CONSTRAINT ... FOREIGN KEY ...` and
 `NOTIFY pgrst, 'reload schema'` to make PostgREST pick it up immediately without restarting.
+
+## Secrets are wiped on re-import, not just shadowed
+
+Re-importing the same repo into Replit (e.g. via GitHub re-sync) can drop previously-set secrets
+entirely — `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_DATABASE_URL` disappeared after a same-day
+re-import even though `replit.md` still documented them as configured. Symptom: API server boot log
+shows `SUPABASE_SERVICE_ROLE_KEY: false`, `/api/health` reports `database: error` or silently uses
+the empty Replit DB, and the frontend admin-role gate falls back to "buyer" (see
+`auth-middleware-500-fix.md`). **How to apply:** after any re-import, check `viewEnvVars`/secret
+existence before trusting replit.md's "already configured" notes — don't assume secrets survived.
+Also: the Supabase pooler connection string's username must be `postgres.<project-ref>` (not bare
+`postgres`), or Postgres rejects it with a generic "password authentication failed" error that looks
+like a wrong password.
