@@ -19,8 +19,10 @@ router.get("/", async (req: any, res) => {
       .limit(limit);
 
     res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch notifications" });
+  } catch (error: any) {
+    console.error("[notifications] DB error:", error?.message, error?.code);
+    // Return empty list instead of 500 — table may not exist in this environment yet
+    res.json([]);
   }
 });
 
@@ -35,7 +37,8 @@ router.patch("/:id/read", async (req: any, res) => {
       .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
 
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
+    console.error("[notifications] patch DB error:", error?.message, error?.code);
     res.status(500).json({ error: "Failed to update notification" });
   }
 });

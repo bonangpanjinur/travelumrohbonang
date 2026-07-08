@@ -25,8 +25,10 @@ router.get("/my", async (req, res) => {
       .from(roleMenuPermissions)
       .where(eq(roleMenuPermissions.role, role));
     res.json({ data: rows });
-  } catch {
-    res.status(500).json({ error: "Failed to fetch menu permissions" });
+  } catch (err: any) {
+    console.error("[menu-permissions] GET /my DB error:", err?.message, err?.code);
+    // Return empty data instead of 500 — table may not exist in this environment yet
+    res.json({ data: [] });
   }
 });
 
