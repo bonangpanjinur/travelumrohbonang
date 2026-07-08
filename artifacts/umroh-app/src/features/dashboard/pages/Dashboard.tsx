@@ -111,7 +111,7 @@ const Dashboard = () => {
 
       const { data: bookingData } = await supabase
         .from('bookings')
-        .select(`*, package:packages(title), departure:package_departures(departure_date)`)
+        .select(`*, package:packages(title), departure:package_departures!bookings_departure_id_fkey(departure_date)`)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1)
