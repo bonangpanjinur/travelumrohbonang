@@ -3,6 +3,18 @@
 Dokumen ini merangkum hasil analisis bug/fitur sesuai permintaan dan urutan perbaikan.
 Untuk latar belakang arsitektur lengkap lihat `MASTER_PROJECT_BLUEPRINT.md`, `PROJECT_ANALYSIS.md`, `AUTH_ARCHITECTURE.md`.
 
+## Update 2026-07-08 (lanjutan) — semua item P0 di MASTER_PROJECT_BLUEPRINT.md §11 sudah selesai
+
+1. **P0-2** (env vars) — `SUPABASE_SERVICE_ROLE_KEY` dan `SUPABASE_DATABASE_URL` sudah diisi sebagai Replit Secret. Diverifikasi: `lib/db` sekarang tersambung ke Supabase Postgres asli (75 tabel, data nyata: 8 profiles, 8 user_roles), bukan lagi Postgres kosong bawaan Replit. `GET /api/health` → `database: ok`, `supabase: ok`.
+2. **P0-3** (trigger konflik) — dikonfirmasi lewat query `pg_trigger` langsung ke Supabase: `trg_handle_new_local_user` (di `public.users`, tabel yang **0 baris** dan tidak pernah di-INSERT oleh kode apapun) memang aktif berdampingan dengan `on_auth_user_created` (di `auth.users`, jalur asli). Trigger + function legacy sudah di-DROP langsung dari live DB. `scripts/migrations/business_logic_triggers.sql` diperbarui jadi catatan arsip (bagian 6 dihapus).
+3. **P0-4** (schema drift UUID) — dikonfirmasi: `profiles.id` dan `user_roles.id`/`user_roles.user_id` di live DB memang `uuid`, sementara Drizzle schema (`lib/db/src/schema/profiles.ts`, `agents.ts`) mendeklarasikannya `text`. Diperbaiki ke `uuid(...)` di kedua file — **tidak ada perubahan DB**, murni penyelarasan tipe TypeScript. `pnpm run typecheck` bersih setelah perubahan.
+   - Catatan: pola yang sama (kolom `id`/`*_id` uuid di DB tapi `text` di Drizzle) ternyata ada di hampir semua tabel lain juga (agents, bookings, contracts, dll — lihat query di sesi ini). Sengaja **tidak** diubah semuanya sekaligus karena scope P0-4 di blueprint hanya menyebut profiles/user_roles secara eksplisit dan perubahan schema-wide berisiko lebih tinggi (banyak `.references()` yang saling terikat tipe). Diusulkan sebagai follow-up task terpisah.
+4. **P0-1** (celah keamanan `/cms/chat-messages`) — route sekarang wajib `requireAuth` + ownership check (`booking.userId === req.user.id`) atau role staff (`super_admin`/`admin`/`branch_manager`/`staff`). Diverifikasi: request tanpa token → 401; route CMS publik lain tidak terpengaruh.
+5. **P0-5** (redirect loop role null) — diperiksa `authMiddleware.ts`: sudah ada fallback default role `buyer` + `persistRole()` saat user baru tidak punya row `user_roles`, dan frontend (`useAuth.tsx`) sudah punya JWT-claim fallback untuk 5xx/network error. Sudah teratasi dari sesi sebelumnya, tidak perlu perubahan tambahan.
+6. **P0-6** (trigger hanya jalan di Supabase cloud) — tidak lagi relevan sebagai blocker: dev di Replit sekarang tersambung langsung ke Supabase asli (bukan Postgres lokal murni) lewat `SUPABASE_DATABASE_URL`, jadi trigger `on_auth_user_created` (yang butuh schema `auth`) selalu berjalan di environment yang benar.
+
+**Kesimpulan**: semua 6 item P0 di `MASTER_PROJECT_BLUEPRINT.md` §11 sudah tidak lagi open. Item P1/P2/P3 (payment gateway, `isAdmin` frontend vs `requireAdmin` backend, legacy `replit-auth-web`, dll) belum disentuh — lihat blueprint untuk daftar lengkap.
+
 ## Status: apa yang SUDAH diperbaiki di sesi ini
 
 1. **Header/menu admin tidak konsisten per role**

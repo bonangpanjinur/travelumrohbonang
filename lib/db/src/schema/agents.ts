@@ -1,5 +1,5 @@
 import {
-  pgTable, text, integer, boolean, numeric, timestamp,
+  pgTable, text, integer, boolean, numeric, timestamp, uuid,
   index, uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -25,8 +25,8 @@ export const agents = pgTable("agents", {
 ]);
 
 export const userRoles = pgTable("user_roles", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull(),       // references auth.users — no local FK
+  id: uuid("id").primaryKey(),
+  userId: uuid("user_id").notNull(),       // references auth.users (uuid) — no local FK
   role: text("role").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [

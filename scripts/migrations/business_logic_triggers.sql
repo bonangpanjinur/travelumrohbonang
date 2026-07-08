@@ -312,48 +312,19 @@ CREATE TRIGGER trg_booking_status_notification
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 6. LOCAL USER PROFILE AUTO-CREATE  (development / local Postgres only)
---    Supabase menggunakan trigger on auth.users (lihat add_new_user_profile_trigger.sql).
---    Di local Postgres, kita pakai tabel 'users' (dari Replit Auth schema) sebagai
---    pengganti — saat user baru di-insert, auto-buat profiles + user_roles(buyer).
---
---    CATATAN: Trigger ini TIDAK perlu di-apply ke Supabase.
---             Di Supabase sudah ada trigger on_auth_user_created di auth.users.
+-- 6. [REMOVED 2026-07-08 — P0-3 fix] LOCAL USER PROFILE AUTO-CREATE
+--    This trigger targeted the legacy `public.users` table (Replit Auth
+--    scaffold remnant). The app only ever writes users through Supabase Auth
+--    (`auth.users`), which already has its own trigger — `on_auth_user_created`
+--    on `auth.users`, defined in add_new_user_profile_trigger.sql. `public.users`
+--    is never inserted into by any app code path, so this trigger was 100% dead
+--    (confirmed empty table + no INSERT call sites) but still live in the DB,
+--    creating confusion about which trigger actually creates profiles/roles.
+--    Dropped both the trigger and its function (`fn_handle_new_local_user`)
+--    directly against the live Supabase DB. Do not recreate — if local/dev
+--    Postgres ever needs this again, wire it to the same Supabase Auth flow
+--    instead of a separate `public.users` shadow table.
 -- ─────────────────────────────────────────────────────────────────────────────
-
-CREATE OR REPLACE FUNCTION fn_handle_new_local_user()
-RETURNS trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
-  v_name  TEXT;
-  v_email TEXT;
-BEGIN
-  v_email := COALESCE(NEW.email, NEW.id);
-  v_name  := COALESCE(
-    NULLIF(TRIM(COALESCE(NEW.first_name, '') || ' ' || COALESCE(NEW.last_name, '')), ''),
-    SPLIT_PART(v_email, '@', 1)
-  );
-
-  -- Buat profile
-  INSERT INTO profiles (id, name, email, totp_enabled, created_at)
-  VALUES (NEW.id, v_name, v_email, false, NOW())
-  ON CONFLICT (id) DO NOTHING;
-
-  -- Assign role buyer (default)
-  INSERT INTO user_roles (id, user_id, role, created_at)
-  VALUES (gen_random_uuid(), NEW.id, 'buyer', NOW())
-  ON CONFLICT (user_id) DO NOTHING;
-
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_handle_new_local_user ON users;
-CREATE TRIGGER trg_handle_new_local_user
-  AFTER INSERT ON users
-  FOR EACH ROW
-  EXECUTE FUNCTION fn_handle_new_local_user();
 
 
 -- ─────────────────────────────────────────────────────────────────────────────

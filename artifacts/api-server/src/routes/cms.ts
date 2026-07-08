@@ -16,11 +16,15 @@ import {
   floatingButtons,
   services,
   chatMessages,
+  bookings,
   eq,
   and,
   desc,
   asc,
 } from "@workspace/db";
+import { requireAuth } from "../middlewares/auth";
+
+const STAFF_ROLES = new Set(["super_admin", "admin", "branch_manager", "staff"]);
 
 const router = Router();
 
@@ -208,18 +212,31 @@ router.get("/services", async (req, res) => {
   }
 });
 
-// Chat Messages (Scoped by booking)
-router.get("/chat-messages", async (req, res) => {
+// Chat Messages (Scoped by booking — auth + ownership required, see P0-1 fix 2026-07-08)
+router.get("/chat-messages", requireAuth, async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
     const { booking_id } = req.query;
     if (!booking_id) return res.status(400).json({ error: "Booking ID is required" });
-    
-    // In public route, we might not have req.user if it's not through requireAuth.
-    // The task says chat_messages (user-scoped by booking).
-    // If it's a public route, we should probably check if the user is authorized for this booking.
-    // But since this is a public CMS route, maybe it's for the chat widget on the booking page.
-    // We'll assume the booking_id is enough for now, or check req.user if available.
-    
+
+    const [booking] = await db
+      .select({ id: bookings.id, userId: bookings.userId })
+      .from(bookings)
+      .where(eq(bookings.id, booking_id as string))
+      .limit(1);
+
+    if (!booking) {
+      return res.status(404).json({ error: "Booking not found" });
+    }
+
+    const isOwner = booking.userId === req.user.id;
+    const isStaff = STAFF_ROLES.has(req.user.role as string);
+    if (!isOwner && !isStaff) {
+      return res.status(403).json({ error: "Not authorized to view this booking's chat" });
+    }
+
     const messages = await db
       .select()
       .from(chatMessages)

@@ -100,13 +100,22 @@ const PUBLIC_READ_TABLES = new Set([
 ]);
 
 // Tables that require the user to be authenticated for any access.
+//
+// NOTE: `chat_messages` is intentionally NOT in this list (or in ALLOWED_TABLES
+// at all — see P0-1 fix 2026-07-08). This generic proxy only gates on
+// `req.isAuthenticated()`, with no per-row ownership check — any authenticated
+// user could read any other user's booking chat via `GET /rest/v1/chat_messages
+// ?booking_id=eq.<any>`. Access to chat messages must go exclusively through
+// the dedicated `GET /api/cms/chat-messages` route (routes/cms.ts), which
+// enforces booking ownership or staff role. Do not re-add chat_messages here
+// without adding the same ownership check to this generic handler first.
 const AUTH_TABLES = new Set([
   "profiles", "bookings", "booking_rooms", "booking_pilgrims", "booking_payments",
   "wishlists", "notifications", "pilgrim_documents", "contracts",
   "crm_contacts", "audit_logs", "error_logs", "request_log",
   "template_upgrade_orders", "affiliate_clicks", "user_roles",
   "leads", "lead_follow_ups", "loyalty_balances", "loyalty_points",
-  "financial_transactions", "chat_messages", "pilgrim_doc_access_logs",
+  "financial_transactions", "pilgrim_doc_access_logs",
   "package_costs", "payment_proof_access_logs", "payments", "agent_commissions",
   "flight_details", "installment_schedules", "payment_gateway_transactions",
 ]);

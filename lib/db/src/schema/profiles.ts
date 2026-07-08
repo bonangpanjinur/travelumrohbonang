@@ -1,11 +1,11 @@
 import {
-  pgTable, text, boolean, timestamp,
+  pgTable, text, boolean, timestamp, uuid,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-// id is the Supabase auth user ID (mirrors auth.users.id)
+// id is the Supabase auth user ID (mirrors auth.users.id, actual column type is uuid)
 export const profiles = pgTable("profiles", {
-  id: text("id").primaryKey(),
+  id: uuid("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull(),
   phone: text("phone"),
