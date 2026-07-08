@@ -14,3 +14,4 @@
 - [Role resolution strategy](role-resolution-strategy.md) — local-first speed + Supabase-wins-on-demotion; use getUserRole(), never getLocalRole/getSupabaseRole directly.
 - [SQL triggers quota logic](sql-triggers-quota-logic.md) — 8 business logic triggers in business_logic_triggers.sql; dollar-quote $ corruption fix pattern; quota hard guard via FOR UPDATE lock.
 - [pg.Pool error handler + fetch timeouts](pg-pool-error-handler.md) — pool.on('error') required or bg failures crash Vercel; all Supabase fetch() calls need AbortSignal.timeout(ms).
+- [Supabase DATABASE_URL split-brain](supabase-database-url-split-brain.md) — Replit import auto-binds DATABASE_URL to its own empty Postgres; use SUPABASE_DATABASE_URL (pooler host, not direct/IPv6) instead; missing FK constraints break PostgREST embeds with PGRST200.
