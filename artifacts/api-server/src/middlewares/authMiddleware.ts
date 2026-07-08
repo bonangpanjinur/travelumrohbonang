@@ -75,11 +75,24 @@ function timeoutSignal(ms: number): AbortSignal {
 }
 
 /**
- * Query role from Supabase HTTP REST (used when DATABASE_URL is absent,
- * e.g. on Vercel serverless). Falls back gracefully to null on any error.
+ * Result type for Supabase role lookup.
+ *  { reachable: true,  role: string | null } — Supabase responded (even if no row)
+ *  { reachable: false }                      — transport/config error; cannot trust result
  */
-async function getSupabaseRole(userId: string): Promise<string | null> {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+type SupabaseRoleResult =
+  | { reachable: true; role: string | null }
+  | { reachable: false };
+
+/**
+ * Query role from Supabase HTTP REST (used when DATABASE_URL is absent,
+ * e.g. on Vercel serverless).
+ *
+ * Returns { reachable: true, role } on any successful HTTP response so callers
+ * can distinguish "user has no row in Supabase" from "Supabase was unreachable."
+ * Returns { reachable: false } only on network errors, timeouts, or missing config.
+ */
+async function getSupabaseRole(userId: string): Promise<SupabaseRoleResult> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return { reachable: false };
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/user_roles?user_id=eq.${userId}&limit=1`,
@@ -92,37 +105,46 @@ async function getSupabaseRole(userId: string): Promise<string | null> {
         },
       },
     );
-    if (!res.ok) return null;
+    if (!res.ok) return { reachable: false };
     const rows = (await res.json()) as Array<{ role: string }>;
-    return rows[0]?.role ?? null;
+    return { reachable: true, role: rows[0]?.role ?? null };
   } catch {
-    return null;
+    return { reachable: false };
   }
-}
-
-function moreRestrictiveRole(a: string | null, b: string | null): string | null {
-  if (!a) return b;
-  if (!b) return a;
-  // Higher rank number = less privilege. Pick the one with the higher rank value
-  // so that a Supabase demotion immediately takes effect even if local is stale.
-  return (ROLE_RANK[a] ?? 99) >= (ROLE_RANK[b] ?? 99) ? a : b;
 }
 
 /**
  * Unified role getter.
  *
- * When both stores are reachable, Supabase is treated as the authoritative
- * source for REVOCATION: if Supabase returns a less-privileged role than
- * local Postgres, the less-privileged role wins immediately (no stale escalation).
+ * Supabase is the single source of truth.
  *
- * When only one store is reachable the available value is used.
+ * • Reachable + has row  → use Supabase role; sync to local in background.
+ * • Reachable + no row   → role is null (user has no privilege); do NOT fall
+ *                          back to local which might be stale/elevated.
+ * • Unreachable (network/timeout/config) → fall back to local Postgres only.
+ *
+ * This ensures that removing a role in the Supabase dashboard revokes access
+ * within the cache TTL (60 s), and that newly promoted roles work immediately
+ * without needing a local DB sync first.
  */
 async function getUserRole(userId: string): Promise<string | null> {
-  const [localRole, supabaseRole] = await Promise.all([
+  const [localRole, supabaseResult] = await Promise.all([
     getLocalRole(userId),
     getSupabaseRole(userId),
   ]);
-  return moreRestrictiveRole(localRole, supabaseRole);
+
+  if (supabaseResult.reachable) {
+    // Supabase responded — its result is authoritative (even if null / no row).
+    const supabaseRole = supabaseResult.role;
+    if (supabaseRole && supabaseRole !== localRole) {
+      // Sync promotion/demotion to local so future fast-path reads stay accurate.
+      setLocalRole(userId, supabaseRole).catch(() => {});
+    }
+    return supabaseRole;
+  }
+
+  // Supabase unreachable (network error, timeout, missing config) — use local.
+  return localRole;
 }
 
 /**

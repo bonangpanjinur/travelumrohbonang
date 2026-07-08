@@ -1,25 +1,36 @@
 ---
-name: Role resolution strategy in authMiddleware
-description: How getUserRole() resolves conflicts between local Postgres and Supabase HTTP role stores, and why Supabase wins on demotion.
+name: Role resolution strategy
+description: How user roles are resolved in authMiddleware (local Postgres vs Supabase)
 ---
 
-## Rule
+## Strategy: Supabase is authoritative
+`getUserRole()` in `authMiddleware.ts` queries both local Postgres and Supabase in parallel.
 
-`getUserRole()` queries BOTH local Postgres and Supabase HTTP in parallel, then picks the **more restrictive** (higher ROLE_RANK) value.
+**Supabase wins when reachable** — both promotions and demotions set via Supabase dashboard
+take effect within the token-cache TTL (60 s). When Supabase returns a role, it is also
+synced to local Postgres in the background (fire-and-forget) so future fast-path requests
+stay accurate.
 
-```
-ROLE_RANK: super_admin(0) < admin(1) < branch_manager(2) < staff(3) < agent(4) < buyer(5) < user(6)
-Higher rank number = less privilege. moreRestrictiveRole() returns the one with higher rank.
-```
+**Local Postgres is the fallback** — used only when Supabase HTTP REST is unreachable
+(network error, missing env vars, etc).
 
-**Why:** Local Postgres can have a stale elevated role (e.g., user was super_admin in dev, then demoted in Supabase). Without this, the stale elevated role would persist in local DB and grant unintended access.
+**Why:** Previous "most restrictive wins" design (local buyer + supabase super_admin → buyer)
+blocked legitimate admin promotions made directly in the Supabase dashboard. Supabase-as-
+authoritative means a single source of truth; backend still verifies on every request so the
+60-second cache window is acceptable.
 
-**How to apply:**
-- Always use `getUserRole()`, never `getLocalRole()` or `getSupabaseRole()` directly in `resolveUser()`
-- `persistRole()` writes to BOTH stores (local Postgres + Supabase HTTP) on admin email override or first-login assignment
-- Admin email override uses `persistRole()` then evicts the token cache entry so stale "buyer" is not served again
+## ADMIN_EMAILS override
+Still applies: if the email is in the `ADMIN_EMAILS` env var allowlist, the user always gets
+`super_admin` regardless of DB state. Covers the bootstrap case where no role row exists.
 
-## Local-first for performance, Supabase-wins for security
+## isAdmin (frontend)
+`useAuth.tsx`: `isAdmin = role !== "user" && role !== "buyer"` — all non-buyer roles get
+admin panel access (includes agent, staff, branch_manager, admin, super_admin).
 
-In dev (DATABASE_URL present): local Postgres is queried first (fast, no network). Supabase is also queried to catch demotions.
-In production/Vercel (no DATABASE_URL): `getLocalRole()` returns null immediately, Supabase HTTP is used exclusively.
+`isFullAdmin = role === "super_admin" || role === "admin"` — matches backend `requireAdmin`
+middleware; use for UI gated by full admin privilege.
+
+## How to apply
+- Never call `getLocalRole` / `getSupabaseRole` directly in other code; always use `getUserRole()`.
+- A role cached for up to 60 s; force a fresh lookup by evicting: `tokenCache.delete(token)`.
+- New env var `SUPABASE_SERVICE_ROLE_KEY` must be set for Supabase role lookup to work.

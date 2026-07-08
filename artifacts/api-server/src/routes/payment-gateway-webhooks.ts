@@ -41,6 +41,7 @@ router.post("/midtrans", async (req, res) => {
 
   // ── Signature verification ────────────────────────────────────────────────
   const serverKey = process.env["MIDTRANS_SERVER_KEY"];
+  const isProduction = process.env["NODE_ENV"] === "production";
   if (serverKey) {
     if (!receivedSig || !status_code || !gross_amount) {
       return res.status(400).json({ error: "Missing signature fields" });
@@ -52,6 +53,10 @@ router.post("/midtrans", async (req, res) => {
       console.warn("[webhook/midtrans] Invalid signature for order", order_id);
       return res.status(401).json({ error: "Invalid signature" });
     }
+  } else if (isProduction) {
+    // Production with no key configured → reject (fail-closed).
+    console.error("[webhook/midtrans] MIDTRANS_SERVER_KEY not set in production — rejecting request");
+    return res.status(500).json({ error: "Webhook not configured" });
   } else {
     console.warn("[webhook/midtrans] MIDTRANS_SERVER_KEY not set — skipping signature check (dev mode)");
   }
@@ -75,8 +80,8 @@ router.post("/midtrans", async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error("[webhook/midtrans] DB error:", err);
-    // Return 200 anyway — Midtrans will retry on non-2xx
-    res.json({ ok: false, error: "DB error" });
+    // Return 500 so Midtrans retries the notification later.
+    res.status(500).json({ error: "DB error" });
   }
 });
 
@@ -85,12 +90,16 @@ router.post("/midtrans", async (req, res) => {
 router.post("/xendit", async (req, res) => {
   const callbackToken = process.env["XENDIT_WEBHOOK_TOKEN"];
   const receivedToken = req.headers["x-callback-token"] as string | undefined;
+  const isProduction = process.env["NODE_ENV"] === "production";
 
   if (callbackToken) {
     if (receivedToken !== callbackToken) {
       console.warn("[webhook/xendit] Invalid callback token");
       return res.status(401).json({ error: "Invalid callback token" });
     }
+  } else if (isProduction) {
+    console.error("[webhook/xendit] XENDIT_WEBHOOK_TOKEN not set in production — rejecting request");
+    return res.status(500).json({ error: "Webhook not configured" });
   } else {
     console.warn("[webhook/xendit] XENDIT_WEBHOOK_TOKEN not set — skipping token check (dev mode)");
   }
@@ -119,7 +128,8 @@ router.post("/xendit", async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error("[webhook/xendit] DB error:", err);
-    res.json({ ok: false, error: "DB error" });
+    // Return 500 so Xendit retries the callback later.
+    res.status(500).json({ error: "DB error" });
   }
 });
 
