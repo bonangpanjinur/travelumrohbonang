@@ -35,7 +35,16 @@ function corsOrigin(
   // In development, allow all origins for local convenience.
   if (process.env.NODE_ENV !== "production") return callback(null, true);
   if (rawOrigins.includes(origin)) return callback(null, true);
-  callback(new Error(`CORS: origin '${origin}' not allowed`));
+  // IMPORTANT: never pass an Error here. The `cors` package forwards it to
+  // Express's error-handling middleware via next(err), which previously hit
+  // the generic catch-all handler and returned an opaque 500 for every
+  // request from an unlisted origin — indistinguishable from a real crash.
+  // Passing `false` instead makes `cors` skip the CORS headers (browser
+  // blocks the response client-side with a clear CORS error) while the
+  // server itself still responds normally, so origin misconfiguration never
+  // masquerades as a backend 500.
+  console.warn(`[cors] origin '${origin}' not in ALLOWED_ORIGINS — rejecting CORS headers (not a 500)`);
+  callback(null, false);
 }
 
 app.use(

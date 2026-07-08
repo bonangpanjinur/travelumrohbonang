@@ -36,9 +36,13 @@ router.get("/", async (req, res) => {
       }));
 
     res.json({ data: result });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch FAQs" });
+  } catch (err: any) {
+    console.error("[GET /api/faqs] failed:", err);
+    res.status(500).json({
+      error: "Failed to fetch FAQs",
+      message: process.env.NODE_ENV === "development" ? err?.message : undefined,
+      stack: process.env.NODE_ENV === "development" ? err?.stack : undefined,
+    });
   }
 });
 

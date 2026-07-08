@@ -114,9 +114,13 @@ router.get("/", async (req: Request, res: Response) => {
     });
 
     res.json({ data, total: data.length });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch packages" });
+  } catch (err: any) {
+    console.error("[GET /api/packages] failed:", err);
+    res.status(500).json({
+      error: "Failed to fetch packages",
+      message: process.env.NODE_ENV === "development" ? err?.message : undefined,
+      stack: process.env.NODE_ENV === "development" ? err?.stack : undefined,
+    });
   }
 });
 
@@ -132,8 +136,13 @@ router.get("/filter-options", async (req: Request, res: Response) => {
       airlines: airs.map((a) => ({ id: a.id, name: a.name })),
       airports: apts.map((a) => ({ id: a.id, name: a.name, city: a.city })),
     });
-  } catch {
-    res.status(500).json({ error: "Failed to fetch filter options" });
+  } catch (err: any) {
+    console.error("[GET /api/packages/filter-options] failed:", err);
+    res.status(500).json({
+      error: "Failed to fetch filter options",
+      message: process.env.NODE_ENV === "development" ? err?.message : undefined,
+      stack: process.env.NODE_ENV === "development" ? err?.stack : undefined,
+    });
   }
 });
 

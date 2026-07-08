@@ -44,8 +44,8 @@ router.get("/auth/user", async (req, res) => {
     }
 
     res.json(parsed.data);
-  } catch (err) {
-    console.error("[auth/user] unexpected error:", err);
+  } catch (err: any) {
+    console.error("[auth/user] unexpected error:", err?.message, err?.stack);
     // Return unauthenticated rather than 500 so the client can handle it.
     res.json({ user: null });
   }
