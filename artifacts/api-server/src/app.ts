@@ -104,8 +104,17 @@ app.use((_req, res) => {
 });
 
 // ── Global error handler ──────────────────────────────────────────────────────
-app.use((err: Error, _req: import("express").Request, res: import("express").Response, _next: import("express").NextFunction) => {
-  console.error("[app] unhandled error:", err?.message ?? err);
+// Logs the FULL original exception (name, message, stack, and any extra
+// enumerable properties) so the real root cause is visible in Vercel/Replit
+// logs instead of just "Internal server error". Never leaks stack/details to
+// the client — the response body stays generic in every environment.
+app.use((err: any, req: import("express").Request, res: import("express").Response, _next: import("express").NextFunction) => {
+  console.error("[app] unhandled error on", req.method, req.originalUrl, {
+    name: err?.name,
+    message: err?.message,
+    stack: err?.stack,
+    ...err, // captures extra fields some libs attach (code, status, cause, etc.)
+  });
   res.status(500).json({ message: "Internal server error" });
 });
 

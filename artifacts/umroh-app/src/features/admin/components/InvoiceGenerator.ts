@@ -21,12 +21,13 @@ interface InvoiceData {
 
 export const fetchInvoiceData = async (bookingId: string): Promise<InvoiceData | null> => {
   const [bookingRes, pilgrimsRes, roomsRes, paymentsRes, brandingRes] = await Promise.all([
+    // TEMPORARY: package/departure embeds disabled — production schema cache
+    // has no FK relationship for bookings->packages or bookings->package_departures
+    // (confirmed via direct PostgREST probing). See chat report for details.
     supabase
       .from("bookings")
       .select(`
-        booking_code, total_price, status, created_at,
-        package:packages(title),
-        departure:package_departures!bookings_departure_id_fkey(departure_date),
+        booking_code, total_price, status, created_at, package_id, departure_id,
         profile:profiles!bookings_user_id_profiles_fkey(name, email)
       `)
       .eq("id", bookingId)

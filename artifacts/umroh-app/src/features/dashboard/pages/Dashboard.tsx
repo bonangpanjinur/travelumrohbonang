@@ -109,9 +109,14 @@ const Dashboard = () => {
         .maybeSingle();
       setIsAgent(!!agentRow);
 
+      // TEMPORARY: production Supabase schema cache has no FK relationship
+      // between bookings/packages/package_departures (confirmed via direct
+      // PostgREST probing — PGRST200 on every embed variant, including
+      // column- and constraint-name hints). Embedding is disabled until the
+      // actual FK constraints are confirmed/restored; see chat report.
       const { data: bookingData } = await supabase
         .from('bookings')
-        .select(`*, package:packages(title), departure:package_departures!bookings_departure_id_fkey(departure_date)`)
+        .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -184,7 +189,7 @@ const Dashboard = () => {
               <div>
                 <CardTitle className="text-xl text-primary">Status Perjalanan Anda</CardTitle>
                 <CardDescription>
-                  {activeBooking ? `Paket: ${activeBooking.package?.title}` : "Anda belum memilih paket perjalanan."}
+                  {activeBooking ? `Paket: ${activeBooking.package?.title ?? "-"}` : "Anda belum memilih paket perjalanan."}
                 </CardDescription>
               </div>
               {activeBooking?.departure?.departure_date && (
