@@ -487,7 +487,7 @@ router.post("/:table", requireAuth, async (req: Request, res: Response) => {
       if (!cols.length) continue;
 
       const colNames = cols.map((c) => `"${c}"`).join(", ");
-      const placeholders = cols.map((_, i) => `${i + 1}`).join(", ");
+      const placeholders = cols.map((_, i) => `$${i + 1}`).join(", ");
       const vals = cols.map((c) => row[c]);
 
       let sql = `INSERT INTO "${table}" (${colNames}) VALUES (${placeholders})`;
