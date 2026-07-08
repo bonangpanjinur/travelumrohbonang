@@ -100,7 +100,7 @@ export const menuGroups: MenuGroup[] = [
     label: "Operasional",
     labelKey: "menu.group.operations",
     items: [
-      { label: "Paket Umroh", labelKey: "menu.packages", href: "/admin/packages", icon: Package, roles: OPERATIONAL },
+      { label: "Paket Umroh", labelKey: "menu.packages", href: "/admin/packages", icon: Package, roles: ALL_STAFF },
       { label: "Keberangkatan", labelKey: "menu.departures", href: "/admin/departures", icon: Calendar, roles: ALL_STAFF },
       { label: "Itinerary", labelKey: "menu.itineraries", href: "/admin/itineraries", icon: MapPin, roles: ALL_STAFF },
       { label: "Booking", labelKey: "menu.bookings", href: "/admin/bookings", icon: Ticket, roles: OPERATIONAL },
@@ -124,7 +124,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Laporan", labelKey: "menu.reports", href: "/admin/reports", icon: FileText, roles: FINANCE },
       { label: "Histori Akses Bukti", labelKey: "menu.proof_access_logs", href: "/admin/proof-access-logs", icon: ShieldCheck, roles: SUPER_ADMIN_ADMIN },
       { label: "Pencairan Komisi Agen", labelKey: "menu.agent_withdrawals", href: "/admin/agent-withdrawals", icon: Wallet, roles: SUPER_ADMIN_ADMIN },
-      { label: "Refund Jamaah", labelKey: "menu.refunds", href: "/admin/refunds", icon: Receipt, roles: FINANCE },
+      { label: "Refund Jamaah", labelKey: "menu.refunds", href: "/admin/refunds", icon: Receipt, roles: SUPER_ADMIN_ADMIN },
     ],
   },
   {
@@ -155,7 +155,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Maskapai", labelKey: "menu.airlines", href: "/admin/airlines", icon: Plane, roles: SUPER_ADMIN_ADMIN },
       { label: "Bandara", labelKey: "menu.airports", href: "/admin/airports", icon: MapPin, roles: SUPER_ADMIN_ADMIN },
       { label: "Cabang", labelKey: "menu.branches", href: "/admin/branches", icon: Building2, roles: [...SUPER_ADMIN_ADMIN, "branch_manager"] },
-      { label: "Agen", labelKey: "menu.agents", href: "/admin/agents", icon: Briefcase, roles: [...SUPER_ADMIN_ADMIN, "branch_manager"] },
+      { label: "Agen", labelKey: "menu.agents", href: "/admin/agents", icon: Briefcase, roles: SUPER_ADMIN_ADMIN },
       { label: "Muthawif", labelKey: "menu.muthawifs", href: "/admin/muthawifs", icon: User, roles: SUPER_ADMIN_ADMIN },
     ],
   },
