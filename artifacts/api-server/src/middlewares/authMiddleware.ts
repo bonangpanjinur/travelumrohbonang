@@ -261,10 +261,16 @@ export async function authMiddleware(
     return this.user != null;
   } as Request["isAuthenticated"];
 
-  const token = getTokenFromRequest(req);
-  if (token) {
-    const user = await resolveUser(token);
-    if (user) req.user = user;
+  try {
+    const token = getTokenFromRequest(req);
+    if (token) {
+      const user = await resolveUser(token);
+      if (user) req.user = user;
+    }
+  } catch (err: any) {
+    // Safety net: authMiddleware must NEVER cause a 500 — any error here
+    // means the request proceeds as unauthenticated, not as a server error.
+    console.error("[authMiddleware] unexpected error (proceeding unauthenticated):", err?.message, err?.stack);
   }
 
   next();

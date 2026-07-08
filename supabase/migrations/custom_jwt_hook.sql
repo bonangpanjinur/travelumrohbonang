@@ -27,10 +27,11 @@ DECLARE
   user_role text;
 BEGIN
   -- Ambil role user dari tabel user_roles
+  -- CATATAN: user_id disimpan sebagai TEXT, bukan UUID — jangan cast ::uuid
   SELECT role
     INTO user_role
     FROM public.user_roles
-   WHERE user_roles.user_id = (event->>'user_id')::uuid
+   WHERE user_roles.user_id = event->>'user_id'
    LIMIT 1;
 
   -- Ambil klaim yang ada

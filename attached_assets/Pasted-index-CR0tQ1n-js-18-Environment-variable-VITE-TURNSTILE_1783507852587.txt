@@ -1,0 +1,41 @@
+index-CR0tQ1n_.js:18 Environment variable VITE_TURNSTILE_SITE_KEY is not defined
+
+index-CR0tQ1n_.js:18 Environment variable VITE_SENTRY_DSN is not defined
+index-CR0tQ1n_.js:148 [sentry] VITE_SENTRY_DSN not set — Sentry disabled.
+reuwfhuaabdhxjkomred…d_at.desc&limit=6:1 
+ Failed to load resource: the server responded with a status of 400 ()
+reuwfhuaabdhxjkomred…ant_type=password:1 
+ Failed to load resource: the server responded with a status of 400 ()
+api/auth/user:1 
+ Failed to load resource: the server responded with a status of 500 ()
+index-CR0tQ1n_.js:9 [useAuth] /api/auth/user returned 500 — using JWT claim fallback
+api/notifications?limit=5:1 
+ Failed to load resource: the server responded with a status of 500 ()
+index-CR0tQ1n_.js:138 Error
+    at ye (index-CR0tQ1n_.js:9:78632)
+    at async u (index-CR0tQ1n_.js:138:29381)
+api/auth/user:1 
+ Failed to load resource: the server responded with a status of 500 ()
+index-CR0tQ1n_.js:9 [useAuth] /api/auth/user returned 500 — using JWT claim fallback
+api/notifications?limit=5:1 
+ Failed to load resource: the server responded with a status of 500 ()
+index-CR0tQ1n_.js:138 Error
+    at ye (index-CR0tQ1n_.js:9:78632)
+    at async u (index-CR0tQ1n_.js:138:29381)
+api/auth/user:1 
+ Failed to load resource: the server responded with a status of 500 ()
+index-CR0tQ1n_.js:9 [useAuth] /api/auth/user returned 500 — using JWT claim fallback
+api/notifications?limit=5:1 
+ Failed to load resource: the server responded with a status of 500 ()
+index-CR0tQ1n_.js:138 Error
+    at ye (index-CR0tQ1n_.js:9:78632)
+    at async u (index-CR0tQ1n_.js:138:29381)
+api/auth/user:1 
+ Failed to load resource: the server responded with a status of 500 ()
+index-CR0tQ1n_.js:9 [useAuth] /api/auth/user returned 500 — using JWT claim fallback
+api/notifications?limit=5:1 
+ Failed to load resource: the server responded with a status of 500 ()
+index-CR0tQ1n_.js:138 Error
+    at ye (index-CR0tQ1n_.js:9:78632)
+    at async u (index-CR0tQ1n_.js:138:29381)
+﻿
