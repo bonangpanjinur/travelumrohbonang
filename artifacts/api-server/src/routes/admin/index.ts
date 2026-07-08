@@ -4,6 +4,7 @@ import {
   requireAdmin,
   requireStaff,
   requireOperational,
+  requireFinance,
   requireSuperAdmin,
 } from "../../middlewares/requireAdmin";
 
@@ -37,6 +38,7 @@ import adminMasterdataRouter from "./masterdata";
 import adminIntegrationsRouter from "./integrations";
 import adminChatsRouter from "./chats";
 import adminMenuPermissionsRouter from "./menu-permissions";
+import adminAnalyticsRouter from "./analytics";
 
 const router = Router();
 
@@ -51,6 +53,7 @@ router.use("/agents", requireAdmin, adminAgentsRouter);
 router.use("/integrations", requireSuperAdmin, adminIntegrationsRouter);
 // GET readable by all admin roles; PUT/DELETE restricted to super_admin inside the router
 router.use("/menu-permissions", requireOperational, adminMenuPermissionsRouter);
+router.use("/analytics", requireFinance, adminAnalyticsRouter);
 
 // ── Full admin routes (super_admin + admin only) ────────────────────────────
 router.use("/users", requireAdmin, adminUsersRouter);

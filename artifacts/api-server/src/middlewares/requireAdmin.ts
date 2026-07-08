@@ -22,6 +22,9 @@ const OPERATIONAL_ROLES = new Set([
   "agent",
 ]);
 
+/** Finance roles — super_admin, admin, branch_manager. Used on money/reporting endpoints. */
+const FINANCE_ROLES = new Set(["super_admin", "admin", "branch_manager"]);
+
 // ── Middleware ───────────────────────────────────────────────────────────────
 
 /** Full admin gate: super_admin + admin only. Used as the default global gate. */
@@ -65,6 +68,22 @@ export const requireOperational: RequestHandler = (req, res, next) => {
   }
   if (!OPERATIONAL_ROLES.has(req.user.role as string)) {
     res.status(403).json({ error: "Operational access required" });
+    return;
+  }
+  next();
+};
+
+/**
+ * Finance gate: super_admin, admin, branch_manager.
+ * Use on money/reporting endpoints (payments summaries, analytics, refunds review).
+ */
+export const requireFinance: RequestHandler = (req, res, next) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  if (!FINANCE_ROLES.has(req.user.role as string)) {
+    res.status(403).json({ error: "Finance access required" });
     return;
   }
   next();

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Badge } from "@/shared/components/ui/badge";
@@ -8,7 +8,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from "recharts";
-import { format, subDays, subMonths, eachDayOfInterval, eachMonthOfInterval, startOfMonth, endOfMonth } from "date-fns";
+import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import {
   TrendingUp, TrendingDown, Users, Package, CreditCard,
@@ -164,194 +164,66 @@ const AnalyticsDashboard = () => {
   const [bookingStatus, setBookingStatus] = useState<BookingStatusSlice[]>([]);
   const [departures, setDepartures] = useState<DepartureOccupancy[]>([]);
 
-  const getRange = useCallback((p: string) => {
-    const now = new Date();
-    switch (p) {
-      case "7days":   return { start: subDays(now, 7), end: now, prev_start: subDays(now, 14), prev_end: subDays(now, 7) };
-      case "30days":  return { start: subDays(now, 30), end: now, prev_start: subDays(now, 60), prev_end: subDays(now, 30) };
-      case "3months": return { start: subMonths(now, 3), end: now, prev_start: subMonths(now, 6), prev_end: subMonths(now, 3) };
-      case "6months": return { start: subMonths(now, 6), end: now, prev_start: subMonths(now, 12), prev_end: subMonths(now, 6) };
-      case "1year":   return { start: subMonths(now, 12), end: now, prev_start: subMonths(now, 24), prev_end: subMonths(now, 12) };
-      default:        return { start: subDays(now, 30), end: now, prev_start: subDays(now, 60), prev_end: subDays(now, 30) };
-    }
-  }, []);
+  // All aggregation (KPIs, trend buckets, per-package revenue, status
+  // breakdowns) is computed server-side in one SQL round trip via
+  // /api/admin/analytics/summary — this component only formats the
+  // response for display (labels, colors, chart shaping).
+  interface AnalyticsSummary {
+    kpis: { bookings: number; prevBookings: number; revenue: number; prevRevenue: number; pilgrims: number; prevPilgrims: number; avgValue: number; prevAvgValue: number };
+    trend: { key: string; bookings: number; revenue: number }[];
+    packageRevenue: { name: string; bookings: number; revenue: number }[];
+    paymentStatus: { status: string; count: number }[];
+    bookingStatus: { status: string; count: number }[];
+    departures: { id: string; package_title: string; departure_date: string; quota: number; booked: number }[];
+  }
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const { start, end, prev_start, prev_end } = getRange(period);
+    try {
+      const useMonthly = ["3months", "6months", "1year"].includes(period);
+      const summary = await apiFetch<AnalyticsSummary>(`/api/admin/analytics/summary?period=${period}`);
 
-    await Promise.all([
-      loadKpis(start, end, prev_start, prev_end),
-      loadTrend(start, end, period),
-      loadPackageRevenue(start, end),
-      loadPaymentStatus(start, end),
-      loadBookingStatus(start, end),
-      loadDepartures(),
-    ]);
+      setKpis(summary.kpis);
+
+      setTrendData(
+        summary.trend.map((t) => ({
+          label: useMonthly
+            ? format(new Date(`${t.key}-01`), "MMM yy", { locale: localeId })
+            : format(new Date(t.key), "d MMM", { locale: localeId }),
+          bookings: t.bookings,
+          revenue: t.revenue,
+        }))
+      );
+
+      setPackageRevenue(summary.packageRevenue);
+
+      setPaymentStatus(
+        summary.paymentStatus.map((p) => ({
+          name: STATUS_LABEL[p.status] ?? p.status,
+          label: p.status,
+          value: p.count,
+        }))
+      );
+
+      setBookingStatus(
+        summary.bookingStatus.map((b) => ({
+          name: BOOKING_STATUS_LABEL[b.status] ?? b.status,
+          value: b.count,
+          label: b.status,
+          color: BOOKING_STATUS_COLOR[b.status] ?? PALETTE.blue,
+        }))
+      );
+
+      setDepartures(summary.departures);
+    } catch {
+      // Leave previous data in place; UI already shows "Belum ada data" for empty arrays.
+    }
 
     setLastRefreshed(new Date());
     setLoading(false);
-  }, [period, getRange]);
+  }, [period]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  const loadKpis = async (start: Date, end: Date, prevStart: Date, prevEnd: Date) => {
-    const [{ data: bCurr }, { data: bPrev }] = await Promise.all([
-      supabase.from("bookings").select("id").gte("created_at", start.toISOString()).lte("created_at", end.toISOString()).neq("status", "cancelled"),
-      supabase.from("bookings").select("id").gte("created_at", prevStart.toISOString()).lte("created_at", prevEnd.toISOString()).neq("status", "cancelled"),
-    ]);
-
-    const currIds = bCurr?.map(b => b.id) ?? [];
-    const prevIds = bPrev?.map(b => b.id) ?? [];
-
-    const [{ data: pCurr }, { data: pPrev }, { data: pilgCurr }, { data: pilgPrev }] = await Promise.all([
-      supabase.from("payments").select("amount").eq("status", "paid").in("booking_id", currIds.length ? currIds : [""]),
-      supabase.from("payments").select("amount").eq("status", "paid").in("booking_id", prevIds.length ? prevIds : [""]),
-      supabase.from("booking_pilgrims").select("id, booking:bookings!inner(status)").in("booking_id", currIds.length ? currIds : [""]),
-      supabase.from("booking_pilgrims").select("id, booking:bookings!inner(status)").in("booking_id", prevIds.length ? prevIds : [""]),
-    ]);
-
-    const revCurr = (pCurr ?? []).reduce((s, p) => s + (p.amount ?? 0), 0);
-    const revPrev = (pPrev ?? []).reduce((s, p) => s + (p.amount ?? 0), 0);
-    const bkCurr = currIds.length;
-    const bkPrev = prevIds.length;
-
-    setKpis({
-      bookings: bkCurr, prevBookings: bkPrev,
-      revenue: revCurr, prevRevenue: revPrev,
-      pilgrims: pilgCurr?.length ?? 0, prevPilgrims: pilgPrev?.length ?? 0,
-      avgValue: bkCurr > 0 ? revCurr / bkCurr : 0,
-      prevAvgValue: bkPrev > 0 ? revPrev / bkPrev : 0,
-    });
-  };
-
-  const loadTrend = async (start: Date, end: Date, p: string) => {
-    const useMonthly = ["3months","6months","1year"].includes(p);
-
-    const [{ data: bookings }, { data: payments }] = await Promise.all([
-      supabase.from("bookings").select("created_at").gte("created_at", start.toISOString()).lte("created_at", end.toISOString()).neq("status", "cancelled"),
-      supabase.from("payments").select("amount, paid_at, created_at").eq("status", "paid").gte("created_at", start.toISOString()).lte("created_at", end.toISOString()),
-    ]);
-
-    if (useMonthly) {
-      const months = eachMonthOfInterval({ start: startOfMonth(start), end: endOfMonth(end) });
-      const map: Record<string, TrendPoint> = {};
-      months.forEach(m => {
-        const key = format(m, "yyyy-MM");
-        map[key] = { label: format(m, "MMM yy", { locale: localeId }), bookings: 0, revenue: 0 };
-      });
-      (bookings ?? []).forEach(b => {
-        const key = format(new Date(b.created_at ?? ""), "yyyy-MM");
-        if (map[key]) map[key].bookings++;
-      });
-      (payments ?? []).forEach(pay => {
-        const key = format(new Date(pay.paid_at ?? pay.created_at ?? ""), "yyyy-MM");
-        if (map[key]) map[key].revenue += pay.amount ?? 0;
-      });
-      setTrendData(Object.values(map));
-    } else {
-      const days = eachDayOfInterval({ start, end });
-      const map: Record<string, TrendPoint> = {};
-      days.forEach(d => {
-        const key = format(d, "yyyy-MM-dd");
-        map[key] = { label: format(d, "d MMM", { locale: localeId }), bookings: 0, revenue: 0 };
-      });
-      (bookings ?? []).forEach(b => {
-        const key = format(new Date(b.created_at ?? ""), "yyyy-MM-dd");
-        if (map[key]) map[key].bookings++;
-      });
-      (payments ?? []).forEach(pay => {
-        const key = format(new Date(pay.paid_at ?? pay.created_at ?? ""), "yyyy-MM-dd");
-        if (map[key]) map[key].revenue += pay.amount ?? 0;
-      });
-      setTrendData(Object.values(map));
-    }
-  };
-
-  const loadPackageRevenue = async (start: Date, end: Date) => {
-    const { data: bookings } = await supabase
-      .from("bookings")
-      .select("id, package:packages(title)")
-      .gte("created_at", start.toISOString())
-      .lte("created_at", end.toISOString())
-      .neq("status", "cancelled");
-
-    if (!bookings?.length) { setPackageRevenue([]); return; }
-
-    const ids = bookings.map(b => b.id);
-    const { data: payments } = await supabase.from("payments").select("amount, booking_id").eq("status", "paid").in("booking_id", ids);
-
-    const map: Record<string, { bookings: number; revenue: number }> = {};
-    bookings.forEach((b: any) => {
-      const name = b.package?.title ?? "Tanpa Paket";
-      if (!map[name]) map[name] = { bookings: 0, revenue: 0 };
-      map[name].bookings++;
-      (payments ?? []).filter(p => p.booking_id === b.id).forEach(p => { map[name].revenue += p.amount ?? 0; });
-    });
-
-    setPackageRevenue(
-      Object.entries(map)
-        .map(([name, v]) => ({ name, ...v }))
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 8)
-    );
-  };
-
-  const loadPaymentStatus = async (start: Date, end: Date) => {
-    const { data } = await supabase
-      .from("payments")
-      .select("status")
-      .gte("created_at", start.toISOString())
-      .lte("created_at", end.toISOString());
-
-    const map: Record<string, number> = {};
-    (data ?? []).forEach(p => { if (p.status) { map[p.status] = (map[p.status] ?? 0) + 1; } });
-    setPaymentStatus(
-      Object.entries(map).map(([key, val]) => ({
-        name: STATUS_LABEL[key] ?? key,
-        label: key,
-        value: val,
-      }))
-    );
-  };
-
-  const loadBookingStatus = async (start: Date, end: Date) => {
-    const { data } = await supabase
-      .from("bookings")
-      .select("status")
-      .gte("created_at", start.toISOString())
-      .lte("created_at", end.toISOString());
-
-    const map: Record<string, number> = {};
-    (data ?? []).forEach(b => { if (b.status) { map[b.status] = (map[b.status] ?? 0) + 1; } });
-    setBookingStatus(
-      Object.entries(map).map(([key, val]) => ({
-        name: BOOKING_STATUS_LABEL[key] ?? key,
-        value: val,
-        label: key,
-        color: BOOKING_STATUS_COLOR[key] ?? PALETTE.blue,
-      }))
-    );
-  };
-
-  const loadDepartures = async () => {
-    const { data } = await supabase
-      .from("package_departures")
-      .select("id, departure_date, quota, remaining_quota, package:packages(title)")
-      .gte("departure_date", new Date().toISOString().split("T")[0])
-      .order("departure_date", { ascending: true })
-      .limit(8);
-
-    setDepartures(
-      (data ?? []).map((d: any) => ({
-        id: d.id,
-        package_title: d.package?.title ?? "–",
-        departure_date: d.departure_date,
-        quota: d.quota,
-        booked: d.quota - d.remaining_quota,
-      }))
-    );
-  };
 
   const kpiCards: KpiCard[] = [
     { label: "Total Booking", value: kpis.bookings, prev: kpis.prevBookings, icon: Package, color: "text-primary", prefix: "" },
