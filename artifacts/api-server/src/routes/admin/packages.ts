@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, packages, packageDepartures, departurePrices, packageHotels, eq, asc } from "@workspace/db";
+import { db, packages, packageDepartures, departurePrices, packageHotels, eq, asc, inArray } from "@workspace/db";
 import {
   PackageSchema,
   PackageListResponse,
@@ -75,15 +75,25 @@ router.get("/:id", async (req, res) => {
       .from(packageDepartures)
       .where(eq(packageDepartures.packageId, id));
 
-    const departuresWithPrices = await Promise.all(
-      departures.map(async (dep) => {
-        const prices = await db
+    const departureIds = departures.map((dep) => dep.id);
+    const allPrices = departureIds.length
+      ? await db
           .select()
           .from(departurePrices)
-          .where(eq(departurePrices.departureId, dep.id));
-        return { ...dep, prices };
-      }),
-    );
+          .where(inArray(departurePrices.departureId, departureIds))
+      : [];
+
+    const pricesByDeparture = new Map<string, typeof allPrices>();
+    for (const price of allPrices) {
+      const list = pricesByDeparture.get(price.departureId) ?? [];
+      list.push(price);
+      pricesByDeparture.set(price.departureId, list);
+    }
+
+    const departuresWithPrices = departures.map((dep) => ({
+      ...dep,
+      prices: pricesByDeparture.get(dep.id) ?? [],
+    }));
 
     res.json(PackageDetailSchema.parse({ ...pkg, departures: departuresWithPrices }));
   } catch {

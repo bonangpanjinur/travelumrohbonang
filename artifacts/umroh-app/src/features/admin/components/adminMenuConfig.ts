@@ -91,9 +91,9 @@ export const menuGroups: MenuGroup[] = [
     label: "Utama",
     labelKey: "menu.group.main",
     items: [
-      { label: "Dashboard", labelKey: "menu.dashboard", href: "/admin", icon: LayoutDashboard },
-      { label: "Notifikasi", labelKey: "menu.notifications", href: "/admin/notifications", icon: BellRing },
-      { label: "Website Utama", labelKey: "menu.main_website", href: "/", icon: Globe },
+      { label: "Dashboard", labelKey: "menu.dashboard", href: "/admin", icon: LayoutDashboard, roles: OPERATIONAL },
+      { label: "Notifikasi", labelKey: "menu.notifications", href: "/admin/notifications", icon: BellRing, roles: OPERATIONAL },
+      { label: "Website Utama", labelKey: "menu.main_website", href: "/", icon: Globe, roles: OPERATIONAL },
     ],
   },
   {
@@ -104,11 +104,11 @@ export const menuGroups: MenuGroup[] = [
       { label: "Keberangkatan", labelKey: "menu.departures", href: "/admin/departures", icon: Calendar, roles: ALL_STAFF },
       { label: "Itinerary", labelKey: "menu.itineraries", href: "/admin/itineraries", icon: MapPin, roles: ALL_STAFF },
       { label: "Booking", labelKey: "menu.bookings", href: "/admin/bookings", icon: Ticket, roles: OPERATIONAL },
-      { label: "Jemaah", labelKey: "menu.pilgrims", href: "/admin/pilgrims", icon: Users, roles: ALL_STAFF },
-      { label: "Manifest", labelKey: "menu.manifest", href: "/admin/manifest", icon: ClipboardList, roles: ALL_STAFF },
-      { label: "Check-In QR", labelKey: "menu.checkin_qr", href: "/admin/check-in", icon: ShieldCheck, roles: ALL_STAFF },
-      { label: "Manasik Kit", labelKey: "menu.manasik_kit", href: "/admin/manasik", icon: BookOpen, roles: ALL_STAFF },
-      { label: "Dokumen Jemaah", labelKey: "menu.pilgrim_documents", href: "/admin/documents", icon: FileCheck, roles: ALL_STAFF },
+      { label: "Jemaah", labelKey: "menu.pilgrims", href: "/admin/pilgrims", icon: Users, roles: OPERATIONAL },
+      { label: "Manifest", labelKey: "menu.manifest", href: "/admin/manifest", icon: ClipboardList, roles: OPERATIONAL },
+      { label: "Check-In QR", labelKey: "menu.checkin_qr", href: "/admin/check-in", icon: ShieldCheck, roles: OPERATIONAL },
+      { label: "Manasik Kit", labelKey: "menu.manasik_kit", href: "/admin/manasik", icon: BookOpen, roles: OPERATIONAL },
+      { label: "Dokumen Jemaah", labelKey: "menu.pilgrim_documents", href: "/admin/documents", icon: FileCheck, roles: OPERATIONAL },
     ],
   },
   {
@@ -156,7 +156,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Bandara", labelKey: "menu.airports", href: "/admin/airports", icon: MapPin, roles: SUPER_ADMIN_ADMIN },
       { label: "Cabang", labelKey: "menu.branches", href: "/admin/branches", icon: Building2, roles: [...SUPER_ADMIN_ADMIN, "branch_manager"] },
       { label: "Agen", labelKey: "menu.agents", href: "/admin/agents", icon: Briefcase, roles: [...SUPER_ADMIN_ADMIN, "branch_manager"] },
-      { label: "Muthawif", labelKey: "menu.muthawifs", href: "/admin/muthawifs", icon: User, roles: SUPER_ADMIN_ADMIN },
+      { label: "Muthawif", labelKey: "menu.muthawifs", href: "/admin/muthawifs", icon: User, roles: [...SUPER_ADMIN_ADMIN, "branch_manager"] },
     ],
   },
   {

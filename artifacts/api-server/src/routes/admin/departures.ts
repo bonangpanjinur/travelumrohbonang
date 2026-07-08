@@ -10,6 +10,7 @@ import {
   muthawifs,
   eq,
   and,
+  inArray,
 } from "@workspace/db";
 
 // mergeParams: true so req.params.packageId from parent router is accessible here
@@ -39,15 +40,25 @@ router.get("/", async (req, res) => {
       ? await baseQuery.where(eq(packageDepartures.packageId, packageId)).orderBy(packageDepartures.departureDate)
       : await baseQuery.orderBy(packageDepartures.departureDate);
 
-    const departuresWithPrices = await Promise.all(
-      data.map(async (dep: any) => {
-        const prices = await db
+    const departureIds = data.map((dep: any) => dep.id);
+    const allPrices = departureIds.length
+      ? await db
           .select()
           .from(departurePrices)
-          .where(eq(departurePrices.departureId, dep.id));
-        return { ...dep, prices };
-      }),
-    );
+          .where(inArray(departurePrices.departureId, departureIds))
+      : [];
+
+    const pricesByDeparture = new Map<string, typeof allPrices>();
+    for (const price of allPrices) {
+      const list = pricesByDeparture.get(price.departureId) ?? [];
+      list.push(price);
+      pricesByDeparture.set(price.departureId, list);
+    }
+
+    const departuresWithPrices = data.map((dep: any) => ({
+      ...dep,
+      prices: pricesByDeparture.get(dep.id) ?? [],
+    }));
 
     res.json({ data: departuresWithPrices, total: departuresWithPrices.length });
   } catch (err) {

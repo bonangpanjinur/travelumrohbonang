@@ -4,17 +4,26 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
+// On Replit dev, the platform auto-provisions its own Postgres and binds it to
+// `DATABASE_URL`, which shadows the Supabase Postgres connection string this app
+// actually needs (this app's single source of truth is the Supabase project's DB,
+// same one the frontend talks to via supabase-js/PostgREST). `SUPABASE_DATABASE_URL`
+// lets Replit dev point Drizzle at the real Supabase DB without touching the
+// runtime-managed `DATABASE_URL` var. In production (e.g. Vercel), `DATABASE_URL`
+// is set manually to the Supabase connection string, so this falls through unchanged.
+const connectionString =
+  process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || "";
+
+if (!connectionString) {
   console.warn(
-    "[db] WARNING: DATABASE_URL is not set. Database queries will fail at runtime. " +
-    "Add DATABASE_URL to your environment variables.",
+    "[db] WARNING: neither SUPABASE_DATABASE_URL nor DATABASE_URL is set. Database queries will fail at runtime.",
   );
 }
 
-const isSupabase = /supabase\.(com|co)/.test(process.env.DATABASE_URL ?? "");
+const isSupabase = /supabase\.(com|co)/.test(connectionString);
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || "postgres://localhost/placeholder",
+  connectionString: connectionString || "postgres://localhost/placeholder",
   // Supabase's pooler (PgBouncer, port 6543) presents a certificate chain that
   // Node's default trust store does not always validate, causing every query
   // to fail at the SSL handshake step in serverless environments (Vercel).
