@@ -106,6 +106,7 @@ import AdminLoginSettings from "./features/admin/pages/LoginSettings";
 import AdminSEO from "./features/admin/pages/SEO";
 import PackageCosts from "./features/admin/pages/PackageCosts";
 import AdminPackageCategories from "./features/admin/pages/PackageCategories";
+import AdminMenuPermissions from "./features/admin/pages/MenuPermissions";
 import { useEffect } from "react";
 import { installGlobalErrorHandlers } from "@/shared/lib/errorLogger";
 const queryClient = new QueryClient();
@@ -224,6 +225,7 @@ const AppContent = () => {
           <Route path="integrations" element={<AdminIntegrations />} />
           <Route path="login-settings" element={<AdminLoginSettings />} />
           <Route path="seo" element={<AdminSEO />} />
+          <Route path="menu-permissions" element={<AdminMenuPermissions />} />
         </Route>
       </Route>
 

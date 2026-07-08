@@ -8,6 +8,7 @@ import ThemeToggle from "@/shared/components/common/ThemeToggle";
 import AdminNotificationBell from "./AdminNotificationBell";
 import { useState, useMemo } from "react";
 import { menuGroups, type BrandingSettings } from "./adminMenuConfig";
+import { useMenuPermissions } from "@/features/admin/hooks/useMenuPermissions";
 
 interface AdminSidebarProps {
   branding: BrandingSettings;
@@ -24,6 +25,7 @@ const AdminSidebar = ({
 }: AdminSidebarProps) => {
   const { role } = useAuth();
   const { t } = useLanguage();
+  const rolePermissions = useMenuPermissions();
   const location = useLocation();
   const showLogo = branding.display_mode === "logo_only" || branding.display_mode === "both";
   const showText = branding.display_mode === "text_only" || branding.display_mode === "both";
@@ -93,6 +95,12 @@ const AdminSidebar = ({
             {menuGroups.map((group) => {
               const isCollapsed = collapsedGroups[group.label] ?? false;
               const filteredItems = group.items.filter(item => {
+                // DB permissions override static config (if a row exists for this role+menuKey)
+                if (rolePermissions !== null) {
+                  const dbPerm = rolePermissions[item.labelKey];
+                  if (dbPerm !== undefined) return dbPerm;
+                }
+                // Fallback: static roles array from adminMenuConfig
                 if (!item.roles) return true;
                 return !!role && item.roles.includes(role);
               });

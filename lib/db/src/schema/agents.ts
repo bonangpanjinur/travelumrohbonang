@@ -2,6 +2,7 @@ import {
   pgTable, text, integer, boolean, numeric, timestamp,
   index, uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { bookings } from "./bookings";
 import { branches } from "./masterdata";
 
@@ -65,4 +66,21 @@ export const affiliateClicks = pgTable("affiliate_clicks", {
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_affiliate_clicks_agent_id").on(t.agentId),
+]);
+
+/**
+ * Stores per-role menu visibility overrides set by super_admin.
+ * menuKey maps to MenuItem.labelKey from adminMenuConfig.ts.
+ * If no row exists for a role+menuKey combo, the sidebar falls back
+ * to the static `item.roles` array in adminMenuConfig.ts.
+ */
+export const roleMenuPermissions = pgTable("role_menu_permissions", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()::text`),
+  role: text("role").notNull(),
+  menuKey: text("menu_key").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("uq_role_menu_permissions").on(t.role, t.menuKey),
+  index("idx_rmp_role").on(t.role),
 ]);

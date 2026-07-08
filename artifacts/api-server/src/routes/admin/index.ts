@@ -36,6 +36,7 @@ import adminSeoRouter from "./seo";
 import adminMasterdataRouter from "./masterdata";
 import adminIntegrationsRouter from "./integrations";
 import adminChatsRouter from "./chats";
+import adminMenuPermissionsRouter from "./menu-permissions";
 
 const router = Router();
 
@@ -48,6 +49,8 @@ router.use(requireAuth);
 // The GET /roles endpoint is readable by all admins.
 router.use("/agents", requireAdmin, adminAgentsRouter);
 router.use("/integrations", requireSuperAdmin, adminIntegrationsRouter);
+// GET readable by all admin roles; PUT/DELETE restricted to super_admin inside the router
+router.use("/menu-permissions", requireOperational, adminMenuPermissionsRouter);
 
 // ── Full admin routes (super_admin + admin only) ────────────────────────────
 router.use("/users", requireAdmin, adminUsersRouter);
