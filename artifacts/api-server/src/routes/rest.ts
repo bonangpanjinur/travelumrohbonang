@@ -24,6 +24,22 @@ async function supabaseForward(
     return;
   }
 
+  // Mirror the local-pool guards: an unfiltered PATCH/DELETE forwarded to
+  // PostgREST would update/delete every row in the table (PostgREST itself
+  // does not refuse this for a service-role request). See incident
+  // 2026-07-08 — a PATCH with no query params wiped every user_roles.role
+  // to super_admin. Require at least one ACTUAL filter predicate (not just
+  // any query key — `select`/`order`/`limit`/`offset`/`or` are not filters
+  // on their own) for these methods regardless of which table is targeted.
+  if (req.method === "PATCH" || req.method === "DELETE") {
+    const NON_FILTER_KEYS = new Set(["select", "order", "limit", "offset"]);
+    const hasFilter = Object.keys(req.query).some((k) => !NON_FILTER_KEYS.has(k));
+    if (!hasFilter) {
+      res.status(400).json({ message: `${req.method} without a filter is not allowed` });
+      return;
+    }
+  }
+
   // Reconstruct the query string and forward to PostgREST
   const qs = new URLSearchParams(req.query as Record<string, string>).toString();
   const url = `${SUPABASE_URL}/rest/v1/${table}${qs ? `?${qs}` : ""}`;
@@ -113,12 +129,25 @@ const AUTH_TABLES = new Set([
   "profiles", "bookings", "booking_rooms", "booking_pilgrims", "booking_payments",
   "wishlists", "notifications", "pilgrim_documents", "contracts",
   "crm_contacts", "audit_logs", "error_logs", "request_log",
-  "template_upgrade_orders", "affiliate_clicks", "user_roles",
+  "template_upgrade_orders", "affiliate_clicks",
   "leads", "lead_follow_ups", "loyalty_balances", "loyalty_points",
   "financial_transactions", "pilgrim_doc_access_logs",
   "package_costs", "payment_proof_access_logs", "payments", "agent_commissions",
   "flight_details", "installment_schedules", "payment_gateway_transactions",
 ]);
+
+// `user_roles` is intentionally NOT exposed through this generic proxy at all
+// (neither PUBLIC_READ_TABLES nor AUTH_TABLES) — see incident 2026-07-08:
+// this table was previously in AUTH_TABLES, which only gates on
+// `req.isAuthenticated()` with no ownership/role check, and PATCH here had no
+// "reject empty WHERE" guard (unlike DELETE). A single PATCH request with no
+// filter query params updated every row's `role` column to `super_admin`,
+// privilege-escalating every account in the system. Role reads/writes must go
+// exclusively through the dedicated `/api/admin/roles` route (`requireSuperAdmin`
+// for writes) or the server-trusted `authMiddleware.ts` resolution path. Do not
+// re-add "user_roles" to either table set without both (a) an ownership/role
+// check equivalent to `requireSuperAdmin` and (b) a mandatory non-empty WHERE
+// clause on PATCH/DELETE.
 
 // All tables allowed through the proxy (union of both sets).
 const ALLOWED_TABLES = new Set([...PUBLIC_READ_TABLES, ...AUTH_TABLES]);
@@ -561,10 +590,16 @@ router.patch("/:table", requireAuth, async (req: Request, res: Response) => {
     if (!setCols.length) return res.status(400).json({ message: "No valid fields to update" });
 
     const setVals = setCols.map((c) => body[c]);
-    const setClause = setCols.map((c, i) => `"${c}" = $${i + 1}`).join(", ");
+    const setClause = setCols.map((c, i) => `"${c}" = ${i + 1}`).join(", ");
 
     const whereVals: unknown[] = [...setVals];
     const whereClause = buildWhere(table, req.query as Record<string, string>, whereVals);
+
+    // Mirror the DELETE guard below: an unfiltered PATCH would silently
+    // update every row in the table (see incident 2026-07-08, user_roles).
+    if (!whereClause) {
+      return res.status(400).json({ message: "PATCH without a filter is not allowed" });
+    }
 
     let sql = `UPDATE "${table}" SET ${setClause} ${whereClause}`;
     if (wantsReturn) sql += " RETURNING *";
