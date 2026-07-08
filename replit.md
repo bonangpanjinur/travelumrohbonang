@@ -10,7 +10,9 @@ Aplikasi manajemen umroh lengkap — paket, booking, jemaah, pembayaran, dan CMS
   - `API Server` → `PORT=8080 pnpm --filter @workspace/api-server dev` (API, port 8080)
 - **Template system**: 3 variants (Classic, Modern, Luxury) + custom color picker in admin Settings → Template tab
 - **RBAC**: Full role hierarchy (super_admin → admin → branch_manager → staff → agent → buyer) enforced frontend + backend
-- **To run the app**: Supabase credentials already set in `.replit` userenv. `DATABASE_URL` auto-provided by Replit PostgreSQL.
+- **To run the app**: Supabase credentials already set in `.replit` userenv. `DATABASE_URL` auto-provided by Replit PostgreSQL. `SUPABASE_SERVICE_ROLE_KEY` added 2026-07-08 — `GET /api/health` reports `database: ok` and `supabase: ok`.
+- **Re-import note (2026-07-08)**: after re-importing this repo, `node_modules` was missing for both `artifacts/umroh-app` and `artifacts/api-server`, causing both workflows to fail (`vite: not found`, `ERR_MODULE_NOT_FOUND esbuild`). Fixed by running `pnpm install` at the repo root.
+- **Known-large auth/schema audit**: `MASTER_PROJECT_BLUEPRINT.md`, `PROJECT_ANALYSIS.md`, and `AUTH_ARCHITECTURE.md` document a multi-phase remediation plan (remove Replit Auth remnants, consolidate role resolution, fix UUID/TEXT schema drift, audit every API route, then dashboard/business modules). Not started — see proposed follow-up tasks.
 
 ## Run & Operate
 
