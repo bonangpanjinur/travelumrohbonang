@@ -1,0 +1,29 @@
+index-BYXBAvKG.js:18 Environment variable VITE_TURNSTILE_SITE_KEY is not defined
+Id @ index-BYXBAvKG.js:18
+index-BYXBAvKG.js:18 Environment variable VITE_SENTRY_DSN is not defined
+Id @ index-BYXBAvKG.js:18
+index-BYXBAvKG.js:150 [sentry] VITE_SENTRY_DSN not set — Sentry disabled.
+api/auth/user:1  Failed to load resource: the server responded with a status of 500 ()
+index-BYXBAvKG.js:9 [useAuth] /api/auth/user returned 500 — using JWT claim fallback
+tv @ index-BYXBAvKG.js:9
+api/auth/user:1  Failed to load resource: the server responded with a status of 500 ()
+index-BYXBAvKG.js:9 [useAuth] /api/auth/user returned 500 — using JWT claim fallback
+tv @ index-BYXBAvKG.js:9
+api/auth/user:1  Failed to load resource: the server responded with a status of 500 ()
+index-BYXBAvKG.js:9 [useAuth] /api/auth/user returned 500 — using JWT claim fallback
+tv @ index-BYXBAvKG.js:9
+api/notifications?limit=5:1  Failed to load resource: the server responded with a status of 500 ()
+index-BYXBAvKG.js:140 Error
+    at ve (index-BYXBAvKG.js:9:78632)
+    at async u (index-BYXBAvKG.js:140:29388)
+u @ index-BYXBAvKG.js:140
+reuwfhuaabdhxjkomred.supabase.co/rest/v1/bookings?select=*%2Cpackage%3Apackages%28title%29%2Cdeparture%3Apackage_departures%28departure_date%29&user_id=eq.8f2d6d1a-0ed9-4775-b2d9-19a3fb9a8626&order=created_at.desc&limit=1:1  Failed to load resource: the server responded with a status of 400 ()
+api/auth/user:1  Failed to load resource: the server responded with a status of 500 ()
+index-BYXBAvKG.js:9 [useAuth] /api/auth/user returned 500 — using JWT claim fallback
+tv @ index-BYXBAvKG.js:9
+api/notifications?limit=5:1  Failed to load resource: the server responded with a status of 500 ()
+index-BYXBAvKG.js:140 Error
+    at ve (index-BYXBAvKG.js:9:78632)
+    at async u (index-BYXBAvKG.js:140:29388)
+u @ index-BYXBAvKG.js:140
+reuwfhuaabdhxjkomred.supabase.co/rest/v1/bookings?select=*%2Cpackage%3Apackages%28title%29%2Cdeparture%3Apackage_departures%28departure_date%29&user_id=eq.8f2d6d1a-0ed9-4775-b2d9-19a3fb9a8626&order=created_at.desc&limit=1:1  Failed to load resource: the server responded with a status of 400 ()
