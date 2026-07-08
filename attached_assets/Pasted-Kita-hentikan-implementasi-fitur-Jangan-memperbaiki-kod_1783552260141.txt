@@ -1,0 +1,188 @@
+Kita hentikan implementasi fitur.
+
+Jangan memperbaiki kode secara acak.
+
+Saya ingin melakukan Root Cause Analysis.
+
+Saat ini browser console menunjukkan:
+
+1.
+
+POST
+
+/auth/v1/token?grant_type=refresh_token
+
+400
+
+2.
+
+GET
+
+/api/auth/user
+
+500
+
+3.
+
+GET
+
+/api/notifications
+
+500
+
+Saya ingin kamu mencari akar masalahnya.
+
+======================================================
+
+LANGKAH 1
+
+Audit refresh token.
+
+Cari:
+
+- di mana refresh token disimpan
+- siapa yang melakukan refresh
+- kapan refresh dipanggil
+- response body dari Supabase
+- apakah refresh token expired
+- apakah refresh token invalid
+- apakah refresh gagal karena cookie
+- apakah refresh gagal karena localStorage
+
+Jangan memperbaiki dulu.
+
+======================================================
+
+LANGKAH 2
+
+Audit endpoint
+
+/api/auth/user
+
+Tambahkan logging sementara.
+
+Saya ingin melihat:
+
+- Authorization header diterima atau tidak
+
+- JWT berhasil di-parse atau tidak
+
+- JWT berhasil diverifikasi atau tidak
+
+- authMiddleware gagal di langkah mana
+
+- getLocalRole()
+
+- getSupabaseRole()
+
+- query database
+
+- response Supabase
+
+- stack trace lengkap
+
+Jangan hanya menampilkan status 500.
+
+Saya ingin root cause sebenarnya.
+
+======================================================
+
+LANGKAH 3
+
+Audit
+
+/api/notifications
+
+Saya ingin mengetahui apakah endpoint ini gagal karena:
+
+A.
+
+Auth gagal
+
+atau
+
+B.
+
+Query database gagal
+
+atau
+
+C.
+
+Role gagal
+
+atau
+
+D.
+
+Exception lain.
+
+======================================================
+
+LANGKAH 4
+
+Jangan melakukan refactor.
+
+Jangan membuat fitur baru.
+
+Jangan membuat migration.
+
+Jangan mengubah arsitektur.
+
+======================================================
+
+LANGKAH 5
+
+Setelah root cause ditemukan,
+
+baru lakukan perbaikan MINIMAL.
+
+Perbaiki hanya penyebab utama.
+
+Jangan memperbaiki gejala.
+
+======================================================
+
+OUTPUT
+
+Saya ingin laporan:
+
+1.
+
+Root Cause refresh token 400
+
+2.
+
+Root Cause /api/auth/user 500
+
+3.
+
+Root Cause /api/notifications 500
+
+4.
+
+Urutan error (mana penyebab utama, mana efek domino)
+
+5.
+
+File yang diubah
+
+6.
+
+Perubahan yang dilakukan
+
+7.
+
+Hasil testing
+
+Target akhir:
+
+✓ Refresh token berhasil
+
+✓ /api/auth/user → HTTP 200
+
+✓ /api/notifications → HTTP 200
+
+✓ Tidak ada lagi fallback JWT claim.
+
+Jika root cause belum ditemukan, jangan lanjut ke implementasi.
