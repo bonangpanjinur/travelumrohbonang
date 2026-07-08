@@ -13,6 +13,13 @@ export const translations: Record<Language, Record<string, string>> = {
     "nav.my_dashboard": "Dashboard Saya",
     "nav.admin": "Administrasi",
     "nav.admin_dashboard": "Dashboard Admin",
+    "nav.role.super_admin": "Super Admin",
+    "nav.role.admin": "Admin",
+    "nav.role.branch_manager": "Manajer Cabang",
+    "nav.role.staff": "Staff",
+    "nav.role.agent": "Agen",
+    "nav.role.buyer": "Jemaah",
+    "nav.role.user": "Jemaah",
 
     // Hero
     "hero.title": "Perjalanan Umroh Terbaik",
@@ -209,6 +216,13 @@ export const translations: Record<Language, Record<string, string>> = {
     "nav.my_dashboard": "My Dashboard",
     "nav.admin": "Administration",
     "nav.admin_dashboard": "Admin Dashboard",
+    "nav.role.super_admin": "Super Admin",
+    "nav.role.admin": "Admin",
+    "nav.role.branch_manager": "Branch Manager",
+    "nav.role.staff": "Staff",
+    "nav.role.agent": "Agent",
+    "nav.role.buyer": "Pilgrim",
+    "nav.role.user": "Pilgrim",
 
     // Hero
     "hero.title": "Best Umrah Journey",

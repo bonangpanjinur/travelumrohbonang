@@ -53,7 +53,7 @@ const Navbar = () => {
   const [userProfile, setUserProfile] = useState<{ name: string; avatar_url: string } | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, role, signOut } = useAuth();
   const { t } = useLanguage();
 
   useEffect(() => {
@@ -274,6 +274,16 @@ const Navbar = () => {
               <DropdownMenuContent align="end" className="w-56 bg-card border-border z-[120]">
                 <div className="px-2 py-1.5">
                   <p className="text-xs font-medium text-muted-foreground px-2 py-1 uppercase tracking-wider">{t("nav.my_account")}</p>
+                  {userProfile?.name && (
+                    <p className="px-2 text-sm font-medium text-foreground truncate">{userProfile.name}</p>
+                  )}
+                  {role && (
+                    <span className={`mx-2 mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                      isAdmin ? "bg-gold/15 text-gold" : "bg-muted text-muted-foreground"
+                    }`}>
+                      {t(`nav.role.${role}`)}
+                    </span>
+                  )}
                 </div>
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard" className="flex items-center gap-2 cursor-pointer">
@@ -364,7 +374,16 @@ const Navbar = () => {
               
               {user ? (
                 <div className="pt-4 border-t border-primary-foreground/10 mt-2 space-y-1">
-                  <p className="px-4 py-2 text-xs text-primary-foreground/40 uppercase tracking-wider">{t("nav.my_account")}</p>
+                  <div className="px-4 py-2 flex items-center justify-between">
+                    <p className="text-xs text-primary-foreground/40 uppercase tracking-wider">{t("nav.my_account")}</p>
+                    {role && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                        isAdmin ? "bg-gold/20 text-gold" : "bg-primary-foreground/10 text-primary-foreground/60"
+                      }`}>
+                        {t(`nav.role.${role}`)}
+                      </span>
+                    )}
+                  </div>
                   <Link 
                     to="/dashboard" 
                     onClick={() => setIsOpen(false)} 
