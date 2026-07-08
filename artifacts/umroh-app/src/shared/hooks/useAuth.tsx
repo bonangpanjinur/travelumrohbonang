@@ -29,17 +29,7 @@ export interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  /**
-   * True if the user can access the admin panel (super_admin, admin,
-   * branch_manager, staff, agent). Note: `agent` is included here because
-   * agents have a subset of admin pages (bookings, documents, etc).
-   * For UI that should only be visible to super_admin/admin, use `isFullAdmin`.
-   */
   isAdmin: boolean;
-  /**
-   * P1-3: True only for super_admin + admin roles — matches backend `requireAdmin`.
-   * Use this for UI elements that are gated by full admin privilege.
-   */
   isFullAdmin: boolean;
   role: AppRole | null;
   refreshRole: () => Promise<void>;
@@ -53,48 +43,49 @@ const VALID_ROLES = new Set<AppRole>([
   "super_admin", "admin", "branch_manager", "staff", "agent", "buyer", "user",
 ]);
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string ?? "";
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string ?? "";
+
 /**
- * Decode a Supabase JWT and build a minimal AuthUser from its claims.
- * Used as fallback when /api/auth/user is unreachable (network error, 5xx),
- * so the user is not stuck in an infinite redirect loop on the login page.
- *
- * Security notes:
- * - Called only on transient server errors (network/5xx), never on 401/403.
- * - Signature is NOT verified here (browser can't access the secret).
- *   Backend APIs still enforce role on every request; this only gates UX.
- * - Expiry (`exp`) is checked so we don't keep an expired token as "active".
+ * Fetch user profile + role directly from Supabase.
+ * No Express API involved — reads user from Supabase Auth and role
+ * from the user_roles table via PostgREST (RLS: user can read own role).
  */
-function buildUserFromToken(token: string): AuthUser | null {
+async function fetchUserFromSupabase(token: string): Promise<AuthUser | null> {
   try {
-    // base64url → base64 → JSON
-    const b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    const payload = JSON.parse(atob(b64)) as Record<string, unknown>;
+    // 1. Verify token and get user info from Supabase Auth
+    const { data: { user: supaUser }, error } = await supabaseAuth.auth.getUser(token);
+    if (error || !supaUser) return null;
 
-    const id = payload["sub"] as string | undefined;
-    if (!id) return null;
+    // 2. Read role directly from Supabase user_roles table
+    //    RLS policy "users read own role" allows this with the user's JWT.
+    let role: AppRole = "buyer";
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/user_roles?user_id=eq.${supaUser.id}&limit=1&select=role`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            apikey: SUPABASE_ANON_KEY,
+            Accept: "application/json",
+          },
+          signal: AbortSignal.timeout(8_000),
+        },
+      );
+      if (res.ok) {
+        const rows = (await res.json()) as Array<{ role: string }>;
+        const rawRole = rows[0]?.role ?? "buyer";
+        role = VALID_ROLES.has(rawRole as AppRole) ? (rawRole as AppRole) : "buyer";
+      }
+    } catch {
+      // Role lookup failed — fallback to buyer. Backend still enforces per-request.
+    }
 
-    // Reject expired tokens — don't treat a stale session as authenticated.
-    const exp = payload["exp"] as number | undefined;
-    if (exp && Date.now() / 1000 > exp) return null;
-
-    const email = (payload["email"] as string | undefined) ?? null;
-
-    // Supabase stores custom role in app_metadata.role (via custom claims hook)
-    // or falls back to "buyer" if no custom claim has been applied yet.
-    const appMeta = payload["app_metadata"] as Record<string, unknown> | undefined;
-    const rawRole =
-      (appMeta?.["role"] as string | undefined) ??
-      (payload["role"] as string | undefined) ??
-      "buyer";
-    const role: AppRole = VALID_ROLES.has(rawRole as AppRole)
-      ? (rawRole as AppRole)
-      : "buyer";
-
-    const meta = payload["user_metadata"] as Record<string, unknown> | undefined;
+    const meta = supaUser.user_metadata as Record<string, unknown> | undefined;
 
     return {
-      id,
-      email,
+      id: supaUser.id,
+      email: supaUser.email ?? null,
       firstName: (meta?.["first_name"] as string | undefined) ?? null,
       lastName: (meta?.["last_name"] as string | undefined) ?? null,
       profileImageUrl:
@@ -108,49 +99,6 @@ function buildUserFromToken(token: string): AuthUser | null {
   }
 }
 
-/**
- * Fetch the enriched user profile (including DB role) from the API server.
- *
- * Fallback strategy:
- * - 2xx + user object → return it (accurate, has DB role).
- * - 2xx + null user  → return null (server says not authenticated).
- * - 401 / 403        → return null (token rejected; force re-auth).
- * - 503              → Supabase not configured on server; use JWT claim fallback
- *   so the user isn't logged out in local/dev environments without Supabase.
- * - other 5xx / network err → decode JWT claims as a temporary fallback user so
- *   the user can enter the app without an infinite redirect loop. Backend still
- *   enforces role on every admin API call, so this is safe.
- */
-async function fetchAuthUser(token: string): Promise<AuthUser | null> {
-  try {
-    const res = await fetch("/api/auth/user", {
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include",
-    });
-
-    if (res.ok) {
-      const data = (await res.json()) as { user: AuthUser | null };
-      return data.user ?? null;
-    }
-
-    // 401/403 = token rejected by server → do not fallback, force re-auth.
-    if (res.status === 401 || res.status === 403) {
-      console.warn(`[useAuth] /api/auth/user returned ${res.status} — clearing session`);
-      return null;
-    }
-
-    // 5xx or unexpected status → transient server error, use JWT fallback.
-    console.warn(
-      `[useAuth] /api/auth/user returned ${res.status} — using JWT claim fallback`,
-    );
-    return buildUserFromToken(token);
-  } catch (err) {
-    // Network error (offline, DNS, timeout) → use JWT fallback.
-    console.warn("[useAuth] /api/auth/user unreachable — using JWT claim fallback:", err);
-    return buildUserFromToken(token);
-  }
-}
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -158,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     supabaseAuth.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.access_token) {
-        const profile = await fetchAuthUser(session.access_token);
+        const profile = await fetchUserFromSupabase(session.access_token);
         setUser(profile);
       }
       setLoading(false);
@@ -168,7 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       data: { subscription },
     } = supabaseAuth.auth.onAuthStateChange(async (_event, session) => {
       if (session?.access_token) {
-        const profile = await fetchAuthUser(session.access_token);
+        const profile = await fetchUserFromSupabase(session.access_token);
         setUser(profile);
       } else {
         setUser(null);
@@ -180,17 +128,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const role = user?.role ?? null;
-  // Any role other than buyer/user gets admin panel access.
   const isAdmin = !!(role && role !== "user" && role !== "buyer");
-  // P1-3: Matches backend requireAdmin gate (super_admin + admin only).
   const isFullAdmin = role === "super_admin" || role === "admin";
 
   const refreshRole = useCallback(async () => {
-    const {
-      data: { session },
-    } = await supabaseAuth.auth.getSession();
+    const { data: { session } } = await supabaseAuth.auth.getSession();
     if (session?.access_token) {
-      const profile = await fetchAuthUser(session.access_token);
+      const profile = await fetchUserFromSupabase(session.access_token);
       setUser(profile);
     }
   }, []);
@@ -200,8 +144,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signOut = useCallback(async () => {
-    // P3-8: Clear 2FA sessionStorage flag before signing out so it doesn't
-    // persist into the next login session.
     if (user?.id) {
       sessionStorage.removeItem(`admin_2fa_verified_${user.id}`);
     }
