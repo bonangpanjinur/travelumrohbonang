@@ -9,6 +9,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -16,6 +17,7 @@ import {
   Search, Plus, CreditCard, Wallet, RefreshCw, Copy, CheckCircle,
   Clock, XCircle, AlertTriangle, QrCode, Building2, Eye
 } from "lucide-react";
+import PaymentGatewaySettings from "../components/PaymentGatewaySettings";
 
 const BANKS_MIDTRANS = [
   { code: "bca", label: "BCA" },
@@ -200,6 +202,17 @@ const PaymentGateway = () => {
         </Button>
       </div>
 
+      <Tabs defaultValue="transactions">
+        <TabsList>
+          <TabsTrigger value="transactions">Transaksi</TabsTrigger>
+          <TabsTrigger value="settings">Pengaturan API</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="settings" className="mt-4">
+          <PaymentGatewaySettings />
+        </TabsContent>
+
+        <TabsContent value="transactions" className="mt-4 space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
@@ -325,6 +338,8 @@ const PaymentGateway = () => {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Create Payment Dialog */}
       <Dialog open={createDialog} onOpenChange={setCreateDialog}>
