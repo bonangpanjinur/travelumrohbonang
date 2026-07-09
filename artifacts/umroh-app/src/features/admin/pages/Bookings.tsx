@@ -78,8 +78,13 @@ const AdminBookings = () => {
       }));
       setBookings(mapped);
       setTotalCount(res.total || 0);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      toast({
+        title: "Gagal memuat booking",
+        description: e?.message || "Terjadi kesalahan saat memuat data. Coba muat ulang halaman.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

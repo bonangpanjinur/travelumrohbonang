@@ -108,7 +108,8 @@ const Payment = () => {
     .filter(p => p.status === "pending")
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const remainingAmount = booking ? booking.totalPrice - paidAmount - pendingAmount : 0;
+  // Only subtract confirmed (paid) payments from remaining — pending is not yet verified
+  const remainingAmount = booking ? booking.totalPrice - paidAmount : 0;
   const minimumDp = booking?.minimumDp || 0;
   const paymentProgress = booking ? ((paidAmount / booking.totalPrice) * 100) : 0;
 

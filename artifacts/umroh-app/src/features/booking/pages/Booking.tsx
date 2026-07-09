@@ -103,9 +103,17 @@ const Booking = () => {
     }
 
     const fetchData = async () => {
+      // Guard: params must be present — can be missing if user navigates to /booking directly
+      if (!slug || !departureId) {
+        toast({ title: "Paket tidak valid", description: "Silakan pilih paket dan keberangkatan terlebih dahulu.", variant: "destructive" });
+        setLoading(false);
+        navigate("/paket");
+        return;
+      }
+
       // Fetch package, departure, branches, and agents in parallel
       const [pkgRes, branchRes, agentRes] = await Promise.all([
-        supabase.from("packages").select("id, title, slug").eq("slug", slug!).maybeSingle(),
+        supabase.from("packages").select("id, title, slug").eq("slug", slug).maybeSingle(),
         supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
         supabase.from("agents").select("id, name, branch_id, branch:branches(name)").eq("is_active", true).order("name")
       ]);
@@ -119,7 +127,7 @@ const Booking = () => {
         const { data: depData } = await supabase
           .from("package_departures")
           .select(`*, prices:departure_prices(room_type, price)`)
-          .eq("id", departureId!)
+          .eq("id", departureId)
           .maybeSingle();
 
         if (depData) {

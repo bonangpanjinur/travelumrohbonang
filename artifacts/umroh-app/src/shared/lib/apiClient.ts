@@ -36,5 +36,8 @@ export async function apiFetch<T = unknown>(
     );
   }
 
-  return res.json() as Promise<T>;
+  // Handle empty body (some DELETE/PATCH routes return 200 with no content)
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
 }

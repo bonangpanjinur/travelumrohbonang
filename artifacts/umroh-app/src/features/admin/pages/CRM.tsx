@@ -108,7 +108,7 @@ const AdminCRM = () => {
     queryKey: ["packages_for_crm"],
     queryFn: async () => {
       const res = await apiFetch<{ data: any[] }>("/api/packages?active=true");
-      return res.data;
+      return res.data || [];
     },
   });
 

@@ -24,13 +24,15 @@ export function useMyBookings(userId: string | undefined) {
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Bump this counter to trigger a refetch without changing userId
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!userId) return;
 
     let cancelled = false;
 
-    async function fetch() {
+    async function fetchBookings() {
       try {
         setLoading(true);
         setError(null);
@@ -47,11 +49,13 @@ export function useMyBookings(userId: string | undefined) {
       }
     }
 
-    fetch();
+    fetchBookings();
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, refreshKey]);
 
-  return { bookings, loading, error };
+  const refetch = () => setRefreshKey((k) => k + 1);
+
+  return { bookings, loading, error, refetch };
 }
