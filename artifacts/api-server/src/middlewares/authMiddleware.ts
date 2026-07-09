@@ -263,11 +263,15 @@ async function resolveUser(token: string): Promise<AuthUser | null> {
   }
 }
 
+const isDev = process.env.NODE_ENV !== "production";
+
 export async function authMiddleware(
   req: Request,
   _res: Response,
   next: NextFunction,
 ) {
+  if (isDev) console.log(`[authMiddleware] → ${req.method} ${req.path}`);
+
   req.isAuthenticated = function (this: Request) {
     return this.user != null;
   } as Request["isAuthenticated"];
@@ -275,8 +279,16 @@ export async function authMiddleware(
   try {
     const token = getTokenFromRequest(req);
     if (token) {
+      if (isDev) console.log("[authMiddleware] token found, resolving user...");
       const user = await resolveUser(token);
-      if (user) req.user = user;
+      if (user) {
+        req.user = user;
+        if (isDev) console.log(`[authMiddleware] JWT verified — user=${user.id} role=${user.role}`);
+      } else {
+        if (isDev) console.log("[authMiddleware] token invalid or Supabase unreachable — proceeding unauthenticated");
+      }
+    } else {
+      if (isDev) console.log("[authMiddleware] no token — proceeding unauthenticated");
     }
   } catch (err: any) {
     // Safety net: authMiddleware must NEVER cause a 500 — any error here

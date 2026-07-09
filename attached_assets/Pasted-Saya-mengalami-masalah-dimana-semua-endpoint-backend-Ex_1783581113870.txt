@@ -1,0 +1,170 @@
+Saya mengalami masalah dimana semua endpoint backend Express mengembalikan HTTP 500 di deployment Vercel.
+
+Contoh endpoint yang gagal:
+
+/api/auth/user
+/api/admin/menu-permissions/my
+/api/admin/masterdata/categories
+/api/admin/bookings
+
+Frontend React tetap berjalan normal dan login ke Supabase berhasil, sehingga kemungkinan besar masalah berada di backend Express, middleware, atau konfigurasi runtime.
+
+JANGAN melakukan refactor besar atau mengubah arsitektur aplikasi.
+
+Saya ingin melakukan audit terlebih dahulu.
+
+Tugas
+1. Audit Startup Server
+
+Periksa proses startup Express.
+
+Pastikan server menampilkan log berikut saat dijalankan:
+
+Node version
+Environment
+Port
+Semua environment variable penting (hanya status AVAILABLE / MISSING, jangan tampilkan nilainya)
+Status koneksi Supabase
+Status registrasi routes
+
+Contoh:
+
+✓ NODE_ENV
+✓ PORT
+✓ SUPABASE_URL
+✓ SUPABASE_SERVICE_ROLE_KEY
+✓ JWT_SECRET
+✓ SESSION_SECRET
+
+✓ Supabase Client Initialized
+✓ Routes Registered
+✓ Server Started
+2. Validasi Environment Variable
+
+Buat utilitas validasi environment.
+
+Jika ada environment variable yang kosong, server harus gagal startup dengan pesan yang jelas.
+
+Contoh:
+
+ERROR:
+SUPABASE_SERVICE_ROLE_KEY is missing
+
+Jangan biarkan error baru muncul saat ada request pertama.
+
+3. Tambahkan Request Logger
+
+Tambahkan middleware logging global.
+
+Minimal tampilkan:
+
+GET /api/admin/categories
+
+↓
+
+200
+
+atau
+
+GET /api/admin/categories
+
+↓
+
+500
+
+Beserta lama request.
+
+4. Tambahkan Global Error Handler
+
+Pastikan semua error Express masuk ke satu handler.
+
+Saat development tampilkan:
+
+message
+stack
+route
+method
+
+Saat production jangan tampilkan stack ke client, tetapi tetap log ke console.
+
+5. Audit Middleware
+
+Periksa semua middleware seperti:
+
+auth
+permission
+session
+jwt
+cookie
+
+Pastikan setiap middleware mencetak log sederhana:
+
+Auth middleware entered
+JWT verified
+Permission checked
+
+atau
+
+Permission failed
+
+Sehingga saya tahu middleware mana yang gagal.
+
+6. Audit Registrasi Route
+
+Saat startup tampilkan seluruh route yang berhasil didaftarkan.
+
+Misalnya:
+
+Registered Routes
+
+GET /api/auth/user
+
+GET /api/admin/bookings
+
+GET /api/admin/masterdata/categories
+
+GET /api/admin/menu-permissions/my
+7. Tambahkan Health Check
+
+Buat endpoint:
+
+GET /api/health
+
+Response harus berupa:
+
+{
+    "status":"ok",
+    "database":"connected",
+    "server":"running"
+}
+
+Jika Supabase gagal:
+
+{
+    "status":"error",
+    "database":"failed",
+    "reason":"..."
+}
+8. Jangan Mengubah Business Logic
+
+Jangan mengubah:
+
+query database
+struktur route
+middleware auth
+UI frontend
+
+Fokus hanya pada audit, logging, validasi, dan diagnostik.
+
+Output yang Saya Inginkan
+
+Setelah audit selesai, berikan laporan:
+
+Struktur startup server.
+Daftar semua environment variable yang dipakai.
+Daftar semua middleware yang berjalan.
+Daftar semua route yang berhasil diregistrasi.
+Titik yang paling mungkin menyebabkan seluruh endpoint mengembalikan HTTP 500.
+Rekomendasi perbaikan tanpa langsung mengubah business logic.
+
+Tujuan tahap ini adalah mendapatkan penyebab pasti dari error sistemik, bukan melakukan refactor atau migrasi arsitektur.

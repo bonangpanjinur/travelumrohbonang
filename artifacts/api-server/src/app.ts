@@ -50,6 +50,17 @@ function corsOrigin(
 app.use(
   pinoHttp({
     logger,
+    // Human-readable success/error messages so Vercel logs show:
+    //   → GET /api/admin/categories  200  45ms
+    //   → GET /api/admin/bookings    500  (error message)
+    // Note: pino-http v10 customSuccessMessage receives responseTime as 3rd arg;
+    //       customErrorMessage receives the Error as 3rd arg (no responseTime).
+    customSuccessMessage(req, res, responseTime) {
+      return `→ ${req.method} ${(req as any).url?.split("?")[0]}  ${res.statusCode}  ${responseTime}ms`;
+    },
+    customErrorMessage(req, res, err) {
+      return `→ ${(req as any).method} ${(req as any).url?.split("?")[0]}  ${res.statusCode}  [${err?.message ?? "error"}]`;
+    },
     serializers: {
       req(req) {
         return {
@@ -106,16 +117,37 @@ app.use((_req, res) => {
 // ── Global error handler ──────────────────────────────────────────────────────
 // Logs the FULL original exception (name, message, stack, and any extra
 // enumerable properties) so the real root cause is visible in Vercel/Replit
-// logs instead of just "Internal server error". Never leaks stack/details to
-// the client — the response body stays generic in every environment.
+// logs instead of just "Internal server error".
+//
+// In development:  response body includes message, route, method, and stack
+//                  so you can debug without opening Vercel logs.
+// In production:   response body stays generic — stack/message never leak.
 app.use((err: any, req: import("express").Request, res: import("express").Response, _next: import("express").NextFunction) => {
-  console.error("[app] unhandled error on", req.method, req.originalUrl, {
-    name: err?.name,
+  const isProduction = process.env.NODE_ENV === "production";
+
+  // Always log the full error server-side (visible in Vercel / Replit logs)
+  console.error("[app] unhandled error", {
+    method:  req.method,
+    route:   req.originalUrl,
+    name:    err?.name,
     message: err?.message,
-    stack: err?.stack,
+    stack:   err?.stack,
     ...err, // captures extra fields some libs attach (code, status, cause, etc.)
   });
-  res.status(500).json({ message: "Internal server error" });
+
+  if (isProduction) {
+    // Never leak internals to the client in production
+    res.status(500).json({ message: "Internal server error" });
+  } else {
+    // In development, surface details so middleware/route bugs are visible
+    // without needing to tail the server logs
+    res.status(500).json({
+      message: err?.message ?? "Internal server error",
+      route:   req.originalUrl,
+      method:  req.method,
+      stack:   err?.stack ?? null,
+    });
+  }
 });
 
 export default app;

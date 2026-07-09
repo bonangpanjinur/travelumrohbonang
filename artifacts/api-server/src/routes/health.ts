@@ -1,6 +1,6 @@
 import { Router, type RequestHandler } from "express";
 import { pool } from "@workspace/db";
-import { HealthCheckResponse, FullHealthCheckResponse } from "@workspace/api-zod";
+import { HealthCheckResponse } from "@workspace/api-zod";
 import {
   SUPABASE_URL,
   SUPABASE_SERVER_KEY,
@@ -90,20 +90,35 @@ async function checkSupabase(): Promise<{
   }
 }
 
-const health: RequestHandler = async (req: any, res: any) => {
+const health: RequestHandler = async (_req, res: any) => {
   const [database, supabase] = await Promise.all([checkDatabase(), checkSupabase()]);
 
-  const overallStatus =
-    database.status === "ok" && supabase.status !== "error" ? "ok" : "degraded";
-  const httpStatus = overallStatus === "ok" ? 200 : 503;
+  const dbOk      = database.status === "ok";
+  const supabaseOk = supabase.status !== "error";
+  const allOk     = dbOk && supabaseOk;
 
-  const data = FullHealthCheckResponse.parse({
-    status: overallStatus,
-    timestamp: new Date().toISOString(),
-    services: { database, supabase },
-  });
+  const httpStatus = allOk ? 200 : 503;
 
-  res.status(httpStatus).json(data);
+  if (allOk) {
+    // Simple format requested by the client
+    res.status(200).json({
+      status:   "ok",
+      database: "connected",
+      server:   "running",
+    });
+  } else {
+    // Surface the first failure reason
+    const reason = !dbOk
+      ? (database.error ?? "Database unreachable")
+      : (supabase.error ?? "Supabase unreachable");
+
+    res.status(httpStatus).json({
+      status:   "error",
+      database: dbOk ? "connected" : "failed",
+      server:   "running",
+      reason,
+    });
+  }
 };
 
 router.get("/health", health);
