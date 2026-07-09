@@ -6,8 +6,9 @@ import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/shared/components/ui/select";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
-import { Pause, Play, Trash2, ShieldAlert } from "lucide-react";
+import { Pause, Play, Trash2, ShieldAlert, ClipboardCopy, Check } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/shared/hooks/use-toast";
 
 interface DiagLogEntry {
   id: number;
@@ -22,6 +23,17 @@ interface DiagLogEntry {
   httpStatus?: number;
   error?: string;
   extra?: Record<string, unknown>;
+}
+
+interface HealthDetail {
+  status: string;
+  timestamp: string;
+  nodeVersion?: string;
+  nodeEnv?: string;
+  uptimeSeconds?: number;
+  isVercel?: boolean;
+  allowedOrigins?: string[];
+  checks?: Record<string, unknown>;
 }
 
 const METHODS = ["GET", "POST", "PATCH", "DELETE"];
@@ -40,6 +52,9 @@ const RestDiagLogs = () => {
   const [query, setQuery] = useState("");
   const [live, setLive] = useState(true);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [copying, setCopying] = useState(false);
+  const [justCopied, setJustCopied] = useState(false);
+  const { toast } = useToast();
 
   const lastIdRef = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -90,6 +105,70 @@ const RestDiagLogs = () => {
     lastIdRef.current = lastIdRef.current; // keep sinceId so cleared entries don't reappear
   };
 
+  const copyIncidentReport = async () => {
+    setCopying(true);
+    try {
+      const health = await apiFetch<HealthDetail>("/api/health/detail").catch((e) => ({
+        status: "unreachable",
+        timestamp: new Date().toISOString(),
+        error: String(e),
+      })) as HealthDetail & { error?: string };
+
+      const filterSummary = [
+        method !== "all" ? `method=${method}` : null,
+        table.trim() ? `table=${table.trim()}` : null,
+        query.trim() ? `q="${query.trim()}"` : null,
+      ].filter(Boolean).join(", ") || "(tidak ada filter)";
+
+      const lines: string[] = [];
+      lines.push("# Incident Report — Umroh App API");
+      lines.push(`Generated: ${new Date().toISOString()}`);
+      lines.push(`Filter aktif: ${filterSummary}`);
+      lines.push(`Jumlah log ditampilkan: ${logs.length}`);
+      lines.push("");
+      lines.push("## Health Snapshot (/api/health/detail)");
+      lines.push("```json");
+      lines.push(JSON.stringify(health, null, 2));
+      lines.push("```");
+      lines.push("");
+      lines.push(`## REST Diagnostic Logs (${logs.length} entri, sesuai filter di atas)`);
+      lines.push("```");
+      if (logs.length === 0) {
+        lines.push("(tidak ada log pada filter saat ini)");
+      } else {
+        for (const log of logs) {
+          const parts = [
+            log.timestamp,
+            `${log.method} /${log.table}`,
+            `stage=${log.stage}`,
+            log.httpStatus ? `status=${log.httpStatus}` : null,
+            log.backend ? `backend=${log.backend}` : null,
+            `auth=${log.authenticated}`,
+            log.role ? `role=${log.role}` : null,
+            log.userId ? `userId=${log.userId}` : null,
+            log.error ? `error=${log.error}` : null,
+          ].filter(Boolean);
+          lines.push(parts.join(" | "));
+          if (log.extra && Object.keys(log.extra).length) {
+            lines.push(`  extra: ${JSON.stringify(log.extra)}`);
+          }
+        }
+      }
+      lines.push("```");
+
+      const report = lines.join("\n");
+      await navigator.clipboard.writeText(report);
+
+      setJustCopied(true);
+      setTimeout(() => setJustCopied(false), 2000);
+      toast({ title: "Incident report disalin ke clipboard" });
+    } catch (e) {
+      toast({ title: "Gagal membuat incident report", description: String(e), variant: "destructive" });
+    } finally {
+      setCopying(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -104,6 +183,14 @@ const RestDiagLogs = () => {
           </Button>
           <Button variant="outline" size="sm" onClick={clear}>
             <Trash2 className="w-4 h-4 mr-1" /> Bersihkan Tampilan
+          </Button>
+          <Button variant="outline" size="sm" onClick={copyIncidentReport} disabled={copying}>
+            {justCopied ? (
+              <Check className="w-4 h-4 mr-1 text-green-600" />
+            ) : (
+              <ClipboardCopy className="w-4 h-4 mr-1" />
+            )}
+            {copying ? "Menyalin..." : justCopied ? "Tersalin!" : "Copy Incident Report"}
           </Button>
         </div>
       </div>
