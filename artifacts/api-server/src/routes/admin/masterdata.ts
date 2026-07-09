@@ -11,6 +11,22 @@ import {
   asc,
 } from "@workspace/db";
 
+/** Map a caught DB/unknown error to an appropriate HTTP response. */
+function dbError(res: any, entityLabel: string, action: "create" | "update" | "delete", err: unknown) {
+  const msg = err instanceof Error ? err.message : String(err);
+  // Postgres NOT NULL violation (code 23502) or FK violation (23503/23505)
+  if (msg.includes("23502") || msg.includes("null value") || msg.includes("violates not-null")) {
+    res.status(400).json({ error: `Missing required field for ${entityLabel}` });
+  } else if (msg.includes("23503") || msg.includes("foreign key")) {
+    res.status(400).json({ error: `Invalid reference — related record not found` });
+  } else if (msg.includes("23505") || msg.includes("unique")) {
+    res.status(409).json({ error: `${entityLabel} already exists` });
+  } else {
+    console.error(`[masterdata] Failed to ${action} ${entityLabel}:`, msg);
+    res.status(500).json({ error: `Failed to ${action} ${entityLabel}` });
+  }
+}
+
 const router = Router();
 
 // Hotels
@@ -24,6 +40,10 @@ router.get("/hotels", async (_req, res) => {
 });
 
 router.post("/hotels", async (req, res) => {
+  if (!req.body?.name?.trim()) {
+    res.status(400).json({ error: "name is required" });
+    return;
+  }
   try {
     const [created] = await db
       .insert(hotels)
@@ -34,7 +54,7 @@ router.post("/hotels", async (req, res) => {
       .returning();
     res.status(201).json(created);
   } catch (err) {
-    res.status(500).json({ error: "Failed to create hotel" });
+    dbError(res, "hotel", "create", err);
   }
 });
 
@@ -48,7 +68,7 @@ router.patch("/hotels/:id", async (req, res) => {
     if (!updated) return res.status(404).json({ error: "Hotel not found" });
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: "Failed to update hotel" });
+    dbError(res, "hotel", "update", err);
   }
 });
 
@@ -58,7 +78,7 @@ router.delete("/hotels/:id", async (req, res) => {
     if (!deleted) return res.status(404).json({ error: "Hotel not found" });
     res.json({ message: "Hotel deleted" });
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete hotel" });
+    dbError(res, "hotel", "delete", err);
   }
 });
 
@@ -73,6 +93,10 @@ router.get("/airlines", async (_req, res) => {
 });
 
 router.post("/airlines", async (req, res) => {
+  if (!req.body?.name?.trim()) {
+    res.status(400).json({ error: "name is required" });
+    return;
+  }
   try {
     const [created] = await db
       .insert(airlines)
@@ -83,7 +107,7 @@ router.post("/airlines", async (req, res) => {
       .returning();
     res.status(201).json(created);
   } catch (err) {
-    res.status(500).json({ error: "Failed to create airline" });
+    dbError(res, "airline", "create", err);
   }
 });
 
@@ -97,7 +121,7 @@ router.patch("/airlines/:id", async (req, res) => {
     if (!updated) return res.status(404).json({ error: "Airline not found" });
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: "Failed to update airline" });
+    dbError(res, "airline", "update", err);
   }
 });
 
@@ -107,7 +131,7 @@ router.delete("/airlines/:id", async (req, res) => {
     if (!deleted) return res.status(404).json({ error: "Airline not found" });
     res.json({ message: "Airline deleted" });
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete airline" });
+    dbError(res, "airline", "delete", err);
   }
 });
 
@@ -122,6 +146,10 @@ router.get("/airports", async (_req, res) => {
 });
 
 router.post("/airports", async (req, res) => {
+  if (!req.body?.name?.trim()) {
+    res.status(400).json({ error: "name is required" });
+    return;
+  }
   try {
     const [created] = await db
       .insert(airports)
@@ -132,7 +160,7 @@ router.post("/airports", async (req, res) => {
       .returning();
     res.status(201).json(created);
   } catch (err) {
-    res.status(500).json({ error: "Failed to create airport" });
+    dbError(res, "airport", "create", err);
   }
 });
 
@@ -146,7 +174,7 @@ router.patch("/airports/:id", async (req, res) => {
     if (!updated) return res.status(404).json({ error: "Airport not found" });
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: "Failed to update airport" });
+    dbError(res, "airport", "update", err);
   }
 });
 
@@ -156,7 +184,7 @@ router.delete("/airports/:id", async (req, res) => {
     if (!deleted) return res.status(404).json({ error: "Airport not found" });
     res.json({ message: "Airport deleted" });
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete airport" });
+    dbError(res, "airport", "delete", err);
   }
 });
 
@@ -171,6 +199,10 @@ router.get("/muthawifs", async (_req, res) => {
 });
 
 router.post("/muthawifs", async (req, res) => {
+  if (!req.body?.name?.trim()) {
+    res.status(400).json({ error: "name is required" });
+    return;
+  }
   try {
     const [created] = await db
       .insert(muthawifs)
@@ -181,7 +213,7 @@ router.post("/muthawifs", async (req, res) => {
       .returning();
     res.status(201).json(created);
   } catch (err) {
-    res.status(500).json({ error: "Failed to create muthawif" });
+    dbError(res, "muthawif", "create", err);
   }
 });
 
@@ -195,7 +227,7 @@ router.patch("/muthawifs/:id", async (req, res) => {
     if (!updated) return res.status(404).json({ error: "Muthawif not found" });
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: "Failed to update muthawif" });
+    dbError(res, "muthawif", "update", err);
   }
 });
 
@@ -205,7 +237,7 @@ router.delete("/muthawifs/:id", async (req, res) => {
     if (!deleted) return res.status(404).json({ error: "Muthawif not found" });
     res.json({ message: "Muthawif deleted" });
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete muthawif" });
+    dbError(res, "muthawif", "delete", err);
   }
 });
 
@@ -220,6 +252,10 @@ router.get("/categories", async (_req, res) => {
 });
 
 router.post("/categories", async (req, res) => {
+  if (!req.body?.name?.trim()) {
+    res.status(400).json({ error: "name is required" });
+    return;
+  }
   try {
     const [created] = await db
       .insert(packageCategories)
@@ -230,7 +266,7 @@ router.post("/categories", async (req, res) => {
       .returning();
     res.status(201).json(created);
   } catch (err) {
-    res.status(500).json({ error: "Failed to create category" });
+    dbError(res, "category", "create", err);
   }
 });
 
@@ -244,7 +280,7 @@ router.patch("/categories/:id", async (req, res) => {
     if (!updated) return res.status(404).json({ error: "Category not found" });
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: "Failed to update category" });
+    dbError(res, "category", "update", err);
   }
 });
 
@@ -254,7 +290,7 @@ router.delete("/categories/:id", async (req, res) => {
     if (!deleted) return res.status(404).json({ error: "Category not found" });
     res.json({ message: "Category deleted" });
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete category" });
+    dbError(res, "category", "delete", err);
   }
 });
 

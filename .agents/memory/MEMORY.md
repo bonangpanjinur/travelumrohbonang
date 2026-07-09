@@ -20,3 +20,4 @@
 - [Payment gateway architecture](payment-gateway-architecture.md) — admin routes gated, webhook routes PUBLIC at /api/payments/webhook/*; SHA512 + callback-token verification; env-only credentials.
 - [Agent withdrawals schema](agent-withdrawals-schema.md) — separate bank/admin/proof columns (not a JSON blob); PATCH validates status/adminNotes/proofUrl only; admin GET joins agents table for name/email.
 - [REST proxy unfiltered-write guard](rest-proxy-unfiltered-write-guard.md) — PATCH/DELETE on generic /rest/v1/:table proxy must reject empty filters; never expose privilege tables (user_roles) through auth-only table sets.
+- [Masterdata route error handling](masterdata-error-handling.md) — POST handlers need name validation (400) + dbError() for constraint errors; missing table = 500 from catch block.
