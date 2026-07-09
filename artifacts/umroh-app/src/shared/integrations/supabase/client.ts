@@ -2,11 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { supabaseAuth } from './auth-client';
 
-// REST and storage requests go directly to Supabase using the anon key.
-// Row Level Security (RLS) on the Supabase project enforces per-row
-// authorization based on the user's JWT token attached below.
-const SUPABASE_URL =
-  import.meta.env.VITE_SUPABASE_URL ?? '';
+// REST and storage requests go through the Vite proxy in development so they
+// hit the local Replit database instead of the real Supabase project.
+// In production, VITE_SUPABASE_URL is the real Supabase project URL.
+const SUPABASE_URL = import.meta.env.DEV
+  ? window.location.origin   // same-origin → Vite proxies /rest/v1 to local API
+  : (import.meta.env.VITE_SUPABASE_URL ?? '');
 
 const SUPABASE_KEY =
   import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';

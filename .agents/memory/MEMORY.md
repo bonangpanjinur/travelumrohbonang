@@ -1,3 +1,4 @@
+- [Local DB + Supabase Auth hybrid](local-db-proxy-setup.md) — dev mode routes data through Vite proxy to local Postgres; auth stays on real Supabase; client.ts uses window.location.origin.
 - [apiFetch auth token](apifetch-auth-token.md) — apiFetch must auto-attach Supabase Bearer token; without it all admin API calls return 401 silently.
 - [authMiddleware 500 + JWT hook setup](auth-middleware-500-fix.md) — admin button hidden because JWT fallback gives "buyer"; full fix: try-catch in middleware + Supabase JWT hook + user_roles in Supabase.
 - [Express 5 handler typing](express5-handler-typing.md) — never annotate req/res explicitly in route handlers; always let TypeScript infer from the router method.

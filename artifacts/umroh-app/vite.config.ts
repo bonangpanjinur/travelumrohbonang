@@ -9,6 +9,11 @@ const port = rawPort ? Number(rawPort) : 3000;
 
 const basePath = process.env.BASE_PATH ?? "/";
 
+// Real Supabase project URL — used only for proxying /auth/v1 in dev.
+// Data queries (REST/storage) are routed to the local API server via Vite proxy
+// because client.ts uses window.location.origin in dev mode (same-origin, no CORS).
+const realSupabaseUrl = process.env.VITE_SUPABASE_URL ?? "https://reuwfhuaabdhxjkomred.supabase.co";
+
 export default defineConfig({
   base: basePath,
   plugins: [
@@ -88,7 +93,9 @@ export default defineConfig({
       strict: true,
     },
     proxy: {
-      // Forward API and Supabase-compat routes to the local Express server
+      // Auth stays on real Supabase (login/signup/session)
+      "/auth/v1": { target: realSupabaseUrl, changeOrigin: true },
+      // Forward API and Supabase-compat data routes to local Express server
       "/api": { target: "http://localhost:8080", changeOrigin: true },
       "/rest/v1": { target: "http://localhost:8080", changeOrigin: true },
       "/storage/v1": { target: "http://localhost:8080", changeOrigin: true },
