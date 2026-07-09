@@ -44,7 +44,7 @@ router.get("/:id", async (req, res) => {
     const [contract] = await db
       .select()
       .from(contracts)
-      .where(eq(contracts.id, req.params.id))
+      .where(eq(contracts.id, String(req.params.id)))
       .limit(1);
     if (!contract) return res.status(404).json({ error: "Contract not found" });
     res.json(contract);
@@ -66,7 +66,7 @@ router.patch("/:id", async (req, res) => {
         ...(signerName !== undefined ? { signerName } : {}),
         ...(signedAt ? { signedAt: new Date(signedAt) } : {}),
       })
-      .where(eq(contracts.id, req.params.id))
+      .where(eq(contracts.id, String(req.params.id)))
       .returning();
     if (!updated) return res.status(404).json({ error: "Contract not found" });
     res.json(updated);
@@ -80,7 +80,7 @@ router.delete("/:id", requireAdmin, async (req, res) => {
   try {
     const [deleted] = await db
       .delete(contracts)
-      .where(eq(contracts.id, req.params.id))
+      .where(eq(contracts.id, String(req.params.id)))
       .returning();
     if (!deleted) return res.status(404).json({ error: "Contract not found" });
     res.json({ success: true });

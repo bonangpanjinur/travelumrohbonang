@@ -165,7 +165,7 @@ async function checkCriticalTables(): Promise<{
            AND tablename = ANY($1)`,
         [criticalTables],
       );
-      const found = new Set(res.rows.map((r) => r.tablename));
+      const found = new Set(res.rows.map((r: { tablename: string }) => r.tablename));
       for (const t of criticalTables) {
         tables[t] = found.has(t) ? "exists" : "missing";
       }
@@ -395,7 +395,7 @@ async function checkSchemaHealth(): Promise<SchemaHealthResult> {
          AND tablename = ANY($1)`,
       [DRIZZLE_TABLES as unknown as string[]],
     );
-    const existingSet = new Set(tableRes.rows.map((r) => r.tablename));
+    const existingSet = new Set(tableRes.rows.map((r: { tablename: string }) => r.tablename));
     const existingTables = DRIZZLE_TABLES.filter((t) => existingSet.has(t));
     const missingTables = DRIZZLE_TABLES.filter((t) => !existingSet.has(t));
 
