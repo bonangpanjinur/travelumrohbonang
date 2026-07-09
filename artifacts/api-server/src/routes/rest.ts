@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { pool } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth";
 import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../lib/supabaseEnv";
+import { pushDiagLog } from "../lib/diagLogBuffer";
 
 /**
  * Per-request diagnostic logger for the REST proxy.
@@ -13,6 +14,10 @@ import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../lib/supabaseEnv";
  * of a bare "Internal Server Error" that requires guessing where it broke.
  * Never logs request/row bodies verbatim (may contain PII) — only shapes
  * (keys, counts) and control-flow metadata.
+ *
+ * Also pushes into an in-memory ring buffer (see diagLogBuffer.ts) so the
+ * admin "Live REST Diagnostics" page can tail these without needing a log
+ * viewer.
  */
 function logDiag(
   req: Request,
@@ -21,17 +26,28 @@ function logDiag(
   extra: Record<string, unknown> = {},
 ): void {
   const user = (req as any).user;
-  console.log(
-    `[REST-DIAG] ${req.method} /${table} :: ${stage}`,
-    JSON.stringify({
-      authenticated: typeof req.isAuthenticated === "function" ? req.isAuthenticated() : false,
-      userId: user?.id ?? null,
-      role: user?.role ?? null,
-      queryKeys: Object.keys(req.query ?? {}),
-      bodyKeys: req.body && typeof req.body === "object" ? Object.keys(Array.isArray(req.body) ? (req.body[0] ?? {}) : req.body) : [],
-      ...extra,
-    }),
-  );
+  const payload = {
+    authenticated: typeof req.isAuthenticated === "function" ? req.isAuthenticated() : false,
+    userId: user?.id ?? null,
+    role: user?.role ?? null,
+    queryKeys: Object.keys(req.query ?? {}),
+    bodyKeys: req.body && typeof req.body === "object" ? Object.keys(Array.isArray(req.body) ? (req.body[0] ?? {}) : req.body) : [],
+    ...extra,
+  };
+  console.log(`[REST-DIAG] ${req.method} /${table} :: ${stage}`, JSON.stringify(payload));
+
+  pushDiagLog({
+    method: req.method,
+    table,
+    stage,
+    authenticated: payload.authenticated,
+    userId: payload.userId,
+    role: payload.role,
+    backend: (extra.backend as string | undefined) ?? undefined,
+    httpStatus: (extra.httpStatus as number | undefined) ?? undefined,
+    error: (extra.error as string | undefined) ?? undefined,
+    extra,
+  });
 }
 
 // When DATABASE_URL is not a real Postgres URL (e.g. Vercel without DATABASE_URL set),

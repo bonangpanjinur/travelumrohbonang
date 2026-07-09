@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { db, auditLogs, errorLogs, desc } from "@workspace/db";
+import diagLogsRouter from "./diagLogs";
 
 const router = Router();
+
+router.use("/", diagLogsRouter);
 
 router.get("/audit", async (req, res) => {
   try {

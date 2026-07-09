@@ -188,6 +188,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Kesehatan Sistem", labelKey: "menu.system_health", href: "/admin/system-health", icon: Activity, roles: SUPER_ADMIN_ADMIN },
       { label: "Audit Logs", labelKey: "menu.audit_logs", href: "/admin/audit-logs", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
       { label: "Error Tracking", labelKey: "menu.error_tracking", href: "/admin/error-logs", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
+      { label: "Live REST Diagnostics", labelKey: "menu.rest_diag", href: "/admin/rest-diag", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
       { label: "Slug Redirects (SEO)", labelKey: "menu.slug_redirects", href: "/admin/slug-redirects", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
       { label: "Pengaturan SEO", labelKey: "menu.seo_settings", href: "/admin/seo", icon: Search, roles: SUPER_ADMIN_ADMIN },
       { label: "Manajemen Role", labelKey: "menu.role_management", href: "/admin/role-management", icon: ShieldCheck, roles: SUPER_ONLY },
