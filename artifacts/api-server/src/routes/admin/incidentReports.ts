@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createIncidentReportLink, getIncidentReportLink } from "../../lib/incidentReportStore";
+import { createIncidentReportLink, getIncidentReportLink, revokeIncidentReportLink } from "../../lib/incidentReportStore";
 
 const router = Router();
 
@@ -35,6 +35,16 @@ router.get("/:id", (req, res) => {
     createdAt: entry.createdAt,
     expiresAt: entry.expiresAt,
   });
+});
+
+// DELETE /api/admin/incident-reports/:id — revoke a link early (e.g. sent to the wrong person).
+router.delete("/:id", (req, res) => {
+  const revoked = revokeIncidentReportLink(req.params.id);
+  if (!revoked) {
+    res.status(404).json({ error: "Report not found or already expired" });
+    return;
+  }
+  res.json({ revoked: true });
 });
 
 export default router;

@@ -54,3 +54,7 @@ export function getIncidentReportLink(id: string): StoredReport | null {
   }
   return entry;
 }
+
+export function revokeIncidentReportLink(id: string): boolean {
+  return store.delete(id);
+}
