@@ -19,15 +19,15 @@ ON CONFLICT (id) DO NOTHING;
 -- 2. PACKAGE CATEGORIES — Kategori paket umroh
 -- =============================================================
 
-INSERT INTO package_categories (id, name, description, parent_id, icon, show_extra_hotels, is_active, sort_order, created_at)
+INSERT INTO package_categories (id, name, description, parent_id, show_extra_hotels, is_active, sort_order, created_at)
 VALUES
-  ('cat_reguler',   'Umroh Reguler',    'Paket umroh standar dengan fasilitas lengkap dan harga terjangkau',       NULL, 'star',    false, true, 1, now()),
-  ('cat_plus',      'Umroh Plus',       'Paket umroh dengan hotel berbintang lebih dekat ke Masjidil Haram',       NULL, 'star-filled', false, true, 2, now()),
-  ('cat_vip',       'Umroh VIP',        'Paket umroh eksklusif dengan pelayanan premium dan hotel bintang 5',      NULL, 'crown',   false, true, 3, now()),
-  ('cat_vvip',      'Umroh VVIP',       'Paket umroh paling eksklusif dengan layanan personal concierge',          NULL, 'diamond', false, true, 4, now()),
-  ('cat_ramadhan',  'Umroh Ramadhan',   'Paket umroh di bulan suci Ramadhan dengan pengalaman spiritual terbaik',  NULL, 'moon',    false, true, 5, now()),
-  ('cat_keluarga',  'Umroh Keluarga',   'Paket umroh khusus keluarga dengan layanan ramah anak',                  NULL, 'home',    false, true, 6, now()),
-  ('cat_backpacker','Umroh Backpacker', 'Paket umroh hemat untuk jamaah muda dengan anggaran terbatas',            NULL, 'backpack',false, true, 7, now())
+  ('cat_reguler',   'Umroh Reguler',    'Paket umroh standar dengan fasilitas lengkap dan harga terjangkau',       NULL, false, true, 1, now()),
+  ('cat_plus',      'Umroh Plus',       'Paket umroh dengan hotel berbintang lebih dekat ke Masjidil Haram',       NULL, false, true, 2, now()),
+  ('cat_vip',       'Umroh VIP',        'Paket umroh eksklusif dengan pelayanan premium dan hotel bintang 5',      NULL, false, true, 3, now()),
+  ('cat_vvip',      'Umroh VVIP',       'Paket umroh paling eksklusif dengan layanan personal concierge',          NULL, false, true, 4, now()),
+  ('cat_ramadhan',  'Umroh Ramadhan',   'Paket umroh di bulan suci Ramadhan dengan pengalaman spiritual terbaik',  NULL, false, true, 5, now()),
+  ('cat_keluarga',  'Umroh Keluarga',   'Paket umroh khusus keluarga dengan layanan ramah anak',                  NULL, false, true, 6, now()),
+  ('cat_backpacker','Umroh Backpacker', 'Paket umroh hemat untuk jamaah muda dengan anggaran terbatas',            NULL, false, true, 7, now())
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================
@@ -502,25 +502,22 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Muthawifs (pembimbing ibadah)
-INSERT INTO muthawifs (id, name, phone, photo_url, bio, is_active, created_at)
+INSERT INTO muthawifs (id, name, phone, photo_url, created_at)
 VALUES
   ('mtw_01', 'Ustadz Dr. Ahmad Syukri, Lc.',
    '08111234567',
    'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=200&h=200&fit=crop&crop=face',
-   'Lulusan Universitas Islam Madinah, berpengalaman 15 tahun membimbing jemaah umroh dan haji. Hafidz Quran 30 juz. Dikenal sabar, ramah, dan menguasai sejarah Tanah Suci secara mendalam.',
-   true, now()),
+   now()),
 
   ('mtw_02', 'Ustadz Muhammad Amin Fauzan, S.Ag.',
    '08222345678',
    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face',
-   'Alumni Universitas Al-Azhar Kairo dengan pengalaman 10 tahun sebagai muthawif profesional. Spesialis bimbingan doa dan dzikir selama umroh. Penulis buku panduan ibadah umroh.',
-   true, now()),
+   now()),
 
   ('mtw_03', 'Ustadzah Hj. Fatimah Azzahra, M.Ag.',
    '08333456789',
    'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=200&fit=crop&crop=face',
-   'Muthawifah berpengalaman 12 tahun khusus mendampingi jemaah wanita dan keluarga. Magister Ilmu Agama Islam dengan spesialisasi fiqih ibadah perempuan. Fasih bahasa Arab dan Inggris.',
-   true, now())
+   now())
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================
