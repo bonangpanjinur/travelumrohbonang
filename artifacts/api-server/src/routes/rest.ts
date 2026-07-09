@@ -3,6 +3,37 @@ import { pool } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth";
 import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../lib/supabaseEnv";
 
+/**
+ * Per-request diagnostic logger for the REST proxy.
+ *
+ * Prints exactly which step a request reached — request received, auth
+ * result, which backend was used (local Postgres vs Supabase HTTP), the
+ * query executed (redacted of values), and the outcome. This exists so a
+ * failing production request shows the exact failing step in logs instead
+ * of a bare "Internal Server Error" that requires guessing where it broke.
+ * Never logs request/row bodies verbatim (may contain PII) — only shapes
+ * (keys, counts) and control-flow metadata.
+ */
+function logDiag(
+  req: Request,
+  table: string,
+  stage: string,
+  extra: Record<string, unknown> = {},
+): void {
+  const user = (req as any).user;
+  console.log(
+    `[REST-DIAG] ${req.method} /${table} :: ${stage}`,
+    JSON.stringify({
+      authenticated: typeof req.isAuthenticated === "function" ? req.isAuthenticated() : false,
+      userId: user?.id ?? null,
+      role: user?.role ?? null,
+      queryKeys: Object.keys(req.query ?? {}),
+      bodyKeys: req.body && typeof req.body === "object" ? Object.keys(Array.isArray(req.body) ? (req.body[0] ?? {}) : req.body) : [],
+      ...extra,
+    }),
+  );
+}
+
 // When DATABASE_URL is not a real Postgres URL (e.g. Vercel without DATABASE_URL set),
 // fall back to forwarding requests to Supabase's REST API (PostgREST) directly.
 // This avoids connection timeouts that would cause Vercel serverless functions to 500.
@@ -70,6 +101,12 @@ async function supabaseForward(
   if (req.headers["range"]) headers["Range"] = req.headers["range"] as string;
   if (req.headers["accept"]) headers["Accept"] = req.headers["accept"] as string;
 
+  logDiag(req, table, "supabase_forward:request", {
+    backend: "supabase_http",
+    tokenType: AUTH_TABLES.has(table) ? "user_jwt" : "service_role",
+    url,
+  });
+
   try {
     const sbRes = await fetch(url, {
       method: req.method,
@@ -87,8 +124,16 @@ async function supabaseForward(
     res.setHeader("Content-Type", contentType);
 
     const body = await sbRes.text();
+
+    logDiag(req, table, "supabase_forward:response", {
+      httpStatus: sbRes.status,
+      ok: sbRes.ok,
+      ...(sbRes.ok ? {} : { errorBody: body.slice(0, 500) }),
+    });
+
     res.status(sbRes.status).end(body);
   } catch (err) {
+    logDiag(req, table, "supabase_forward:exception", { error: String(err) });
     res.status(502).json({ error: "Supabase proxy error", detail: String(err) });
   }
 }
@@ -424,6 +469,7 @@ router.get("/:table", async (req: Request, res: Response) => {
 
   // Tables in AUTH_TABLES require authentication even for reads.
   if (AUTH_TABLES.has(table) && !req.isAuthenticated()) {
+    logDiag(req, table, "rejected:auth_required");
     return res.status(401).json({ message: "Authentication required" });
   }
 
@@ -432,6 +478,8 @@ router.get("/:table", async (req: Request, res: Response) => {
     await supabaseForward(req, res, table);
     return;
   }
+
+  logDiag(req, table, "local_pool:request", { backend: "local_postgres" });
 
   try {
     const q = req.query as Record<string, string>;
@@ -471,6 +519,7 @@ router.get("/:table", async (req: Request, res: Response) => {
 
     res.json(result.rows);
   } catch (err: any) {
+    logDiag(req, table, "local_pool:exception", { error: err.message });
     console.error(`[REST] GET /${table}:`, err.message);
     res.status(500).json({ message: err.message });
   }
@@ -489,6 +538,7 @@ router.post("/:table", requireAuth, async (req: Request, res: Response) => {
   if (PUBLIC_READ_TABLES.has(table)) {
     const userRole = (req as any).user?.role as string | undefined;
     if (!userRole || !WRITE_STAFF_ROLES.has(userRole)) {
+      logDiag(req, table, "rejected:staff_role_required");
       return res.status(403).json({ message: "Staff access required to write to this table" });
     }
   }
@@ -497,6 +547,8 @@ router.post("/:table", requireAuth, async (req: Request, res: Response) => {
     await supabaseForward(req, res, table);
     return;
   }
+
+  logDiag(req, table, "local_pool:request", { backend: "local_postgres" });
 
   try {
     const prefer = (req.headers["prefer"] as string) || "";
@@ -555,6 +607,7 @@ router.post("/:table", requireAuth, async (req: Request, res: Response) => {
     }
     return res.status(201).json(insertedRows);
   } catch (err: any) {
+    logDiag(req, table, "local_pool:exception", { error: err.message });
     console.error(`[REST] POST /${table}:`, err.message);
     res.status(500).json({ message: err.message });
   }
@@ -571,6 +624,7 @@ router.patch("/:table", requireAuth, async (req: Request, res: Response) => {
   if (PUBLIC_READ_TABLES.has(table)) {
     const userRole = (req as any).user?.role as string | undefined;
     if (!userRole || !WRITE_STAFF_ROLES.has(userRole)) {
+      logDiag(req, table, "rejected:staff_role_required");
       return res.status(403).json({ message: "Staff access required to write to this table" });
     }
   }
@@ -579,6 +633,8 @@ router.patch("/:table", requireAuth, async (req: Request, res: Response) => {
     await supabaseForward(req, res, table);
     return;
   }
+
+  logDiag(req, table, "local_pool:request", { backend: "local_postgres" });
 
   try {
     const prefer = (req.headers["prefer"] as string) || "";
@@ -616,6 +672,7 @@ router.patch("/:table", requireAuth, async (req: Request, res: Response) => {
     }
     return res.json(result.rows);
   } catch (err: any) {
+    logDiag(req, table, "local_pool:exception", { error: err.message });
     console.error(`[REST] PATCH /${table}:`, err.message);
     res.status(500).json({ message: err.message });
   }
@@ -632,6 +689,7 @@ router.delete("/:table", requireAuth, async (req: Request, res: Response) => {
   if (PUBLIC_READ_TABLES.has(table)) {
     const userRole = (req as any).user?.role as string | undefined;
     if (!userRole || !WRITE_STAFF_ROLES.has(userRole)) {
+      logDiag(req, table, "rejected:staff_role_required");
       return res.status(403).json({ message: "Staff access required to write to this table" });
     }
   }
@@ -641,15 +699,19 @@ router.delete("/:table", requireAuth, async (req: Request, res: Response) => {
     return;
   }
 
+  logDiag(req, table, "local_pool:request", { backend: "local_postgres" });
+
   try {
     const values: unknown[] = [];
     const whereClause = buildWhere(table, req.query as Record<string, string>, values);
     if (!whereClause) {
+      logDiag(req, table, "rejected:no_filter");
       return res.status(400).json({ message: "DELETE without WHERE is not allowed" });
     }
     await pool.query(`DELETE FROM "${table}" ${whereClause}`, values);
     return res.status(204).send();
   } catch (err: any) {
+    logDiag(req, table, "local_pool:exception", { error: err.message });
     console.error(`[REST] DELETE /${table}:`, err.message);
     res.status(500).json({ message: err.message });
   }
