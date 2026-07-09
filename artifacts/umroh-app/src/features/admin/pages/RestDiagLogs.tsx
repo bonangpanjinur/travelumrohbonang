@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { Switch } from "@/shared/components/ui/switch";
 import { Label } from "@/shared/components/ui/label";
-import { Pause, Play, Trash2, ShieldAlert, ClipboardCopy, Check, EyeOff } from "lucide-react";
+import { Pause, Play, Trash2, ShieldAlert, ClipboardCopy, Check, EyeOff, Download } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/shared/hooks/use-toast";
 
@@ -63,6 +63,7 @@ const RestDiagLogs = () => {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [copying, setCopying] = useState(false);
   const [justCopied, setJustCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [redact, setRedact] = useState(true);
   const { toast } = useToast();
 
@@ -115,60 +116,65 @@ const RestDiagLogs = () => {
     lastIdRef.current = lastIdRef.current; // keep sinceId so cleared entries don't reappear
   };
 
+  const buildIncidentReport = async (): Promise<string> => {
+    const health = await apiFetch<HealthDetail>("/api/health/detail").catch((e) => ({
+      status: "unreachable",
+      timestamp: new Date().toISOString(),
+      error: String(e),
+    })) as HealthDetail & { error?: string };
+
+    const filterSummary = [
+      method !== "all" ? `method=${method}` : null,
+      table.trim() ? `table=${table.trim()}` : null,
+      query.trim() ? `q="${query.trim()}"` : null,
+    ].filter(Boolean).join(", ") || "(tidak ada filter)";
+
+    const lines: string[] = [];
+    lines.push("# Incident Report — Umroh App API");
+    lines.push(`Generated: ${new Date().toISOString()}`);
+    lines.push(`Filter aktif: ${filterSummary}`);
+    lines.push(`Jumlah log ditampilkan: ${logs.length}`);
+    if (redact) lines.push(`Redaksi: AKTIF (email & UUID/user id disamarkan)`);
+    lines.push("");
+    lines.push("## Health Snapshot (/api/health/detail)");
+    lines.push("```json");
+    lines.push(JSON.stringify(health, null, 2));
+    lines.push("```");
+    lines.push("");
+    lines.push(`## REST Diagnostic Logs (${logs.length} entri, sesuai filter di atas)`);
+    lines.push("```");
+    if (logs.length === 0) {
+      lines.push("(tidak ada log pada filter saat ini)");
+    } else {
+      for (const log of logs) {
+        const parts = [
+          log.timestamp,
+          `${log.method} /${log.table}`,
+          `stage=${log.stage}`,
+          log.httpStatus ? `status=${log.httpStatus}` : null,
+          log.backend ? `backend=${log.backend}` : null,
+          `auth=${log.authenticated}`,
+          log.role ? `role=${log.role}` : null,
+          log.userId ? `userId=${redact ? "[REDACTED_ID]" : log.userId}` : null,
+          log.error ? `error=${log.error}` : null,
+        ].filter(Boolean);
+        lines.push(parts.join(" | "));
+        if (log.extra && Object.keys(log.extra).length) {
+          lines.push(`  extra: ${JSON.stringify(log.extra)}`);
+        }
+      }
+    }
+    lines.push("```");
+
+    let report = lines.join("\n");
+    if (redact) report = redactText(report);
+    return report;
+  };
+
   const copyIncidentReport = async () => {
     setCopying(true);
     try {
-      const health = await apiFetch<HealthDetail>("/api/health/detail").catch((e) => ({
-        status: "unreachable",
-        timestamp: new Date().toISOString(),
-        error: String(e),
-      })) as HealthDetail & { error?: string };
-
-      const filterSummary = [
-        method !== "all" ? `method=${method}` : null,
-        table.trim() ? `table=${table.trim()}` : null,
-        query.trim() ? `q="${query.trim()}"` : null,
-      ].filter(Boolean).join(", ") || "(tidak ada filter)";
-
-      const lines: string[] = [];
-      lines.push("# Incident Report — Umroh App API");
-      lines.push(`Generated: ${new Date().toISOString()}`);
-      lines.push(`Filter aktif: ${filterSummary}`);
-      lines.push(`Jumlah log ditampilkan: ${logs.length}`);
-      if (redact) lines.push(`Redaksi: AKTIF (email & UUID/user id disamarkan)`);
-      lines.push("");
-      lines.push("## Health Snapshot (/api/health/detail)");
-      lines.push("```json");
-      lines.push(JSON.stringify(health, null, 2));
-      lines.push("```");
-      lines.push("");
-      lines.push(`## REST Diagnostic Logs (${logs.length} entri, sesuai filter di atas)`);
-      lines.push("```");
-      if (logs.length === 0) {
-        lines.push("(tidak ada log pada filter saat ini)");
-      } else {
-        for (const log of logs) {
-          const parts = [
-            log.timestamp,
-            `${log.method} /${log.table}`,
-            `stage=${log.stage}`,
-            log.httpStatus ? `status=${log.httpStatus}` : null,
-            log.backend ? `backend=${log.backend}` : null,
-            `auth=${log.authenticated}`,
-            log.role ? `role=${log.role}` : null,
-            log.userId ? `userId=${redact ? "[REDACTED_ID]" : log.userId}` : null,
-            log.error ? `error=${log.error}` : null,
-          ].filter(Boolean);
-          lines.push(parts.join(" | "));
-          if (log.extra && Object.keys(log.extra).length) {
-            lines.push(`  extra: ${JSON.stringify(log.extra)}`);
-          }
-        }
-      }
-      lines.push("```");
-
-      let report = lines.join("\n");
-      if (redact) report = redactText(report);
+      const report = await buildIncidentReport();
       await navigator.clipboard.writeText(report);
 
       setJustCopied(true);
@@ -178,6 +184,29 @@ const RestDiagLogs = () => {
       toast({ title: "Gagal membuat incident report", description: String(e), variant: "destructive" });
     } finally {
       setCopying(false);
+    }
+  };
+
+  const downloadIncidentReport = async () => {
+    setDownloading(true);
+    try {
+      const report = await buildIncidentReport();
+      const blob = new Blob([report], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = format(new Date(), "yyyyMMdd-HHmmss");
+      a.href = url;
+      a.download = `incident-report-${stamp}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Incident report berhasil diunduh" });
+    } catch (e) {
+      toast({ title: "Gagal mengunduh incident report", description: String(e), variant: "destructive" });
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -209,6 +238,10 @@ const RestDiagLogs = () => {
               <ClipboardCopy className="w-4 h-4 mr-1" />
             )}
             {copying ? "Menyalin..." : justCopied ? "Tersalin!" : "Copy Incident Report"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={downloadIncidentReport} disabled={downloading}>
+            <Download className="w-4 h-4 mr-1" />
+            {downloading ? "Mengunduh..." : "Download as File"}
           </Button>
         </div>
       </div>
