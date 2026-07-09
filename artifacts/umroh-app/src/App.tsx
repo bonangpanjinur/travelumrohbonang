@@ -103,6 +103,7 @@ import Account2FA from "./features/auth/pages/Account2FA";
 import ContractSign from "./features/jamaah/pages/ContractSign";
 import AdminErrorLogs from "./features/admin/pages/ErrorLogs";
 import AdminRestDiagLogs from "./features/admin/pages/RestDiagLogs";
+import AdminIncidentReportView from "./features/admin/pages/IncidentReportView";
 import AdminIntegrations from "./features/admin/pages/Integrations";
 import AdminLoginSettings from "./features/admin/pages/LoginSettings";
 import AdminSEO from "./features/admin/pages/SEO";
@@ -227,6 +228,7 @@ const AppContent = () => {
           <Route path="manasik" element={<AdminManasik />} />
           <Route path="error-logs" element={<AdminErrorLogs />} />
           <Route path="rest-diag" element={<AdminRestDiagLogs />} />
+          <Route path="incident-reports/:id" element={<AdminIncidentReportView />} />
           <Route path="integrations" element={<AdminIntegrations />} />
           <Route path="login-settings" element={<AdminLoginSettings />} />
           <Route path="seo" element={<AdminSEO />} />

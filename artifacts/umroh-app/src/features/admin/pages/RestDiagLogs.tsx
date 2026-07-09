@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { Switch } from "@/shared/components/ui/switch";
 import { Label } from "@/shared/components/ui/label";
-import { Pause, Play, Trash2, ShieldAlert, ClipboardCopy, Check, EyeOff, Download } from "lucide-react";
+import { Pause, Play, Trash2, ShieldAlert, ClipboardCopy, Check, EyeOff, Download, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/shared/hooks/use-toast";
 
@@ -64,6 +64,8 @@ const RestDiagLogs = () => {
   const [copying, setCopying] = useState(false);
   const [justCopied, setJustCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [justShared, setJustShared] = useState(false);
   const [redact, setRedact] = useState(true);
   const { toast } = useToast();
 
@@ -210,6 +212,28 @@ const RestDiagLogs = () => {
     }
   };
 
+  const shareIncidentLink = async () => {
+    setSharing(true);
+    try {
+      const report = await buildIncidentReport();
+      const res = await apiFetch<{ id: string; expiresAt: number }>("/api/admin/incident-reports", {
+        method: "POST",
+        body: JSON.stringify({ report }),
+      });
+      const link = `${window.location.origin}/admin/incident-reports/${res.id}`;
+      await navigator.clipboard.writeText(link);
+
+      setJustShared(true);
+      setTimeout(() => setJustShared(false), 2500);
+      const hours = Math.round((res.expiresAt - Date.now()) / 3600000);
+      toast({ title: "Link disalin ke clipboard", description: `Link kadaluarsa dalam ~${hours} jam. Hanya bisa dibuka oleh admin yang login.` });
+    } catch (e) {
+      toast({ title: "Gagal membuat share link", description: String(e), variant: "destructive" });
+    } finally {
+      setSharing(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -242,6 +266,14 @@ const RestDiagLogs = () => {
           <Button variant="outline" size="sm" onClick={downloadIncidentReport} disabled={downloading}>
             <Download className="w-4 h-4 mr-1" />
             {downloading ? "Mengunduh..." : "Download as File"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={shareIncidentLink} disabled={sharing}>
+            {justShared ? (
+              <Check className="w-4 h-4 mr-1 text-green-600" />
+            ) : (
+              <Link2 className="w-4 h-4 mr-1" />
+            )}
+            {sharing ? "Membuat link..." : justShared ? "Link tersalin!" : "Share Incident Link"}
           </Button>
         </div>
       </div>

@@ -41,6 +41,7 @@ import adminMenuPermissionsRouter from "./menu-permissions";
 import adminAnalyticsRouter from "./analytics";
 import adminContractsRouter from "./contracts";
 import adminPaymentGatewayRouter from "./payment-gateway";
+import adminIncidentReportsRouter from "./incidentReports";
 
 const router = Router();
 
@@ -63,6 +64,7 @@ router.use("/settings", requireAdmin, adminSettingsRouter);
 router.use("/tenant", requireAdmin, adminTenantRouter);
 router.use("/system-health", requireAdmin, adminSystemHealthRouter);
 router.use("/logs", requireAdmin, adminLogsRouter);
+router.use("/incident-reports", requireAdmin, adminIncidentReportsRouter);
 router.use("/currencies", requireAdmin, adminCurrenciesRouter);
 router.use("/content", requireAdmin, adminContentRouter);
 router.use("/gallery", requireAdmin, adminGalleryRouter);
