@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -109,29 +110,58 @@ export function useAdminNotifications() {
   }, []);
 
   const fetchAll = useCallback(async () => {
-    const [{ data: bookings }, { data: payments }] = await Promise.all([
-      supabase
-        .from("bookings")
-        .select("id, booking_code, created_at, profile:profiles!bookings_user_id_profiles_fkey(name)")
-        .order("created_at", { ascending: false })
-        .limit(MAX_ITEMS / 2),
-      supabase
+    try {
+      // Bookings: use Express API to avoid FK embed requirement on PostgREST.
+      // Direct Supabase query with profile:profiles!bookings_user_id_profiles_fkey(name)
+      // returns 400 when the FK constraint is missing in the live DB.
+      const bookingsResult = await apiFetch<{ data: Array<{
+        id: string; bookingCode: string; createdAt: string; userName: string | null;
+      }> }>("/api/admin/bookings?limit=20").catch(() => ({ data: [] as any[] }));
+
+      // Payments: two-step query — avoids the FK embed booking:bookings(booking_code)
+      const { data: rawPayments } = await supabase
         .from("payments")
-        .select("id, amount, status, created_at, booking:bookings(booking_code)")
+        .select("id, amount, status, created_at, booking_id")
         .eq("status", "pending")
         .order("created_at", { ascending: false })
-        .limit(MAX_ITEMS / 2),
-    ]);
+        .limit(MAX_ITEMS / 2);
 
-    const bookingNotifs: AdminNotif[] = (bookings || []).map(buildBookingNotif);
-    const paymentNotifs: AdminNotif[] = (payments || []).map(buildPaymentNotif);
+      // Resolve booking_code for each payment via a separate .in() query
+      const bookingIds = (rawPayments || []).map((p: any) => p.booking_id).filter(Boolean);
+      let bookingCodeMap: Map<string, string> = new Map();
+      if (bookingIds.length > 0) {
+        const { data: bkRows } = await supabase
+          .from("bookings")
+          .select("id, booking_code")
+          .in("id", bookingIds);
+        bookingCodeMap = new Map((bkRows || []).map((b: any) => [b.id, b.booking_code]));
+      }
 
-    const all = [...bookingNotifs, ...paymentNotifs].sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+      const paymentsWithCode = (rawPayments || []).map((p: any) => ({
+        ...p,
+        booking: { booking_code: bookingCodeMap.get(p.booking_id) || "" },
+      }));
 
-    setNotifications(applyReadState(all, readIdsRef.current));
-    setLoading(false);
+      const bookingNotifs: AdminNotif[] = (bookingsResult.data || []).map((b) =>
+        buildBookingNotif({
+          id: b.id,
+          booking_code: b.bookingCode,
+          created_at: b.createdAt,
+          profile: { name: b.userName || "" },
+        })
+      );
+      const paymentNotifs: AdminNotif[] = paymentsWithCode.map(buildPaymentNotif);
+
+      const all = [...bookingNotifs, ...paymentNotifs].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setNotifications(applyReadState(all, readIdsRef.current));
+    } catch (err) {
+      console.error("[useAdminNotifications] fetchAll error:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

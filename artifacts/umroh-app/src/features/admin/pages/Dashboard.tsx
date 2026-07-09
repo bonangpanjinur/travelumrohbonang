@@ -11,18 +11,20 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { format, subMonths, startOfMonth } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 interface RecentBooking {
   id: string;
-  booking_code: string;
+  bookingCode: string;
   status: string;
-  created_at: string;
-  total_price: number;
-  profile: { name: string; email: string } | null;
-  package: { title: string } | null;
+  createdAt: string;
+  totalPrice: number;
+  userName: string | null;
+  userEmail: string | null;
+  packageTitle: string | null;
 }
 
 interface MonthlyTrend {
@@ -51,7 +53,7 @@ const AdminDashboard = () => {
         const [
           bookingsRes, agentsRes, paymentsRes, packagesRes,
           pilgrimsRes, branchesRes, muthawifsRes,
-          revenueRes, recentRes, trendRes
+          revenueRes, trendRes, recentResult
         ] = await Promise.all([
           supabase.from('bookings').select('*', { count: 'exact', head: true }),
           supabase.from('agents').select('*', { count: 'exact', head: true }).eq('is_active', true),
@@ -61,12 +63,12 @@ const AdminDashboard = () => {
           supabase.from('branches').select('*', { count: 'exact', head: true }).eq('is_active', true),
           supabase.from('muthawifs').select('*', { count: 'exact', head: true }),
           supabase.from('bookings').select('total_price').eq('status', 'paid'),
-          supabase.from('bookings').select(`
-            id, booking_code, status, created_at, total_price,
-            profile:profiles!bookings_user_id_profiles_fkey(name, email),
-            package:packages(title)
-          `).order('created_at', { ascending: false }).limit(5),
           supabase.from('bookings').select('created_at'),
+          // Use Express API instead of direct Supabase to avoid FK embed requirement.
+          // Direct query with profiles!bookings_user_id_profiles_fkey returns 400
+          // when the FK constraint is missing in the live DB (PGRST200).
+          apiFetch<{ data: RecentBooking[] }>('/api/admin/bookings?limit=5')
+            .catch(() => ({ data: [] as RecentBooking[] })),
         ]);
 
         const totalRevenue = (revenueRes.data || []).reduce((sum, b) => sum + (b.total_price || 0), 0);
@@ -98,7 +100,7 @@ const AdminDashboard = () => {
           totalMuthawifs: muthawifsRes.count || 0,
           totalRevenue,
         });
-        setRecentBookings((recentRes.data as unknown as RecentBooking[]) || []);
+        setRecentBookings(recentResult.data || []);
         setMonthlyTrend(trends);
       } catch (error) {
         console.error("Error fetching stats:", error);
@@ -198,13 +200,13 @@ const AdminDashboard = () => {
                     </div>
                     <div className="space-y-0.5 min-w-0 flex-1">
                       <p className="text-sm font-medium leading-none truncate">
-                        {b.profile?.name || "Tanpa Nama"}
+                        {b.userName || "Tanpa Nama"}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {b.package?.title || "-"} • {b.booking_code}
+                        {b.packageTitle || "-"} • {b.bookingCode}
                       </p>
                       <p className="text-[10px] text-muted-foreground/60">
-                        {format(new Date(b.created_at), "d MMM yyyy, HH:mm", { locale: localeId })}
+                        {format(new Date(b.createdAt), "d MMM yyyy, HH:mm", { locale: localeId })}
                       </p>
                     </div>
                     <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${
