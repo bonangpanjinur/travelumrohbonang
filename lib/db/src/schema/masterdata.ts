@@ -8,9 +8,10 @@ export const packageCategories = pgTable("package_categories", {
   name: text("name").notNull(),
   description: text("description"),
   parentId: text("parent_id").references((): any => packageCategories.id, { onDelete: "set null" }),
-  icon: text("icon"),
-  showExtraHotels: boolean("show_extra_hotels").notNull().default(false),
-  isActive: boolean("is_active").notNull().default(true),
+  // NOTE: icon column does not exist in the actual DB — omitted to prevent
+  // Drizzle from including it in INSERT/SELECT and causing "column does not exist" errors.
+  showExtraHotels: boolean("show_extra_hotels"),
+  isActive: boolean("is_active"),
   sortOrder: integer("sort_order"),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
@@ -48,7 +49,7 @@ export const packageHotels = pgTable("package_hotels", {
   id: text("id").primaryKey(),
   packageId: text("package_id").notNull(),
   hotelId: text("hotel_id").notNull().references(() => hotels.id, { onDelete: "cascade" }),
-  city: text("city"),
+  // NOTE: 'city' does not exist in the actual DB — removed to prevent INSERT errors
   label: text("label"),
   sortOrder: integer("sort_order"),
   createdAt: timestamp("created_at", { withTimezone: true }),
@@ -62,8 +63,7 @@ export const muthawifs = pgTable("muthawifs", {
   name: text("name").notNull(),
   phone: text("phone"),
   photoUrl: text("photo_url"),
-  bio: text("bio"),
-  isActive: boolean("is_active").notNull().default(true),
+  // NOTE: 'bio' and 'is_active' do not exist in the actual DB — removed to prevent INSERT errors
   createdAt: timestamp("created_at", { withTimezone: true }),
 });
 

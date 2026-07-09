@@ -57,8 +57,8 @@ export const departureGallery = pgTable("departure_gallery", {
   id: text("id").primaryKey(),
   departureId: text("departure_id").notNull().references(() => packageDepartures.id, { onDelete: "cascade" }),
   imageUrl: text("image_url").notNull(),
-  title: text("title"),
-  description: text("description"),
+  // NOTE: DB has 'caption', not 'title'/'description' — removed to prevent "column does not exist" errors
+  caption: text("caption"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
