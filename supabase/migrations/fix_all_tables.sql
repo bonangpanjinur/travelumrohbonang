@@ -1,918 +1,446 @@
 -- =============================================================================
--- FIX ALL TABLES — Satu file, aman dijalankan berkali-kali
+-- FIX ALL TABLES — v3 (definitive)
 -- =============================================================================
+-- Berdasarkan analisis mendalam supabase-schema.sql vs Drizzle schema.
+--
 -- Cara pakai: Supabase Dashboard → SQL Editor → New Query → paste → Run
 --
--- Script ini:
--- • SECTION A – Tambah kolom yang mungkin kurang di tabel yang sudah ada
--- • SECTION B – Buat tabel yang belum ada sama sekali
--- • Tidak ada RLS policy (untuk menghindari konflik tipe uuid/text)
--- • Semua operasi pakai IF NOT EXISTS / DO block agar aman diulang
+-- Aman dijalankan berulang kali. Tidak akan error meskipun:
+--   • Tabel sudah ada
+--   • Kolom sudah ada
+--   • Index sudah ada
+--   • Constraint sudah ada
+--   • Tabel belum ada (DO block menangkap error)
 -- =============================================================================
 
 -- =============================================================================
--- SECTION A: TAMBAH KOLOM YANG KURANG DI TABEL EXISTING
+-- SECTION 1: KOLOM YANG KURANG DI TABEL EXISTING
+-- =============================================================================
+-- Setiap ALTER TABLE dibungkus DO block → tidak error jika tabel belum ada
+
+-- ── agent_withdrawals ────────────────────────────────────────────────────────
+-- supabase-schema.sql mempunyai kolom lama "bank_details TEXT" (satu kolom).
+-- Drizzle schema mengharapkan kolom terpisah (bank_name, bank_account, dll).
+DO $$ BEGIN
+  ALTER TABLE public.agent_withdrawals ADD COLUMN IF NOT EXISTS bank_name      text;
+  ALTER TABLE public.agent_withdrawals ADD COLUMN IF NOT EXISTS bank_account   text;
+  ALTER TABLE public.agent_withdrawals ADD COLUMN IF NOT EXISTS account_holder text;
+  ALTER TABLE public.agent_withdrawals ADD COLUMN IF NOT EXISTS notes          text;
+  ALTER TABLE public.agent_withdrawals ADD COLUMN IF NOT EXISTS admin_notes    text;
+  ALTER TABLE public.agent_withdrawals ADD COLUMN IF NOT EXISTS proof_url      text;
+  ALTER TABLE public.agent_withdrawals ADD COLUMN IF NOT EXISTS processed_by   text;
+  ALTER TABLE public.agent_withdrawals ADD COLUMN IF NOT EXISTS processed_at   timestamptz;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'agent_withdrawals belum ada — lewati';
+END $$;
+
+-- ── booking_pilgrims ─────────────────────────────────────────────────────────
+-- supabase-schema.sql tidak punya kolom nationality dan room_type
+DO $$ BEGIN
+  ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS nationality text;
+  ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS room_type   text;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'booking_pilgrims belum ada — lewati';
+END $$;
+
+-- ── notifications ─────────────────────────────────────────────────────────────
+-- Pastikan semua kolom yang diharapkan Drizzle ada.
+-- CATATAN: user_id mungkin TEXT atau UUID tergantung versi DB.
+-- Kita tidak ubah tipe — hanya tambah kolom yang mungkin belum ada.
+DO $$ BEGIN
+  ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS title      text;
+  ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS message    text;
+  ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS is_read    boolean DEFAULT false;
+  ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS created_at timestamptz;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'notifications belum ada — lewati';
+END $$;
+
+-- ── packages (pastikan semua FK kolom ada) ────────────────────────────────────
+DO $$ BEGIN
+  ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS duration_days     integer;
+  ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS package_type      text;
+  ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS category_id       text;
+  ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS hotel_makkah_id   text;
+  ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS hotel_madinah_id  text;
+  ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS airline_id        text;
+  ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS airport_id        text;
+  ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS minimum_dp        integer;
+  ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS dp_deadline_days  integer;
+  ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS full_deadline_days integer;
+  ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS is_active         boolean;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'packages belum ada — lewati';
+END $$;
+
+-- ── package_departures ───────────────────────────────────────────────────────
+DO $$ BEGIN
+  ALTER TABLE public.package_departures ADD COLUMN IF NOT EXISTS return_date     text;
+  ALTER TABLE public.package_departures ADD COLUMN IF NOT EXISTS status          text;
+  ALTER TABLE public.package_departures ADD COLUMN IF NOT EXISTS muthawif_id     text;
+  ALTER TABLE public.package_departures ADD COLUMN IF NOT EXISTS remaining_quota integer;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'package_departures belum ada — lewati';
+END $$;
+
+-- ── profiles ─────────────────────────────────────────────────────────────────
+DO $$ BEGIN
+  ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone              text;
+  ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url         text;
+  ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS branch_id          text;
+  ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS totp_enabled       boolean DEFAULT false;
+  ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS totp_secret        text;
+  ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS totp_backup_codes  text;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'profiles belum ada — lewati';
+END $$;
+
+-- ── contracts ────────────────────────────────────────────────────────────────
+DO $$ BEGIN
+  ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS user_id            text;
+  ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS status             text;
+  ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS html_content       text;
+  ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS signature_data_url text;
+  ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS signed_at          timestamptz;
+  ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS signer_name        text;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'contracts belum ada — lewati';
+END $$;
+
+-- ── refund_requests ──────────────────────────────────────────────────────────
+DO $$ BEGIN
+  ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS bank_name      text;
+  ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS bank_account   text;
+  ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS account_holder text;
+  ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS admin_notes    text;
+  ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS processed_by   text;
+  ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS processed_at   timestamptz;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'refund_requests belum ada — lewati';
+END $$;
+
+-- ── payments ─────────────────────────────────────────────────────────────────
+DO $$ BEGIN
+  ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS booking_id     text;
+  ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS amount         integer;
+  ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS status         text DEFAULT 'pending';
+  ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS payment_method text;
+  ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS payment_type   text;
+  ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS proof_url      text;
+  ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS paid_at        timestamptz;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'payments belum ada — lewati';
+END $$;
+
+-- ── bookings ─────────────────────────────────────────────────────────────────
+DO $$ BEGIN
+  ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS user_id        text;
+  ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS package_id     text;
+  ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS departure_id   text;
+  ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS branch_id      text;
+  ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS agent_id       text;
+  ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS pic_id         text;
+  ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS pic_type       text;
+  ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS status         text;
+  ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS total_price    integer;
+  ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS currency       text;
+  ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS payment_scheme text;
+  ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS notes          text;
+  ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS booking_code   text;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'bookings belum ada — lewati';
+END $$;
+
+-- ── user_roles ───────────────────────────────────────────────────────────────
+DO $$ BEGIN
+  ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS role       text;
+  ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now();
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'user_roles belum ada — lewati';
+END $$;
+
+-- ── branches ─────────────────────────────────────────────────────────────────
+DO $$ BEGIN
+  ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS slug          text;
+  ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS region        text;
+  ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS postal_code   text;
+  ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS country       text;
+  ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS latitude      double precision;
+  ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS longitude     double precision;
+  ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS opening_hours text;
+  ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS image_url     text;
+  ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS map_url       text;
+  ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS description   text;
+  ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS is_active     boolean DEFAULT true;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'branches belum ada — lewati';
+END $$;
+
+-- ── hotels ───────────────────────────────────────────────────────────────────
+DO $$ BEGIN
+  ALTER TABLE public.hotels ADD COLUMN IF NOT EXISTS stars       integer;
+  ALTER TABLE public.hotels ADD COLUMN IF NOT EXISTS image_url   text;
+  ALTER TABLE public.hotels ADD COLUMN IF NOT EXISTS description text;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'hotels belum ada — lewati';
+END $$;
+
+-- ── booking_pilgrims (FK dan kolom lain yang mungkin belum ada) ───────────────
+DO $$ BEGIN
+  ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS booking_id      text;
+  ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS name            text;
+  ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS phone           text;
+  ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS email           text;
+  ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS gender          text;
+  ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS nik             text;
+  ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS birth_date      text;
+  ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS passport_number text;
+  ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS passport_expiry text;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'booking_pilgrims belum ada — lewati';
+END $$;
+
+-- ── pilgrim_documents ────────────────────────────────────────────────────────
+DO $$ BEGIN
+  ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS pilgrim_id    text;
+  ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS booking_id    text;
+  ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS document_type text;
+  ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS status        text DEFAULT 'pending';
+  ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS file_url      text;
+  ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS notes         text;
+  ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS submitted_at  timestamptz;
+  ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS verified_at   timestamptz;
+  ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS verified_by   text;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'pilgrim_documents belum ada — lewati';
+END $$;
+
+-- =============================================================================
+-- SECTION 2: BUAT TABEL BARU YANG BELUM ADA DI supabase-schema.sql
 -- =============================================================================
 
 -- ── payment_gateway_transactions ─────────────────────────────────────────────
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS booking_id              text;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS gateway                  text;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS order_id                 text;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS gateway_transaction_id   text;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS amount                   integer;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS payment_method           text;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS bank_code                text;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS va_number                text;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS status                   text DEFAULT 'pending';
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS customer_name            text;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS customer_email           text;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS expiry_time              timestamp with time zone;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS paid_at                  timestamp with time zone;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS raw_response             text;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS created_at               timestamp with time zone;
-ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS updated_at               timestamp with time zone;
-
--- ── payments ──────────────────────────────────────────────────────────────────
-ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS booking_id     text;
-ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS amount         integer;
-ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS status         text DEFAULT 'pending';
-ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS payment_method text;
-ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS payment_type   text;
-ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS proof_url      text;
-ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS paid_at        timestamp with time zone;
-ALTER TABLE public.payments ADD COLUMN IF NOT EXISTS created_at     timestamp with time zone;
-
--- ── bookings ──────────────────────────────────────────────────────────────────
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS booking_code   text;
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS user_id        text;
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS package_id     text;
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS departure_id   text;
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS branch_id      text;
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS agent_id       text;
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS pic_id         text;
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS pic_type       text;
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS status         text;
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS total_price    integer;
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS currency       text;
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS payment_scheme text;
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS notes          text;
-ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS created_at     timestamp with time zone;
-
--- ── booking_pilgrims ──────────────────────────────────────────────────────────
-ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS booking_id       text;
-ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS name             text;
-ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS phone            text;
-ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS email            text;
-ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS gender           text;
-ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS nik              text;
-ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS birth_date       text;
-ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS nationality      text;
-ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS passport_number  text;
-ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS passport_expiry  text;
-ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS room_type        text;
-ALTER TABLE public.booking_pilgrims ADD COLUMN IF NOT EXISTS created_at       timestamp with time zone;
-
--- ── contracts ─────────────────────────────────────────────────────────────────
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS booking_id          text;
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS user_id             text;
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS status              text;
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS html_content        text;
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS signature_data_url  text;
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS signed_at           timestamp with time zone;
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS signer_name         text;
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS created_at          timestamp with time zone;
-
--- ── refund_requests ───────────────────────────────────────────────────────────
-ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS user_id         text;
-ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS booking_id      text;
-ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS reason          text;
-ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS amount          integer;
-ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS status          text DEFAULT 'pending';
-ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS bank_name       text;
-ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS bank_account    text;
-ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS account_holder  text;
-ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS admin_notes     text;
-ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS processed_by    text;
-ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS processed_at    timestamp with time zone;
-ALTER TABLE public.refund_requests ADD COLUMN IF NOT EXISTS created_at      timestamp with time zone;
-
--- ── chat_messages ─────────────────────────────────────────────────────────────
-ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS booking_id   text;
-ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS sender_id    text;
-ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS sender_role  text;
-ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS message      text;
-ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS created_at   timestamp with time zone;
-
--- ── notifications ─────────────────────────────────────────────────────────────
--- user_id sudah ada sebagai uuid di Supabase — JANGAN ubah tipenya
-ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS title      text;
-ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS message    text;
-ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS is_read    boolean DEFAULT false;
-ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS created_at timestamp with time zone;
-
--- ── pilgrim_documents ─────────────────────────────────────────────────────────
-ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS pilgrim_id     text;
-ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS booking_id     text;
-ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS document_type  text;
-ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS status         text DEFAULT 'pending';
-ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS file_url       text;
-ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS notes          text;
-ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS submitted_at   timestamp with time zone;
-ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS verified_at    timestamp with time zone;
-ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS verified_by    text;
-ALTER TABLE public.pilgrim_documents ADD COLUMN IF NOT EXISTS created_at     timestamp with time zone;
-
--- ── package_departures ────────────────────────────────────────────────────────
-ALTER TABLE public.package_departures ADD COLUMN IF NOT EXISTS package_id      text;
-ALTER TABLE public.package_departures ADD COLUMN IF NOT EXISTS departure_date  text;
-ALTER TABLE public.package_departures ADD COLUMN IF NOT EXISTS return_date     text;
-ALTER TABLE public.package_departures ADD COLUMN IF NOT EXISTS quota           integer;
-ALTER TABLE public.package_departures ADD COLUMN IF NOT EXISTS remaining_quota integer;
-ALTER TABLE public.package_departures ADD COLUMN IF NOT EXISTS status          text;
-ALTER TABLE public.package_departures ADD COLUMN IF NOT EXISTS muthawif_id    text;
-ALTER TABLE public.package_departures ADD COLUMN IF NOT EXISTS created_at     timestamp with time zone;
-
--- ── departure_prices ──────────────────────────────────────────────────────────
-ALTER TABLE public.departure_prices ADD COLUMN IF NOT EXISTS departure_id  text;
-ALTER TABLE public.departure_prices ADD COLUMN IF NOT EXISTS room_type     text;
-ALTER TABLE public.departure_prices ADD COLUMN IF NOT EXISTS price         integer;
-ALTER TABLE public.departure_prices ADD COLUMN IF NOT EXISTS created_at   timestamp with time zone;
-
--- ── package_hotels ────────────────────────────────────────────────────────────
-ALTER TABLE public.package_hotels ADD COLUMN IF NOT EXISTS package_id  text;
-ALTER TABLE public.package_hotels ADD COLUMN IF NOT EXISTS hotel_id    text;
-ALTER TABLE public.package_hotels ADD COLUMN IF NOT EXISTS city        text;
-ALTER TABLE public.package_hotels ADD COLUMN IF NOT EXISTS label       text;
-ALTER TABLE public.package_hotels ADD COLUMN IF NOT EXISTS sort_order  integer;
-ALTER TABLE public.package_hotels ADD COLUMN IF NOT EXISTS created_at  timestamp with time zone;
-
--- ── packages ──────────────────────────────────────────────────────────────────
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS title            text;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS slug             text;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS description      text;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS image_url        text;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS duration_days    integer;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS package_type     text;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS category_id      text;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS hotel_makkah_id  text;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS hotel_madinah_id text;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS airline_id       text;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS airport_id       text;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS minimum_dp       integer;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS dp_deadline_days   integer;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS full_deadline_days integer;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS is_active        boolean DEFAULT true;
-ALTER TABLE public.packages ADD COLUMN IF NOT EXISTS created_at       timestamp with time zone;
-
--- ── site_settings ─────────────────────────────────────────────────────────────
-ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS key        text;
-ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS category   text;
-ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS value      jsonb;
-ALTER TABLE public.site_settings ADD COLUMN IF NOT EXISTS created_at timestamp with time zone;
-
--- ── testimonials ──────────────────────────────────────────────────────────────
-ALTER TABLE public.testimonials ADD COLUMN IF NOT EXISTS name         text;
-ALTER TABLE public.testimonials ADD COLUMN IF NOT EXISTS location     text;
-ALTER TABLE public.testimonials ADD COLUMN IF NOT EXISTS package_name text;
-ALTER TABLE public.testimonials ADD COLUMN IF NOT EXISTS photo_url    text;
-ALTER TABLE public.testimonials ADD COLUMN IF NOT EXISTS rating       integer;
-ALTER TABLE public.testimonials ADD COLUMN IF NOT EXISTS content      text;
-ALTER TABLE public.testimonials ADD COLUMN IF NOT EXISTS travel_date  text;
-ALTER TABLE public.testimonials ADD COLUMN IF NOT EXISTS is_active    boolean DEFAULT true;
-ALTER TABLE public.testimonials ADD COLUMN IF NOT EXISTS sort_order   integer;
-ALTER TABLE public.testimonials ADD COLUMN IF NOT EXISTS created_at   timestamp with time zone;
-
--- ── coupons ───────────────────────────────────────────────────────────────────
-ALTER TABLE public.coupons ADD COLUMN IF NOT EXISTS code           text;
-ALTER TABLE public.coupons ADD COLUMN IF NOT EXISTS discount_type  text;
-ALTER TABLE public.coupons ADD COLUMN IF NOT EXISTS value          integer;
-ALTER TABLE public.coupons ADD COLUMN IF NOT EXISTS min_purchase   integer;
-ALTER TABLE public.coupons ADD COLUMN IF NOT EXISTS max_uses       integer;
-ALTER TABLE public.coupons ADD COLUMN IF NOT EXISTS used_count     integer DEFAULT 0;
-ALTER TABLE public.coupons ADD COLUMN IF NOT EXISTS expired_at     timestamp with time zone;
-ALTER TABLE public.coupons ADD COLUMN IF NOT EXISTS is_active      boolean DEFAULT true;
-ALTER TABLE public.coupons ADD COLUMN IF NOT EXISTS created_at     timestamp with time zone;
-
--- ── profiles ──────────────────────────────────────────────────────────────────
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS name               text;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email              text;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone              text;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url         text;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS branch_id          text;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS totp_enabled       boolean DEFAULT false;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS totp_secret        text;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS totp_backup_codes  text;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at         timestamp with time zone;
-
--- ── branches ──────────────────────────────────────────────────────────────────
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS name          text;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS slug          text;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS address       text;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS phone         text;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS email         text;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS city          text;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS region        text;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS postal_code   text;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS country       text;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS latitude      double precision;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS longitude     double precision;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS opening_hours text;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS image_url     text;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS map_url       text;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS description   text;
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS created_at    timestamp with time zone;
-
--- ── hotels ────────────────────────────────────────────────────────────────────
-ALTER TABLE public.hotels ADD COLUMN IF NOT EXISTS name        text;
-ALTER TABLE public.hotels ADD COLUMN IF NOT EXISTS city        text;
-ALTER TABLE public.hotels ADD COLUMN IF NOT EXISTS stars       integer;
-ALTER TABLE public.hotels ADD COLUMN IF NOT EXISTS image_url   text;
-ALTER TABLE public.hotels ADD COLUMN IF NOT EXISTS description text;
-ALTER TABLE public.hotels ADD COLUMN IF NOT EXISTS created_at  timestamp with time zone;
-
--- ── airlines ──────────────────────────────────────────────────────────────────
-ALTER TABLE public.airlines ADD COLUMN IF NOT EXISTS name       text;
-ALTER TABLE public.airlines ADD COLUMN IF NOT EXISTS code       text;
-ALTER TABLE public.airlines ADD COLUMN IF NOT EXISTS logo_url   text;
-ALTER TABLE public.airlines ADD COLUMN IF NOT EXISTS created_at timestamp with time zone;
-
--- ── airports ──────────────────────────────────────────────────────────────────
-ALTER TABLE public.airports ADD COLUMN IF NOT EXISTS name       text;
-ALTER TABLE public.airports ADD COLUMN IF NOT EXISTS code       text;
-ALTER TABLE public.airports ADD COLUMN IF NOT EXISTS city       text;
-ALTER TABLE public.airports ADD COLUMN IF NOT EXISTS created_at timestamp with time zone;
-
--- ── user_roles ────────────────────────────────────────────────────────────────
-ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS role       text;
-ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
-
--- =============================================================================
--- SECTION B: BUAT TABEL YANG BELUM ADA
--- =============================================================================
--- Urutan: tabel independen → dependensi → child tables
-
--- ── Master / independen ──────────────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS public.currencies (
-    id          text PRIMARY KEY,
-    code        text NOT NULL,
-    name        text,
-    symbol      text,
-    rate_to_idr integer,
-    is_default  boolean NOT NULL DEFAULT false,
-    is_active   boolean NOT NULL DEFAULT true,
-    created_at  timestamp with time zone
+-- Tabel ini TIDAK ADA di supabase-schema.sql awal.
+-- CREATE TABLE IF NOT EXISTS menangani kasus tabel sudah ada.
+-- ALTER TABLE di bawah menangani kasus tabel ada tapi column kurang.
+CREATE TABLE IF NOT EXISTS public.payment_gateway_transactions (
+    id                     text PRIMARY KEY,
+    booking_id             text,
+    gateway                text,
+    order_id               text,
+    gateway_transaction_id text,
+    amount                 integer,
+    payment_method         text,
+    bank_code              text,
+    va_number              text,
+    status                 text DEFAULT 'pending',
+    customer_name          text,
+    customer_email         text,
+    expiry_time            timestamptz,
+    paid_at                timestamptz,
+    raw_response           text,
+    created_at             timestamptz,
+    updated_at             timestamptz
 );
 
-CREATE TABLE IF NOT EXISTS public.airlines (
-    id         text PRIMARY KEY,
-    name       text NOT NULL,
-    code       text,
-    logo_url   text,
-    created_at timestamp with time zone
-);
+-- Jika tabel sudah ada tapi column kurang (dari migrasi sebelumnya):
+DO $$ BEGIN
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS booking_id             text;
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS gateway                text;
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS order_id               text;
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS gateway_transaction_id text;
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS amount                 integer;
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS payment_method         text;
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS bank_code              text;
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS va_number              text;
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS status                 text DEFAULT 'pending';
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS customer_name          text;
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS customer_email         text;
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS expiry_time            timestamptz;
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS paid_at                timestamptz;
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS raw_response           text;
+  ALTER TABLE public.payment_gateway_transactions ADD COLUMN IF NOT EXISTS updated_at             timestamptz;
+EXCEPTION WHEN undefined_table THEN
+  RAISE NOTICE 'payment_gateway_transactions belum ada — lewati ALTER';
+END $$;
 
-CREATE TABLE IF NOT EXISTS public.airports (
-    id         text PRIMARY KEY,
-    name       text NOT NULL,
-    code       text,
-    city       text,
-    created_at timestamp with time zone
-);
-
-CREATE TABLE IF NOT EXISTS public.muthawifs (
-    id         text PRIMARY KEY,
-    name       text NOT NULL,
-    phone      text,
-    photo_url  text,
-    bio        text,
-    is_active  boolean NOT NULL DEFAULT true,
-    created_at timestamp with time zone
-);
-
-CREATE TABLE IF NOT EXISTS public.package_categories (
-    id               text PRIMARY KEY,
-    name             text NOT NULL,
-    description      text,
-    parent_id        text REFERENCES public.package_categories(id) ON DELETE SET NULL,
-    icon             text,
-    show_extra_hotels boolean NOT NULL DEFAULT false,
-    is_active        boolean NOT NULL DEFAULT true,
-    sort_order       integer,
-    created_at       timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_package_categories_is_active ON public.package_categories (is_active);
-CREATE INDEX IF NOT EXISTS idx_package_categories_parent_id ON public.package_categories (parent_id);
-
-CREATE TABLE IF NOT EXISTS public.integration_secrets (
-    id         text PRIMARY KEY,
-    provider   text NOT NULL,
-    config     jsonb,
-    is_active  boolean NOT NULL DEFAULT true,
-    created_at timestamp with time zone
-);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_integration_secrets_provider ON public.integration_secrets (provider);
-
-CREATE TABLE IF NOT EXISTS public.leads (
-    id               text PRIMARY KEY,
-    name             text NOT NULL,
-    phone            text,
-    email            text,
-    source           text,
-    status           text NOT NULL DEFAULT 'new',
-    package_interest text,
-    notes            text,
-    created_at       timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_leads_status ON public.leads (status);
-
-CREATE TABLE IF NOT EXISTS public.loyalty_balances (
-    id           text PRIMARY KEY,
-    user_id      text NOT NULL,
-    total_points integer NOT NULL DEFAULT 0,
-    created_at   timestamp with time zone
-);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_loyalty_balances_user_id ON public.loyalty_balances (user_id);
-
-CREATE TABLE IF NOT EXISTS public.loyalty_points (
-    id          text PRIMARY KEY,
-    user_id     text NOT NULL,
-    points      integer NOT NULL,
-    source      text,
-    description text,
-    created_at  timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_loyalty_points_user_id ON public.loyalty_points (user_id);
-
-CREATE TABLE IF NOT EXISTS public.request_log (
-    id         text PRIMARY KEY,
-    ip         text,
-    endpoint   text NOT NULL,
-    user_id    text,
-    created_at timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_request_log_created_at ON public.request_log (created_at);
-CREATE INDEX IF NOT EXISTS idx_request_log_user_id    ON public.request_log (user_id);
-
-CREATE TABLE IF NOT EXISTS public.error_logs (
-    id         text PRIMARY KEY,
-    user_id    text,
-    level      text NOT NULL,
-    message    text NOT NULL,
-    stack      text,
-    url        text,
-    user_agent text,
-    context    jsonb,
-    created_at timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_error_logs_created_at ON public.error_logs (created_at);
-CREATE INDEX IF NOT EXISTS idx_error_logs_level       ON public.error_logs (level);
-
-CREATE TABLE IF NOT EXISTS public.audit_logs (
-    id          text PRIMARY KEY,
-    user_id     text,
-    action      text NOT NULL,
-    entity_type text,
-    entity_id   text,
-    metadata    jsonb,
-    user_agent  text,
-    created_at  timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs (user_id);
-
-CREATE TABLE IF NOT EXISTS public.seo_overrides (
-    id                 text PRIMARY KEY,
-    path               text NOT NULL,
-    title              text,
-    description        text,
-    og_image           text,
-    canonical_override text,
-    noindex            boolean NOT NULL DEFAULT false,
-    keywords           text,
-    created_at         timestamp with time zone
-);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_overrides_path ON public.seo_overrides (path);
-
+-- ── role_menu_permissions ────────────────────────────────────────────────────
+-- Tabel ini TIDAK ADA di supabase-schema.sql awal.
 CREATE TABLE IF NOT EXISTS public.role_menu_permissions (
-    id         text PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    role       text NOT NULL,
-    menu_key   text NOT NULL,
-    enabled    boolean NOT NULL DEFAULT true,
-    updated_at timestamp with time zone NOT NULL DEFAULT now()
+    id         text        PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    role       text        NOT NULL,
+    menu_key   text        NOT NULL,
+    enabled    boolean     NOT NULL DEFAULT true,
+    updated_at timestamptz NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX IF NOT EXISTS uq_role_menu_permissions ON public.role_menu_permissions (role, menu_key);
-CREATE INDEX IF NOT EXISTS idx_rmp_role ON public.role_menu_permissions (role);
-
--- ── CMS / Content ────────────────────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS public.blog_posts (
-    id              text PRIMARY KEY,
-    title           text NOT NULL,
-    slug            text NOT NULL,
-    excerpt         text,
-    content         text,
-    image_url       text,
-    category        text,
-    author          text,
-    seo_title       text,
-    seo_description text,
-    is_published    boolean NOT NULL DEFAULT false,
-    published_at    timestamp with time zone,
-    created_at      timestamp with time zone
-);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_blog_posts_slug ON public.blog_posts (slug);
-CREATE INDEX IF NOT EXISTS idx_blog_posts_is_published ON public.blog_posts (is_published);
-
-CREATE TABLE IF NOT EXISTS public.pages (
-    id              text PRIMARY KEY,
-    slug            text NOT NULL,
-    title           text NOT NULL,
-    content         text,
-    seo_title       text,
-    seo_description text,
-    is_active       boolean NOT NULL DEFAULT true,
-    created_at      timestamp with time zone
-);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_pages_slug ON public.pages (slug);
-
-CREATE TABLE IF NOT EXISTS public.gallery (
-    id          text PRIMARY KEY,
-    image_url   text NOT NULL,
-    title       text,
-    description text,
-    category    text,
-    sort_order  integer,
-    is_active   boolean NOT NULL DEFAULT true,
-    created_at  timestamp with time zone
-);
-
-CREATE TABLE IF NOT EXISTS public.faqs (
-    id         text PRIMARY KEY,
-    question   text NOT NULL,
-    answer     text NOT NULL,
-    scope      text,
-    package_id text,
-    sort_order integer,
-    is_active  boolean NOT NULL DEFAULT true,
-    created_at timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_faqs_scope      ON public.faqs (scope);
-CREATE INDEX IF NOT EXISTS idx_faqs_package_id ON public.faqs (package_id);
-
-CREATE TABLE IF NOT EXISTS public.services (
-    id          text PRIMARY KEY,
-    title       text NOT NULL,
-    description text,
-    icon        text,
-    sort_order  integer,
-    is_active   boolean NOT NULL DEFAULT true,
-    created_at  timestamp with time zone
-);
-
-CREATE TABLE IF NOT EXISTS public.guide_steps (
-    id          text PRIMARY KEY,
-    step_number integer NOT NULL,
-    title       text NOT NULL,
-    description text,
-    icon        text,
-    is_active   boolean NOT NULL DEFAULT true,
-    created_at  timestamp with time zone
-);
-
-CREATE TABLE IF NOT EXISTS public.advantages (
-    id         text PRIMARY KEY,
-    title      text NOT NULL,
-    icon       text,
-    sort_order integer,
-    is_active  boolean NOT NULL DEFAULT true,
-    created_at timestamp with time zone
-);
-
-CREATE TABLE IF NOT EXISTS public.navigation_items (
-    id              text PRIMARY KEY,
-    label           text NOT NULL,
-    url             text NOT NULL,
-    parent_id       text REFERENCES public.navigation_items(id) ON DELETE SET NULL,
-    sort_order      integer NOT NULL DEFAULT 0,
-    is_active       boolean NOT NULL DEFAULT true,
-    open_in_new_tab boolean NOT NULL DEFAULT false,
-    created_at      timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_navigation_items_parent_id ON public.navigation_items (parent_id);
-
-CREATE TABLE IF NOT EXISTS public.floating_buttons (
-    id         text PRIMARY KEY,
-    platform   text NOT NULL,
-    label      text NOT NULL,
-    url        text,
-    icon       text,
-    is_active  boolean NOT NULL DEFAULT true,
-    sort_order integer NOT NULL DEFAULT 0,
-    created_at timestamp with time zone
-);
-
-CREATE TABLE IF NOT EXISTS public.manasik_materials (
-    id            text PRIMARY KEY,
-    title         text NOT NULL,
-    description   text,
-    type          text,
-    file_url      text,
-    thumbnail_url text,
-    sort_order    integer,
-    is_active     boolean NOT NULL DEFAULT true,
-    created_at    timestamp with time zone
-);
-
--- ── Tenant ───────────────────────────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS public.tenant_sites (
-    id               text PRIMARY KEY,
-    owner_id         text,
-    subdomain        text NOT NULL,
-    custom_domain    text,
-    site_name        text,
-    tagline          text,
-    logo_url         text,
-    primary_color    text,
-    secondary_color  text,
-    hero_image_url   text,
-    hero_title       text,
-    hero_subtitle    text,
-    about_text       text,
-    whatsapp_number  text,
-    phone            text,
-    email            text,
-    address          text,
-    instagram_url    text,
-    facebook_url     text,
-    is_active        boolean NOT NULL DEFAULT true,
-    template         text,
-    gsc_verification text,
-    seo_default_image text,
-    branch_id        text,
-    agent_id         text,
-    created_at       timestamp with time zone
-);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_tenant_sites_subdomain   ON public.tenant_sites (subdomain);
-CREATE INDEX        IF NOT EXISTS idx_tenant_sites_custom_domain ON public.tenant_sites (custom_domain);
-CREATE INDEX        IF NOT EXISTS idx_tenant_sites_is_active      ON public.tenant_sites (is_active);
-
--- ── Agents ───────────────────────────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS public.agents (
-    id                  text PRIMARY KEY,
-    user_id             text,
-    branch_id           text,
-    name                text NOT NULL,
-    phone               text,
-    email               text,
-    referral_code       text,
-    commission_percent  numeric,
-    monthly_target      integer,
-    is_active           boolean NOT NULL DEFAULT true,
-    created_at          timestamp with time zone
-);
-
--- ── Depends on packages / agents / branches ──────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS public.wishlists (
-    id         text PRIMARY KEY,
-    user_id    text NOT NULL,
-    package_id text NOT NULL,
-    created_at timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_wishlists_package_id ON public.wishlists (package_id);
-CREATE INDEX IF NOT EXISTS idx_wishlists_user_id    ON public.wishlists (user_id);
-
-CREATE TABLE IF NOT EXISTS public.package_commissions (
-    id                text PRIMARY KEY,
-    package_id        text NOT NULL,
-    label             text,
-    commission_amount numeric NOT NULL DEFAULT 0,
-    created_at        timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_package_commissions_package_id ON public.package_commissions (package_id);
-
-CREATE TABLE IF NOT EXISTS public.package_costs (
-    id            text PRIMARY KEY,
-    package_id    text NOT NULL,
-    departure_id  text,
-    category      text,
-    item_name     text NOT NULL,
-    qty           numeric,
-    unit          text,
-    unit_cost     numeric,
-    currency_code text,
-    is_per_pax    boolean NOT NULL DEFAULT false,
-    is_active     boolean NOT NULL DEFAULT true,
-    notes         text,
-    sort_order    integer NOT NULL DEFAULT 0,
-    created_at    timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_package_costs_package_id   ON public.package_costs (package_id);
-CREATE INDEX IF NOT EXISTS idx_package_costs_departure_id ON public.package_costs (departure_id);
-
-CREATE TABLE IF NOT EXISTS public.package_reviews (
-    id          text PRIMARY KEY,
-    package_id  text NOT NULL,
-    user_id     text NOT NULL,
-    rating      integer,
-    title       text,
-    comment     text,
-    is_approved boolean NOT NULL DEFAULT false,
-    created_at  timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_package_reviews_package_id ON public.package_reviews (package_id);
-
--- ── Depends on package_departures ────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS public.departure_gallery (
-    id           text PRIMARY KEY,
-    departure_id text NOT NULL,
-    image_url    text NOT NULL,
-    title        text,
-    description  text,
-    sort_order   integer NOT NULL DEFAULT 0,
-    created_at   timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_departure_gallery_departure_id ON public.departure_gallery (departure_id);
-
-CREATE TABLE IF NOT EXISTS public.itineraries (
-    id           text PRIMARY KEY,
-    departure_id text NOT NULL,
-    title        text,
-    notes        text,
-    is_active    boolean NOT NULL DEFAULT true,
-    created_at   timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_itineraries_departure_id ON public.itineraries (departure_id);
-
-CREATE TABLE IF NOT EXISTS public.itinerary_days (
-    id           text PRIMARY KEY,
-    itinerary_id text NOT NULL,
-    day_number   integer NOT NULL,
-    title        text,
-    description  text,
-    image_url    text,
-    created_at   timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_itinerary_days_itinerary_id ON public.itinerary_days (itinerary_id);
-
--- ── Depends on bookings ───────────────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS public.booking_payments (
-    id               text PRIMARY KEY,
-    booking_id       text NOT NULL,
-    type             text NOT NULL,
-    amount           integer NOT NULL,
-    paid_at          timestamp with time zone NOT NULL,
-    method           text,
-    reference_number text,
-    notes            text,
-    recorded_by      text,
-    is_voided        boolean NOT NULL DEFAULT false,
-    created_at       timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_booking_payments_booking_id ON public.booking_payments (booking_id);
-
-CREATE TABLE IF NOT EXISTS public.booking_rooms (
-    id         text PRIMARY KEY,
-    booking_id text NOT NULL,
-    room_type  text NOT NULL,
-    price      numeric NOT NULL,
-    quantity   integer NOT NULL,
-    subtotal   numeric NOT NULL,
-    created_at timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_booking_rooms_booking_id ON public.booking_rooms (booking_id);
-
-CREATE TABLE IF NOT EXISTS public.pilgrim_testimonials (
-    id          text PRIMARY KEY,
-    booking_id  text NOT NULL,
-    user_id     text NOT NULL,
-    rating      integer,
-    message     text,
-    is_approved boolean NOT NULL DEFAULT false,
-    created_at  timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_pilgrim_testimonials_booking_id ON public.pilgrim_testimonials (booking_id);
-
-CREATE TABLE IF NOT EXISTS public.financial_transactions (
-    id               text PRIMARY KEY,
-    booking_id       text,
-    category         text NOT NULL,
-    type             text NOT NULL,
-    amount           numeric NOT NULL,
-    description      text,
-    reference_number text,
-    transaction_date timestamp with time zone,
-    recorded_by      text,
-    created_at       timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_financial_transactions_booking_id ON public.financial_transactions (booking_id);
-CREATE INDEX IF NOT EXISTS idx_financial_transactions_type        ON public.financial_transactions (type);
-
-CREATE TABLE IF NOT EXISTS public.payment_proof_access_logs (
-    id         text PRIMARY KEY,
-    user_id    text,
-    booking_id text,
-    payment_id text,
-    context    text,
-    created_at timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_payment_proof_logs_booking_id ON public.payment_proof_access_logs (booking_id);
-CREATE INDEX IF NOT EXISTS idx_payment_proof_logs_user_id    ON public.payment_proof_access_logs (user_id);
-
--- ── Depends on booking_pilgrims / payments ────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS public.pilgrim_doc_access_logs (
-    id           text PRIMARY KEY,
-    user_id      text,
-    pilgrim_id   text,
-    doc_type     text,
-    storage_path text,
-    context      text,
-    created_at   timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_pilgrim_doc_access_logs_user_id ON public.pilgrim_doc_access_logs (user_id);
-
--- ── Agent sub-tables ──────────────────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS public.agent_commissions (
-    id         text PRIMARY KEY,
-    booking_id text NOT NULL,
-    agent_id   text NOT NULL,
-    amount     integer NOT NULL,
-    status     text NOT NULL DEFAULT 'pending',
-    created_at timestamp with time zone
-);
-
-CREATE TABLE IF NOT EXISTS public.agent_withdrawals (
-    id             text PRIMARY KEY,
-    agent_id       text NOT NULL,
-    amount         integer NOT NULL,
-    status         text NOT NULL DEFAULT 'requested',
-    bank_name      text,
-    bank_account   text,
-    account_holder text,
-    notes          text,
-    admin_notes    text,
-    proof_url      text,
-    processed_by   text,
-    processed_at   timestamp with time zone,
-    created_at     timestamp with time zone
-);
-
-CREATE TABLE IF NOT EXISTS public.affiliate_clicks (
-    id            text PRIMARY KEY,
-    agent_id      text,
-    referral_code text,
-    ip            text,
-    user_agent    text,
-    created_at    timestamp with time zone
-);
-
--- ── CRM ──────────────────────────────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS public.lead_follow_ups (
-    id             text PRIMARY KEY,
-    lead_id        text NOT NULL,
-    follow_up_date timestamp with time zone,
-    type           text,
-    notes          text,
-    is_done        boolean NOT NULL DEFAULT false,
-    done_at        timestamp with time zone,
-    created_at     timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_lead_follow_ups_lead_id ON public.lead_follow_ups (lead_id);
-
--- ── Tenant sub-tables ─────────────────────────────────────────────────────────
-
-CREATE TABLE IF NOT EXISTS public.tenant_site_packages (
-    id             text PRIMARY KEY,
-    tenant_site_id text NOT NULL,
-    package_id     text NOT NULL,
-    is_featured    boolean NOT NULL DEFAULT false,
-    sort_order     integer,
-    created_at     timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_tenant_site_packages_package_id ON public.tenant_site_packages (package_id);
-CREATE INDEX IF NOT EXISTS idx_tenant_site_packages_site_id    ON public.tenant_site_packages (tenant_site_id);
-
-CREATE TABLE IF NOT EXISTS public.slug_redirects (
-    id             text PRIMARY KEY,
-    tenant_site_id text,
-    resource_type  text NOT NULL,
-    old_slug       text NOT NULL,
-    new_slug       text NOT NULL,
-    created_at     timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_slug_redirects_old_slug ON public.slug_redirects (old_slug);
-CREATE INDEX IF NOT EXISTS idx_slug_redirects_site_id  ON public.slug_redirects (tenant_site_id);
-
-CREATE TABLE IF NOT EXISTS public.template_upgrade_orders (
-    id             text PRIMARY KEY,
-    tenant_site_id text NOT NULL,
-    requested_by   text NOT NULL,
-    current_template text,
-    target_template  text,
-    price          integer,
-    status         text NOT NULL DEFAULT 'pending',
-    created_at     timestamp with time zone
-);
-CREATE INDEX IF NOT EXISTS idx_template_upgrade_orders_site_id ON public.template_upgrade_orders (tenant_site_id);
 
 -- =============================================================================
--- SECTION C: INDEX PENTING — setiap index dibuat hanya jika kolom sudah ada
+-- SECTION 3: INDEX YANG MUNGKIN BELUM ADA
 -- =============================================================================
--- Menggunakan DO block + cek kolom agar aman meskipun kolom belum ada
--- (misalnya karena table di Supabase punya schema berbeda dari yang diharapkan)
+-- Setiap index dibuat hanya jika kolom yang diindex sudah ada di tabel.
+-- Menggunakan DO block + cek information_schema → tidak pernah error.
 
 DO $$
-DECLARE
-  col_ok boolean;
+DECLARE v boolean;
 BEGIN
 
-  -- bookings: status
+  -- role_menu_permissions: unique (role, menu_key)
+  IF NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='uq_role_menu_perm') THEN
+    CREATE UNIQUE INDEX uq_role_menu_perm ON public.role_menu_permissions (role, menu_key);
+  END IF;
+
+  -- role_menu_permissions: role
+  IF NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_rmp_role') THEN
+    CREATE INDEX idx_rmp_role ON public.role_menu_permissions (role);
+  END IF;
+
+  -- payment_gateway_transactions: order_id (hanya jika kolom sudah ada)
   SELECT EXISTS(SELECT 1 FROM information_schema.columns
-    WHERE table_schema='public' AND table_name='bookings' AND column_name='status') INTO col_ok;
-  IF col_ok AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_bookings_status') THEN
-    CREATE INDEX idx_bookings_status ON public.bookings (status);
+    WHERE table_schema='public'
+      AND table_name='payment_gateway_transactions'
+      AND column_name='order_id') INTO v;
+  IF v AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_pgt_order_id') THEN
+    CREATE INDEX idx_pgt_order_id ON public.payment_gateway_transactions (order_id);
+  END IF;
+
+  -- payment_gateway_transactions: booking_id
+  SELECT EXISTS(SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public'
+      AND table_name='payment_gateway_transactions'
+      AND column_name='booking_id') INTO v;
+  IF v AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_pgt_booking_id') THEN
+    CREATE INDEX idx_pgt_booking_id ON public.payment_gateway_transactions (booking_id);
   END IF;
 
   -- bookings: user_id
   SELECT EXISTS(SELECT 1 FROM information_schema.columns
-    WHERE table_schema='public' AND table_name='bookings' AND column_name='user_id') INTO col_ok;
-  IF col_ok AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_bookings_user_id') THEN
+    WHERE table_schema='public' AND table_name='bookings' AND column_name='user_id') INTO v;
+  IF v AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_bookings_user_id') THEN
     CREATE INDEX idx_bookings_user_id ON public.bookings (user_id);
   END IF;
 
-  -- bookings: package_id
+  -- bookings: status
   SELECT EXISTS(SELECT 1 FROM information_schema.columns
-    WHERE table_schema='public' AND table_name='bookings' AND column_name='package_id') INTO col_ok;
-  IF col_ok AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_bookings_package_id') THEN
-    CREATE INDEX idx_bookings_package_id ON public.bookings (package_id);
+    WHERE table_schema='public' AND table_name='bookings' AND column_name='status') INTO v;
+  IF v AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_bookings_status') THEN
+    CREATE INDEX idx_bookings_status ON public.bookings (status);
   END IF;
 
   -- bookings: booking_code (unique)
   SELECT EXISTS(SELECT 1 FROM information_schema.columns
-    WHERE table_schema='public' AND table_name='bookings' AND column_name='booking_code') INTO col_ok;
-  IF col_ok AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='uq_bookings_code') THEN
-    CREATE UNIQUE INDEX uq_bookings_code ON public.bookings (booking_code);
-  END IF;
-
-  -- payments: status
-  SELECT EXISTS(SELECT 1 FROM information_schema.columns
-    WHERE table_schema='public' AND table_name='payments' AND column_name='status') INTO col_ok;
-  IF col_ok AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_payments_status') THEN
-    CREATE INDEX idx_payments_status ON public.payments (status);
+    WHERE table_schema='public' AND table_name='bookings' AND column_name='booking_code') INTO v;
+  IF v AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='uq_bookings_booking_code') THEN
+    CREATE UNIQUE INDEX uq_bookings_booking_code ON public.bookings (booking_code);
   END IF;
 
   -- payments: booking_id
   SELECT EXISTS(SELECT 1 FROM information_schema.columns
-    WHERE table_schema='public' AND table_name='payments' AND column_name='booking_id') INTO col_ok;
-  IF col_ok AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_payments_booking_id') THEN
+    WHERE table_schema='public' AND table_name='payments' AND column_name='booking_id') INTO v;
+  IF v AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_payments_booking_id') THEN
     CREATE INDEX idx_payments_booking_id ON public.payments (booking_id);
   END IF;
 
-  -- user_roles: user_id (index)
+  -- payments: status
   SELECT EXISTS(SELECT 1 FROM information_schema.columns
-    WHERE table_schema='public' AND table_name='user_roles' AND column_name='user_id') INTO col_ok;
-  IF col_ok AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_user_roles_user_id') THEN
+    WHERE table_schema='public' AND table_name='payments' AND column_name='status') INTO v;
+  IF v AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_payments_status') THEN
+    CREATE INDEX idx_payments_status ON public.payments (status);
+  END IF;
+
+  -- user_roles: user_id (index biasa)
+  SELECT EXISTS(SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='user_roles' AND column_name='user_id') INTO v;
+  IF v AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_user_roles_user_id') THEN
     CREATE INDEX idx_user_roles_user_id ON public.user_roles (user_id);
   END IF;
 
-  -- user_roles: user_id (unique)
-  IF col_ok AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='uq_user_roles_user_id') THEN
+  -- user_roles: user_id (unique constraint — via index)
+  IF v AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='uq_user_roles_user_id') THEN
     CREATE UNIQUE INDEX uq_user_roles_user_id ON public.user_roles (user_id);
+  END IF;
+
+  -- notifications: user_id + is_read (hanya jika kedua kolom ada)
+  SELECT EXISTS(SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='notifications' AND column_name='user_id') INTO v;
+  IF v AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_notifications_user') THEN
+    SELECT EXISTS(SELECT 1 FROM information_schema.columns
+      WHERE table_schema='public' AND table_name='notifications' AND column_name='is_read') INTO v;
+    IF v THEN
+      CREATE INDEX idx_notifications_user ON public.notifications (user_id, is_read);
+    END IF;
   END IF;
 
   -- site_settings: key
   SELECT EXISTS(SELECT 1 FROM information_schema.columns
-    WHERE table_schema='public' AND table_name='site_settings' AND column_name='key') INTO col_ok;
-  IF col_ok AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_site_settings_key') THEN
+    WHERE table_schema='public' AND table_name='site_settings' AND column_name='key') INTO v;
+  IF v AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_site_settings_key') THEN
     CREATE INDEX idx_site_settings_key ON public.site_settings (key);
   END IF;
 
   -- branches: slug (unique)
   SELECT EXISTS(SELECT 1 FROM information_schema.columns
-    WHERE table_schema='public' AND table_name='branches' AND column_name='slug') INTO col_ok;
-  IF col_ok AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='uq_branches_slug') THEN
+    WHERE table_schema='public' AND table_name='branches' AND column_name='slug') INTO v;
+  IF v AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='uq_branches_slug') THEN
     CREATE UNIQUE INDEX uq_branches_slug ON public.branches (slug);
+  END IF;
+
+  -- agents: referral_code
+  SELECT EXISTS(SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='agents' AND column_name='referral_code') INTO v;
+  IF v AND NOT EXISTS(SELECT 1 FROM pg_indexes WHERE indexname='idx_agents_referral_code') THEN
+    CREATE INDEX idx_agents_referral_code ON public.agents (referral_code);
   END IF;
 
 END $$;
 
 -- =============================================================================
--- SECTION D: CUSTOM JWT HOOK — Embed role ke JWT otomatis
+-- SECTION 4: FK CONSTRAINTS (idempotent: DROP IF EXISTS → ADD)
 -- =============================================================================
--- Setelah script ini berhasil, lakukan 1 langkah manual di Supabase Dashboard:
---   Authentication → Hooks → Custom Access Token Hook
---   → Enable → Type: Postgres Function → Function: public.custom_access_token_hook
--- Lalu user perlu LOGOUT dan LOGIN ULANG agar JWT baru ter-generate.
+-- Hanya tambah FK yang belum ada di supabase-schema.sql atau mungkin gagal sebelumnya.
+-- Semua constraint pakai DROP IF EXISTS dulu agar aman dijalankan berulang.
+
+-- user_roles → auth.users (user_id TEXT vs UUID: buat sebagai TEXT FK dulu)
+-- CATATAN: FK dari TEXT ke UUID bisa gagal di Postgres standar.
+-- Jika gagal, constraint dilewati — tabel tetap berfungsi tanpa FK ini.
+DO $$ BEGIN
+  ALTER TABLE public.user_roles DROP CONSTRAINT IF EXISTS fk_user_roles_user;
+  ALTER TABLE public.user_roles ADD CONSTRAINT fk_user_roles_user
+    FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'FK user_roles→auth.users gagal (mungkin type mismatch): %', SQLERRM;
+END $$;
+
+-- notifications → auth.users
+DO $$ BEGIN
+  ALTER TABLE public.notifications DROP CONSTRAINT IF EXISTS fk_notifications_user;
+  ALTER TABLE public.notifications ADD CONSTRAINT fk_notifications_user
+    FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'FK notifications→auth.users gagal (mungkin type mismatch): %', SQLERRM;
+END $$;
+
+-- payment_gateway_transactions → bookings
+DO $$ BEGIN
+  ALTER TABLE public.payment_gateway_transactions DROP CONSTRAINT IF EXISTS fk_pgt_booking;
+  ALTER TABLE public.payment_gateway_transactions ADD CONSTRAINT fk_pgt_booking
+    FOREIGN KEY (booking_id) REFERENCES public.bookings(id) ON DELETE SET NULL;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'FK payment_gateway_transactions→bookings gagal: %', SQLERRM;
+END $$;
+
+-- =============================================================================
+-- SECTION 5: (tidak ada — unique constraints sudah ditangani di SECTION 3)
 -- =============================================================================
 
--- Buat fungsi hook (CREATE OR REPLACE aman dijalankan berulang kali)
+-- =============================================================================
+-- SECTION 6: CUSTOM JWT HOOK
+-- =============================================================================
+-- Fungsi ini dijalankan setiap kali user login — menyematkan role ke JWT.
+-- Setelah SQL ini berhasil, WAJIB aktifkan manual di:
+--   Supabase Dashboard → Authentication → Hooks → Custom Access Token Hook
+--   → Enable → Type: Postgres Function → Function: public.custom_access_token_hook
+-- Lalu user perlu LOGOUT dan LOGIN ULANG.
+
 CREATE OR REPLACE FUNCTION public.custom_access_token_hook(event jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -923,18 +451,15 @@ DECLARE
   claims    jsonb;
   user_role text;
 BEGIN
-  -- Ambil role dari tabel user_roles
-  -- user_id disimpan sebagai TEXT — tidak perlu cast ::uuid
+  -- Ambil role dari user_roles (user_id disimpan sebagai TEXT)
   SELECT role
     INTO user_role
     FROM public.user_roles
    WHERE user_roles.user_id = event->>'user_id'
    LIMIT 1;
 
-  -- Ambil klaim yang ada
   claims := event->'claims';
 
-  -- Jika role ditemukan, embed ke app_metadata
   IF user_role IS NOT NULL THEN
     claims := jsonb_set(
       claims,
@@ -944,37 +469,38 @@ BEGIN
     );
   END IF;
 
-  -- Kembalikan event dengan klaim yang sudah diperbarui
   RETURN jsonb_set(event, '{claims}', claims);
 END;
 $$;
 
--- Grant akses ke supabase_auth_admin (dibutuhkan hook engine Supabase)
-GRANT USAGE  ON SCHEMA public TO supabase_auth_admin;
-GRANT EXECUTE ON FUNCTION public.custom_access_token_hook TO supabase_auth_admin;
+-- Grant permissions yang dibutuhkan hook engine
+GRANT USAGE   ON SCHEMA public                               TO supabase_auth_admin;
+GRANT EXECUTE ON FUNCTION public.custom_access_token_hook   TO supabase_auth_admin;
+GRANT SELECT  ON public.user_roles                          TO supabase_auth_admin;
 
--- Cabut akses publik untuk keamanan
+-- Cabut akses publik
 REVOKE EXECUTE ON FUNCTION public.custom_access_token_hook FROM PUBLIC, anon, authenticated;
 
--- Grant SELECT di user_roles agar hook bisa baca role
-GRANT SELECT ON public.user_roles TO supabase_auth_admin;
-
 -- =============================================================================
--- VERIFIKASI AKHIR: Tampilkan tabel + fungsi yang sudah ada
+-- VERIFIKASI AKHIR
 -- =============================================================================
 
--- Tabel yang ada
+-- Tabel yang ada di public schema
 SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = 'public'
-  AND table_type = 'BASE TABLE'
+  AND table_type   = 'BASE TABLE'
 ORDER BY table_name;
 
--- Konfirmasi fungsi hook sudah terbuat
-SELECT
-  routine_name,
-  routine_type,
-  security_type
+-- Konfirmasi JWT hook function
+SELECT routine_name, security_type
 FROM information_schema.routines
 WHERE routine_schema = 'public'
-  AND routine_name = 'custom_access_token_hook';
+  AND routine_name   = 'custom_access_token_hook';
+
+-- Kolom baru di agent_withdrawals
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name   = 'agent_withdrawals'
+ORDER BY ordinal_position;
