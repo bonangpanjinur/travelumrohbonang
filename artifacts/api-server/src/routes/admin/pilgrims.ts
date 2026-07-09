@@ -6,6 +6,7 @@ import {
   packages,
   packageDepartures,
   pilgrimDocuments,
+  checkIns,
   eq,
   and,
   or,
@@ -100,11 +101,66 @@ router.patch("/:id", async (req: any, res) => {
 
 // Check-ins
 router.get("/check-ins", async (req: any, res) => {
-    // Note: check_ins table wasn't in the schema files I read, but the task mentioned public routes for pilgrim_documents etc. 
-    // And CheckIn.tsx uses 'check_ins'. I should check if it exists in db schema or I might need to skip if I don't know the schema.
-    // Actually the prompt says "ALL needed tables already exist".
-    // Let me try to find check_ins in the codebase.
-    res.status(501).json({ error: "Not implemented" });
+  try {
+    const data = await db
+      .select({
+        id: checkIns.id,
+        pilgrimId: checkIns.pilgrimId,
+        bookingId: checkIns.bookingId,
+        departureId: checkIns.departureId,
+        location: checkIns.location,
+        notes: checkIns.notes,
+        checkedInBy: checkIns.checkedInBy,
+        checkedInAt: checkIns.checkedInAt,
+        pilgrimName: bookingPilgrims.name,
+      })
+      .from(checkIns)
+      .leftJoin(bookingPilgrims, eq(checkIns.pilgrimId, bookingPilgrims.id))
+      .orderBy(desc(checkIns.checkedInAt))
+      .limit(100);
+    res.json(data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch check-ins" });
+  }
+});
+
+router.post("/check-in", async (req: any, res) => {
+  try {
+    const { pilgrimId, departureId, bookingId, location, notes } = req.body;
+    if (!pilgrimId) {
+      return res.status(400).json({ error: "pilgrimId is required" });
+    }
+
+    const [pilgrim] = await db
+      .select({ id: bookingPilgrims.id, bookingId: bookingPilgrims.bookingId })
+      .from(bookingPilgrims)
+      .where(eq(bookingPilgrims.id, pilgrimId))
+      .limit(1);
+
+    if (!pilgrim) {
+      return res.status(404).json({ error: "Pilgrim not found" });
+    }
+
+    const [created] = await db
+      .insert(checkIns)
+      .values({
+        id: crypto.randomUUID(),
+        pilgrimId,
+        bookingId: bookingId ?? pilgrim.bookingId ?? null,
+        departureId: departureId ?? null,
+        location: location ?? null,
+        notes: notes ?? null,
+        checkedInBy: req.user?.id ?? null,
+        checkedInAt: new Date(),
+      })
+      .returning();
+
+    res.status(201).json(created);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to record check-in" });
+  }
 });
 
 export default router;

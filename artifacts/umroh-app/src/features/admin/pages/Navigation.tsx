@@ -68,7 +68,7 @@ const AdminNavigation = () => {
     try {
       const [navRes, catRes] = await Promise.all([
         apiFetch<{ data: NavItem[] }>("/api/admin/content/navigation-items"),
-        apiFetch<{ data: Category[] }>("/api/admin/content/package-categories"),
+        apiFetch<{ data: Category[] }>("/api/admin/masterdata/categories"),
       ]);
 
       setNavItems(navRes.data || []);
@@ -154,13 +154,13 @@ const AdminNavigation = () => {
 
     try {
       if (editingCat) {
-        await apiFetch(`/api/admin/content/package-categories/${editingCat.id}`, {
+        await apiFetch(`/api/admin/masterdata/categories/${editingCat.id}`, {
           method: "PATCH",
           body: JSON.stringify(data),
         });
         toast({ title: "Kategori diupdate!" });
       } else {
-        await apiFetch("/api/admin/content/package-categories", {
+        await apiFetch("/api/admin/masterdata/categories", {
           method: "POST",
           body: JSON.stringify(data),
         });
@@ -192,7 +192,7 @@ const AdminNavigation = () => {
 
   const executeCatDelete = async (id: string) => {
     try {
-      await apiFetch(`/api/admin/content/package-categories/${id}`, { method: "DELETE" });
+      await apiFetch(`/api/admin/masterdata/categories/${id}`, { method: "DELETE" });
       toast({ title: "Kategori dihapus" });
       fetchData();
     } catch (error) {

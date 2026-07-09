@@ -12,6 +12,48 @@ router.get("/", async (req, res) => {
   }
 });
 
+// Single-key get/set helpers used by feature-specific admin pages (e.g. SEO defaults).
+router.get("/seo", async (req, res) => {
+  try {
+    const [item] = await db.select().from(siteSettings).where(eq(siteSettings.key, "seo")).limit(1);
+    res.json({ data: item ?? { key: "seo", category: "general", value: {} } });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch SEO settings" });
+  }
+});
+
+router.put("/seo", async (req, res) => {
+  try {
+    const { category, value } = req.body;
+    const [existing] = await db.select().from(siteSettings).where(eq(siteSettings.key, "seo")).limit(1);
+
+    let item;
+    if (existing) {
+      [item] = await db
+        .update(siteSettings)
+        .set({ category: category ?? existing.category, value })
+        .where(eq(siteSettings.key, "seo"))
+        .returning();
+    } else {
+      [item] = await db
+        .insert(siteSettings)
+        .values({
+          id: crypto.randomUUID(),
+          key: "seo",
+          category: category ?? "general",
+          value,
+          createdAt: new Date(),
+        })
+        .returning();
+    }
+
+    res.json({ data: item });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to save SEO settings" });
+  }
+});
+
 router.post("/", async (req, res) => {
   try {
     const [item] = await db.insert(siteSettings).values({

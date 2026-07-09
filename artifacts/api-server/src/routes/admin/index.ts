@@ -78,6 +78,7 @@ router.use("/masterdata", requireAdmin, adminMasterdataRouter);
 
 // ── Staff routes (super_admin, admin, branch_manager, staff) ────────────────
 router.use("/packages", requireStaff, adminPackagesRouter);
+router.use("/departures", requireStaff, adminDeparturesRouter);
 router.use("/packages/:packageId/departures", requireStaff, adminDeparturesRouter);
 router.use("/pilgrims", requireStaff, adminPilgrimsRouter);
 router.use("/chats", requireStaff, adminChatsRouter);
@@ -85,6 +86,7 @@ router.use("/branches", requireStaff, adminBranchesRouter);
 
 // ── Operational routes (adds agent access) ──────────────────────────────────
 router.use("/bookings", requireOperational, adminBookingsRouter);
+router.use("/payments", requireOperational, adminPaymentsRouter);
 router.use("/bookings/:bookingId/payments", requireOperational, adminPaymentsRouter);
 router.use("/bookings/:bookingId/documents", requireOperational, adminDocumentsRouter);
 router.use("/documents", requireOperational, adminDocumentsRouter);

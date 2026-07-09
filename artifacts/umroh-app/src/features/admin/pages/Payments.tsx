@@ -72,7 +72,7 @@ const AdminPayments = () => {
     setError(null);
     setLoading(true);
     try {
-      const data = await apiFetch<Payment[]>("/api/admin/bookings/payments/all");
+      const data = await apiFetch<Payment[]>("/api/admin/payments/all");
       setPayments(data || []);
     } catch (err: any) {
       setError(err.message || "Gagal memuat data pembayaran");

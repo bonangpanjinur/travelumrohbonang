@@ -22,3 +22,4 @@
 - [REST proxy unfiltered-write guard](rest-proxy-unfiltered-write-guard.md) — PATCH/DELETE on generic /rest/v1/:table proxy must reject empty filters; never expose privilege tables (user_roles) through auth-only table sets.
 - [Masterdata route error handling](masterdata-error-handling.md) — POST handlers need name validation (400) + dbError() for constraint errors; missing table = 500 from catch block.
 - [Seed file schema drift](seed-file-schema-drift.md) — supabase-seed.sql had stale columns (icon, bio) not in current Drizzle schema; check \d table before re-running seeds after schema push.
+- [Admin route frontend/backend mismatches](admin-route-frontend-backend-mismatches.md) — grep apiFetch admin paths vs actual router mounts; recurring bugs: flat-vs-nested mergeParams routes, unbuilt sub-features, resource naming drift, {data} vs bare-array response shape.

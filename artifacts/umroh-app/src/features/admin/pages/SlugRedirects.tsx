@@ -21,7 +21,7 @@ interface Redirect {
 
 interface TenantOption {
   id: string;
-  site_name: string;
+  siteName: string;
   subdomain: string;
 }
 
@@ -43,9 +43,9 @@ const AdminSlugRedirects = () => {
 
   const fetchAll = async () => {
     try {
-      const [{ data: r }, { data: t }] = await Promise.all([
+      const [{ data: r }, t] = await Promise.all([
         apiFetch<{ data: Redirect[] }>("/api/admin/redirects"),
-        apiFetch<{ data: TenantOption[] }>("/api/admin/tenants"), // Assuming this exists or create it
+        apiFetch<TenantOption[]>("/api/admin/tenant"),
       ]);
       setRows(r || []);
       setTenants(t || []);
@@ -94,7 +94,7 @@ const AdminSlugRedirects = () => {
   const tenantLabel = (id: string | null) => {
     if (!id) return "Global";
     const t = tenants.find((x) => x.id === id);
-    return t ? `${t.site_name} (${t.subdomain})` : "—";
+    return t ? `${t.siteName} (${t.subdomain})` : "—";
   };
 
   const resourceLabel: Record<Redirect["resource_type"], string> = {
@@ -138,7 +138,7 @@ const AdminSlugRedirects = () => {
                   <SelectContent>
                     <SelectItem value={SCOPE_GLOBAL}>Global (semua domain)</SelectItem>
                     {tenants.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.site_name} ({t.subdomain})</SelectItem>
+                      <SelectItem key={t.id} value={t.id}>{t.siteName} ({t.subdomain})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

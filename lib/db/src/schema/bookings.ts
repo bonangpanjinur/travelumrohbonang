@@ -77,6 +77,20 @@ export const pilgrimDocuments = pgTable("pilgrim_documents", {
   index("idx_pilgrim_docs_booking_id").on(t.bookingId),
 ]);
 
+export const checkIns = pgTable("check_ins", {
+  id: text("id").primaryKey(),
+  pilgrimId: text("pilgrim_id").notNull().references(() => bookingPilgrims.id, { onDelete: "cascade" }),
+  bookingId: text("booking_id").references(() => bookings.id, { onDelete: "set null" }),
+  departureId: text("departure_id").references(() => packageDepartures.id, { onDelete: "set null" }),
+  location: text("location"),
+  notes: text("notes"),
+  checkedInBy: text("checked_in_by"),
+  checkedInAt: timestamp("checked_in_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index("idx_check_ins_pilgrim_id").on(t.pilgrimId),
+  index("idx_check_ins_booking_id").on(t.bookingId),
+]);
+
 export const bookingPayments = pgTable("booking_payments", {
   id: text("id").primaryKey(),
   bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),

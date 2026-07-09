@@ -33,7 +33,7 @@ const AdminRefunds = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await apiFetch<any[]>("/api/admin/bookings/refunds");
+      const data = await apiFetch<any[]>("/api/admin/refunds");
       setItems(data || []);
     } catch (e: any) {
       toast.error(e.message);
@@ -48,7 +48,7 @@ const AdminRefunds = () => {
     if (!selected) return;
     setSaving(true);
     try {
-      await apiFetch(`/api/admin/bookings/refunds/${selected.id}`, {
+      await apiFetch(`/api/admin/refunds/${selected.id}`, {
         method: "PATCH",
         body: JSON.stringify({
           status,
