@@ -724,10 +724,77 @@ DO $$ BEGIN
 END $$;
 
 -- =============================================================================
--- VERIFIKASI: Tampilkan semua tabel yang ada setelah migrasi
+-- SECTION D: CUSTOM JWT HOOK — Embed role ke JWT otomatis
 -- =============================================================================
+-- Setelah script ini berhasil, lakukan 1 langkah manual di Supabase Dashboard:
+--   Authentication → Hooks → Custom Access Token Hook
+--   → Enable → Type: Postgres Function → Function: public.custom_access_token_hook
+-- Lalu user perlu LOGOUT dan LOGIN ULANG agar JWT baru ter-generate.
+-- =============================================================================
+
+-- Buat fungsi hook (CREATE OR REPLACE aman dijalankan berulang kali)
+CREATE OR REPLACE FUNCTION public.custom_access_token_hook(event jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+AS $$
+DECLARE
+  claims    jsonb;
+  user_role text;
+BEGIN
+  -- Ambil role dari tabel user_roles
+  -- user_id disimpan sebagai TEXT — tidak perlu cast ::uuid
+  SELECT role
+    INTO user_role
+    FROM public.user_roles
+   WHERE user_roles.user_id = event->>'user_id'
+   LIMIT 1;
+
+  -- Ambil klaim yang ada
+  claims := event->'claims';
+
+  -- Jika role ditemukan, embed ke app_metadata
+  IF user_role IS NOT NULL THEN
+    claims := jsonb_set(
+      claims,
+      '{app_metadata}',
+      COALESCE(claims->'app_metadata', '{}'::jsonb)
+        || jsonb_build_object('role', user_role)
+    );
+  END IF;
+
+  -- Kembalikan event dengan klaim yang sudah diperbarui
+  RETURN jsonb_set(event, '{claims}', claims);
+END;
+$$;
+
+-- Grant akses ke supabase_auth_admin (dibutuhkan hook engine Supabase)
+GRANT USAGE  ON SCHEMA public TO supabase_auth_admin;
+GRANT EXECUTE ON FUNCTION public.custom_access_token_hook TO supabase_auth_admin;
+
+-- Cabut akses publik untuk keamanan
+REVOKE EXECUTE ON FUNCTION public.custom_access_token_hook FROM PUBLIC, anon, authenticated;
+
+-- Grant SELECT di user_roles agar hook bisa baca role
+GRANT SELECT ON public.user_roles TO supabase_auth_admin;
+
+-- =============================================================================
+-- VERIFIKASI AKHIR: Tampilkan tabel + fungsi yang sudah ada
+-- =============================================================================
+
+-- Tabel yang ada
 SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = 'public'
   AND table_type = 'BASE TABLE'
 ORDER BY table_name;
+
+-- Konfirmasi fungsi hook sudah terbuat
+SELECT
+  routine_name,
+  routine_type,
+  security_type
+FROM information_schema.routines
+WHERE routine_schema = 'public'
+  AND routine_name = 'custom_access_token_hook';
