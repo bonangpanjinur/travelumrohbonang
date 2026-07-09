@@ -8,7 +8,7 @@
  */
 
 import type { Express } from "express";
-import { SUPABASE_URL, SUPABASE_SERVER_KEY } from "./supabaseEnv";
+import { SUPABASE_URL, SUPABASE_SERVER_KEY, SUPABASE_SERVICE_ROLE_KEY } from "./supabaseEnv";
 
 // ── Supabase connectivity check ───────────────────────────────────────────────
 
@@ -27,6 +27,38 @@ export async function checkSupabaseConnectivity(): Promise<"ok" | "not_configure
   } catch {
     return "unreachable";
   }
+}
+
+/**
+ * Decodes a Supabase JWT-style key (anon or service_role) WITHOUT verifying
+ * the signature, purely to prove at startup which role the configured key
+ * actually carries. This exists because "the service role key is probably
+ * wrong" has repeatedly been guessed without evidence — this prints the
+ * actual decoded role, project ref, and expiry so a bad key is provable,
+ * not assumed. Never logs the key itself, only length/prefix/decoded claims.
+ */
+function inspectSupabaseKey(label: string, key: string): string {
+  if (!key) return `${label}: MISSING`;
+  const parts = key.split(".");
+  let decoded = "unparseable (not a JWT — check for whitespace/truncation)";
+  if (parts.length === 3) {
+    try {
+      const payloadJson = Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+      const payload = JSON.parse(payloadJson);
+      const exp = payload.exp ? new Date(payload.exp * 1000).toISOString() : "none";
+      decoded = `role=${payload.role ?? "?"} ref=${payload.ref ?? "?"} exp=${exp}`;
+    } catch {
+      decoded = "unparseable (base64/JSON decode failed)";
+    }
+  }
+  return `${label}: len=${key.length} prefix=${key.slice(0, 8)}... ${decoded}`;
+}
+
+export function logSupabaseKeyDiagnostics(): void {
+  console.log("\n── Supabase Key Diagnostics (no secrets printed) ──────────────");
+  console.log(`  ${inspectSupabaseKey("SUPABASE_SERVICE_ROLE_KEY", SUPABASE_SERVICE_ROLE_KEY)}`);
+  console.log(`  URL: ${SUPABASE_URL || "MISSING"}`);
+  console.log("──────────────────────────────────────────────────────────────\n");
 }
 
 // ── Route listing ─────────────────────────────────────────────────────────────
@@ -96,6 +128,11 @@ export async function logStartupBanner(app: Express, port: number): Promise<void
   console.log(`  Port         : ${port}`);
   console.log(`  Runtime      : ${isVercel ? "Vercel (serverless)" : "Node.js (long-running)"}`);
   console.log("");
+
+  // Proof-based Supabase key diagnostics — decodes the JWT claims of the
+  // configured key so a wrong/expired/wrong-project key is provable at
+  // startup instead of guessed after the fact.
+  logSupabaseKeyDiagnostics();
 
   // Supabase connectivity
   const supabaseStatus = await checkSupabaseConnectivity();

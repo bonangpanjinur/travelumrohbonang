@@ -8,6 +8,59 @@ import {
   SUPABASE_ANON_KEY,
 } from "../lib/supabaseEnv";
 
+/**
+ * Decodes the configured SUPABASE_SERVICE_ROLE_KEY's JWT claims WITHOUT
+ * verifying the signature — purely to prove which role/project the key
+ * actually carries. Exposed here (not just startup logs) because Vercel
+ * cold-start logs are easy to miss; this makes the proof available on
+ * every /health/detail call. Never returns the raw key.
+ */
+function inspectServiceRoleKey(): {
+  present: boolean;
+  length: number;
+  prefix: string | null;
+  decoded: { role?: string; ref?: string; exp?: string } | null;
+  decodeError: string | null;
+} {
+  const key = SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    return { present: false, length: 0, prefix: null, decoded: null, decodeError: "SUPABASE_SERVICE_ROLE_KEY is not set" };
+  }
+  const parts = key.split(".");
+  if (parts.length !== 3) {
+    return {
+      present: true,
+      length: key.length,
+      prefix: key.slice(0, 8),
+      decoded: null,
+      decodeError: "Not a valid JWT structure (expected 3 dot-separated segments) — key may be truncated or wrong value pasted",
+    };
+  }
+  try {
+    const payloadJson = Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    const payload = JSON.parse(payloadJson);
+    return {
+      present: true,
+      length: key.length,
+      prefix: key.slice(0, 8),
+      decoded: {
+        role: payload.role,
+        ref: payload.ref,
+        exp: payload.exp ? new Date(payload.exp * 1000).toISOString() : undefined,
+      },
+      decodeError: null,
+    };
+  } catch (err) {
+    return {
+      present: true,
+      length: key.length,
+      prefix: key.slice(0, 8),
+      decoded: null,
+      decodeError: err instanceof Error ? err.message : "base64/JSON decode failed",
+    };
+  }
+}
+
 const router = Router();
 
 const healthz: RequestHandler = (req: any, res: any) => {
@@ -249,24 +302,40 @@ const healthDetail: RequestHandler = async (_req, res) => {
     checkSupabaseAuth(),
   ]);
 
+  const serviceRoleKey = inspectServiceRoleKey();
+  const keyLooksOk =
+    serviceRoleKey.present &&
+    !serviceRoleKey.decodeError &&
+    serviceRoleKey.decoded?.role === "service_role";
+
   const allOk =
     envVars.status === "ok" &&
     database.status === "ok" &&
     tables.status === "ok" &&
     supabasePostgrest.status !== "error" &&
-    supabaseAuth.status !== "error";
+    supabaseAuth.status !== "error" &&
+    keyLooksOk;
 
   const overallStatus = allOk ? "ok" : "degraded";
 
   res.status(allOk ? 200 : 503).json({
     status: overallStatus,
     timestamp: new Date().toISOString(),
+    nodeVersion: process.version,
+    nodeEnv: process.env.NODE_ENV ?? "development",
+    uptimeSeconds: process.uptime(),
+    isVercel: process.env.VERCEL === "1",
+    allowedOrigins: (process.env.ALLOWED_ORIGINS ?? "").split(",").map((o) => o.trim()).filter(Boolean),
     checks: {
       envVars,
       database,
       tables,
       supabasePostgrest,
       supabaseAuth,
+      serviceRoleKey: {
+        ...serviceRoleKey,
+        status: keyLooksOk ? "ok" : serviceRoleKey.present ? "wrong_role_or_malformed" : "missing",
+      },
     },
   });
 };
