@@ -6,9 +6,18 @@ import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/shared/components/ui/select";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
-import { Pause, Play, Trash2, ShieldAlert, ClipboardCopy, Check } from "lucide-react";
+import { Switch } from "@/shared/components/ui/switch";
+import { Label } from "@/shared/components/ui/label";
+import { Pause, Play, Trash2, ShieldAlert, ClipboardCopy, Check, EyeOff } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/shared/hooks/use-toast";
+
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+const UUID_REGEX = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g;
+
+function redactText(input: string): string {
+  return input.replace(EMAIL_REGEX, "[REDACTED_EMAIL]").replace(UUID_REGEX, "[REDACTED_ID]");
+}
 
 interface DiagLogEntry {
   id: number;
@@ -54,6 +63,7 @@ const RestDiagLogs = () => {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [copying, setCopying] = useState(false);
   const [justCopied, setJustCopied] = useState(false);
+  const [redact, setRedact] = useState(true);
   const { toast } = useToast();
 
   const lastIdRef = useRef(0);
@@ -125,6 +135,7 @@ const RestDiagLogs = () => {
       lines.push(`Generated: ${new Date().toISOString()}`);
       lines.push(`Filter aktif: ${filterSummary}`);
       lines.push(`Jumlah log ditampilkan: ${logs.length}`);
+      if (redact) lines.push(`Redaksi: AKTIF (email & UUID/user id disamarkan)`);
       lines.push("");
       lines.push("## Health Snapshot (/api/health/detail)");
       lines.push("```json");
@@ -145,7 +156,7 @@ const RestDiagLogs = () => {
             log.backend ? `backend=${log.backend}` : null,
             `auth=${log.authenticated}`,
             log.role ? `role=${log.role}` : null,
-            log.userId ? `userId=${log.userId}` : null,
+            log.userId ? `userId=${redact ? "[REDACTED_ID]" : log.userId}` : null,
             log.error ? `error=${log.error}` : null,
           ].filter(Boolean);
           lines.push(parts.join(" | "));
@@ -156,7 +167,8 @@ const RestDiagLogs = () => {
       }
       lines.push("```");
 
-      const report = lines.join("\n");
+      let report = lines.join("\n");
+      if (redact) report = redactText(report);
       await navigator.clipboard.writeText(report);
 
       setJustCopied(true);
@@ -176,7 +188,7 @@ const RestDiagLogs = () => {
           <ShieldAlert className="w-6 h-6 text-primary" />
           <h1 className="text-2xl font-display font-bold">Live REST Diagnostics</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Button variant={live ? "default" : "outline"} size="sm" onClick={() => setLive((v) => !v)}>
             {live ? <Pause className="w-4 h-4 mr-1" /> : <Play className="w-4 h-4 mr-1" />}
             {live ? "Pause" : "Resume"}
@@ -184,6 +196,12 @@ const RestDiagLogs = () => {
           <Button variant="outline" size="sm" onClick={clear}>
             <Trash2 className="w-4 h-4 mr-1" /> Bersihkan Tampilan
           </Button>
+          <div className="flex items-center gap-1.5 pl-1">
+            <Switch id="redact-toggle" checked={redact} onCheckedChange={setRedact} />
+            <Label htmlFor="redact-toggle" className="text-xs text-muted-foreground flex items-center gap-1 cursor-pointer">
+              <EyeOff className="w-3.5 h-3.5" /> Redact
+            </Label>
+          </div>
           <Button variant="outline" size="sm" onClick={copyIncidentReport} disabled={copying}>
             {justCopied ? (
               <Check className="w-4 h-4 mr-1 text-green-600" />
