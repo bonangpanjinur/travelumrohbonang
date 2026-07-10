@@ -122,10 +122,24 @@ frontend-nya. Temuan & yang sudah dieksekusi:
           tanpa batas saat log sudah banyak.
 [ ]     Integrations.ts (masking secret) — sudah dicek, TIDAK ada masalah
         (masking + merge-on-mask sudah benar diimplementasikan).
-[ ]     Branches.tsx tanpa pagination client-side — dicatat, tidak dieksekusi
-        (skala data cabang biasanya kecil, risiko rendah, prioritas
-        ditangguhkan berikutnya bila diminta).
+[x] P2  Branches.tsx tanpa pagination client-side
+        — ditambahkan `useAdminPagination` + `AdminPagination` (pola yang
+          sama dipakai di Agents.tsx), 20 baris per halaman.
+[x] P2  content.ts (generic CRUD CMS) rawan override field terlarang
+        — createCrudRoutes menerima req.body mentah; ditambahkan
+          stripImmutableFields() supaya klien tidak bisa mengoper `id` atau
+          `createdAt` lewat body POST/PATCH. Validasi per-tipe konten (zod)
+          belum dibuat — tetap dicatat sebagai potensi kerja lanjutan bila
+          diperlukan, risiko rendah karena rute ini admin-only.
+[x] P2  analytics.ts memakai `any` pada hasil query SQL mentah
+        — ditambahkan interface TrendRow/PackageRevenueRow/StatusCountRow/
+          DepartureRow untuk hasil db.execute(sql\`...\`), menghilangkan
+          `any` di lapisan mapping response.
 ```
+
+Verifikasi lanjutan: `tsc --noEmit` di api-server & umroh-app bersih (setelah
+menghapus cache `.tsbuildinfo` basi), esbuild build sukses, kedua workflow
+("API Server", "Start application") jalan bersih tanpa error di homepage.
 
 Verifikasi: `pnpm --filter @workspace/api-server` build (esbuild) sukses,
 `pnpm --filter @workspace/umroh-app` `tsc --noEmit` bersih setelah perubahan

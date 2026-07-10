@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/shared/hooks/use-toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
+import AdminPagination from "@/features/admin/components/AdminPagination";
+import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
 
 interface Branch {
   id: string;
@@ -56,6 +58,7 @@ const AdminBranches = () => {
   const { toast } = useToast();
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...empty });
+  const { page, setPage, totalPages, totalCount, paginatedItems, pageSize } = useAdminPagination(branches);
 
   useEffect(() => {
     fetchBranches();
@@ -278,7 +281,7 @@ const AdminBranches = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {branches.map((b) => (
+              {paginatedItems.map((b) => (
                 <TableRow key={b.id}>
                   <TableCell className="font-semibold">{b.name}</TableCell>
                   <TableCell>{b.city || "-"}</TableCell>
@@ -292,6 +295,7 @@ const AdminBranches = () => {
               ))}
             </TableBody>
           </Table>
+          <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
         </div>
       )}
     </div>

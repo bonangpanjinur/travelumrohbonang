@@ -16,6 +16,18 @@ import {
 
 const router = Router();
 
+// Generic CRUD bypasses per-content-type field validation (no zod schema per
+// table), which is an accepted tradeoff for these low-risk, admin-auth-gated
+// CMS tables. What we do guard against here: a caller overriding `id` or
+// `createdAt` via the request body, which would otherwise let a PATCH/POST
+// silently rewrite the primary key or fabricate a creation timestamp.
+function stripImmutableFields(body: unknown): Record<string, unknown> {
+  const clean = { ...(body as Record<string, unknown> | null | undefined) };
+  delete clean.id;
+  delete clean.createdAt;
+  return clean;
+}
+
 const createCrudRoutes = (table: any, name: string) => {
   router.get(`/${name}`, async (req, res) => {
     try {
@@ -29,8 +41,8 @@ const createCrudRoutes = (table: any, name: string) => {
   router.post(`/${name}`, async (req, res) => {
     try {
       const [item] = (await db.insert(table).values({
+        ...stripImmutableFields(req.body),
         id: crypto.randomUUID(),
-        ...req.body,
         createdAt: new Date(),
       }).returning()) as any[];
       res.status(201).json({ data: item });
@@ -42,7 +54,7 @@ const createCrudRoutes = (table: any, name: string) => {
 
   router.patch(`/${name}/:id`, async (req, res) => {
     try {
-      const [item] = await db.update(table).set(req.body).where(eq(table.id, req.params.id)).returning();
+      const [item] = await db.update(table).set(stripImmutableFields(req.body)).where(eq(table.id, req.params.id)).returning();
       if (!item) return res.status(404).json({ error: "Not found" });
       res.json({ data: item });
     } catch (err) {

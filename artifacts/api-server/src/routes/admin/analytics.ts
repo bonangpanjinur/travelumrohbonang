@@ -5,6 +5,17 @@ const router = Router();
 
 type RangeConfig = { start: Date; end: Date; prevStart: Date; prevEnd: Date; useMonthly: boolean };
 
+interface TrendRow { key: string; bookings: number | string; revenue: number | string }
+interface PackageRevenueRow { name: string; bookings: number | string; revenue: number | string }
+interface StatusCountRow { status: string; count: number | string }
+interface DepartureRow {
+  id: string;
+  package_title: string | null;
+  departure_date: string;
+  quota: number | string;
+  remaining_quota: number | string;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function getRange(period: string): RangeConfig {
@@ -153,25 +164,25 @@ router.get("/summary", async (req, res) => {
         avgValue: currBookings > 0 ? currRevenue / currBookings : 0,
         prevAvgValue: prevBookings > 0 ? prevRevenue / prevBookings : 0,
       },
-      trend: trendRows.rows.map((r: any) => ({
+      trend: (trendRows.rows as unknown as TrendRow[]).map((r) => ({
         key: r.key,
         bookings: Number(r.bookings ?? 0),
         revenue: Number(r.revenue ?? 0),
       })),
-      packageRevenue: packageRevenueRows.rows.map((r: any) => ({
+      packageRevenue: (packageRevenueRows.rows as unknown as PackageRevenueRow[]).map((r) => ({
         name: r.name,
         bookings: Number(r.bookings ?? 0),
         revenue: Number(r.revenue ?? 0),
       })),
-      paymentStatus: paymentStatusRows.rows.map((r: any) => ({
+      paymentStatus: (paymentStatusRows.rows as unknown as StatusCountRow[]).map((r) => ({
         status: r.status,
         count: Number(r.count ?? 0),
       })),
-      bookingStatus: bookingStatusRows.rows.map((r: any) => ({
+      bookingStatus: (bookingStatusRows.rows as unknown as StatusCountRow[]).map((r) => ({
         status: r.status,
         count: Number(r.count ?? 0),
       })),
-      departures: departureRows.rows.map((r: any) => ({
+      departures: (departureRows.rows as unknown as DepartureRow[]).map((r) => ({
         id: r.id,
         package_title: r.package_title ?? "–",
         departure_date: r.departure_date,
