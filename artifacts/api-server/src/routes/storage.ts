@@ -11,6 +11,34 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
+// Upload guardrails: cap body size and restrict to safe content-types to
+// prevent memory-exhaustion DoS and arbitrary file uploads (see .lovable/plan.md P1).
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024; // 15MB
+const ALLOWED_CONTENT_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "application/pdf",
+  "application/octet-stream", // Supabase JS client sometimes omits/blanks this
+]);
+
+function validateUploadHeaders(req: Request, res: Response): boolean {
+  const contentType = (req.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
+  if (contentType && !ALLOWED_CONTENT_TYPES.has(contentType)) {
+    res.status(415).json({ error: `Unsupported content type: ${contentType}` });
+    return false;
+  }
+
+  const contentLength = Number(req.headers["content-length"] || 0);
+  if (contentLength > MAX_UPLOAD_BYTES) {
+    res.status(413).json({ error: `File too large. Max ${MAX_UPLOAD_BYTES / (1024 * 1024)}MB` });
+    return false;
+  }
+
+  return true;
+}
+
 function getBucketDir(bucket: string): string {
   const safe = bucket.replace(/[^a-zA-Z0-9_-]/g, "_");
   const dir = path.join(UPLOADS_DIR, safe);
@@ -37,10 +65,14 @@ function getWildcardPath(req: Request): string {
 
 // Express 5 / path-to-regexp v8: wildcards use *name (no colon)
 // POST /storage/v1/object/:bucket/*filePath
-router.post("/object/:bucket/*filePath", requireAuth, (req: Request, res: Response) => {
+function handleUpload(req: Request, res: Response): void {
   const { bucket } = req.params as Record<string, string>;
   const filePath = getWildcardPath(req);
-  if (!filePath) return res.status(400).json({ error: "Missing file path" });
+  if (!filePath) {
+    res.status(400).json({ error: "Missing file path" });
+    return;
+  }
+  if (!validateUploadHeaders(req, res)) return;
 
   try {
     const fullPath = getFilePath(bucket, filePath);
@@ -48,8 +80,22 @@ router.post("/object/:bucket/*filePath", requireAuth, (req: Request, res: Respon
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
     const chunks: Buffer[] = [];
-    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    let total = 0;
+    let aborted = false;
+
+    req.on("data", (chunk: Buffer) => {
+      if (aborted) return;
+      total += chunk.length;
+      if (total > MAX_UPLOAD_BYTES) {
+        aborted = true;
+        res.status(413).json({ error: `File too large. Max ${MAX_UPLOAD_BYTES / (1024 * 1024)}MB` });
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on("end", () => {
+      if (aborted) return;
       const buf = Buffer.concat(chunks);
       fs.writeFileSync(fullPath, buf);
       res.status(200).json({
@@ -58,43 +104,19 @@ router.post("/object/:bucket/*filePath", requireAuth, (req: Request, res: Respon
       });
     });
     req.on("error", (err) => {
+      if (aborted) return;
       console.error("[Storage] upload error:", err);
       res.status(500).json({ error: err.message });
     });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }
-});
+}
+
+router.post("/object/:bucket/*filePath", requireAuth, handleUpload);
 
 // PUT /storage/v1/object/:bucket/*filePath
-router.put("/object/:bucket/*filePath", requireAuth, (req: Request, res: Response) => {
-  const { bucket } = req.params as Record<string, string>;
-  const filePath = getWildcardPath(req);
-  if (!filePath) return res.status(400).json({ error: "Missing file path" });
-
-  try {
-    const fullPath = getFilePath(bucket, filePath);
-    const dir = path.dirname(fullPath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-    const chunks: Buffer[] = [];
-    req.on("data", (chunk: Buffer) => chunks.push(chunk));
-    req.on("end", () => {
-      const buf = Buffer.concat(chunks);
-      fs.writeFileSync(fullPath, buf);
-      res.status(200).json({
-        Key: `${bucket}/${filePath}`,
-        Id: crypto.randomUUID(),
-      });
-    });
-    req.on("error", (err) => {
-      console.error("[Storage] upload error:", err);
-      res.status(500).json({ error: err.message });
-    });
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
+router.put("/object/:bucket/*filePath", requireAuth, handleUpload);
 
 // GET /storage/v1/object/public/:bucket/*filePath
 router.get("/object/public/:bucket/*filePath", (req: Request, res: Response) => {

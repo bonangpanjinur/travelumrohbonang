@@ -53,14 +53,38 @@ Ini 4 finding yang masih terbuka dan sebelumnya jadi tugas awal:
 ## 6. Prioritas Rekomendasi (kalau nanti diperbaiki)
 
 ```text
-P0  Security findings 2 & 4 (data leak & admin asset tampering)
-P1  Security findings 1 & 3
-P1  Upload size limit + MIME check di src/routes/storage.ts
-P2  Ganti Math.random() → crypto.randomUUID() di pilgrim-documents.ts
-P2  Verifikasi admin role guard pada /admin/documents
-P3  Konsolidasi drift Drizzle vs SQL migrations
-P3  Perjelas app_role enum & has_role signature
+[x] P0  Security findings 2 & 4 (data leak & admin asset tampering)
+        — sudah ada migration supabase/migrations/20260710152224_*.sql
+          (ownership-checked policy pilgrim-documents + admin-only cms-images/
+          gallery/testimonials). BELUM diverifikasi ter-apply ke Supabase live
+          project (butuh SUPABASE_SERVICE_ROLE_KEY untuk mengecek) — lihat catatan
+          di bawah.
+[x] P1  Security finding 1 (REVOKE EXECUTE dari SECURITY DEFINER trigger-only fn)
+        — sudah ada di migration yang sama (baris 92-104).
+[x] P1  Security finding 3 (INSERT ownership check pilgrim-documents)
+        — sudah ada di migration yang sama (policy INSERT baris 37-45, WITH CHECK
+          via user_owns_pilgrim()).
+[x] P1  Upload size limit + MIME check di src/routes/storage.ts
+        — ditambahkan: whitelist content-type, cap 15MB via header +
+          penegakan byte-stream aktual (req.destroy() kalau melebihi saat upload).
+[x] P2  Ganti Math.random() → crypto.randomUUID() di pilgrim-documents.ts
+        — 3 pemakaian (create document, access-log) sudah diganti.
+[x] P2  Verifikasi admin role guard pada /admin/documents
+        — sudah terpasang: routes/admin/index.ts memasang
+          requireOperational di /documents dan /bookings/:bookingId/documents.
+          Tidak ada perubahan kode diperlukan.
+[ ] P3  Konsolidasi drift Drizzle vs SQL migrations — belum dikerjakan (butuh
+        keputusan/scope terpisah, banyak file sql/* legacy vs supabase/migrations).
+[ ] P3  Perjelas app_role enum & has_role signature — belum dikerjakan, perlu
+        akses ke Supabase live project untuk cek definisi enum saat ini.
 ```
+
+**Catatan verifikasi:** migration `supabase/migrations/20260710152224_*.sql` sudah
+ada di repo dan menutup P0/P1 secara kode, tapi API Server belum bisa start
+di environment ini karena `SUPABASE_SERVICE_ROLE_KEY` (dan `SUPABASE_URL`)
+belum diisi — jadi belum bisa dikonfirmasi migration ini benar-benar sudah
+diterapkan (applied) ke project Supabase yang live. Isi secret tersebut lalu
+jalankan `supabase db push` (atau apply manual) untuk memastikan.
 
 ## 7. Catatan tentang “build error”
 

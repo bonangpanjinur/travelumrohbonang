@@ -1,4 +1,5 @@
 import { Router } from "express";
+import crypto from "crypto";
 import { db, pilgrimDocuments, pilgrimDocAccessLogs, bookings, bookingPilgrims, eq, and, inArray } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth";
 
@@ -103,7 +104,7 @@ router.post("/", async (req: any, res) => {
         .returning();
       return res.json(updated);
     } else {
-      const id = Math.random().toString(36).substring(2, 15);
+      const id = crypto.randomUUID();
       const [inserted] = await db
         .insert(pilgrimDocuments)
         .values({
@@ -130,7 +131,7 @@ router.post("/", async (req: any, res) => {
 router.post("/access-log", async (req: any, res) => {
   try {
     const { pilgrimId, docType, storagePath, context } = req.body;
-    const id = Math.random().toString(36).substring(2, 15);
+    const id = crypto.randomUUID();
     await db.insert(pilgrimDocAccessLogs).values({
       id,
       userId: req.user.id,
