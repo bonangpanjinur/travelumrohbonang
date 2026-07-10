@@ -4,9 +4,9 @@
   "license": "MIT",
   "scripts": {
     "prepare": "sh -c 'git config core.hooksPath .githooks && chmod +x .githooks/pre-commit || true'",
-    "dev": "pnpm --filter ./artifacts/umroh-app dev",
+    "dev": "vite --config artifacts/umroh-app/vite.config.ts --host 0.0.0.0",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "build:dev": "pnpm --filter ./artifacts/umroh-app build",
+    "build:dev": "vite build --config artifacts/umroh-app/vite.config.ts",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "lint": "eslint artifacts/umroh-app/src artifacts/api-server/src lib --ext .ts,.tsx",
@@ -22,7 +22,11 @@
     "@types/express": "^5.0.6",
     "@types/express-serve-static-core": "^5.0.0",
     "@types/node": "25.9.4",
+    "@vitejs/plugin-react": "^5.0.4",
+    "@tailwindcss/vite": "^4.1.14",
+    "@replit/vite-plugin-runtime-error-modal": "^0.0.6",
     "prettier": "^3.8.4",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "vite": "^7.3.2"
   }
 }
