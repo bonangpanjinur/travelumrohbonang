@@ -22,6 +22,7 @@ import Dashboard from "./features/dashboard/pages/Dashboard";
 import Gallery from "./features/cms/pages/Gallery";
 import Blog from "./features/cms/pages/Blog";
 import BlogDetail from "./features/cms/pages/BlogDetail";
+import FAQPage from "./features/cms/pages/FAQ";
 import DynamicPage from "./features/cms/pages/DynamicPage";
 import TenantSitePage from "./features/tenant/pages/TenantSite";
 import MyUpgrades from "./features/jamaah/pages/MyUpgrades";
@@ -161,6 +162,7 @@ const AppContent = () => {
       <Route path="/galeri" element={<Gallery />} />
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<BlogDetail />} />
+      <Route path="/faq" element={<FAQPage />} />
       <Route path="/manasik" element={<Manasik />} />
       <Route path="/r/:code" element={<AffiliateRedirect />} />
 
