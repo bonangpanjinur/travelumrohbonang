@@ -6,6 +6,7 @@
     "prepare": "sh -c 'git config core.hooksPath .githooks && chmod +x .githooks/pre-commit || true'",
     "dev": "pnpm --filter ./artifacts/umroh-app dev",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "build:dev": "pnpm --filter ./artifacts/umroh-app build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "lint": "eslint artifacts/umroh-app/src artifacts/api-server/src lib --ext .ts,.tsx",
