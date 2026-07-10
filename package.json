@@ -4,7 +4,7 @@
   "license": "MIT",
   "scripts": {
     "prepare": "sh -c 'git config core.hooksPath .githooks && chmod +x .githooks/pre-commit || true'",
-    "dev": "cd artifacts/umroh-app && vite --config vite.config.ts --host 0.0.0.0",
+    "dev": "pnpm --filter ./artifacts/umroh-app dev",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
