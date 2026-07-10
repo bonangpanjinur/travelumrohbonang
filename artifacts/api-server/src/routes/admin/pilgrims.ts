@@ -16,6 +16,34 @@ import {
 
 const router = Router();
 
+// Only these columns may be written via the admin pilgrim form. Without this
+// whitelist, `...req.body` spread straight into insert/update let a caller
+// set arbitrary bookingPilgrims columns (e.g. bookingId, id) via the API.
+const PILGRIM_WRITABLE_FIELDS = [
+  "bookingId",
+  "name",
+  "nik",
+  "phone",
+  "email",
+  "gender",
+  "birthDate",
+  "nationality",
+  "passportNumber",
+  "passportExpiry",
+  "roomType",
+] as const;
+
+function pickPilgrimFields(body: unknown): Record<string, unknown> {
+  const source = (body ?? {}) as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+  for (const field of PILGRIM_WRITABLE_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(source, field)) {
+      result[field] = source[field];
+    }
+  }
+  return result;
+}
+
 router.get("/", async (req: any, res) => {
   try {
     const { search } = req.query;
@@ -71,15 +99,19 @@ router.get("/", async (req: any, res) => {
 
 router.post("/", async (req: any, res) => {
     try {
-        const values = req.body;
+        const values = pickPilgrimFields(req.body);
+        if (!values.bookingId || !values.name) {
+          return res.status(400).json({ error: "bookingId and name are required" });
+        }
         const id = Math.random().toString(36).substring(2, 15);
         const [inserted] = await db.insert(bookingPilgrims).values({
             id,
             ...values,
             createdAt: new Date(),
-        }).returning();
+        } as typeof bookingPilgrims.$inferInsert).returning();
         res.json(inserted);
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: "Failed to create pilgrim" });
     }
 });
@@ -87,14 +119,19 @@ router.post("/", async (req: any, res) => {
 router.patch("/:id", async (req: any, res) => {
   try {
     const { id } = req.params;
-    const values = req.body;
+    const values = pickPilgrimFields(req.body);
+    if (Object.keys(values).length === 0) {
+      return res.status(400).json({ error: "No valid fields to update" });
+    }
     const [updated] = await db
       .update(bookingPilgrims)
       .set(values)
       .where(eq(bookingPilgrims.id, id))
       .returning();
+    if (!updated) return res.status(404).json({ error: "Pilgrim not found" });
     res.json(updated);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Failed to update pilgrim" });
   }
 });

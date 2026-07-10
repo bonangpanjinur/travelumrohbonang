@@ -24,31 +24,44 @@ export default function Compare() {
   const slugs = useMemo(() => (params.get("ids") || "").split(",").filter(Boolean).slice(0, 3), [params]);
   const [pkgs, setPkgs] = useState<Pkg[]>([]);
   const [allPkgs, setAllPkgs] = useState<{id:string;title:string;slug:string}[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     apiFetch<{ data: { id: string; title: string; slug: string }[] }>("/api/packages?active=true")
       .then((res) => {
         setAllPkgs(res.data || []);
-      });
+      })
+      .catch((err) => console.error("Failed to load package list", err));
   }, []);
 
   useEffect(() => {
-    if (slugs.length === 0) { setPkgs([]); return; }
+    if (slugs.length === 0) { setPkgs([]); setError(null); return; }
+    setLoading(true);
+    setError(null);
     (async () => {
-      const { data } = await apiFetch<{ data: any[] }>("/api/packages");
-      const list = (data || []).filter(p => slugs.includes(p.slug));
-      
-      const pkgsWithMinPrice = list.map(p => {
-        const prices = (p.departures || []).flatMap((d: any) => (d.prices || []).map((pr: any) => pr.price));
-        const minPrice = prices.length > 0 ? Math.min(...prices) : undefined;
-        return {
-          ...p,
-          min_price: minPrice,
-          hotel_makkah: p.hotel_makkah ? { name: p.hotel_makkah.name, star: p.hotel_makkah.star } : null,
-          hotel_madinah: p.hotel_madinah ? { name: p.hotel_madinah.name, star: p.hotel_madinah.star } : null,
-        };
-      });
-      setPkgs(pkgsWithMinPrice);
+      try {
+        const { data } = await apiFetch<{ data: any[] }>("/api/packages");
+        const list = (data || []).filter(p => slugs.includes(p.slug));
+
+        const pkgsWithMinPrice = list.map(p => {
+          const prices = (p.departures || []).flatMap((d: any) => (d.prices || []).map((pr: any) => pr.price));
+          const minPrice = prices.length > 0 ? Math.min(...prices) : undefined;
+          return {
+            ...p,
+            min_price: minPrice,
+            hotel_makkah: p.hotel_makkah ? { name: p.hotel_makkah.name, star: p.hotel_makkah.star } : null,
+            hotel_madinah: p.hotel_madinah ? { name: p.hotel_madinah.name, star: p.hotel_madinah.star } : null,
+          };
+        });
+        setPkgs(pkgsWithMinPrice);
+      } catch (err) {
+        console.error("Failed to load packages for comparison", err);
+        setError("Gagal memuat data paket. Silakan coba lagi.");
+        setPkgs([]);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [slugs.join(",")]);
 
@@ -82,7 +95,11 @@ export default function Compare() {
           </select>
         </div>
 
-        {pkgs.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-16 text-muted-foreground">Memuat data paket...</div>
+        ) : error ? (
+          <div className="text-center py-16 text-destructive">{error}</div>
+        ) : pkgs.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">Belum ada paket dipilih.</div>
         ) : (
           <div className="overflow-x-auto">

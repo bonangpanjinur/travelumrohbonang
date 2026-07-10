@@ -28,20 +28,37 @@ export function useWishlist() {
 
   const toggle = async (packageId: string) => {
     if (!user) return { needsAuth: true };
+
+    // Optimistic update so the heart icon responds instantly; rolled back if
+    // the request fails.
+    const wasIn = ids.has(packageId);
+    setIds(prev => {
+      const n = new Set(prev);
+      if (wasIn) n.delete(packageId); else n.add(packageId);
+      return n;
+    });
+
     try {
       const result = await apiFetch<{ added: boolean }>("/api/wishlists/toggle", {
         method: "POST",
         body: JSON.stringify({ packageId }),
       });
-      
-      if (result.added) {
-        setIds(prev => new Set(prev).add(packageId));
-      } else {
-        setIds(prev => { const n = new Set(prev); n.delete(packageId); return n; });
-      }
+
+      // Reconcile with server truth in case of a race.
+      setIds(prev => {
+        const n = new Set(prev);
+        if (result.added) n.add(packageId); else n.delete(packageId);
+        return n;
+      });
       return result;
     } catch (err) {
       console.error(err);
+      // Roll back the optimistic change.
+      setIds(prev => {
+        const n = new Set(prev);
+        if (wasIn) n.add(packageId); else n.delete(packageId);
+        return n;
+      });
       return { error: true };
     }
   };

@@ -70,7 +70,19 @@ const MyDocuments = () => {
     return documents.find((d) => d.pilgrimId === pilgrimId && d.documentType === docType);
   };
 
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+
   const handleUpload = async (pilgrimId: string, docType: string, file: File) => {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast.error("Format file tidak didukung. Gunakan JPG, PNG, WebP, atau PDF.");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("Ukuran file maksimal 5MB.");
+      return;
+    }
+
     const key = `${pilgrimId}-${docType}`;
     setUploading(key);
 

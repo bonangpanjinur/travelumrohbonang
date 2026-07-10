@@ -87,8 +87,26 @@ router.delete("/:id", async (req, res) => {
 
 router.post("/bulk-copy", async (req, res) => {
   try {
-    const { sourceCosts, targetPackageIds, targetDepartureIds, mode, overwrite, sourcePackageId } = req.body;
-    
+    const { sourceCosts, targetPackageIds, targetDepartureIds, mode, overwrite, sourcePackageId } = req.body ?? {};
+
+    if (mode !== "packages" && mode !== "departures") {
+      return res.status(400).json({ error: "mode must be 'packages' or 'departures'" });
+    }
+    if (!Array.isArray(sourceCosts) || sourceCosts.length === 0) {
+      return res.status(400).json({ error: "sourceCosts must be a non-empty array" });
+    }
+    if (mode === "packages" && (!Array.isArray(targetPackageIds) || targetPackageIds.length === 0)) {
+      return res.status(400).json({ error: "targetPackageIds must be a non-empty array" });
+    }
+    if (mode === "departures") {
+      if (!Array.isArray(targetDepartureIds) || targetDepartureIds.length === 0) {
+        return res.status(400).json({ error: "targetDepartureIds must be a non-empty array" });
+      }
+      if (!sourcePackageId) {
+        return res.status(400).json({ error: "sourcePackageId is required for mode 'departures'" });
+      }
+    }
+
     if (overwrite) {
       if (mode === "packages") {
         for (const pid of targetPackageIds) {
