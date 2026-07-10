@@ -3,6 +3,32 @@ import { db, leads, leadFollowUps, eq, desc } from "@workspace/db";
 
 const router = Router();
 
+// Joined follow-ups list — avoids the frontend N+1 pattern of fetching all
+// leads then issuing one follow-ups request per lead (see .lovable/plan.md P3).
+router.get("/follow-ups", async (req, res) => {
+  try {
+    const data = await db
+      .select({
+        id: leadFollowUps.id,
+        leadId: leadFollowUps.leadId,
+        followUpDate: leadFollowUps.followUpDate,
+        type: leadFollowUps.type,
+        notes: leadFollowUps.notes,
+        isDone: leadFollowUps.isDone,
+        doneAt: leadFollowUps.doneAt,
+        createdAt: leadFollowUps.createdAt,
+        leadName: leads.name,
+        leadPhone: leads.phone,
+      })
+      .from(leadFollowUps)
+      .leftJoin(leads, eq(leadFollowUps.leadId, leads.id))
+      .orderBy(desc(leadFollowUps.followUpDate));
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch follow ups" });
+  }
+});
+
 // Leads
 router.get("/leads", async (req, res) => {
   try {

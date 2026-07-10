@@ -46,23 +46,23 @@ interface LeadForm {
   email: string;
   source: string;
   status: string;
-  package_interest: string;
+  packageInterest: string;
   notes: string;
 }
 
 interface FollowUpForm {
-  lead_id: string;
-  follow_up_date: string;
+  leadId: string;
+  followUpDate: string;
   type: string;
   notes: string;
 }
 
 const defaultLeadForm: LeadForm = {
-  name: "", phone: "", email: "", source: "Website", status: "new", package_interest: "", notes: "",
+  name: "", phone: "", email: "", source: "Website", status: "new", packageInterest: "", notes: "",
 };
 
 const defaultFollowUpForm: FollowUpForm = {
-  lead_id: "", follow_up_date: addDays(new Date(), 1).toISOString().slice(0, 16), type: "call", notes: "",
+  leadId: "", followUpDate: addDays(new Date(), 1).toISOString().slice(0, 16), type: "call", notes: "",
 };
 
 const AdminCRM = () => {
@@ -84,23 +84,11 @@ const AdminCRM = () => {
     queryFn: () => apiFetch<any[]>("/api/admin/crm/leads"),
   });
 
-  // Fetch follow-ups
+  // Fetch follow-ups via a single joined endpoint (avoids N+1: previously this
+  // fetched every lead then issued one follow-ups request per lead).
   const { data: followUps = [], isLoading: followUpsLoading } = useQuery({
     queryKey: ["crm_follow_ups"],
-    queryFn: async () => {
-      // For simplicity, let's assume we fetch all leads then their follow ups
-      // Or we could create a dedicated joined endpoint if needed.
-      const allLeads = await apiFetch<any[]>("/api/admin/crm/leads");
-      const followUpsPromises = allLeads.map(l => apiFetch<any[]>(`/api/admin/crm/leads/${l.id}/follow-ups`));
-      const followUpsResults = await Promise.all(followUpsPromises);
-      return followUpsResults.flatMap((leadFollowUps, leadIndex) => {
-        const lead = allLeads[leadIndex];
-        return leadFollowUps.map((f) => ({
-          ...f,
-          leads: { name: lead.name, phone: lead.phone },
-        }));
-      });
-    },
+    queryFn: () => apiFetch<any[]>("/api/admin/crm/follow-ups"),
   });
 
   // Fetch packages for interest dropdown
@@ -130,9 +118,9 @@ const AdminCRM = () => {
     const newLeads = leads.filter((l: any) => l.status === "new").length;
     const interested = leads.filter((l: any) => l.status === "interested").length;
     const converted = leads.filter((l: any) => l.status === "converted").length;
-    const pendingFollowUps = followUps.filter((f: any) => !f.is_done).length;
+    const pendingFollowUps = followUps.filter((f: any) => !f.isDone).length;
     const overdueFollowUps = followUps.filter(
-      (f: any) => !f.is_done && isPast(new Date(f.follow_up_date))
+      (f: any) => !f.isDone && isPast(new Date(f.followUpDate))
     ).length;
     return { total, newLeads, interested, converted, pendingFollowUps, overdueFollowUps };
   }, [leads, followUps]);
@@ -176,7 +164,7 @@ const AdminCRM = () => {
   // Follow-up mutations
   const saveFollowUpMutation = useMutation({
     mutationFn: async (data: FollowUpForm) => {
-      await apiFetch(`/api/admin/crm/leads/${data.lead_id}/follow-ups`, {
+      await apiFetch(`/api/admin/crm/leads/${data.leadId}/follow-ups`, {
         method: "POST",
         body: JSON.stringify(data),
       });
@@ -191,10 +179,10 @@ const AdminCRM = () => {
   });
 
   const toggleFollowUpDone = useMutation({
-    mutationFn: ({ id, isDone }: { id: string; isDone: boolean }) =>
+    mutationFn: ({ id, isDone: nextIsDone }: { id: string; isDone: boolean }) =>
       apiFetch(`/api/admin/crm/follow-ups/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ isDone, doneAt: isDone ? new Date().toISOString() : null }),
+        body: JSON.stringify({ isDone: nextIsDone, doneAt: nextIsDone ? new Date().toISOString() : null }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm_follow_ups"] });
@@ -206,13 +194,13 @@ const AdminCRM = () => {
     setEditLeadId(l.id);
     setLeadForm({
       name: l.name, phone: l.phone || "", email: l.email || "",
-      source: l.source || "Website", status: l.status, package_interest: l.package_interest || "", notes: l.notes || "",
+      source: l.source || "Website", status: l.status, packageInterest: l.packageInterest || "", notes: l.notes || "",
     });
     setLeadDialogOpen(true);
   };
 
   const handleAddFollowUp = (leadId: string) => {
-    setFollowUpForm({ ...defaultFollowUpForm, lead_id: leadId });
+    setFollowUpForm({ ...defaultFollowUpForm, leadId: leadId });
     setFollowUpDialogOpen(true);
   };
 
@@ -243,7 +231,7 @@ const AdminCRM = () => {
               <form onSubmit={(e) => { e.preventDefault(); saveFollowUpMutation.mutate(followUpForm); }} className="space-y-4">
                 <div>
                   <Label>Lead</Label>
-                  <Select value={followUpForm.lead_id} onValueChange={(v) => setFollowUpForm({ ...followUpForm, lead_id: v })}>
+                  <Select value={followUpForm.leadId} onValueChange={(v) => setFollowUpForm({ ...followUpForm, leadId: v })}>
                     <SelectTrigger><SelectValue placeholder="Pilih lead" /></SelectTrigger>
                     <SelectContent>
                       {leads.map((l: any) => (
@@ -255,7 +243,7 @@ const AdminCRM = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Tanggal & Waktu</Label>
-                    <Input type="datetime-local" value={followUpForm.follow_up_date} onChange={(e) => setFollowUpForm({ ...followUpForm, follow_up_date: e.target.value })} />
+                    <Input type="datetime-local" value={followUpForm.followUpDate} onChange={(e) => setFollowUpForm({ ...followUpForm, followUpDate: e.target.value })} />
                   </div>
                   <div>
                     <Label>Tipe</Label>
@@ -273,7 +261,7 @@ const AdminCRM = () => {
                   <Label>Catatan</Label>
                   <Textarea value={followUpForm.notes} onChange={(e) => setFollowUpForm({ ...followUpForm, notes: e.target.value })} placeholder="Catatan follow-up..." />
                 </div>
-                <Button type="submit" className="w-full" disabled={saveFollowUpMutation.isPending || !followUpForm.lead_id}>
+                <Button type="submit" className="w-full" disabled={saveFollowUpMutation.isPending || !followUpForm.leadId}>
                   {saveFollowUpMutation.isPending ? "Menyimpan..." : "Jadwalkan"}
                 </Button>
               </form>
@@ -323,7 +311,7 @@ const AdminCRM = () => {
                 </div>
                 <div>
                   <Label>Paket Diminati</Label>
-                  <Select value={leadForm.package_interest} onValueChange={(v) => setLeadForm({ ...leadForm, package_interest: v })}>
+                  <Select value={leadForm.packageInterest} onValueChange={(v) => setLeadForm({ ...leadForm, packageInterest: v })}>
                     <SelectTrigger><SelectValue placeholder="Pilih paket" /></SelectTrigger>
                     <SelectContent>
                       {packages.map((p: any) => <SelectItem key={p.id} value={p.title}>{p.title}</SelectItem>)}
@@ -414,7 +402,7 @@ const AdminCRM = () => {
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "follow-ups" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           <Bell className="w-4 h-4 inline mr-1.5" />
-          Follow-up ({followUps.filter((f: any) => !f.is_done).length})
+          Follow-up ({followUps.filter((f: any) => !f.isDone).length})
           {stats.overdueFollowUps > 0 && (
             <span className="ml-1.5 bg-destructive text-destructive-foreground text-xs rounded-full px-1.5 py-0.5">{stats.overdueFollowUps}</span>
           )}
@@ -469,10 +457,10 @@ const AdminCRM = () => {
                             </div>
                           </TableCell>
                           <TableCell><Badge variant="outline">{l.source}</Badge></TableCell>
-                          <TableCell className="max-w-[150px] truncate text-sm">{l.package_interest || "-"}</TableCell>
+                          <TableCell className="max-w-[150px] truncate text-sm">{l.packageInterest || "-"}</TableCell>
                           <TableCell>{getStatusBadge(l.status)}</TableCell>
                           <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                            {format(new Date(l.created_at), "dd MMM yyyy", { locale: localeId })}
+                            {format(new Date(l.createdAt), "dd MMM yyyy", { locale: localeId })}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-center gap-1">
@@ -530,17 +518,17 @@ const AdminCRM = () => {
                       const typeInfo = followUpTypes.find((t) => t.value === f.type);
                       const Icon = typeInfo?.icon || Phone;
                       return (
-                        <TableRow key={f.id} className={f.is_done ? "opacity-60" : ""}>
+                        <TableRow key={f.id} className={f.isDone ? "opacity-60" : ""}>
                           <TableCell>
                             <Checkbox
-                              checked={f.is_done}
+                              checked={f.isDone}
                               onCheckedChange={(checked) => toggleFollowUpDone.mutate({ id: f.id, isDone: !!checked })}
                             />
                           </TableCell>
                           <TableCell>
                             <div>
-                              <span className="font-semibold">{f.leads?.name || "-"}</span>
-                              {f.leads?.phone && <span className="text-xs text-muted-foreground ml-2">{f.leads.phone}</span>}
+                              <span className="font-semibold">{f.leadName || "-"}</span>
+                              {f.leadPhone && <span className="text-xs text-muted-foreground ml-2">{f.leadPhone}</span>}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -549,12 +537,12 @@ const AdminCRM = () => {
                               <span className="text-sm">{typeInfo?.label || f.type}</span>
                             </div>
                           </TableCell>
-                          <TableCell className={getFollowUpUrgency(f.follow_up_date, f.is_done)}>
-                            {format(new Date(f.follow_up_date), "dd MMM yyyy HH:mm", { locale: localeId })}
-                            {!f.is_done && isPast(new Date(f.follow_up_date)) && (
+                          <TableCell className={getFollowUpUrgency(f.followUpDate, f.isDone)}>
+                            {format(new Date(f.followUpDate), "dd MMM yyyy HH:mm", { locale: localeId })}
+                            {!f.isDone && isPast(new Date(f.followUpDate)) && (
                               <span className="ml-1.5 text-xs">⚠️ Overdue</span>
                             )}
-                            {!f.is_done && isToday(new Date(f.follow_up_date)) && (
+                            {!f.isDone && isToday(new Date(f.followUpDate)) && (
                               <span className="ml-1.5 text-xs">📌 Hari ini</span>
                             )}
                           </TableCell>

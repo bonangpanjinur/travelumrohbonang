@@ -96,6 +96,43 @@ memastikan file schema mana yang cocok dengan production, lalu opsional
 mengarsipkan/menghapus dump lama) dicatat di `sql/schema/README.md` tapi
 belum dieksekusi — butuh `SUPABASE_SERVICE_ROLE_KEY` terisi dulu.
 
+## 8. Audit lanjutan panel admin (per menu) — setelah P0–P3
+
+Setelah P0–P3 selesai, dilakukan pemetaan menyeluruh menu admin
+(`adminMenuConfig.ts`) dan dicek satu-satu terhadap route backend + halaman
+frontend-nya. Temuan & yang sudah dieksekusi:
+
+```text
+[x] P1  N+1 query di menu CRM (Follow-up tab)
+        — CRM.tsx sebelumnya fetch semua leads lalu 1 request follow-up PER
+          lead (N+1). Tambah endpoint baru GET /api/admin/crm/follow-ups
+          (LEFT JOIN ke leads) dan ganti frontend untuk pakai endpoint itu.
+[x] P1  Bug camelCase/snake_case di menu CRM (data tidak akan muncul sama
+        sekali di form submit/tampilan)
+        — CRM.tsx memakai field snake_case (lead_id, follow_up_date,
+          package_interest, is_done, f.leads.name) padahal backend
+          (Drizzle) mengembalikan/mengharapkan camelCase (leadId,
+          followUpDate, packageInterest, isDone). Ini bug nyata: submit
+          follow-up baru akan tersimpan dengan followUpDate = NULL, dan
+          filter overdue/pending akan selalu 0. Sudah diperbaiki menyeluruh
+          di CRM.tsx.
+[x] P1  Audit Logs & Error Logs tidak dibatasi (unbounded fetch)
+        — GET /api/admin/logs/audit dan /error sekarang menerima
+          ?limit (default 200, max 1000) & ?offset, mencegah query "SELECT *"
+          tanpa batas saat log sudah banyak.
+[ ]     Integrations.ts (masking secret) — sudah dicek, TIDAK ada masalah
+        (masking + merge-on-mask sudah benar diimplementasikan).
+[ ]     Branches.tsx tanpa pagination client-side — dicatat, tidak dieksekusi
+        (skala data cabang biasanya kecil, risiko rendah, prioritas
+        ditangguhkan berikutnya bila diminta).
+```
+
+Verifikasi: `pnpm --filter @workspace/api-server` build (esbuild) sukses,
+`pnpm --filter @workspace/umroh-app` `tsc --noEmit` bersih setelah perubahan
+di atas. API Server masih belum bisa start di environment ini karena
+`SUPABASE_SERVICE_ROLE_KEY` belum diisi — jadi perubahan endpoint baru belum
+bisa dites end-to-end sampai secret itu diisi.
+
 **Catatan verifikasi:** migration `supabase/migrations/20260710152224_*.sql` sudah
 ada di repo dan menutup P0/P1 secara kode, tapi API Server belum bisa start
 di environment ini karena `SUPABASE_SERVICE_ROLE_KEY` (dan `SUPABASE_URL`)
