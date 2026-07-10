@@ -2907,6 +2907,10 @@ export type Database = {
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       normalize_phone_id: { Args: { raw: string }; Returns: string }
       to_idr: { Args: { _amount: number; _currency: string }; Returns: number }
+      user_owns_pilgrim: {
+        Args: { _pilgrim_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
