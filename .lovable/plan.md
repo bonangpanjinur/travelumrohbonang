@@ -73,11 +73,28 @@ Ini 4 finding yang masih terbuka dan sebelumnya jadi tugas awal:
         — sudah terpasang: routes/admin/index.ts memasang
           requireOperational di /documents dan /bookings/:bookingId/documents.
           Tidak ada perubahan kode diperlukan.
-[ ] P3  Konsolidasi drift Drizzle vs SQL migrations — belum dikerjakan (butuh
-        keputusan/scope terpisah, banyak file sql/* legacy vs supabase/migrations).
-[ ] P3  Perjelas app_role enum & has_role signature — belum dikerjakan, perlu
-        akses ke Supabase live project untuk cek definisi enum saat ini.
+[x] P3  Konsolidasi drift Drizzle vs SQL migrations
+        — 4 file dump schema di sql/schema/*.sql ternyata bukan duplikat
+          (md5 berbeda semua, digenerate oleh tool/waktu berbeda). Tidak
+          dihapus (berisiko tanpa akses live DB untuk verifikasi), tapi
+          masing-masing sudah diberi header "⚠️ LEGACY / HISTORICAL SNAPSHOT"
+          + dibuat sql/schema/README.md yang menetapkan sumber kebenaran:
+          lib/db/src/schema/*.ts (struktur tabel) & supabase/migrations/*.sql
+          (perubahan yang applied). sql/migrations/*.sql (ad-hoc one-off
+          scripts) dan sql/seeds/*.sql dibiarkan apa adanya — bukan duplikat
+          schema, jadi tidak butuh anotasi.
+[x] P3  Perjelas app_role enum & has_role signature
+        — sudah diverifikasi: TIDAK ADA enum app_role di codebase manapun.
+          Kolom role konsisten TEXT di semua layer (Drizzle userRoles/
+          roleMenuPermissions, sql/migrations/create_user_roles_table.sql,
+          function has_role(uuid, text)). Bukan bug — desainnya memang TEXT,
+          bukan enum. Detail di sql/schema/README.md.
 ```
+
+**Catatan P3:** rekomendasi lanjutan (introspeksi Supabase live untuk
+memastikan file schema mana yang cocok dengan production, lalu opsional
+mengarsipkan/menghapus dump lama) dicatat di `sql/schema/README.md` tapi
+belum dieksekusi — butuh `SUPABASE_SERVICE_ROLE_KEY` terisi dulu.
 
 **Catatan verifikasi:** migration `supabase/migrations/20260710152224_*.sql` sudah
 ada di repo dan menutup P0/P1 secara kode, tapi API Server belum bisa start

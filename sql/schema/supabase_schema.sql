@@ -1,3 +1,9 @@
+-- ⚠️ LEGACY / HISTORICAL SNAPSHOT — bukan sumber kebenaran schema.
+-- Sumber kebenaran saat ini: lib/db/src/schema/*.ts (Drizzle) untuk struktur
+-- tabel, dan supabase/migrations/*.sql untuk perubahan yang benar-benar
+-- diterapkan (applied) ke Supabase. File ini disimpan sebagai referensi
+-- historis saja — lihat sql/schema/README.md sebelum menjalankan ulang.
+--
 -- Auto-generated schema for UmrohPlus based on existing Supabase types.ts
 -- Run this in the Supabase SQL Editor for your project.
 create extension if not exists pgcrypto;
