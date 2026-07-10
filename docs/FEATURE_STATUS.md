@@ -1,6 +1,6 @@
 # FEATURE_STATUS.md
 > Status setiap fitur di Umroh App.
-> Terakhir diperbarui: 2026-07-08
+> Terakhir diperbarui: 2026-07-10
 
 ---
 
@@ -19,12 +19,13 @@
 
 | Fitur | Status | File Utama | Keterangan |
 |-------|--------|------------|------------|
-| Login (email + password) | ✅ Complete | `features/auth/Auth.tsx` | Via Supabase Auth |
-| Register | ✅ Complete | `features/auth/Auth.tsx` | Auto-create profile via trigger |
+| Login (email + password) | ✅ Complete | `features/auth/Auth.tsx` | Via Supabase Auth + local DB role |
+| Register | ✅ Complete | `features/auth/Auth.tsx` | Auto-create profile via local trigger |
 | Forgot Password / Reset | ✅ Complete | `features/auth/Auth.tsx` | Email link dari Supabase |
 | Two-Factor Authentication (2FA) | ✅ Complete | `features/auth/Account2FA.tsx` | TOTP via Supabase MFA |
 | Logout | ✅ Complete | Supabase `signOut()` | Clear session |
 | Session Persistence | ✅ Complete | Supabase default | localStorage |
+| Admin Email Override | ✅ Complete | `authMiddleware.ts` | ADMIN_EMAILS → auto super_admin |
 
 ---
 
@@ -53,7 +54,7 @@
 | Detail Booking | ✅ Complete | `features/booking/` | Pilgrim data, payment status |
 | Profile Management | ✅ Complete | `features/dashboard/Profile.tsx` | Edit data diri |
 | Wishlist | ✅ Complete | `features/wishlist/Wishlist.tsx` | Toggle, list paket favorit |
-| Notifikasi | ✅ Complete | `features/dashboard/` | Real-time via Supabase |
+| Notifikasi | ✅ Complete | `features/dashboard/` | Trigger-based, Supabase Realtime optional |
 | Upload Dokumen Jamaah | ✅ Complete | `features/jamaah/` | KTP, paspor, foto |
 
 ---
@@ -66,7 +67,7 @@
 | Input Data Jamaah | ✅ Complete | `features/booking/` | Per-pilgrim data |
 | Pilih Tipe Kamar | ✅ Complete | `features/booking/` | Double/Triple/Quad |
 | Booking Code Generation | ✅ Complete | `api/bookings.ts` | Auto-generate di backend |
-| Quota Check | ✅ Complete | DB trigger | Hard lock via `FOR UPDATE` |
+| Quota Check | ✅ Complete | DB trigger | Hard lock via `trg_booking_quota_insert` |
 | Konfirmasi Booking | ✅ Complete | | |
 
 ---
@@ -75,11 +76,11 @@
 
 | Fitur | Status | File Utama | Keterangan |
 |-------|--------|------------|------------|
-| Upload Bukti Transfer | ⚠️ Incomplete | `features/booking/Payment.tsx` | Ada tapi perlu verifikasi |
-| Admin Verifikasi Pembayaran | ⚠️ Incomplete | `features/admin/AdminPayments.tsx` | UI ada, flow belum sempurna |
-| Payment Gateway (Midtrans) | ❌ Broken | — | **Tidak terintegrasi sama sekali** |
-| Payment Gateway (Xendit) | ❌ Broken | — | **Tidak terintegrasi sama sekali** |
-| Auto-Confirm via Webhook | ❌ Broken | — | Trigger ada, tapi tidak ada webhook handler |
+| Upload Bukti Transfer | ⚠️ Incomplete | `features/booking/Payment.tsx` | Ada tapi perlu verifikasi end-to-end |
+| Admin Verifikasi Pembayaran | ⚠️ Incomplete | `features/admin/AdminPayments.tsx` | UI ada, auto-confirm trigger sudah aktif |
+| Payment Gateway (Midtrans) | ❌ Broken | — | Butuh MIDTRANS_SERVER_KEY dan MIDTRANS_CLIENT_KEY |
+| Payment Gateway (Xendit) | ❌ Broken | — | Butuh XENDIT_API_KEY |
+| Auto-Confirm via Payment | ✅ Complete | DB trigger | `trg_booking_payment_auto_confirm` aktif |
 | Refund | ⚠️ Incomplete | `features/admin/AdminRefunds.tsx` | UI ada, backend belum lengkap |
 
 ---
@@ -119,7 +120,7 @@
 | Kelola Booking | ✅ Complete | `features/admin/AdminBookings.tsx` | Approve/reject/status |
 | Kelola Jamaah (Pilgrims) | ✅ Complete | `features/admin/AdminPilgrims.tsx` | |
 | Kelola Dokumen | ✅ Complete | `features/admin/AdminDocuments.tsx` | Verifikasi dokumen |
-| Live Chat Support | ✅ Complete | `features/admin/AdminChats.tsx` | Per booking |
+| Live Chat Support | ✅ Complete | `features/admin/AdminChats.tsx` | Per booking, dengan auth+ownership check |
 | Contracts | ⚠️ Incomplete | `features/admin/AdminContracts.tsx` | Permission check ada, CRUD belum |
 
 ---
@@ -128,7 +129,7 @@
 
 | Fitur | Status | File Utama | Keterangan |
 |-------|--------|------------|------------|
-| Kelola Pembayaran | ⚠️ Incomplete | `features/admin/AdminPayments.tsx` | Manual verify ada |
+| Kelola Pembayaran | ⚠️ Incomplete | `features/admin/AdminPayments.tsx` | Manual verify ada, auto-confirm trigger aktif |
 | Kelola Refund | ⚠️ Incomplete | `features/admin/AdminRefunds.tsx` | UI ada, approval flow belum |
 | Kelola Biaya (Costs) | ⚠️ Incomplete | `features/admin/AdminCosts.tsx` | Belum diverifikasi penuh |
 | Reports | ✅ Complete | `features/admin/AdminReports.tsx` | Export CSV/PDF |
@@ -164,15 +165,17 @@
 
 | Fitur | Status | Keterangan |
 |-------|--------|------------|
-| Agent Commissions (auto via trigger) | ✅ Complete | DB trigger saat booking terbuat |
+| Agent Commissions (auto via trigger) | ✅ Complete | `trg_booking_commission` aktif di Replit PostgreSQL |
 | Agent Withdrawals | ⚠️ Incomplete | UI ada, approval flow belum |
 | Dynamic Theming (CSS vars) | ✅ Complete | `site_settings` → CSS variables |
 | Multi-language (i18n) | ✅ Complete | `shared/i18n/` — Indonesia/English |
 | Dark Mode | ✅ Complete | Tailwind CSS dark mode |
-| Real-time Notifications | ✅ Complete | Supabase Realtime channel |
-| Global Error Boundary | ❌ Broken | Tidak ada di `App.tsx` — white screen saat error |
+| Booking Status Notifications | ✅ Complete | `trg_booking_status_notification` aktif |
+| Global Error Boundary | ✅ Complete | Ada di `App.tsx` baris 115 & 259 |
 | Rate Limiting | ✅ Complete | `middlewares/rateLimiter.ts` |
 | Request Logging | ✅ Complete | `routes/logs.ts` |
+| Business Logic Triggers | ✅ Complete | 6 triggers aktif di Replit PostgreSQL |
+| Schema Sync (Drizzle → PostgreSQL) | ✅ Complete | `drizzle-kit push` dijalankan |
 
 ---
 
@@ -180,8 +183,10 @@
 
 | Status | Jumlah | Persentase |
 |--------|--------|------------|
-| ✅ Complete | ~45 | ~73% |
-| ⚠️ Incomplete | ~10 | ~16% |
-| ❌ Broken | ~4 | ~6% |
+| ✅ Complete | ~50 | ~79% |
+| ⚠️ Incomplete | ~8 | ~13% |
+| ❌ Broken | ~2 | ~3% |
 | 🔲 Unused | ~2 | ~3% |
-| **Total** | **~61** | **100%** |
+| **Total** | **~62** | **100%** |
+
+> **Perubahan dari sebelumnya**: Business Logic Triggers, Schema Sync, Error Boundary, Security Fix B6, Admin Email Override semuanya sudah ✅

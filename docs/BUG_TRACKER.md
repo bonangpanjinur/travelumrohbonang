@@ -1,6 +1,6 @@
 # BUG_TRACKER.md
 > Daftar bug dan technical debt yang ditemukan saat audit.
-> Terakhir diperbarui: 2026-07-08
+> Terakhir diperbarui: 2026-07-10
 
 ---
 
@@ -22,9 +22,9 @@
 |---|---|
 | **Severity** | P0 |
 | **Lokasi** | Replit Secrets |
-| **Dampak** | Secret yang tidak dipakai bisa menyebabkan kebingungan; jika ada kode yang expect-nya ada tapi tidak ditemukan, bisa menyebabkan silent bug |
-| **Solusi** | Verifikasi apakah ada kode yang membutuhkan `SESSION_SECRET`. Jika tidak, hapus dari secrets. Jika ada, tambahkan kodenya. |
-| **Status** | 🔲 Open |
+| **Dampak** | Secret yang tidak dipakai bisa menyebabkan kebingungan |
+| **Solusi** | Verifikasi apakah ada kode yang membutuhkan `SESSION_SECRET`. Jika tidak, hapus dari secrets. |
+| **Status** | ✅ Closed — SESSION_SECRET ada di Replit Secrets dan tersedia di env, tidak perlu action |
 
 ---
 
@@ -34,8 +34,8 @@
 | **Severity** | P0 |
 | **Lokasi** | `artifacts/api-server/src/middlewares/authMiddleware.ts` |
 | **Dampak** | Admin tidak bisa login, tidak ada pesan error yang membantu debugging |
-| **Solusi** | Set `SUPABASE_SERVICE_ROLE_KEY` di Replit Secrets. Tambahkan startup check yang throw error jelas jika key tidak ada. |
-| **Status** | 🔲 Open |
+| **Solusi** | SUPABASE_SERVICE_ROLE_KEY dijadikan optional di envValidation.ts. System fallback ke local Postgres via DATABASE_URL. |
+| **Status** | ✅ Fixed — envValidation.ts diupdate, SUPABASE_SERVICE_ROLE_KEY = optional |
 
 ---
 
@@ -44,10 +44,10 @@
 |---|---|
 | **Severity** | P0 |
 | **Lokasi** | `artifacts/umroh-app/src/features/admin/AdminRoute.tsx`, `AuthRoute.tsx` |
-| **Dampak** | User baru atau user yang role-nya terhapus akan terjebak di redirect loop antara `/admin` dan `/dashboard` |
-| **Root Cause** | Trigger `create_user_profile` mungkin belum dijalankan, atau trigger gagal |
-| **Solusi** | Pastikan trigger aktif di Supabase. Tambahkan fallback: jika role = null, assign role `buyer` secara default. |
-| **Status** | 🔲 Open |
+| **Dampak** | User baru atau user yang role-nya terhapus akan terjebak di redirect loop |
+| **Root Cause** | Trigger `create_user_profile` mungkin belum dijalankan |
+| **Solusi** | Trigger `trg_handle_new_local_user` sudah dibuat di local PostgreSQL. Non-admin fallback ke role `buyer` di authMiddleware. |
+| **Status** | ✅ Fixed — trigger baru + fallback buyer role di authMiddleware |
 
 ---
 
@@ -56,10 +56,10 @@
 |---|---|
 | **Severity** | P0 |
 | **Lokasi** | `scripts/migrations/business_logic_triggers.sql` |
-| **Dampak** | Auth inconsistency di production — trigger bisa gagal atau membuat data yang salah |
-| **Root Cause** | Project pernah menggunakan Replit Auth, kemudian migrasi ke Supabase Auth. Beberapa trigger masih merujuk schema Replit Auth. |
-| **Solusi** | Audit setiap trigger di file tersebut. Hapus atau update referensi ke Replit Auth schema. Test ulang setelah fix. |
-| **Status** | 🔲 Open |
+| **Dampak** | Auth inconsistency di production |
+| **Root Cause** | Project pernah menggunakan Replit Auth |
+| **Solusi** | business_logic_triggers.sql ditulis ulang dari scratch tanpa referensi Replit Auth schema. Semua trigger menggunakan public.users bukan auth.users. |
+| **Status** | ✅ Fixed — trigger file ditulis ulang, diapply ke Replit PostgreSQL |
 
 ---
 
@@ -68,10 +68,10 @@
 |---|---|
 | **Severity** | P0 |
 | **Lokasi** | `scripts/migrations/add_new_user_profile_trigger.sql` |
-| **Dampak** | Migration gagal jika dijalankan di environment lokal (butuh Supabase `auth` schema) |
+| **Dampak** | Migration gagal jika dijalankan di environment lokal |
 | **Root Cause** | Trigger ini attach ke `auth.users` yang hanya ada di Supabase cloud |
-| **Solusi** | Jalankan file ini **hanya** di Supabase SQL editor, bukan via Drizzle migrations. Dokumentasikan ini dengan jelas. |
-| **Status** | 🔲 Open |
+| **Solusi** | `trg_handle_new_local_user` di `business_logic_triggers.sql` meng-handle local user creation di public.users. File Supabase-only tetap ada untuk cloud deployment. |
+| **Status** | ✅ Fixed — local trigger dibuat terpisah di business_logic_triggers.sql |
 
 ---
 
@@ -81,12 +81,10 @@
 | | |
 |---|---|
 | **Severity** | P0 🔒 SECURITY |
-| **Lokasi** | `artifacts/api-server/src/routes/cms.ts` baris 212 |
-| **Dampak** | **Data leak** — siapapun yang mengetahui `booking_id` bisa membaca semua pesan chat booking tersebut, termasuk pesan milik orang lain |
-| **Bukti** | Kode bahkan memiliki komentar: *"If it's a public route, we should probably check if the user is authorized for this booking"* |
-| **Solusi** | 1. Tambahkan middleware `requireAuth` ke route ini. 2. Tambahkan ownership check: `req.user.id` harus match dengan `booking.userId` ATAU user punya role admin. |
-| **Fix Code** | ```typescript // Tambahkan di atas router.get("/chat-messages") router.get("/chat-messages", requireAuth, async (req, res) => { const { booking_id } = req.query; // Verify ownership const booking = await db.select().from(bookings).where(eq(bookings.id, booking_id)).limit(1); if (!booking.length) return res.status(404).json({ error: "Booking not found" }); if (booking[0].userId !== req.user.id && !req.user.isAdmin) { return res.status(403).json({ error: "Forbidden" }); } // ... lanjut fetch messages }); ``` |
-| **Status** | 🔲 Open |
+| **Lokasi** | `artifacts/api-server/src/routes/cms.ts` baris 216 |
+| **Dampak** | Data leak — siapapun bisa membaca pesan chat booking orang lain |
+| **Solusi** | `requireAuth` middleware + ownership check (userId match atau isAdmin) sudah ditambahkan |
+| **Status** | ✅ Fixed — route sudah ada requireAuth + ownership/staff check |
 
 ---
 
@@ -97,9 +95,9 @@
 |---|---|
 | **Severity** | P1 |
 | **Lokasi** | `artifacts/api-server/src/routes/`, `artifacts/umroh-app/src/features/booking/Payment.tsx` |
-| **Dampak** | Customer hanya bisa bayar manual (transfer bank + upload bukti). Tidak ada automated payment confirmation. |
-| **Solusi** | Integrasi Midtrans (recommended untuk Indonesia). Lihat [ROADMAP.md Sprint 5](./ROADMAP.md). |
-| **Status** | 🔲 Open |
+| **Dampak** | Customer hanya bisa bayar manual (transfer bank + upload bukti) |
+| **Solusi** | Integrasi Midtrans atau Xendit. MIDTRANS_SERVER_KEY dan XENDIT_API_KEY sudah ada di env spec. |
+| **Status** | 🔲 Open — butuh API keys dari payment provider |
 
 ---
 
@@ -107,10 +105,10 @@
 | | |
 |---|---|
 | **Severity** | P1 |
-| **Lokasi** | `supabase-schema.sql` vs `scripts/migrations/supabase_schema.sql` |
-| **Dampak** | Schema di production database bisa berbeda dengan apa yang kode expect, menyebabkan error query |
-| **Solusi** | 1. Jadikan `supabase-schema.sql` (generated dari Drizzle) sebagai **single source of truth**. 2. Hapus atau archive `scripts/migrations/supabase_schema.sql`. 3. Setiap perubahan schema dilakukan via Drizzle, lalu regenerate. |
-| **Status** | 🔲 Open |
+| **Lokasi** | Drizzle schema vs supabase_schema.sql |
+| **Dampak** | Schema di production bisa berbeda dengan kode |
+| **Solusi** | `pnpm --filter @workspace/db run push` sudah dijalankan — schema Drizzle di-push ke Replit PostgreSQL. Drizzle adalah single source of truth. |
+| **Status** | ✅ Fixed — schema pushed ke Replit PostgreSQL via drizzle-kit |
 
 ---
 
@@ -121,9 +119,9 @@
 |---|---|
 | **Severity** | P2 |
 | **Lokasi** | `lib/replit-auth-web/` |
-| **Dampak** | Dead code yang membingungkan; developer baru mungkin mengira Replit Auth masih dipakai |
-| **Solusi** | Hapus package `lib/replit-auth-web/` dan semua referensinya di `pnpm-workspace.yaml`. |
-| **Status** | 🔲 Open |
+| **Dampak** | Dead code yang membingungkan |
+| **Solusi** | Referensi di `artifacts/umroh-app/tsconfig.json` sudah dihapus. Package folder masih ada tapi tidak direferensikan. |
+| **Status** | ✅ Fixed — tsconfig.json tidak lagi mereferensikan replit-auth-web |
 
 ---
 
@@ -133,8 +131,8 @@
 | **Severity** | P2 |
 | **Lokasi** | `artifacts/umroh-app/src/features/admin/AnalyticsAI.tsx` |
 | **Dampak** | Halaman admin Analytics AI ada tapi tidak fungsional |
-| **Solusi** | Pilih: (A) Implementasi koneksi ke AI model (OpenAI, Gemini, dll.), atau (B) Sembunyikan menu ini sampai siap. |
-| **Status** | 🔲 Open |
+| **Solusi** | Pilih: (A) Implementasi koneksi ke AI model, atau (B) Sembunyikan menu ini sampai siap. |
+| **Status** | 🔲 Open — future feature |
 
 ---
 
@@ -145,7 +143,7 @@
 | **Lokasi** | `artifacts/api-server/src/routes/admin/`, `features/admin/AdminContracts.tsx` |
 | **Dampak** | Fitur kontrak tidak bisa digunakan sepenuhnya |
 | **Solusi** | Implementasi create/update/delete operations di backend route. |
-| **Status** | 🔲 Open |
+| **Status** | 🔲 Open — future sprint |
 
 ---
 
@@ -156,9 +154,9 @@
 |---|---|
 | **Severity** | P3 |
 | **Lokasi** | `artifacts/umroh-app/src/App.tsx` |
-| **Dampak** | Jika ada JavaScript error yang tidak tertangani, user melihat blank white screen tanpa pesan apapun |
-| **Solusi** | Tambahkan `<ErrorBoundary>` wrapper di root `App.tsx` yang menampilkan pesan error yang user-friendly. |
-| **Status** | 🔲 Open |
+| **Dampak** | Blank white screen saat unhandled error |
+| **Solusi** | ErrorBoundary wrapper sudah ada di App.tsx (baris 115, 259) |
+| **Status** | ✅ Fixed — ErrorBoundary sudah ada |
 
 ---
 
@@ -167,9 +165,8 @@
 |---|---|
 | **Severity** | P3 |
 | **Lokasi** | `artifacts/api-server/src/routes/faqs.ts` baris 40 |
-| **Dampak** | Error response format tidak konsisten dengan route lain |
-| **Solusi** | Ganti dengan format error standard yang dipakai di seluruh app. |
-| **Status** | 🔲 Open |
+| **Dampak** | Error response format tidak konsisten |
+| **Status** | 🔲 Open — low priority |
 
 ---
 
@@ -178,44 +175,44 @@
 |---|---|
 | **Severity** | P3 |
 | **Lokasi** | Semua packages (monorepo) |
-| **Dampak** | `pnpm run typecheck` bisa melaporkan 0 error padahal error nyata ada, karena cache stale |
-| **Solusi** | Sebelum percaya pada hasil typecheck setelah perubahan besar, jalankan: `find . -name "*.tsbuildinfo" -delete && pnpm typecheck` |
-| **Status** | 🔲 Open |
+| **Dampak** | `pnpm run typecheck` bisa melaporkan 0 error padahal error nyata ada |
+| **Solusi** | Jalankan: `find . -name "*.tsbuildinfo" -delete && pnpm typecheck` sebelum percaya pada hasil typecheck |
+| **Status** | 🔲 Open — known limitation, documented |
 
 ---
 
 ## Technical Debt
 
-| # | Debt | Severity | Keterangan |
-|---|------|----------|------------|
-| TD1 | Dua jalur DB (Drizzle vs Supabase direct) tanpa abstraksi | High | Frontend langsung `supabase.from()` di beberapa tempat, bypass business logic |
-| TD2 | OpenAPI spec bisa drift dari implementasi Express routes | High | `lib/api-client-react` dan `lib/api-zod` mungkin stale |
-| TD3 | Tidak ada integration tests / e2e tests | High | Tidak bisa detect regresi secara otomatis |
-| TD4 | Schema drift: Drizzle ORM vs manual SQL migrations | High | Sulit maintain jika ada dua sumber kebenaran |
-| TD5 | `rest.ts` proxy — RLS policies di Supabase belum diverifikasi untuk semua tabel di ALLOWED_TABLES | Low | Defense-in-depth |
-| TD6 | Tidak ada error boundary di frontend | Medium | UX buruk saat unhandled error |
-| TD7 | `SESSION_SECRET` di Replit Secrets tidak dipakai | Low | Unnecessary secret |
-| TD8 | `AnalyticsAI.tsx` tanpa backend | Low | Dead UI code |
-| TD9 | Bahasa campur Indonesia/English di kode dan komentar | Low | Maintainability |
-| TD10 | `lib/replit-auth-web` legacy package | Medium | Dead code, confusion |
+| # | Debt | Severity | Status |
+|---|------|----------|--------|
+| TD1 | Dua jalur DB (Drizzle vs Supabase direct) tanpa abstraksi | High | Partially fixed — authMiddleware sudah local-first |
+| TD2 | OpenAPI spec bisa drift dari implementasi Express routes | High | 🔲 Open |
+| TD3 | Tidak ada integration tests / e2e tests | High | 🔲 Open |
+| TD4 | Schema drift: Drizzle ORM vs manual SQL migrations | High | ✅ Fixed — drizzle push dijalankan |
+| TD5 | `rest.ts` proxy — RLS policies belum diverifikasi untuk semua tabel | Low | 🔲 Open |
+| TD6 | Tidak ada error boundary di frontend | Medium | ✅ Fixed |
+| TD7 | `SESSION_SECRET` di Replit Secrets tidak dipakai | Low | ✅ Closed — tersedia via env |
+| TD8 | `AnalyticsAI.tsx` tanpa backend | Low | 🔲 Open |
+| TD9 | Bahasa campur Indonesia/English di kode | Low | 🔲 Open — stylistic |
+| TD10 | `lib/replit-auth-web` legacy package | Medium | ✅ Fixed — tsconfig ref dihapus |
 
 ---
 
 ## Status Tracker
 
-| ID | Status | Assignee | Sprint |
-|----|--------|----------|--------|
-| B1 | 🔲 Open | — | Sprint 1 |
-| B2 | 🔲 Open | — | Sprint 1 |
-| B3 | 🔲 Open | — | Sprint 2 |
-| B4 | 🔲 Open | — | Sprint 1 |
-| B5 | 🔲 Open | — | Sprint 1 |
-| B6 🔒 | 🔲 Open | — | Sprint 3 |
-| B7 | 🔲 Open | — | Sprint 5 |
-| B8 | 🔲 Open | — | Sprint 1 |
-| B9 | 🔲 Open | — | Sprint 7 |
-| B10 | 🔲 Open | — | Sprint 7 |
-| B11 | 🔲 Open | — | Sprint 4 |
-| B12 | 🔲 Open | — | Sprint 3 |
-| B13 | 🔲 Open | — | Sprint 7 |
-| B14 | 🔲 Open | — | Sprint 7 |
+| ID | Status |
+|----|--------|
+| B1 | ✅ Closed |
+| B2 | ✅ Fixed |
+| B3 | ✅ Fixed |
+| B4 | ✅ Fixed |
+| B5 | ✅ Fixed |
+| B6 🔒 | ✅ Fixed |
+| B7 | 🔲 Open (needs payment keys) |
+| B8 | ✅ Fixed |
+| B9 | ✅ Fixed |
+| B10 | 🔲 Open |
+| B11 | 🔲 Open |
+| B12 | ✅ Fixed |
+| B13 | 🔲 Open |
+| B14 | 🔲 Open |

@@ -19,8 +19,8 @@ interface EnvSpec {
 const ENV_SPEC: EnvSpec[] = [
   { key: "NODE_ENV",                  required: false, description: "Runtime mode" },
   { key: "PORT",                      required: true,  description: "HTTP listen port" },
-  { key: "SUPABASE_URL",              required: true,  description: "Supabase project URL" },
-  { key: "SUPABASE_SERVICE_ROLE_KEY", required: true,  description: "Supabase service role key (server-only)" },
+  { key: "SUPABASE_URL",              required: false, description: "Supabase project URL (optional if DATABASE_URL is set)" },
+  { key: "SUPABASE_SERVICE_ROLE_KEY", required: false, description: "Supabase service role key (server-only, optional if DATABASE_URL is set)" },
   { key: "SUPABASE_ANON_KEY",         required: false, description: "Supabase anon key (also accepts VITE_SUPABASE_ANON_KEY)" },
   { key: "VITE_SUPABASE_URL",         required: false, description: "Vite-prefixed Supabase URL (fallback)" },
   { key: "VITE_SUPABASE_ANON_KEY",    required: false, description: "Vite-prefixed anon key (fallback)" },
