@@ -9,7 +9,5 @@
     "lib": ["dom", "es2022"]
   },
   "include": ["src"],
-  "references": [
-    { "path": "../api-zod" }
-  ]
+  "exclude": ["dist", "node_modules"]
 }
