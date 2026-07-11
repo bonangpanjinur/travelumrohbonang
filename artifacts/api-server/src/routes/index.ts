@@ -17,6 +17,7 @@ import wishlistsRouter from "./wishlists";
 import pilgrimTestimonialsRouter from "./pilgrim-testimonials";
 import paymentGatewayWebhooksRouter from "./payment-gateway-webhooks";
 import { strictLimiter, writeLimiter } from "../middlewares/rateLimiter";
+import { logDiag } from "../lib/tempDiagnosticLog"; // TEMP DIAG
 
 const router = Router();
 
@@ -33,7 +34,13 @@ router.use("/cms", cmsRouter);
 router.use(miscRouter);
 
 // ── Admin (all sub-routes protected individually inside adminRouter) ──────────
-router.use("/admin", strictLimiter, adminRouter);
+router.use(
+  "/admin",
+  (req, _res, next) => { logDiag("strictLimiter:before", req); next(); }, // TEMP DIAG
+  strictLimiter,
+  (req, _res, next) => { logDiag("strictLimiter:after", req); next(); }, // TEMP DIAG
+  adminRouter,
+);
 
 // ── Authenticated user routes ─────────────────────────────────────────────────
 router.use("/bookings", strictLimiter);

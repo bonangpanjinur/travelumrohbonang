@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { roleMenuPermissions } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
+import { logDiag } from "../../lib/tempDiagnosticLog"; // TEMP DIAG
 
 const ADMIN_ROLES = new Set(["super_admin", "admin", "branch_manager", "staff", "agent"]);
 
@@ -13,7 +14,7 @@ const router = Router();
  * Returns only the permissions for the current user's role.
  * Accessible by all admin roles (requireOperational in index.ts).
  */
-router.get("/my", async (req, res) => {
+router.get("/my", (req, _res, next) => { logDiag("GET /menu-permissions/my:before-handler", req); next(); }, async (req, res) => { // TEMP DIAG
   try {
     const role = req.user?.role as string | undefined;
     if (!role || !ADMIN_ROLES.has(role)) {

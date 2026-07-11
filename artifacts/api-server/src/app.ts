@@ -11,6 +11,7 @@ import { logger } from "./lib/logger";
 import { generalLimiter } from "./middlewares/rateLimiter";
 import { requestMetrics } from "./lib/requestMetrics";
 import { authMiddleware } from "./middlewares/authMiddleware";
+import { logDiag } from "./lib/tempDiagnosticLog"; // TEMP DIAG
 
 const app = express();
 
@@ -81,8 +82,16 @@ app.use(cors({ credentials: true, origin: corsOrigin }));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// TEMP DIAG: before/after requireAuth is handled inside authMiddleware's
+// role in the auth chain further down (admin/index.ts). This wraps
+// authMiddleware itself so we can see req state immediately before/after it.
+app.use((req, _res, next) => { logDiag("authMiddleware:before", req); next(); }); // TEMP DIAG
 app.use(authMiddleware);
+app.use((req, _res, next) => { logDiag("authMiddleware:after", req); next(); }); // TEMP DIAG
+
+app.use("/api", (req, _res, next) => { logDiag("generalLimiter:before", req); next(); }); // TEMP DIAG
 app.use("/api", generalLimiter);
+app.use("/api", (req, _res, next) => { logDiag("generalLimiter:after", req); next(); }); // TEMP DIAG
 
 // PostgREST-compatible proxy — serves Supabase JS client requests
 // Apply rate limiting to the REST proxy as well.
@@ -126,6 +135,8 @@ app.use((err: any, req: import("express").Request, res: import("express").Respon
   const isProduction = process.env.NODE_ENV === "production";
 
   // Always log the full error server-side (visible in Vercel / Replit logs)
+  // TEMP DIAG: explicit err.name / err.message / err.stack fields per
+  // diagnostic request, on top of the existing full-object log.
   console.error("[app] unhandled error", {
     method:  req.method,
     route:   req.originalUrl,
@@ -133,6 +144,11 @@ app.use((err: any, req: import("express").Request, res: import("express").Respon
     message: err?.message,
     stack:   err?.stack,
     ...err, // captures extra fields some libs attach (code, status, cause, etc.)
+  });
+  console.error("[TEMP DIAG] error handler", { // TEMP DIAG
+    name: err?.name,
+    message: err?.message,
+    stack: err?.stack,
   });
 
   if (isProduction) {
