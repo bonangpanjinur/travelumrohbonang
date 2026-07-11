@@ -1172,7 +1172,6 @@ ALTER TABLE departure_gallery         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE package_costs             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE package_commissions       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE package_hotels            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE package_extra_hotels      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agents                    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_commissions         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_withdrawals         ENABLE ROW LEVEL SECURITY;
@@ -1261,10 +1260,6 @@ DROP POLICY IF EXISTS package_hotels_admin_all   ON package_hotels;
 CREATE POLICY package_hotels_public_read ON package_hotels FOR SELECT TO anon, authenticated USING (true);
 CREATE POLICY package_hotels_admin_all   ON package_hotels FOR ALL    TO authenticated       USING (is_admin()) WITH CHECK (is_admin());
 
-DROP POLICY IF EXISTS package_extra_hotels_public_read ON package_extra_hotels;
-DROP POLICY IF EXISTS package_extra_hotels_admin_all   ON package_extra_hotels;
-CREATE POLICY package_extra_hotels_public_read ON package_extra_hotels FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY package_extra_hotels_admin_all   ON package_extra_hotels FOR ALL    TO authenticated       USING (is_admin()) WITH CHECK (is_admin());
 
 DROP POLICY IF EXISTS package_costs_auth_read ON package_costs;
 DROP POLICY IF EXISTS package_costs_admin_all ON package_costs;
