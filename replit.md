@@ -18,7 +18,7 @@ Aplikasi manajemen umroh lengkap — paket, booking, jemaah, pembayaran, dan CMS
 - **P0 stabilization complete (2026-07-08)**: all 6 P0 blockers in `MASTER_PROJECT_BLUEPRINT.md` §11 are resolved — see `RENCANA_PERBAIKAN.md` "Update 2026-07-08 (lanjutan)" for full detail. Summary: `SUPABASE_SERVICE_ROLE_KEY`/`SUPABASE_DATABASE_URL` set (real Supabase DB now in use, not empty Replit Postgres); legacy `trg_handle_new_local_user` trigger dropped from live DB (was dead — fired on empty, never-written `public.users`); `profiles.id`/`user_roles.id`/`user_roles.user_id` Drizzle schema types fixed from `text` to `uuid` to match the live DB (TS-only change, no DB migration); `/api/cms/chat-messages` now requires auth + booking-ownership/staff check (was a public data leak); redirect-loop and cloud-only-trigger items were already handled by existing code, verified not to need changes.
 - **Known-large auth/schema audit**: `MASTER_PROJECT_BLUEPRINT.md`, `PROJECT_ANALYSIS.md`, and `AUTH_ARCHITECTURE.md` document a multi-phase remediation plan. P0 (blocker) items are done (see above). P1 (payment gateway, `isAdmin` frontend/backend role-set mismatch, dual role-resolution paths) and P2/P3 (legacy `replit-auth-web` cleanup, incomplete CRUD on contracts/refunds/withdrawals, no tests, etc.) are NOT started — see proposed follow-up tasks.
 - **Broader schema drift (not yet fixed)**: the same `text`-in-Drizzle-vs-`uuid`-in-DB pattern fixed for profiles/user_roles also exists on most other tables' `id`/`*_id` columns (agents, bookings, contracts, crm, logs, payments, etc). Left alone intentionally — scope was larger than the named P0 item and carries more risk (chained `.references()` types). Candidate for a dedicated follow-up task.
-- **Admin panel Supabase-readiness audit (2026-07-09)**: cross-checked every admin frontend `apiFetch` call against the actual backend route mounts and fixed all mismatches (departures, payments, refunds, SEO overrides/audit, settings/seo, pilgrim check-ins, navigation categories, tenant/redirects). Also verified the new `check_ins` table already exists in the live Supabase DB (confirmed in `sql/schema/supabase_schema.sql`) with `uuid` columns — the Drizzle schema declares them `text`, which is the same pre-existing drift noted above; this does **not** cause runtime errors because all IDs are generated with `crypto.randomUUID()` (valid uuid strings), which Postgres accepts into `uuid` columns via implicit cast regardless of what type Drizzle's TS layer thinks it is. No DB migration was needed for `check_ins`. Full monorepo typecheck is clean and both `API Server`/`Start application` workflows verified running with all 289 routes registered.
+- **Admin panel Supabase-readiness audit (2026-07-09)**: cross-checked every admin frontend `apiFetch` call against the actual backend route mounts and fixed all mismatches (departures, payments, refunds, SEO overrides/audit, settings/seo, pilgrim check-ins, navigation categories, tenant/redirects). Also verified the new `check_ins` table already exists in the live Supabase DB (confirmed via schema inspection) with `uuid` columns — the Drizzle schema declares them `text`, which is the same pre-existing drift noted above; this does **not** cause runtime errors because all IDs are generated with `crypto.randomUUID()` (valid uuid strings), which Postgres accepts into `uuid` columns via implicit cast regardless of what type Drizzle's TS layer thinks it is. No DB migration was needed for `check_ins`. Full monorepo typecheck is clean and both `API Server`/`Start application` workflows verified running with all 289 routes registered.
 
 ## Run & Operate
 
@@ -49,12 +49,35 @@ Aplikasi manajemen umroh lengkap — paket, booking, jemaah, pembayaran, dan CMS
 artifacts/umroh-app/     — React frontend (Vite)
 artifacts/api-server/    — Express API server
 api/index.ts             — Vercel Function wrapper untuk API server
-lib/db/                  — Drizzle schema & koneksi PostgreSQL
+lib/db/                  — Drizzle schema & koneksi PostgreSQL (sumber kebenaran schema)
 lib/api-spec/            — OpenAPI spec (sumber kebenaran API)
 lib/api-zod/             — Zod schemas (di-generate dari spec)
 lib/api-client-react/    — React Query hooks (di-generate dari spec)
 vercel.json              — Konfigurasi deployment Vercel
 .env.example             — Template environment variables
+
+sql/
+  migrations/            — Ad-hoc SQL patches (FK, trigger, dll.) — riwayat, jangan duplikat
+  schema/                — Snapshot schema historis (LEGACY, bukan sumber aktif)
+  seeds/
+    seed-demo.sql        — Data demo untuk Replit Postgres (konten publik)
+    seed.sql             — Data awal minimal
+    supabase-seed.sql    — Seed untuk Supabase dev
+    supabase-seed-prod.sql — Seed untuk Supabase production
+
+scripts/                 — Utility scripts Node.js/TypeScript (bukan SQL)
+  seed.ts                — ORM seed script (Drizzle)
+  verify-deploy-env.mjs  — Cek env vars sebelum deploy
+  post-merge.sh          — Jalankan otomatis setelah merge
+
+supabase/migrations/     — Migration resmi Supabase CLI (gunakan ini untuk migration baru)
+
+docs/                    — Semua dokumentasi proyek
+  MASTER_PROJECT_BLUEPRINT.md — Blueprint utama (konsolidasi semua doc)
+  ARCHITECTURE.md, AUTH_ARCHITECTURE.md, AUTH_FLOW.md — Arsitektur & auth
+  DATABASE_MAP.md, API_MAP.md — Peta DB & API
+  BUG_TRACKER.md, ROADMAP.md, FEATURE_STATUS.md — Status & rencana
+  PRD.md, PROJECT_ANALYSIS.md, RENCANA_PERBAIKAN.md — Analisis & perbaikan
 ```
 
 ## Environment Variables
@@ -116,5 +139,6 @@ _Isi sesuai preferensi pengguna._
 - Lihat `pnpm-workspace.yaml` untuk struktur workspace
 - Lihat `sql/` untuk semua file SQL:
   - `sql/migrations/` — patch & migrasi inkremental (FK, trigger, role, dll.)
-  - `sql/schema/` — definisi skema lengkap (Supabase & lokal)
-  - `sql/seeds/` — data awal (`supabase-seed.sql` untuk dev, `supabase-seed-prod.sql` untuk prod)
+  - `sql/schema/` — snapshot schema historis (LEGACY, lihat README di folder itu)
+  - `sql/seeds/` — data awal (`seed-demo.sql` untuk demo, `supabase-seed.sql` untuk dev, `supabase-seed-prod.sql` untuk prod)
+- Lihat `docs/` untuk semua dokumentasi proyek (blueprint, arsitektur, bug tracker, roadmap)
