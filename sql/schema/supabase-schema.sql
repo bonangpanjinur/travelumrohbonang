@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON sessions (expire);
 
 CREATE TABLE IF NOT EXISTS users (
-  id                VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email             VARCHAR UNIQUE,
   first_name        VARCHAR,
   last_name         VARCHAR,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- =============================================================
 
 CREATE TABLE IF NOT EXISTS profiles (
-  id                VARCHAR PRIMARY KEY,
+  id                UUID PRIMARY KEY,
   name              TEXT        NOT NULL,
   email             TEXT        NOT NULL,
   phone             TEXT,
@@ -231,7 +231,7 @@ CREATE TABLE IF NOT EXISTS package_hotels (
 
 CREATE TABLE IF NOT EXISTS agents (
   id                 TEXT PRIMARY KEY,
-  user_id            TEXT,
+  user_id            UUID,
   branch_id          TEXT,
   name               TEXT    NOT NULL,
   phone              TEXT,
@@ -245,7 +245,7 @@ CREATE TABLE IF NOT EXISTS agents (
 
 CREATE TABLE IF NOT EXISTS user_roles (
   id         TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  user_id    TEXT NOT NULL,
+  user_id    UUID NOT NULL,
   role       TEXT NOT NULL,
   created_at TIMESTAMPTZ
 );
@@ -284,7 +284,7 @@ CREATE TABLE IF NOT EXISTS affiliate_clicks (
 CREATE TABLE IF NOT EXISTS bookings (
   id             TEXT PRIMARY KEY,
   booking_code   TEXT    NOT NULL,
-  user_id        TEXT,
+  user_id        UUID,
   package_id     TEXT,
   departure_id   TEXT,
   branch_id      TEXT,
@@ -372,7 +372,7 @@ CREATE TABLE IF NOT EXISTS payments (
 
 CREATE TABLE IF NOT EXISTS payment_proof_access_logs (
   id         TEXT PRIMARY KEY,
-  user_id    TEXT,
+  user_id    UUID,
   booking_id TEXT,
   payment_id TEXT,
   context    TEXT,
@@ -414,7 +414,7 @@ CREATE TABLE IF NOT EXISTS testimonials (
 CREATE TABLE IF NOT EXISTS pilgrim_testimonials (
   id          TEXT PRIMARY KEY,
   booking_id  TEXT    NOT NULL,
-  user_id     TEXT    NOT NULL,
+  user_id     UUID    NOT NULL,
   rating      INTEGER,
   message     TEXT,
   is_approved BOOLEAN NOT NULL DEFAULT false,
@@ -424,7 +424,7 @@ CREATE TABLE IF NOT EXISTS pilgrim_testimonials (
 CREATE TABLE IF NOT EXISTS package_reviews (
   id          TEXT PRIMARY KEY,
   package_id  TEXT    NOT NULL,
-  user_id     TEXT    NOT NULL,
+  user_id     UUID    NOT NULL,
   rating      INTEGER,
   title       TEXT,
   comment     TEXT,
@@ -434,7 +434,7 @@ CREATE TABLE IF NOT EXISTS package_reviews (
 
 CREATE TABLE IF NOT EXISTS wishlists (
   id         TEXT PRIMARY KEY,
-  user_id    TEXT NOT NULL,
+  user_id    UUID NOT NULL,
   package_id TEXT NOT NULL,
   created_at TIMESTAMPTZ
 );
@@ -583,13 +583,13 @@ CREATE TABLE IF NOT EXISTS request_log (
   id         TEXT PRIMARY KEY,
   ip         TEXT,
   endpoint   TEXT NOT NULL,
-  user_id    TEXT,
+  user_id    UUID,
   created_at TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS error_logs (
   id         TEXT PRIMARY KEY,
-  user_id    TEXT,
+  user_id    UUID,
   level      TEXT NOT NULL,
   message    TEXT NOT NULL,
   stack      TEXT,
@@ -601,7 +601,7 @@ CREATE TABLE IF NOT EXISTS error_logs (
 
 CREATE TABLE IF NOT EXISTS audit_logs (
   id          TEXT PRIMARY KEY,
-  user_id     TEXT,
+  user_id     UUID,
   action      TEXT NOT NULL,
   entity_type TEXT,
   entity_id   TEXT,
@@ -612,7 +612,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 CREATE TABLE IF NOT EXISTS pilgrim_doc_access_logs (
   id           TEXT PRIMARY KEY,
-  user_id      TEXT,
+  user_id      UUID,
   pilgrim_id   TEXT,
   doc_type     TEXT,
   storage_path TEXT,
@@ -662,14 +662,14 @@ CREATE TABLE IF NOT EXISTS coupons (
 
 CREATE TABLE IF NOT EXISTS loyalty_balances (
   id           TEXT PRIMARY KEY,
-  user_id      TEXT    NOT NULL,
+  user_id      UUID    NOT NULL,
   total_points INTEGER NOT NULL DEFAULT 0,
   created_at   TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS loyalty_points (
   id          TEXT PRIMARY KEY,
-  user_id     TEXT    NOT NULL,
+  user_id     UUID    NOT NULL,
   points      INTEGER NOT NULL,
   source      TEXT,
   description TEXT,
@@ -691,7 +691,7 @@ CREATE TABLE IF NOT EXISTS integration_secrets (
 CREATE TABLE IF NOT EXISTS contracts (
   id                 TEXT PRIMARY KEY,
   booking_id         TEXT NOT NULL,
-  user_id            TEXT NOT NULL,
+  user_id            UUID NOT NULL,
   html_content       TEXT,
   signature_data_url TEXT,
   signed_at          TIMESTAMPTZ,
@@ -710,7 +710,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 
 CREATE TABLE IF NOT EXISTS notifications (
   id         TEXT PRIMARY KEY,
-  user_id    TEXT    NOT NULL,
+  user_id    UUID    NOT NULL,
   title      TEXT    NOT NULL,
   message    TEXT,
   is_read    BOOLEAN NOT NULL DEFAULT false,
@@ -719,7 +719,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 CREATE TABLE IF NOT EXISTS refund_requests (
   id              TEXT PRIMARY KEY,
-  user_id         TEXT    NOT NULL,
+  user_id         UUID    NOT NULL,
   booking_id      TEXT    NOT NULL,
   reason          TEXT,
   amount          INTEGER,
