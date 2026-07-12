@@ -91,14 +91,8 @@ router.get("/", async (req, res) => {
       .offset(Number(offset) || 0);
 
     res.json({ data, total: data.length }); // Simplified for internal use, but ideally we'd get a real count
-  } catch (e: any) {
-    console.error("[admin/bookings] GET / error:", e?.code, e?.message);
-    res.status(503).json({
-      error: "Failed to fetch bookings",
-      code: e?.code ?? null,
-      detail: e?.message ?? String(e),
-      hint: "Cek DATABASE_URL & SUPABASE_SERVICE_ROLE_KEY di env production. Buka /api/health/detail untuk diagnosa.",
-    });
+  } catch (e) {
+    sendAdminError(res, "GET /api/admin/bookings", e);
   }
 });
 
