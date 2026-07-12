@@ -4,6 +4,7 @@ import { roleMenuPermissions } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { logDiag } from "../../lib/tempDiagnosticLog"; // TEMP DIAG
+import { sendAdminError } from "../../lib/adminApiError";
 
 const ADMIN_ROLES = new Set(["super_admin", "admin", "branch_manager", "staff", "agent"]);
 
