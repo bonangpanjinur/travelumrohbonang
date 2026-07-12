@@ -5,12 +5,24 @@ import { supabaseAuth } from './auth-client';
 // REST and storage requests go through the Vite proxy in development so they
 // hit the local Replit database instead of the real Supabase project.
 // In production, VITE_SUPABASE_URL is the real Supabase project URL.
+const RAW_URL = import.meta.env.VITE_SUPABASE_URL ?? '';
 const SUPABASE_URL = import.meta.env.DEV
   ? window.location.origin   // same-origin → Vite proxies /rest/v1 to local API
-  : (import.meta.env.VITE_SUPABASE_URL ?? '');
+  : RAW_URL;
 
-const SUPABASE_KEY =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
+
+if (!import.meta.env.DEV && (!RAW_URL || !SUPABASE_KEY)) {
+  const missing = [
+    !RAW_URL && 'VITE_SUPABASE_URL',
+    !SUPABASE_KEY && 'VITE_SUPABASE_ANON_KEY',
+  ].filter(Boolean).join(', ');
+  console.error(
+    `[supabase] Production build tanpa env var: ${missing}. ` +
+    `Semua request /rest/v1 akan 401. Cek Vercel Environment Variables ` +
+    `(hindari duplikat / scope Preview yang override Production) lalu redeploy tanpa cache.`,
+  );
+}
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
