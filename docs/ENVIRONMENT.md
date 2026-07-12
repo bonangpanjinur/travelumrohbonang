@@ -67,8 +67,8 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 | Variable | Frontend | Backend | Scripts | Keterangan |
 |----------|:--------:|:-------:|:-------:|------------|
-| `VITE_SUPABASE_PROJECT_ID` | ✅ | ❌ | ✅ | Supabase project ref ID. Dipakai `push-to-supabase.mjs`. |
-| `SUPABASE_PROJECT_REF` | ❌ | ❌ | ✅ | Alternatif untuk project ref. Dipakai `push-to-supabase.mjs`. |
+| `VITE_SUPABASE_PROJECT_ID` | ✅ | ❌ | ✅ | Supabase project ref ID. Dipakai `scripts/push-to-supabase.mjs`. |
+| `SUPABASE_PROJECT_REF` | ❌ | ❌ | ✅ | Alternatif untuk project ref. Dipakai `scripts/push-to-supabase.mjs`. |
 | `SUPABASE_ACCESS_TOKEN` | ❌ | ❌ | ✅ | Supabase CLI access token untuk deploy schema. Bukan JWT user. |
 
 ---

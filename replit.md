@@ -51,15 +51,17 @@ Aplikasi manajemen umroh lengkap — paket, booking, jemaah, pembayaran, dan CMS
 ```
 artifacts/umroh-app/     — React frontend (Vite)
 artifacts/api-server/    — Express API server
+artifacts/mockup-sandbox/ — Canvas component preview sandbox (dev-only, bukan bagian dari app produksi)
 api/index.ts             — Vercel Function wrapper untuk API server
 lib/db/                  — Drizzle schema & koneksi PostgreSQL (sumber kebenaran schema)
 lib/api-spec/            — OpenAPI spec (sumber kebenaran API)
 lib/api-zod/             — Zod schemas (di-generate dari spec)
 lib/api-client-react/    — React Query hooks (di-generate dari spec)
+lib/replit-auth-web/     — Legacy Replit Auth helper (TIDAK dipakai — app pakai Supabase Auth, lihat Gotchas)
 vercel.json              — Konfigurasi deployment Vercel
 .env.example             — Template environment variables
 
-sql/
+sql/                     — Semua SQL non-Supabase-CLI (patch, snapshot, seed)
   migrations/            — Ad-hoc SQL patches (FK, trigger, dll.) — riwayat, jangan duplikat
   schema/                — Snapshot schema historis (LEGACY, bukan sumber aktif)
   seeds/
@@ -68,20 +70,24 @@ sql/
     supabase-seed.sql    — Seed untuk Supabase dev
     supabase-seed-prod.sql — Seed untuk Supabase production
 
-scripts/                 — Utility scripts Node.js/TypeScript (bukan SQL)
+supabase/migrations/     — Migration resmi Supabase CLI (folder ini WAJIB di lokasi ini — dipakai `supabase` CLI, jangan digabung ke sql/)
+
+scripts/                 — Semua utility script Node.js/TypeScript (bukan SQL)
   seed.ts                — ORM seed script (Drizzle)
   verify-deploy-env.mjs  — Cek env vars sebelum deploy
+  push-to-supabase.mjs   — Push schema+seed langsung ke Supabase via Management API (alternatif `supabase` CLI)
   post-merge.sh          — Jalankan otomatis setelah merge
 
-supabase/migrations/     — Migration resmi Supabase CLI (gunakan ini untuk migration baru)
-
-docs/                    — Semua dokumentasi proyek
+docs/                    — Semua dokumentasi proyek (termasuk DEPLOY_TUTORIAL.md)
   MASTER_PROJECT_BLUEPRINT.md — Blueprint utama (konsolidasi semua doc)
   ARCHITECTURE.md, AUTH_ARCHITECTURE.md, AUTH_FLOW.md — Arsitektur & auth
   DATABASE_MAP.md, API_MAP.md — Peta DB & API
   BUG_TRACKER.md, ROADMAP.md, FEATURE_STATUS.md — Status & rencana
   PRD.md, PROJECT_ANALYSIS.md, RENCANA_PERBAIKAN.md — Analisis & perbaikan
+  DEPLOY_TUTORIAL.md      — Tutorial deploy manual ke Vercel (dipindah dari root)
 ```
+
+**Perapian struktur folder (2026-07-12)**: file-file yang tadinya nyasar di root dipindah/dibuang: `push-to-supabase.mjs` → `scripts/push-to-supabase.mjs` (referensi path SQL internalnya juga diperbaiki — sebelumnya salah, mengasumsikan `supabase-schema.sql`/`supabase-seed-prod.sql` ada di root padahal keduanya di `sql/schema/` dan `sql/seeds/`), `DEPLOY_TUTORIAL.md` → `docs/DEPLOY_TUTORIAL.md`. Folder `src/` di root (duplikat lama `integrations/supabase/client.ts` dari sebelum migrasi ke struktur `artifacts/`, sudah tidak dipakai — app yang jalan pakai `artifacts/umroh-app/src/shared/integrations/supabase/`) dan `bun.lock` (sisa, project pakai pnpm) dihapus karena keduanya dead weight, bukan kode aktif.
 
 ## Environment Variables
 

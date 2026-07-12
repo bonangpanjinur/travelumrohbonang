@@ -87,7 +87,7 @@ umroh-app/                          ← root
 │   ├── migrations/                 ← SQL migration files (trigger, RLS, schema manual)
 │   ├── seed.ts / seed.sql          ← Dev seed data
 │   ├── verify-deploy-env.mjs       ← Pre-deploy env checker
-│   └── push-to-supabase.mjs        ← Script push schema ke Supabase
+│   └── scripts/push-to-supabase.mjs ← Script push schema ke Supabase
 │
 ├── docs/                           ← Dokumen audit granular (arsip, dipertahankan)
 │   ├── ARCHITECTURE.md, DATABASE_MAP.md, API_MAP.md, AUTH_FLOW.md
@@ -162,7 +162,7 @@ src/
 - `scripts/migrations/*.sql` — trigger, RLS policy, migration inkremental.
 - `scripts/seed.ts`/`seed.sql`, `supabase-seed*.sql` — data awal.
 - `scripts/verify-deploy-env.mjs` — validasi env vars sebelum deploy Vercel.
-- `push-to-supabase.mjs` — push schema ke Supabase project.
+- `scripts/push-to-supabase.mjs` — push schema ke Supabase project.
 
 ### Assets
 
@@ -591,7 +591,7 @@ Payment Gateway, Refunds (flow), Contracts (CRUD), Analytics AI (tidak terhubung
 |---|---|---|
 | `VITE_SUPABASE_URL` | **Wajib** | URL project Supabase |
 | `VITE_SUPABASE_ANON_KEY` | **Wajib** | Public anon key |
-| `VITE_SUPABASE_PROJECT_ID` | Opsional | Dipakai script `push-to-supabase.mjs` |
+| `VITE_SUPABASE_PROJECT_ID` | Opsional | Dipakai script `scripts/push-to-supabase.mjs` |
 | `VITE_API_URL` | Opsional | Kosong = same-origin (Vercel); isi untuk dev lokal (`http://localhost:8080`) jika API terpisah domain |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | 🔴 Deprecated | Digantikan `VITE_SUPABASE_ANON_KEY` |
 
@@ -611,7 +611,7 @@ Payment Gateway, Refunds (flow), Contracts (CRUD), Analytics AI (tidak terhubung
 
 | Variable | Keterangan |
 |---|---|
-| `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN` | Dipakai `push-to-supabase.mjs`, bukan runtime app |
+| `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN` | Dipakai `scripts/push-to-supabase.mjs`, bukan runtime app |
 
 ### Tidak dipakai / perlu keputusan
 

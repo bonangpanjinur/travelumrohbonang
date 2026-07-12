@@ -97,7 +97,7 @@ umroh-app/                          ← root
 │   ├── migrations/                 ← SQL migration files
 │   ├── seed.ts / seed.sql          ← dev seed data
 │   ├── verify-deploy-env.mjs       ← pre-deploy env check
-│   └── push-to-supabase.mjs        ← schema push script
+│   └── scripts/push-to-supabase.mjs ← schema push script
 │
 ├── supabase-schema.sql             ← Drizzle-generated schema
 ├── supabase-seed.sql               ← General seed
@@ -577,7 +577,7 @@ logs
 | `SUPABASE_ANON_KEY` | ❌ | ✅ | No | Backend-specific; fallback ke VITE_ |
 | `NODE_ENV` | ✅ | ✅ | No | Toggle dev features (CORS, stacks) |
 | `VITE_SUPABASE_PROJECT_ID` | ✅ | ❌ | No | Dipakai scripts/push-to-supabase |
-| `SUPABASE_PROJECT_REF` | ❌ | Script | No | push-to-supabase.mjs |
+| `SUPABASE_PROJECT_REF` | ❌ | Script | No | scripts/push-to-supabase.mjs |
 | `SUPABASE_ACCESS_TOKEN` | ❌ | Script | No | Supabase CLI auth |
 | `SESSION_SECRET` | ❌ | ❌ | No | ⚠️ Ada di secrets tapi tidak dipakai di code |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Deprecated | ❌ | No | Diganti VITE_SUPABASE_ANON_KEY |

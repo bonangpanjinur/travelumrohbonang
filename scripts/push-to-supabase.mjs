@@ -3,7 +3,7 @@
  * UmrohPlus — Deploy schema + seed ke Supabase
  *
  * Gunakan:
- *   SUPABASE_ACCESS_TOKEN=<token> node push-to-supabase.mjs
+ *   SUPABASE_ACCESS_TOKEN=<token> node scripts/push-to-supabase.mjs
  *
  * Cara dapatkan token:
  *   https://app.supabase.com/account/tokens → "Generate new token"
@@ -30,8 +30,11 @@ const API_BASE = "https://api.supabase.com/v1";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function loadSql(filename) {
-  return readFileSync(path.join(__dirname, filename), "utf-8");
+// Repo root is one level up from scripts/.
+const REPO_ROOT = path.resolve(__dirname, "..");
+
+function loadSql(relativePath) {
+  return readFileSync(path.join(REPO_ROOT, relativePath), "utf-8");
 }
 
 async function runStatement(sql, label) {
@@ -144,7 +147,7 @@ async function main() {
 
   // ── Phase 1: Schema ───────────────────────────────────────────────
   console.log("\n📐 Phase 1: Membuat tabel & index ...");
-  const schemaStatements = parseStatements(loadSql("supabase-schema.sql"));
+  const schemaStatements = parseStatements(loadSql("sql/schema/supabase-schema.sql"));
   console.log(`   ${schemaStatements.length} statements akan dijalankan`);
   process.stdout.write("   ");
 
@@ -163,7 +166,7 @@ async function main() {
 
   // ── Phase 2: Seed ─────────────────────────────────────────────────
   console.log("\n🌱 Phase 2: Mengisi data awal ...");
-  const seedStatements = parseStatements(loadSql("supabase-seed-prod.sql"));
+  const seedStatements = parseStatements(loadSql("sql/seeds/supabase-seed-prod.sql"));
   console.log(`   ${seedStatements.length} statements akan dijalankan`);
   process.stdout.write("   ");
 

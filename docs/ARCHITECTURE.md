@@ -96,7 +96,7 @@ umroh-app/                          ← root
 │   ├── migrations/                 ← SQL migration files
 │   ├── seed.ts / seed.sql          ← dev seed data
 │   ├── verify-deploy-env.mjs       ← pre-deploy env check
-│   └── push-to-supabase.mjs        ← schema push script
+│   └── scripts/push-to-supabase.mjs ← schema push script
 │
 ├── supabase-schema.sql             ← Drizzle-generated schema (source of truth)
 ├── supabase-seed.sql               ← General seed data
