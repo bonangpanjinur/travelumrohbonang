@@ -1,0 +1,85 @@
+disabled.
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/packages?select=id%2Ctitle%2Cslug%2Cimage_url%2Cduration_days%2Cpackage_type%2Ccategory%3Apackage_categories%28id%2Cname%29%2Chotel_makkah%3Ahotels%21packages_hotel_makkah_id_fkey%28star%2Cname%29%2Cairline%3Aairlines%21packages_airline_id_fkey%28id%2Cname%29%2Cairport%3Aairports%21packages_airport_id_fkey%28id%2Cname%2Ccity%29%2Cdepartures%3Apackage_departures%28id%2Cdeparture_date%2Cremaining_quota%2Cprices%3Adeparture_prices%28price%2Croom_type%29%29&is_active=eq.true&order=created_at.desc&limit=6:1  Failed to load resource: the server responded with a status of 400 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/installment_schedules?select=*%2Cbooking%3Abookings%28booking_code%2Cprofile%3Aprofiles%21bookings_user_id_profiles_fkey%28name%29%29&order=due_date.asc:1  Failed to load resource: the server responded with a status of 404 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/payment_proof_access_logs?select=id%2Cuser_id%2Cproof_path%2Ccontext%2Cip%2Cuser_agent%2Ccreated_at&order=created_at.desc&limit=1000&created_at=gte.2026-06-12T00%3A00%3A00&created_at=lte.2026-07-12T23%3A59%3A59:1  Failed to load resource: the server responded with a status of 400 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/payment_proof_access_logs?select=id%2Cuser_id%2Cproof_path%2Ccontext%2Cip%2Cuser_agent%2Ccreated_at&order=created_at.desc&limit=1000&created_at=gte.2026-06-12T00%3A00%3A00&created_at=lte.2026-07-12T23%3A59%3A59:1  Failed to load resource: the server responded with a status of 400 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/payment_proof_access_logs?select=id%2Cuser_id%2Cproof_path%2Ccontext%2Cip%2Cuser_agent%2Ccreated_at&order=created_at.desc&limit=1000&created_at=gte.2026-06-12T00%3A00%3A00&created_at=lte.2026-07-12T23%3A59%3A59:1  Failed to load resource: the server responded with a status of 400 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/agents/withdrawals:1  Failed to load resource: the server responded with a status of 500 ()
+index-rTt4FzZn.js:394 Error: Failed to fetch withdrawals
+    at be (index-rTt4FzZn.js:9:79091)
+    at async S (index-rTt4FzZn.js:394:80636)
+S @ index-rTt4FzZn.js:394
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/agents/withdrawals:1  Failed to load resource: the server responded with a status of 500 ()
+index-rTt4FzZn.js:394 Error: Failed to fetch withdrawals
+    at be (index-rTt4FzZn.js:9:79091)
+    at async S (index-rTt4FzZn.js:394:80636)
+S @ index-rTt4FzZn.js:394
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/payment_proof_access_logs?select=id%2Cuser_id%2Cproof_path%2Ccontext%2Cip%2Cuser_agent%2Ccreated_at&order=created_at.desc&limit=1000&created_at=gte.2026-06-12T00%3A00%3A00&created_at=lte.2026-07-12T23%3A59%3A59:1  Failed to load resource: the server responded with a status of 400 ()
+/api/admin/agents/withdrawals:1  Failed to load resource: the server responded with a status of 500 ()
+index-rTt4FzZn.js:394 Error: Failed to fetch withdrawals
+    at be (index-rTt4FzZn.js:9:79091)
+    at async S (index-rTt4FzZn.js:394:80636)
+S @ index-rTt4FzZn.js:394
+/api/admin/agents/withdrawals:1  Failed to load resource: the server responded with a status of 500 ()
+index-rTt4FzZn.js:394 Error: Failed to fetch withdrawals
+    at be (index-rTt4FzZn.js:9:79091)
+    at async S (index-rTt4FzZn.js:394:80636)
+S @ index-rTt4FzZn.js:394
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/payment_proof_access_logs?select=id%2Cuser_id%2Cproof_path%2Ccontext%2Cip%2Cuser_agent%2Ccreated_at&order=created_at.desc&limit=1000&created_at=gte.2026-06-12T00%3A00%3A00&created_at=lte.2026-07-12T23%3A59%3A59:1  Failed to load resource: the server responded with a status of 400 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/payment_proof_access_logs?select=id%2Cuser_id%2Cproof_path%2Ccontext%2Cip%2Cuser_agent%2Ccreated_at&order=created_at.desc&limit=1000&created_at=gte.2026-06-12T00%3A00%3A00&created_at=lte.2026-07-12T23%3A59%3A59&context=eq.admin%2Fpayments:1  Failed to load resource: the server responded with a status of 400 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 503 ()
+index-rTt4FzZn.js:9  GET https://travelumrohbonang.vercel.app/api/admin/menu-permissions/my 503 (Service Unavailable)
+be @ index-rTt4FzZn.js:9
+await in be
+queryFn @ index-rTt4FzZn.js:154
+r @ vendor-query-Czhmmtkz.js:1
+d @ vendor-query-Czhmmtkz.js:1
+(anonymous) @ vendor-query-Czhmmtkz.js:1
+index-rTt4FzZn.js:154  HEAD https://yakjpqqobknrmhfmybhe.supabase.co/rest/v1/ net::ERR_ABORTED 401 (Unauthorized)
+Gz @ index-rTt4FzZn.js:154
+(anonymous) @ index-rTt4FzZn.js:154
+(anonymous) @ index-rTt4FzZn.js:154

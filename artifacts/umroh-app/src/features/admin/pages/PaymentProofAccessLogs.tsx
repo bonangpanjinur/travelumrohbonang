@@ -19,10 +19,9 @@ import { exportToCsv } from "@/shared/lib/exportCsv";
 interface AccessLog {
   id: string;
   user_id: string | null;
-  proof_path: string;
+  booking_id: string | null;
+  payment_id: string | null;
   context: string | null;
-  ip: string | null;
-  user_agent: string | null;
   created_at: string;
   profile?: { name: string | null; email: string | null } | null;
 }
@@ -56,7 +55,7 @@ const PaymentProofAccessLogs = () => {
     try {
       let q = supabase
         .from("payment_proof_access_logs")
-        .select("id, user_id, proof_path, context, ip, user_agent, created_at")
+        .select("id, user_id, booking_id, payment_id, context, created_at")
         .order("created_at", { ascending: false })
         .limit(1000);
 
@@ -100,7 +99,8 @@ const PaymentProofAccessLogs = () => {
     const s = search.toLowerCase();
     return logs.filter(
       (l) =>
-        l.proof_path.toLowerCase().includes(s) ||
+        (l.booking_id || "").toLowerCase().includes(s) ||
+        (l.payment_id || "").toLowerCase().includes(s) ||
         (l.profile?.name || "").toLowerCase().includes(s) ||
         (l.profile?.email || "").toLowerCase().includes(s)
     );
@@ -112,14 +112,14 @@ const PaymentProofAccessLogs = () => {
   useEffect(() => { resetPage(); }, [search, contextFilter, from, to]);
 
   const handleExport = () => {
-    const headers = ["Tanggal", "Nama", "Email", "Konteks", "Path Bukti", "User Agent"];
+    const headers = ["Tanggal", "Nama", "Email", "Konteks", "Booking", "Pembayaran"];
     const rows = filtered.map((l) => [
       format(new Date(l.created_at), "yyyy-MM-dd HH:mm:ss"),
       l.profile?.name || "-",
       l.profile?.email || "-",
       l.context || "-",
-      l.proof_path,
-      l.user_agent || "-",
+      l.booking_id || "-",
+      l.payment_id || "-",
     ]);
     exportToCsv("payment-proof-access-logs", headers, rows);
   };
@@ -176,7 +176,7 @@ const PaymentProofAccessLogs = () => {
           <Label className="text-xs">Pencarian</Label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Nama, email, atau path…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input className="pl-9" placeholder="Nama, email, booking, atau pembayaran…" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </div>
       </div>
@@ -201,8 +201,8 @@ const PaymentProofAccessLogs = () => {
                     <TableHead>Waktu</TableHead>
                     <TableHead>Pengakses</TableHead>
                     <TableHead>Konteks</TableHead>
-                    <TableHead>Path Bukti</TableHead>
-                    <TableHead className="hidden lg:table-cell">User Agent</TableHead>
+                    <TableHead>Booking</TableHead>
+                    <TableHead className="hidden lg:table-cell">Pembayaran</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -216,9 +216,9 @@ const PaymentProofAccessLogs = () => {
                         <div className="text-xs text-muted-foreground">{log.profile?.email || log.user_id || "-"}</div>
                       </TableCell>
                       <TableCell>{contextBadge(log.context)}</TableCell>
-                      <TableCell className="font-mono text-xs break-all max-w-xs">{log.proof_path}</TableCell>
-                      <TableCell className="hidden lg:table-cell text-xs text-muted-foreground truncate max-w-xs" title={log.user_agent || ""}>
-                        {log.user_agent || "-"}
+                      <TableCell className="font-mono text-xs break-all max-w-xs">{log.booking_id || "-"}</TableCell>
+                      <TableCell className="hidden lg:table-cell text-xs text-muted-foreground truncate max-w-xs">
+                        {log.payment_id || "-"}
                       </TableCell>
                     </TableRow>
                   ))}

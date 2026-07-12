@@ -1,0 +1,643 @@
+# ROLE
+
+Kamu adalah seorang Senior Software Architect, Senior Fullstack Engineer, Technical Product Manager, dan DevOps Engineer.
+
+Repository ini adalah sistem manajemen Umroh & Haji yang sudah berjalan dan sudah dideploy di Vercel.
+
+Jangan langsung melakukan refactor atau menghapus file. Lakukan audit menyeluruh terlebih dahulu.
+
+---
+
+# OBJECTIVE
+
+Saya ingin repository ini menjadi production-grade dengan arsitektur yang rapi, mudah dikembangkan, terdokumentasi dengan baik, scalable, dan mudah dipahami developer baru.
+
+Lakukan pekerjaan secara bertahap.
+
+---
+
+# PHASE 1 — ANALISIS REPOSITORY
+
+Scan seluruh repository.
+
+Analisis:
+
+* struktur folder
+* struktur source code
+* arsitektur project
+* framework yang digunakan
+* library
+* dependency
+* konfigurasi
+* API
+* database
+* authentication
+* middleware
+* deployment
+* environment variable
+* reusable component
+* hooks
+* utils
+* services
+* state management
+* coding style
+* naming convention
+* routing
+* security
+* performance
+* SEO (jika website)
+* accessibility
+* responsive design
+
+Kemudian buat laporan lengkap.
+
+Output:
+
+```
+PROJECT AUDIT
+
+Score Overall:
+/100
+
+Strength
+
+Weakness
+
+Technical Debt
+
+Architecture Problems
+
+Folder Problems
+
+Naming Problems
+
+Security Problems
+
+Performance Problems
+
+Maintainability Problems
+
+Scalability Problems
+
+```
+
+---
+
+# PHASE 2 — FITUR
+
+Lakukan analisis seluruh fitur yang sudah ada.
+
+Kelompokkan menjadi:
+
+## Existing Features
+
+Semua fitur yang sudah berjalan.
+
+Contoh:
+
+* Login
+* Register
+* Dashboard
+* Paket Umroh
+* Paket Haji
+* Jamaah
+* Pembayaran
+* Invoice
+* dsb
+
+---
+
+## Existing Features That Need Improvement
+
+Analisis setiap fitur.
+
+Contoh:
+
+Dashboard
+
+Masalah:
+
+* belum responsive
+* loading lambat
+* belum realtime
+* tidak ada statistik
+* tidak ada chart
+
+Improvement:
+
+* ...
+* ...
+* ...
+
+Lakukan hal yang sama untuk SEMUA fitur.
+
+---
+
+## Missing Features
+
+Analisis bisnis sistem Umroh & Haji.
+
+Cari fitur yang seharusnya ada tetapi belum tersedia.
+
+Misalnya:
+
+CRM Jamaah
+
+Follow Up Jamaah
+
+Marketing Pipeline
+
+Lead Management
+
+WhatsApp Blast
+
+Email Notification
+
+Payment Gateway
+
+Booking
+
+Seat Management
+
+Kuota
+
+Manifest
+
+Visa Tracking
+
+Dokumen Jamaah
+
+Paspor
+
+Vaksin
+
+MCU
+
+Hotel
+
+Maskapai
+
+Bus
+
+Tour Leader
+
+Muthawif
+
+Jadwal Keberangkatan
+
+Rooming List
+
+Keuangan
+
+Cashflow
+
+Laporan
+
+Komisi Marketing
+
+Multi Cabang
+
+Multi Role
+
+Permission
+
+Audit Log
+
+Activity Log
+
+Approval System
+
+Digital Signature
+
+Upload Dokumen
+
+Cloud Storage
+
+Reminder
+
+Notifikasi
+
+Calendar
+
+Task Management
+
+Checklist Keberangkatan
+
+After Umroh Survey
+
+Customer Satisfaction
+
+Referral Program
+
+Loyalty
+
+Voucher
+
+Promo
+
+Landing Page CMS
+
+Blog
+
+SEO
+
+Analytics
+
+dan fitur lain yang relevan.
+
+Berikan prioritas:
+
+Critical
+
+High
+
+Medium
+
+Low
+
+---
+
+# PHASE 3 — ARSITEKTUR
+
+Analisis apakah struktur project sudah mengikuti best practice.
+
+Jika belum, buat usulan struktur baru.
+
+Misalnya:
+
+src/
+
+app/
+
+components/
+
+features/
+
+modules/
+
+services/
+
+repositories/
+
+hooks/
+
+providers/
+
+types/
+
+lib/
+
+utils/
+
+config/
+
+constants/
+
+styles/
+
+assets/
+
+public/
+
+docs/
+
+tests/
+
+scripts/
+
+database/
+
+prisma/
+
+middleware/
+
+emails/
+
+shared/
+
+Buat penjelasan fungsi setiap folder.
+
+---
+
+# PHASE 4 — CLEANUP
+
+Cari:
+
+* duplicate code
+* dead code
+* unused components
+* unused images
+* unused assets
+* unused API
+* unused hook
+* unused function
+* duplicated utility
+* duplicated style
+* duplicated types
+
+JANGAN HAPUS.
+
+Buat daftar terlebih dahulu.
+
+---
+
+# PHASE 5 — DOCUMENTATION
+
+Jika belum ada, buat dokumentasi berikut.
+
+README.md
+
+Berisi:
+
+* Project Overview
+* Features
+* Tech Stack
+* Installation
+* Development
+* Production
+* Deployment
+* Environment Variables
+* Folder Structure
+* Scripts
+* Contributing
+* License
+
+---
+
+Buat:
+
+CHANGELOG.md
+
+ROADMAP.md
+
+CONTRIBUTING.md
+
+CODE_OF_CONDUCT.md
+
+ARCHITECTURE.md
+
+API_DOCUMENTATION.md
+
+DATABASE.md
+
+SECURITY.md
+
+DEPLOYMENT.md
+
+TESTING.md
+
+CODING_STANDARD.md
+
+STYLE_GUIDE.md
+
+VERSIONING.md
+
+RELEASE_PROCESS.md
+
+FEATURES.md
+
+BUSINESS_FLOW.md
+
+USER_FLOW.md
+
+SYSTEM_DESIGN.md
+
+ERD.md
+
+TECH_STACK.md
+
+GLOSSARY.md
+
+TROUBLESHOOTING.md
+
+FAQ.md
+
+---
+
+# PHASE 6 — PRODUCT DOCUMENT
+
+Buat folder:
+
+/docs
+
+Isi dengan:
+
+PRD.md
+
+MRD.md
+
+BRD.md
+
+SRS.md
+
+User Story.md
+
+Use Case.md
+
+Functional Requirements.md
+
+Non Functional Requirements.md
+
+Acceptance Criteria.md
+
+Epic.md
+
+Sprint Planning.md
+
+Product Vision.md
+
+Persona.md
+
+Journey Map.md
+
+Wireframe Notes.md
+
+Backlog.md
+
+Release Plan.md
+
+---
+
+# PHASE 7 — CODE QUALITY
+
+Analisis:
+
+SOLID
+
+DRY
+
+KISS
+
+YAGNI
+
+Clean Code
+
+Clean Architecture
+
+Repository Pattern
+
+Service Layer
+
+Dependency Injection
+
+Error Handling
+
+Logging
+
+Validation
+
+Security
+
+Caching
+
+Performance
+
+SSR/CSR
+
+SEO
+
+Accessibility
+
+Best Practice
+
+Berikan score masing-masing.
+
+---
+
+# PHASE 8 — REFACTOR PLAN
+
+JANGAN langsung mengubah kode.
+
+Buat roadmap refactor.
+
+Tahapan:
+
+Step 1
+
+Apa yang diperbaiki.
+
+Risiko.
+
+Estimasi.
+
+---
+
+Step 2
+
+...
+
+Sampai seluruh project selesai.
+
+---
+
+# PHASE 9 — IMPLEMENTATION PLAN
+
+Buat checklist.
+
+Contoh:
+
+[]
+
+Rapikan folder
+
+[]
+
+Pisahkan business logic
+
+[]
+
+Pisahkan service
+
+[]
+
+Pisahkan repository
+
+[]
+
+Rapikan component
+
+[]
+
+Rapikan hooks
+
+[]
+
+Rapikan API
+
+[]
+
+Rapikan database
+
+[]
+
+Tambah testing
+
+[]
+
+Tambah documentation
+
+[]
+
+Tambah monitoring
+
+[]
+
+Tambah logging
+
+[]
+
+Tambah security
+
+[]
+
+Tambah CI/CD
+
+[]
+
+Tambah linting
+
+[]
+
+Tambah formatter
+
+[]
+
+Tambah Husky
+
+[]
+
+Tambah commitlint
+
+[]
+
+Tambah GitHub Action
+
+[]
+
+Tambah Docker
+
+[]
+
+Tambah observability
+
+[]
+
+Tambah analytics
+
+---
+
+# IMPORTANT RULES
+
+* Jangan menghapus file tanpa analisis.
+* Jangan rename file sembarangan.
+* Jangan mengubah logic bisnis.
+* Jangan memecahkan build.
+* Jangan membuat asumsi tanpa membaca seluruh repository.
+* Jelaskan alasan setiap rekomendasi.
+* Berikan contoh implementasi jika diperlukan.
+
+Jika menemukan masalah, tampilkan bukti berupa lokasi file, nama file, dan alasan teknis.
+
+Setelah audit selesai, tampilkan daftar prioritas pekerjaan dari yang paling penting hingga yang paling rendah.
+
+BARU setelah saya menyetujui roadmap tersebut, lakukan refactor secara bertahap dalam commit kecil yang aman dan mudah direview.
