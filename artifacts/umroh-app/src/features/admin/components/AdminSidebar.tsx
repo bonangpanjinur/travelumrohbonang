@@ -58,28 +58,25 @@ const AdminSidebar = ({
   const flatItems = useMemo(() => menuGroups.flatMap((g) => g.items), []);
   const recentHrefs = useSidebarRecent(location.pathname, allKnownHrefs);
 
-  // Auto-collapse: only "Utama" and the group holding the active route are open by default.
-  const initialCollapsed = useMemo(() => {
-    const map: Record<string, boolean> = {};
-    menuGroups.forEach((group) => {
-      const hasActive = group.items.some((item) => location.pathname === item.href);
-      map[group.label] = !(group.labelKey === "menu.group.main" || hasActive);
-    });
-    return map;
+  // Accordion: only one group (real or virtual) is open at a time. Defaults to whichever
+  // group holds the active route, falling back to "Utama".
+  const initialOpenGroup = useMemo(() => {
+    const activeGroup = menuGroups.find((group) => group.items.some((item) => location.pathname === item.href));
+    return activeGroup?.label ?? menuGroups.find((g) => g.labelKey === "menu.group.main")?.label ?? null;
   }, []); // only on mount
 
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(initialCollapsed);
+  const [openGroup, setOpenGroup] = useState<string | null>(initialOpenGroup);
 
   const toggleGroup = (label: string) => {
-    setCollapsedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+    setOpenGroup((prev) => (prev === label ? null : label));
   };
 
-  // Auto-expand the group containing the active route whenever navigation happens elsewhere
-  // (e.g. via a dashboard shortcut), not just on first mount.
+  // Auto-open (and thus auto-close every other group) whenever navigation lands on a route
+  // elsewhere in the group, not just on first mount.
   useEffect(() => {
     const activeGroup = menuGroups.find((group) => group.items.some((item) => item.href === location.pathname));
     if (activeGroup) {
-      setCollapsedGroups((prev) => (prev[activeGroup.label] ? { ...prev, [activeGroup.label]: false } : prev));
+      setOpenGroup(activeGroup.label);
     }
   }, [location.pathname]);
 
@@ -211,7 +208,7 @@ const AdminSidebar = ({
                 items={favoriteItems}
                 labelFor={labelFor}
                 collapsedSidebar={collapsed}
-                isOpen={!collapsedGroups["__favorites"]}
+                isOpen={openGroup === "__favorites"}
                 onToggleOpen={() => toggleGroup("__favorites")}
                 activePathname={location.pathname}
                 favorites={favorites}
@@ -231,7 +228,7 @@ const AdminSidebar = ({
                 items={recentItems}
                 labelFor={labelFor}
                 collapsedSidebar={collapsed}
-                isOpen={!collapsedGroups["__recent"]}
+                isOpen={openGroup === "__recent"}
                 onToggleOpen={() => toggleGroup("__recent")}
                 activePathname={location.pathname}
                 favorites={favorites}
@@ -256,7 +253,7 @@ const AdminSidebar = ({
                 items={group.items}
                 labelFor={labelFor}
                 collapsedSidebar={collapsed}
-                isOpen={isSearching || !collapsedGroups[group.label]}
+                isOpen={isSearching || openGroup === group.label}
                 onToggleOpen={isSearching ? undefined : () => toggleGroup(group.label)}
                 activePathname={location.pathname}
                 favorites={favorites}
