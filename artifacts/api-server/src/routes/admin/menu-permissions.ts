@@ -47,8 +47,8 @@ router.get("/", async (req, res) => {
   try {
     const rows = await db.select().from(roleMenuPermissions);
     res.json({ data: rows });
-  } catch {
-    res.status(500).json({ error: "Failed to fetch menu permissions" });
+  } catch (err) {
+    sendAdminError(res, "GET /api/admin/menu-permissions", err);
   }
 });
 
