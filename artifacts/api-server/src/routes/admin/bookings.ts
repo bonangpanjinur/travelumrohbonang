@@ -22,6 +22,7 @@ import {
   type AdminUpdateBookingStatusInput,
 } from "@workspace/api-zod";
 import { validate } from "../../middlewares/validate";
+import { sendAdminError } from "../../lib/adminApiError";
 
 const router = Router();
 
