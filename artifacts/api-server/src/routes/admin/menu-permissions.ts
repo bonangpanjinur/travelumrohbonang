@@ -116,8 +116,8 @@ router.put("/", async (req, res) => {
       saved: valid.length,
       skipped: permissions.length - valid.length,
     });
-  } catch {
-    res.status(500).json({ error: "Failed to save menu permissions" });
+  } catch (err) {
+    sendAdminError(res, "PUT /api/admin/menu-permissions", err);
   }
 });
 
