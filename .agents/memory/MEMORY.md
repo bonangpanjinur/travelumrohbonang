@@ -23,3 +23,4 @@
 - [Masterdata route error handling](masterdata-error-handling.md) — POST handlers need name validation (400) + dbError() for constraint errors; missing table = 500 from catch block.
 - [Seed file schema drift](seed-file-schema-drift.md) — supabase-seed.sql had stale columns (icon, bio) not in current Drizzle schema; check \d table before re-running seeds after schema push.
 - [Admin route frontend/backend mismatches](admin-route-frontend-backend-mismatches.md) — grep apiFetch admin paths vs actual router mounts; recurring bugs: flat-vs-nested mergeParams routes, unbuilt sub-features, resource naming drift, {data} vs bare-array response shape.
+- [Supabase project-ref mismatch](supabase-project-ref-mismatch.md) — 401s straight from *.supabase.co often mean env vars point at the wrong/stale project, not an RLS bug; diff anon-key `ref` claim vs VITE_SUPABASE_URL.
