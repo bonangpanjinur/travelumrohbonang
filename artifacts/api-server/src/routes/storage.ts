@@ -6,9 +6,20 @@ import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
-const UPLOADS_DIR = path.resolve(process.cwd(), "uploads");
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+// Use /tmp on Vercel (only writable path in the serverless filesystem —
+// process.cwd() there is /var/task, which is read-only and throws ENOENT
+// on mkdir). Mirrors the same check in app.ts for the static /uploads route.
+const UPLOADS_DIR =
+  process.env.VERCEL === "1"
+    ? "/tmp/uploads"
+    : path.resolve(process.cwd(), "uploads");
+try {
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  }
+} catch {
+  // Filesystem may be read-only; uploads will not persist but the module
+  // must still load so unrelated routes keep working.
 }
 
 // Upload guardrails: cap body size and restrict to safe content-types to
