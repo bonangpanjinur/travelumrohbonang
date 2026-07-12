@@ -27,15 +27,8 @@ router.get("/my", (req, _res, next) => { logDiag("GET /menu-permissions/my:befor
       .from(roleMenuPermissions)
       .where(eq(roleMenuPermissions.role, role));
     res.json({ data: rows });
-  } catch (err: any) {
-    console.error("[menu-permissions] GET /my DB error:", err?.code, err?.message);
-    // Return empty data instead of 500 — table may not exist / DB unreachable
-    res.json({
-      data: [],
-      _warning: "db_unreachable",
-      _detail: err?.message ?? String(err),
-      _hint: "Cek DATABASE_URL di env production. Buka /api/health/detail.",
-    });
+  } catch (err) {
+    sendAdminError(res, "GET /api/admin/menu-permissions/my", err);
   }
 });
 
