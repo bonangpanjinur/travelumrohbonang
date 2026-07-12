@@ -4,6 +4,7 @@ import { roleMenuPermissions } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { logDiag } from "../../lib/tempDiagnosticLog"; // TEMP DIAG
+import { sendAdminError } from "../../lib/adminApiError";
 
 const ADMIN_ROLES = new Set(["super_admin", "admin", "branch_manager", "staff", "agent"]);
 
@@ -26,15 +27,8 @@ router.get("/my", (req, _res, next) => { logDiag("GET /menu-permissions/my:befor
       .from(roleMenuPermissions)
       .where(eq(roleMenuPermissions.role, role));
     res.json({ data: rows });
-  } catch (err: any) {
-    console.error("[menu-permissions] GET /my DB error:", err?.code, err?.message);
-    // Return empty data instead of 500 — table may not exist / DB unreachable
-    res.json({
-      data: [],
-      _warning: "db_unreachable",
-      _detail: err?.message ?? String(err),
-      _hint: "Cek DATABASE_URL di env production. Buka /api/health/detail.",
-    });
+  } catch (err) {
+    sendAdminError(res, "GET /api/admin/menu-permissions/my", err);
   }
 });
 
@@ -53,8 +47,8 @@ router.get("/", async (req, res) => {
   try {
     const rows = await db.select().from(roleMenuPermissions);
     res.json({ data: rows });
-  } catch {
-    res.status(500).json({ error: "Failed to fetch menu permissions" });
+  } catch (err) {
+    sendAdminError(res, "GET /api/admin/menu-permissions", err);
   }
 });
 
@@ -122,8 +116,8 @@ router.put("/", async (req, res) => {
       saved: valid.length,
       skipped: permissions.length - valid.length,
     });
-  } catch {
-    res.status(500).json({ error: "Failed to save menu permissions" });
+  } catch (err) {
+    sendAdminError(res, "PUT /api/admin/menu-permissions", err);
   }
 });
 
@@ -140,8 +134,8 @@ router.delete("/reset", async (req, res) => {
   try {
     await db.delete(roleMenuPermissions);
     res.json({ success: true });
-  } catch {
-    res.status(500).json({ error: "Failed to reset menu permissions" });
+  } catch (err) {
+    sendAdminError(res, "DELETE /api/admin/menu-permissions/reset", err);
   }
 });
 
