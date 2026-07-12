@@ -134,8 +134,8 @@ router.delete("/reset", async (req, res) => {
   try {
     await db.delete(roleMenuPermissions);
     res.json({ success: true });
-  } catch {
-    res.status(500).json({ error: "Failed to reset menu permissions" });
+  } catch (err) {
+    sendAdminError(res, "DELETE /api/admin/menu-permissions/reset", err);
   }
 });
 
