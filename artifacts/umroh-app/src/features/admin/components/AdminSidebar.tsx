@@ -1,14 +1,17 @@
 import { Link, useLocation } from "react-router-dom";
-import { LogOut, ChevronDown, ChevronsLeft, ChevronsRight, Globe } from "lucide-react";
+import { LogOut, ChevronsLeft, ChevronsRight, Globe, Search, X, Star, Clock } from "lucide-react";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useLanguage } from "@/shared/i18n/LanguageContext";
-import AdminBranding from "./AdminBranding";
 import LanguageSwitcher from "@/shared/components/common/LanguageSwitcher";
 import ThemeToggle from "@/shared/components/common/ThemeToggle";
 import AdminNotificationBell from "./AdminNotificationBell";
-import { useState, useMemo } from "react";
-import { menuGroups, type BrandingSettings } from "./adminMenuConfig";
+import { useMemo, useState, useEffect } from "react";
+import { menuGroups, type BrandingSettings, type MenuItem } from "./adminMenuConfig";
 import { useMenuPermissions } from "@/features/admin/hooks/useMenuPermissions";
+import { useAdminNotifications } from "@/features/admin/hooks/useAdminNotifications";
+import { useSidebarFavorites } from "@/features/admin/hooks/useSidebarFavorites";
+import { useSidebarRecent } from "@/features/admin/hooks/useSidebarRecent";
+import AdminSidebarGroup from "./AdminSidebarGroup";
 
 interface AdminSidebarProps {
   branding: BrandingSettings;
@@ -19,11 +22,11 @@ interface AdminSidebarProps {
   onToggleCollapsed: () => void;
 }
 
-const AdminSidebar = ({ 
-  branding, 
-  isOpen, 
-  onClose, 
-  onLogout, 
+const AdminSidebar = ({
+  branding,
+  isOpen,
+  onClose,
+  onLogout,
   collapsed,
   onToggleCollapsed,
 }: AdminSidebarProps) => {
@@ -31,19 +34,36 @@ const AdminSidebar = ({
   const { t } = useLanguage();
   const rolePermissions = useMenuPermissions();
   const location = useLocation();
+  const { unreadBookings, unreadPayments } = useAdminNotifications();
+  const { favorites, toggleFavorite } = useSidebarFavorites();
   const showLogo = branding.display_mode === "logo_only" || branding.display_mode === "both";
   const showText = branding.display_mode === "text_only" || branding.display_mode === "both";
 
-  // Auto-collapse: only "Utama" and group with active route are open by default
+  const [search, setSearch] = useState("");
+  const isSearching = search.trim().length > 0;
+
+  // Permission-aware visibility check, shared by every rendering path (groups, favorites, recent).
+  const isItemVisible = (item: MenuItem) => {
+    if (rolePermissions !== null) {
+      const dbPerm = rolePermissions[item.labelKey];
+      if (dbPerm !== undefined) return dbPerm;
+    }
+    if (!item.roles) return true;
+    return !!role && item.roles.includes(role);
+  };
+
+  const labelFor = (item: MenuItem) => t(item.labelKey);
+
+  const allKnownHrefs = useMemo(() => new Set(menuGroups.flatMap((g) => g.items.map((i) => i.href))), []);
+  const flatItems = useMemo(() => menuGroups.flatMap((g) => g.items), []);
+  const recentHrefs = useSidebarRecent(location.pathname, allKnownHrefs);
+
+  // Auto-collapse: only "Utama" and the group holding the active route are open by default.
   const initialCollapsed = useMemo(() => {
     const map: Record<string, boolean> = {};
     menuGroups.forEach((group) => {
-      const hasActive = group.items.some(item => location.pathname === item.href);
-      if (group.labelKey === "menu.group.main" || hasActive) {
-        map[group.label] = false;
-      } else {
-        map[group.label] = true;
-      }
+      const hasActive = group.items.some((item) => location.pathname === item.href);
+      map[group.label] = !(group.labelKey === "menu.group.main" || hasActive);
     });
     return map;
   }, []); // only on mount
@@ -51,11 +71,42 @@ const AdminSidebar = ({
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(initialCollapsed);
 
   const toggleGroup = (label: string) => {
-    setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }));
+    setCollapsedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
+
+  // Auto-expand the group containing the active route whenever navigation happens elsewhere
+  // (e.g. via a dashboard shortcut), not just on first mount.
+  useEffect(() => {
+    const activeGroup = menuGroups.find((group) => group.items.some((item) => item.href === location.pathname));
+    if (activeGroup) {
+      setCollapsedGroups((prev) => (prev[activeGroup.label] ? { ...prev, [activeGroup.label]: false } : prev));
+    }
+  }, [location.pathname]);
+
+  const badgeCounts: Record<string, number> = {
+    "/admin/bookings": unreadBookings,
+    "/admin/payments": unreadPayments,
   };
 
   const roleLabel = role ? role.replace(/_/g, " ") : null;
   const userInitial = (user?.email ?? branding.company_name).charAt(0).toUpperCase();
+
+  const query = search.trim().toLowerCase();
+  const matchesSearch = (item: MenuItem) => labelFor(item).toLowerCase().includes(query);
+
+  const favoriteItems = favorites
+    .map((href) => flatItems.find((i) => i.href === href))
+    .filter((i): i is MenuItem => !!i && isItemVisible(i));
+
+  const recentItems = recentHrefs
+    .map((href) => flatItems.find((i) => i.href === href))
+    .filter((i): i is MenuItem => !!i && isItemVisible(i));
+
+  const visibleGroups = menuGroups.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => isItemVisible(item) && (!isSearching || matchesSearch(item))),
+  }));
+  const hasAnyResults = visibleGroups.some((g) => g.items.length > 0);
 
   return (
     <>
@@ -79,26 +130,19 @@ const AdminSidebar = ({
             to="/"
             className={`p-4 border-b border-primary-foreground/10 hidden lg:flex items-center gap-2 hover:bg-primary-foreground/5 transition-colors shrink-0 ${collapsed ? "lg:justify-center" : ""}`}
           >
-            {showLogo && (
-              branding.logo_url ? (
-                <img
-                  src={branding.logo_url}
-                  alt={branding.company_name}
-                  className="h-10 w-auto object-contain"
-                />
+            {showLogo &&
+              (branding.logo_url ? (
+                <img src={branding.logo_url} alt={branding.company_name} className="h-10 w-auto object-contain" />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center shadow-sm shadow-black/30 shrink-0">
                   <span className="font-display font-bold text-lg text-accent-foreground">
                     {branding.company_name.charAt(0)}
                   </span>
                 </div>
-              )
-            )}
+              ))}
             {showText && !collapsed && (
               <div className="hidden lg:block">
-                <span className="font-display text-xl font-bold text-primary-foreground">
-                  {branding.company_name}
-                </span>
+                <span className="font-display text-xl font-bold text-primary-foreground">{branding.company_name}</span>
                 <span className="block text-[10px] text-primary-foreground/50 tracking-widest uppercase -mt-1">
                   Dashboard
                 </span>
@@ -106,9 +150,7 @@ const AdminSidebar = ({
             )}
             {showText && (
               <div className="lg:hidden">
-                <span className="font-display text-xl font-bold text-primary-foreground">
-                  {branding.company_name}
-                </span>
+                <span className="font-display text-xl font-bold text-primary-foreground">{branding.company_name}</span>
                 <span className="block text-[10px] text-primary-foreground/50 tracking-widest uppercase -mt-1">
                   Dashboard
                 </span>
@@ -118,7 +160,9 @@ const AdminSidebar = ({
 
           {/* User summary */}
           {user && (
-            <div className={`hidden lg:flex items-center gap-3 px-4 py-3 border-b border-primary-foreground/10 shrink-0 ${collapsed ? "lg:justify-center lg:px-2" : ""}`}>
+            <div
+              className={`hidden lg:flex items-center gap-3 px-4 py-3 border-b border-primary-foreground/10 shrink-0 ${collapsed ? "lg:justify-center lg:px-2" : ""}`}
+            >
               <div className="w-9 h-9 rounded-full bg-primary-foreground/10 border border-primary-foreground/15 flex items-center justify-center shrink-0">
                 <span className="text-sm font-semibold text-primary-foreground/90">{userInitial}</span>
               </div>
@@ -135,78 +179,96 @@ const AdminSidebar = ({
             </div>
           )}
 
-          {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin-primary p-3 pt-20 lg:pt-3 space-y-0.5">
-            {menuGroups.map((group, groupIndex) => {
-              const isGroupCollapsed = collapsedGroups[group.label] ?? false;
-              const filteredItems = group.items.filter(item => {
-                // DB permissions override static config (if a row exists for this role+menuKey)
-                if (rolePermissions !== null) {
-                  const dbPerm = rolePermissions[item.labelKey];
-                  if (dbPerm !== undefined) return dbPerm;
-                }
-                // Fallback: static roles array from adminMenuConfig
-                if (!item.roles) return true;
-                return !!role && item.roles.includes(role);
-              });
-              if (filteredItems.length === 0) return null;
+          {/* Search */}
+          {!collapsed && (
+            <div className="px-3 pt-3 shrink-0 hidden lg:block">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary-foreground/40" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t("sidebar.search_placeholder")}
+                  className="w-full pl-8 pr-7 py-2 rounded-lg bg-primary-foreground/10 border border-primary-foreground/10 text-sm text-primary-foreground placeholder:text-primary-foreground/40 focus:outline-none focus:ring-1 focus:ring-accent/60 transition-colors"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-primary-foreground/40 hover:text-primary-foreground/80"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
-              return (
-                <div
-                  key={group.label}
-                  className={groupIndex > 0 ? "pt-2 mt-2 border-t border-primary-foreground/10" : ""}
-                >
-                  {!collapsed && (
-                    <button
-                      onClick={() => toggleGroup(group.label)}
-                      className="flex items-center justify-between w-full px-3 py-2 rounded-md text-[10px] uppercase tracking-wider text-primary-foreground/40 font-semibold hover:text-primary-foreground/70 hover:bg-primary-foreground/5 transition-colors"
-                    >
-                      {t(group.labelKey)}
-                      <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isGroupCollapsed ? "-rotate-90" : ""}`} />
-                    </button>
-                  )}
-                  {(collapsed || !isGroupCollapsed) && (
-                    <ul className="space-y-0.5 mb-1">
-                      {filteredItems.map((item) => {
-                        const isActive = location.pathname === item.href;
-                        return (
-                          <li key={item.href}>
-                            <Link
-                              to={item.href}
-                              onClick={onClose}
-                              title={collapsed ? t(item.labelKey) : undefined}
-                              className={`group relative flex items-center gap-3 py-2.5 rounded-lg text-sm transition-all ${
-                                collapsed ? "lg:justify-center lg:px-0 pl-4 pr-3" : "pl-4 pr-3"
-                              } ${
-                                isActive
-                                  ? "bg-primary-foreground/15 text-primary-foreground font-semibold"
-                                  : "text-primary-foreground/60 font-medium hover:bg-primary-foreground/10 hover:text-primary-foreground/90 hover:translate-x-0.5"
-                              }`}
-                            >
-                              <span
-                                className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-accent transition-opacity ${
-                                  isActive ? "opacity-100" : "opacity-0"
-                                }`}
-                              />
-                              <span
-                                className={`flex items-center justify-center w-7 h-7 rounded-md shrink-0 transition-colors ${
-                                  isActive
-                                    ? "bg-accent/20 text-accent"
-                                    : "text-primary-foreground/50 group-hover:text-primary-foreground/80"
-                                }`}
-                              >
-                                <item.icon className="w-4 h-4" />
-                              </span>
-                              <span className={`flex-1 truncate ${collapsed ? "lg:hidden" : ""}`}>{t(item.labelKey)}</span>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-              );
-            })}
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto scrollbar-thin-primary p-3 pt-20 lg:pt-3 space-y-0.5">
+            {!isSearching && favoriteItems.length > 0 && (
+              <AdminSidebarGroup
+                title={t("sidebar.favorites")}
+                icon={Star}
+                items={favoriteItems}
+                labelFor={labelFor}
+                collapsedSidebar={collapsed}
+                isOpen={!collapsedGroups["__favorites"]}
+                onToggleOpen={() => toggleGroup("__favorites")}
+                activePathname={location.pathname}
+                favorites={favorites}
+                onToggleFavorite={toggleFavorite}
+                favoriteLabel={t("sidebar.pin")}
+                unfavoriteLabel={t("sidebar.unpin")}
+                badgeCounts={badgeCounts}
+                onNavigate={onClose}
+                showDivider={false}
+              />
+            )}
+
+            {!isSearching && recentItems.length > 0 && (
+              <AdminSidebarGroup
+                title={t("sidebar.recent")}
+                icon={Clock}
+                items={recentItems}
+                labelFor={labelFor}
+                collapsedSidebar={collapsed}
+                isOpen={!collapsedGroups["__recent"]}
+                onToggleOpen={() => toggleGroup("__recent")}
+                activePathname={location.pathname}
+                favorites={favorites}
+                onToggleFavorite={toggleFavorite}
+                favoriteLabel={t("sidebar.pin")}
+                unfavoriteLabel={t("sidebar.unpin")}
+                badgeCounts={badgeCounts}
+                onNavigate={onClose}
+                showDivider={favoriteItems.length > 0}
+              />
+            )}
+
+            {isSearching && !hasAnyResults && (
+              <p className="px-3 py-6 text-center text-sm text-primary-foreground/40">{t("sidebar.no_results")}</p>
+            )}
+
+            {visibleGroups.map((group, groupIndex) => (
+              <AdminSidebarGroup
+                key={group.label}
+                title={t(group.labelKey)}
+                icon={group.icon}
+                items={group.items}
+                labelFor={labelFor}
+                collapsedSidebar={collapsed}
+                isOpen={isSearching || !collapsedGroups[group.label]}
+                onToggleOpen={isSearching ? undefined : () => toggleGroup(group.label)}
+                activePathname={location.pathname}
+                favorites={favorites}
+                onToggleFavorite={toggleFavorite}
+                favoriteLabel={t("sidebar.pin")}
+                unfavoriteLabel={t("sidebar.unpin")}
+                badgeCounts={badgeCounts}
+                onNavigate={onClose}
+                showDivider={groupIndex > 0 || favoriteItems.length > 0 || recentItems.length > 0}
+                highlightQuery={isSearching ? query : undefined}
+              />
+            ))}
           </nav>
 
           {/* Footer */}
@@ -215,7 +277,7 @@ const AdminSidebar = ({
               href="/"
               target="_blank"
               rel="noreferrer"
-              title={collapsed ? "Kunjungi Website" : undefined}
+              title={collapsed ? t("menu.main_website") : undefined}
               className={`flex items-center gap-3 py-2.5 w-full rounded-lg text-sm font-medium text-primary-foreground/60 hover:bg-primary-foreground/10 hover:text-primary-foreground/90 transition-colors ${
                 collapsed ? "lg:justify-center lg:px-0 px-3" : "px-3"
               }`}
@@ -227,7 +289,9 @@ const AdminSidebar = ({
             </a>
             {!collapsed && (
               <div className="flex items-center justify-between px-1">
-                <span className="text-[10px] text-primary-foreground/40 uppercase tracking-wider font-semibold">{t("common.language")}</span>
+                <span className="text-[10px] text-primary-foreground/40 uppercase tracking-wider font-semibold">
+                  {t("common.language")}
+                </span>
                 <div className="flex items-center gap-1">
                   <ThemeToggle variant="admin" />
                   <AdminNotificationBell />
@@ -259,10 +323,7 @@ const AdminSidebar = ({
 
       {/* Overlay */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden animate-in fade-in duration-150"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 z-30 bg-black/50 lg:hidden animate-in fade-in duration-150" onClick={onClose} />
       )}
     </>
   );

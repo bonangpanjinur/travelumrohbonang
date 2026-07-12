@@ -43,6 +43,9 @@ import {
   LineChart,
   Activity,
   Layers,
+  Megaphone,
+  Database,
+  SlidersHorizontal,
   type LucideIcon
 
 } from "lucide-react";
@@ -60,6 +63,7 @@ export interface MenuItem {
 export interface MenuGroup {
   label: string;
   labelKey: string;
+  icon: LucideIcon;
   items: MenuItem[];
 }
 
@@ -90,6 +94,7 @@ export const menuGroups: MenuGroup[] = [
   {
     label: "Utama",
     labelKey: "menu.group.main",
+    icon: LayoutDashboard,
     items: [
       { label: "Dashboard", labelKey: "menu.dashboard", href: "/admin", icon: LayoutDashboard, roles: OPERATIONAL },
       { label: "Notifikasi", labelKey: "menu.notifications", href: "/admin/notifications", icon: BellRing, roles: OPERATIONAL },
@@ -98,6 +103,7 @@ export const menuGroups: MenuGroup[] = [
   {
     label: "Operasional",
     labelKey: "menu.group.operations",
+    icon: Package,
     items: [
       { label: "Paket Umroh", labelKey: "menu.packages", href: "/admin/packages", icon: Package, roles: ALL_STAFF },
       { label: "Keberangkatan", labelKey: "menu.departures", href: "/admin/departures", icon: Calendar, roles: ALL_STAFF },
@@ -113,6 +119,7 @@ export const menuGroups: MenuGroup[] = [
   {
     label: "Keuangan",
     labelKey: "menu.group.finance",
+    icon: Wallet,
     items: [
       { label: "Pembayaran", labelKey: "menu.payments", href: "/admin/payments", icon: CreditCard, roles: OPERATIONAL },
       { label: "Cicilan", labelKey: "menu.installments", href: "/admin/installments", icon: Receipt, roles: FINANCE },
@@ -130,6 +137,7 @@ export const menuGroups: MenuGroup[] = [
   {
     label: "Komunikasi",
     labelKey: "menu.group.communication",
+    icon: MessageCircle,
     items: [
       { label: "Chat Jamaah", labelKey: "menu.pilgrim_chat", href: "/admin/chats", icon: MessageCircle, roles: ALL_STAFF },
     ],
@@ -137,6 +145,7 @@ export const menuGroups: MenuGroup[] = [
   {
     label: "Pemasaran",
     labelKey: "menu.group.marketing",
+    icon: Megaphone,
     items: [
       { label: "CRM & Follow-up", labelKey: "menu.crm", href: "/admin/crm", icon: MessageCircle, roles: SUPER_ADMIN_ADMIN },
       { label: "Kupon", labelKey: "menu.coupons", href: "/admin/coupons", icon: Ticket, roles: SUPER_ADMIN_ADMIN },
@@ -149,6 +158,7 @@ export const menuGroups: MenuGroup[] = [
   {
     label: "Master Data",
     labelKey: "menu.group.master_data",
+    icon: Database,
     items: [
       { label: "Kategori Paket", labelKey: "menu.package_categories", href: "/admin/package-categories", icon: Tag, roles: SUPER_ADMIN_ADMIN },
       { label: "Hotel", labelKey: "menu.hotels", href: "/admin/hotels", icon: Hotel, roles: SUPER_ADMIN_ADMIN },
@@ -162,6 +172,7 @@ export const menuGroups: MenuGroup[] = [
   {
     label: "Konten & CMS",
     labelKey: "menu.group.content_cms",
+    icon: Image,
     items: [
       { label: "Blog", labelKey: "menu.blog", href: "/admin/blog", icon: BookOpen, roles: SUPER_ADMIN_ADMIN },
       { label: "Galeri", labelKey: "menu.gallery", href: "/admin/gallery", icon: Image, roles: SUPER_ADMIN_ADMIN },
@@ -176,6 +187,7 @@ export const menuGroups: MenuGroup[] = [
   {
     label: "Pengaturan",
     labelKey: "menu.group.settings",
+    icon: SlidersHorizontal,
     items: [
       { label: "Navigasi", labelKey: "menu.navigation", href: "/admin/navigation", icon: Menu, roles: SUPER_ADMIN_ADMIN },
       { label: "Floating Button", labelKey: "menu.floating_buttons", href: "/admin/floating-buttons", icon: MessageCircle, roles: SUPER_ADMIN_ADMIN },
