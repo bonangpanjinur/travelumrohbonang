@@ -93,7 +93,6 @@ export const menuGroups: MenuGroup[] = [
     items: [
       { label: "Dashboard", labelKey: "menu.dashboard", href: "/admin", icon: LayoutDashboard, roles: OPERATIONAL },
       { label: "Notifikasi", labelKey: "menu.notifications", href: "/admin/notifications", icon: BellRing, roles: OPERATIONAL },
-      { label: "Website Utama", labelKey: "menu.main_website", href: "/", icon: Globe, roles: OPERATIONAL },
     ],
   },
   {

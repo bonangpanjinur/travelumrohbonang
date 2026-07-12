@@ -15,7 +15,19 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("admin-sidebar-collapsed") === "1";
+  });
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
+
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      window.localStorage.setItem("admin-sidebar-collapsed", next ? "1" : "0");
+      return next;
+    });
+  };
 
   useEffect(() => {
     const fetchBranding = async () => {
@@ -59,10 +71,12 @@ const AdminLayout = () => {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onLogout={handleLogout}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={toggleSidebarCollapsed}
       />
 
       {/* Main Content */}
-      <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
+      <main className={`min-h-screen pt-16 lg:pt-0 transition-[margin] duration-200 ${sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"}`}>
         <div className="p-4 lg:p-8">
           <AdminBreadcrumb />
           {/* key={location.pathname} resets the boundary on every route change
