@@ -20,6 +20,9 @@ export const translations: Record<Language, Record<string, string>> = {
     "nav.role.agent": "Agen",
     "nav.role.buyer": "Jemaah",
     "nav.role.user": "Jemaah",
+    "nav.bottom.booking": "Booking",
+    "nav.bottom.profile": "Profil",
+    "nav.bottom.aria_label": "Navigasi utama",
 
     // Hero
     "hero.title": "Perjalanan Umroh Terbaik",
@@ -223,6 +226,9 @@ export const translations: Record<Language, Record<string, string>> = {
     "nav.role.agent": "Agent",
     "nav.role.buyer": "Pilgrim",
     "nav.role.user": "Pilgrim",
+    "nav.bottom.booking": "Booking",
+    "nav.bottom.profile": "Profile",
+    "nav.bottom.aria_label": "Main navigation",
 
     // Hero
     "hero.title": "Best Umrah Journey",

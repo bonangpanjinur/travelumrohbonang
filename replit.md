@@ -38,6 +38,11 @@ Aplikasi manajemen umroh lengkap — paket, booking, jemaah, pembayaran, dan CMS
 - `pnpm run verify:deploy-env` — cek semua environment variable wajib sebelum deploy ke Vercel
 - `GET /api/health` — cek konektivitas database & Supabase sekaligus (status `ok`/`degraded`, latensi per service) — gunakan untuk verifikasi cepat setelah deploy ke Vercel
 
+## Progress terhadap PRD (docs/PRD.md)
+
+- **Fase 1 UI/UX — Mobile Experience (P0, Q3 2026)**: selesai (2026-07-12). Ditambahkan bottom navigation bar mobile (Home/Paket/Booking/Profil) di `MobileBottomNav.tsx`, sticky CTA paket detail direposisi di atas bottom nav, step indicator booking diperjelas di mobile (label "Langkah X dari Y"), touch target tombol dinaikkan ke 44×44px (`button.tsx` size default/icon, hamburger menu, tombol +/- kamar booking). Payment gateway & WhatsApp notification sengaja dilewati sesuai permintaan.
+- Item lain di Fase 1 (bilingual ID/EN, manajemen dokumen jemaah, performa/loading, aksesibilitas lanjutan) belum dikerjakan — lihat PRD bagian 6.2 dan 7.1 untuk detail.
+
 ## Stack
 
 - pnpm workspaces, Node.js 20, TypeScript 5.9

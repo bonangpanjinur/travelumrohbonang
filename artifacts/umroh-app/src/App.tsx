@@ -114,6 +114,7 @@ import AdminMenuPermissions from "./features/admin/pages/MenuPermissions";
 import { useEffect } from "react";
 import { installGlobalErrorHandlers } from "@/shared/lib/errorLogger";
 import ErrorBoundary from "@/shared/components/common/ErrorBoundary";
+import MobileBottomNav from "@/shared/components/layout/MobileBottomNav";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
@@ -134,6 +135,7 @@ const AppContent = () => {
   return (
     <>
       <ImpersonationBanner />
+      <MobileBottomNav />
       <Routes>
       {/* Public Routes */}
       <Route path="/" element={<Index />} />

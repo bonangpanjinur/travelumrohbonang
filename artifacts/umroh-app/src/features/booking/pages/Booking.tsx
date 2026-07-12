@@ -348,22 +348,27 @@ const Booking = () => {
           </div>
 
           {/* Steps */}
-          <div className="flex items-center gap-2 mb-8">
-            {STEPS.map((s, i) => (
-              <div key={s} className="flex items-center">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                    i <= step ? "gradient-gold text-primary" : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {i + 1}
+          <div className="mb-8">
+            <p className="sm:hidden text-xs font-medium text-muted-foreground mb-2">
+              Langkah {step + 1} dari {STEPS.length}: <span className="text-foreground font-semibold">{STEPS[step]}</span>
+            </p>
+            <div className="flex items-center gap-1 sm:gap-2">
+              {STEPS.map((s, i) => (
+                <div key={s} className="flex items-center flex-1 sm:flex-initial">
+                  <div
+                    className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${
+                      i <= step ? "gradient-gold text-primary" : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {i + 1}
+                  </div>
+                  <span className={`ml-2 text-sm hidden sm:block ${i <= step ? "font-semibold" : "text-muted-foreground"}`}>
+                    {s}
+                  </span>
+                  {i < STEPS.length - 1 && <div className="flex-1 sm:w-8 sm:flex-initial h-0.5 bg-border mx-2" />}
                 </div>
-                <span className={`ml-2 text-sm hidden sm:block ${i <= step ? "font-semibold" : "text-muted-foreground"}`}>
-                  {s}
-                </span>
-                {i < STEPS.length - 1 && <div className="w-8 h-0.5 bg-border mx-2" />}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* Step Content */}
@@ -382,17 +387,19 @@ const Booking = () => {
                       <p className="font-bold">{getRoomLabel(room.room_type)}</p>
                       <p className="text-gold font-semibold">{formatPrice(room.price)}</p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       <button
                         onClick={() => updateRoomQuantity(room.room_type, -1)}
-                        className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted"
+                        aria-label={`Kurangi jumlah ${getRoomLabel(room.room_type)}`}
+                        className="w-11 h-11 rounded-full border border-border flex items-center justify-center hover:bg-muted"
                       >
                         <Minus className="w-4 h-4" />
                       </button>
                       <span className="font-bold w-4 text-center">{room.quantity}</span>
                       <button
                         onClick={() => updateRoomQuantity(room.room_type, 1)}
-                        className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted"
+                        aria-label={`Tambah jumlah ${getRoomLabel(room.room_type)}`}
+                        className="w-11 h-11 rounded-full border border-border flex items-center justify-center hover:bg-muted"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
