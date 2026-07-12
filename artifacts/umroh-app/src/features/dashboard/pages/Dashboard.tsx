@@ -1,18 +1,35 @@
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import { 
-  Calendar, CreditCard, FileText, Plane, User, 
-  CheckCircle2, Clock, AlertCircle, LogOut, Crown, Upload, Briefcase, Building2
+  CreditCard, FileText, Plane, User, 
+  CheckCircle2, Clock, LogOut, Crown, Upload, Briefcase, Building2
 } from "lucide-react";
 import { useNavigate, Navigate } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, type KeyboardEvent } from "react";
+import { motion } from "framer-motion";
 import { supabase } from "@/shared/integrations/supabase/client";
 import Navbar from "@/shared/components/layout/Navbar";
 import LoadingSpinner from "@/shared/components/ui/loading-spinner";
 import AdminBanner from "@/features/dashboard/components/AdminBanner";
 import RecentNotifications from "@/features/dashboard/components/RecentNotifications";
 import TestimonialForm from "@/features/dashboard/components/TestimonialForm";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0 },
+};
+
+interface QuickAction {
+  key: string;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  onClick: () => void;
+  colorClass: string;
+  cardClass?: string;
+}
 
 interface StepDef {
   id: number;
@@ -148,31 +165,114 @@ const Dashboard = () => {
 
   const steps = useMemo(() => getSteps(activeBooking, payments), [activeBooking, payments]);
 
-  if (loading) return <LoadingSpinner fullScreen />;
-  if (!user) return <Navigate to="/auth" replace />;
-
   const handleSignOut = async () => {
     await signOut();
   };
+
+  const quickActions: QuickAction[] = useMemo(() => {
+    const actions: QuickAction[] = [
+      {
+        key: "bookings",
+        title: "Riwayat Booking",
+        description: "Lihat semua transaksi",
+        icon: FileText,
+        onClick: () => navigate('/my-bookings'),
+        colorClass: "bg-orange-100 text-orange-600",
+      },
+      {
+        key: "profile",
+        title: "Edit Profil",
+        description: "Update data jamaah",
+        icon: User,
+        onClick: () => navigate('/profile'),
+        colorClass: "bg-purple-100 text-purple-600",
+      },
+      {
+        key: "upgrades",
+        title: "Riwayat Upgrade",
+        description: "Status pengajuan template",
+        icon: Crown,
+        onClick: () => navigate('/my-upgrades'),
+        colorClass: "bg-amber-100 text-amber-600",
+      },
+      {
+        key: "documents",
+        title: "Dokumen Saya",
+        description: "Upload & cek dokumen",
+        icon: Upload,
+        onClick: () => navigate('/my-documents'),
+        colorClass: "bg-teal-100 text-teal-600",
+      },
+    ];
+    if (isAgent) {
+      actions.push({
+        key: "agent",
+        title: "Portal Agen",
+        description: "Referral & komisi",
+        icon: Briefcase,
+        onClick: () => navigate('/agent-portal'),
+        colorClass: "bg-primary/10 text-primary",
+        cardClass: "border-primary/20 bg-primary/5",
+      });
+    }
+    if (hasBranch) {
+      actions.push({
+        key: "branch",
+        title: "Dashboard Cabang",
+        description: "Kelola cabang Anda",
+        icon: Building2,
+        onClick: () => navigate('/branch-dashboard'),
+        colorClass: "bg-info/10 text-info",
+        cardClass: "border-info/20 bg-info/5",
+      });
+    }
+    return actions;
+  }, [isAgent, hasBranch, navigate]);
+
+  if (loading) return <LoadingSpinner fullScreen />;
+  if (!user) return <Navigate to="/auth" replace />;
 
   return (
     <div className="min-h-screen bg-muted/30 pb-20">
       <Navbar />
       <div className="bg-primary text-primary-foreground pt-24 pb-24 px-6 rounded-b-[2.5rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-        <div className="container mx-auto max-w-5xl relative z-10 flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">
-              Assalamu'alaikum, {userName.split(' ')[0]}!
-            </h1>
-            <p className="text-primary-foreground/80 text-lg">
-              Semoga persiapan ibadah Anda dilancarkan.
-            </p>
+        <div className="absolute -bottom-10 left-1/3 w-48 h-48 bg-gold/10 rounded-full blur-3xl"></div>
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={fadeUp}
+          transition={{ duration: 0.4 }}
+          className="container mx-auto max-w-5xl relative z-10 flex justify-between items-start sm:items-center gap-4"
+        >
+          <div className="min-w-0">
+            {loadingBooking && !userName ? (
+              <>
+                <Skeleton className="h-8 w-56 mb-3 bg-white/15" />
+                <Skeleton className="h-5 w-72 bg-white/10" />
+              </>
+            ) : (
+              <>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 truncate">
+                  Assalamu'alaikum, {userName.split(' ')[0]}!
+                </h1>
+                <p className="text-primary-foreground/80 text-base sm:text-lg">
+                  Semoga persiapan ibadah Anda dilancarkan.
+                </p>
+              </>
+            )}
           </div>
-          <Button variant="secondary" size="sm" onClick={handleSignOut} className="hidden md:flex items-center gap-2">
-            <LogOut className="h-4 w-4" /> Keluar
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleSignOut}
+            aria-label="Keluar dari akun"
+            className="shrink-0 flex items-center gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Keluar</span>
           </Button>
-        </div>
+        </motion.div>
       </div>
 
       <div className="container mx-auto max-w-5xl px-4 -mt-16 relative z-20 space-y-6">
@@ -201,28 +301,87 @@ const Dashboard = () => {
             </div>
           </CardHeader>
           <CardContent className="pt-8 pb-8">
-            {!activeBooking && !loadingBooking ? (
+            {loadingBooking ? (
+              <div className="hidden md:flex justify-between gap-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex flex-col items-center w-1/6 gap-3">
+                    <Skeleton className="w-14 h-14 rounded-full" />
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-10" />
+                  </div>
+                ))}
+              </div>
+            ) : !activeBooking ? (
               <div className="text-center py-8">
-                <div className="bg-muted w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Plane className="h-8 w-8 text-muted-foreground" />
+                <div className="bg-primary/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Plane className="h-8 w-8 text-primary/60" />
                 </div>
                 <h3 className="text-lg font-medium">Belum ada booking aktif</h3>
                 <p className="text-muted-foreground mb-6 max-w-md mx-auto">Pilih paket Umrah terbaik kami untuk memulai perjalanan spiritual Anda.</p>
                 <Button onClick={() => navigate('/paket')}>Lihat Paket Umrah</Button>
               </div>
             ) : (
-              <div className="hidden md:flex justify-between relative">
-                <div className="absolute top-1/2 left-0 w-full h-1 bg-muted -z-10 -mt-8 rounded-full"></div>
-                {steps.map((step) => (
-                  <div key={step.id} className="flex flex-col items-center relative z-10 w-1/6">
-                    <div className={`w-14 h-14 rounded-full flex items-center justify-center border-4 bg-card transition-all duration-300
-                      ${step.status === 'completed' ? 'border-success text-success' : 
-                        step.status === 'current' ? 'border-primary text-primary shadow-lg scale-110' : 'border-muted text-muted-foreground/30'}`}>
-                      <step.icon className="h-6 w-6" />
+              (() => {
+                const currentIndex = steps.findIndex((s) => s.status === "current");
+                const completedCount = steps.filter((s) => s.status === "completed").length;
+                const progressIndex = currentIndex >= 0 ? currentIndex : completedCount;
+                const progressPct = steps.length > 1 ? (progressIndex / (steps.length - 1)) * 100 : 0;
+                return (
+                  <div className="hidden md:flex justify-between relative">
+                    <div className="absolute top-1/2 left-0 w-full h-1 bg-muted -z-10 -mt-8 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-success rounded-full transition-all duration-500"
+                        style={{ width: `${progressPct}%` }}
+                      />
                     </div>
-                    <div className="text-center mt-4">
-                      <h4 className={`font-bold text-sm ${step.status === 'current' ? 'text-primary' : 'text-muted-foreground'}`}>{step.title}</h4>
-                      <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block
+                    {steps.map((step) => (
+                      <div key={step.id} className="flex flex-col items-center relative z-10 w-1/6">
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center border-4 bg-card transition-all duration-300
+                          ${step.status === 'completed' ? 'border-success text-success' : 
+                            step.status === 'current' ? 'border-primary text-primary shadow-lg scale-110' : 'border-muted text-muted-foreground/30'}`}>
+                          <step.icon className="h-6 w-6" />
+                        </div>
+                        <div className="text-center mt-4">
+                          <h4 className={`font-bold text-sm ${step.status === 'current' ? 'text-primary' : 'text-muted-foreground'}`}>{step.title}</h4>
+                          <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block
+                            ${step.status === 'completed' ? 'bg-success/10 text-success' : 
+                              step.status === 'current' ? 'bg-info/10 text-info' : 'text-muted-foreground/50'}`}>
+                            {step.status === 'completed' ? 'Selesai' : step.status === 'current' ? 'Proses' : 'Menunggu'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()
+            )}
+            {/* Mobile steps */}
+            {loadingBooking ? (
+              <div className="md:hidden space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3">
+                    <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+                    <Skeleton className="h-4 flex-1" />
+                  </div>
+                ))}
+              </div>
+            ) : activeBooking && (
+              <div className="md:hidden space-y-3">
+                {steps.map((step, i) => (
+                  <div key={step.id} className="flex items-start gap-3">
+                    <div className="flex flex-col items-center shrink-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center
+                        ${step.status === 'completed' ? 'bg-success/10 text-success' : 
+                          step.status === 'current' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground/30'}`}>
+                        <step.icon className="h-5 w-5" />
+                      </div>
+                      {i < steps.length - 1 && (
+                        <div className={`w-0.5 flex-1 min-h-[16px] my-1 rounded-full ${step.status === 'completed' ? 'bg-success/40' : 'bg-muted'}`} />
+                      )}
+                    </div>
+                    <div className={`flex-1 flex items-center justify-between p-3 rounded-lg -mt-1 ${step.status === 'current' ? 'bg-primary/5 border border-primary/20' : ''}`}>
+                      <h4 className={`font-semibold text-sm ${step.status === 'current' ? 'text-primary' : 'text-muted-foreground'}`}>{step.title}</h4>
+                      <span className={`text-xs px-2 py-0.5 rounded-full shrink-0
                         ${step.status === 'completed' ? 'bg-success/10 text-success' : 
                           step.status === 'current' ? 'bg-info/10 text-info' : 'text-muted-foreground/50'}`}>
                         {step.status === 'completed' ? 'Selesai' : step.status === 'current' ? 'Proses' : 'Menunggu'}
@@ -232,118 +391,58 @@ const Dashboard = () => {
                 ))}
               </div>
             )}
-            {/* Mobile steps */}
-            {activeBooking && (
-              <div className="md:hidden space-y-3">
-                {steps.map((step) => (
-                  <div key={step.id} className={`flex items-center gap-3 p-3 rounded-lg ${step.status === 'current' ? 'bg-primary/5 border border-primary/20' : ''}`}>
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0
-                      ${step.status === 'completed' ? 'bg-success/10 text-success' : 
-                        step.status === 'current' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground/30'}`}>
-                      <step.icon className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className={`font-semibold text-sm ${step.status === 'current' ? 'text-primary' : 'text-muted-foreground'}`}>{step.title}</h4>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full
-                      ${step.status === 'completed' ? 'bg-success/10 text-success' : 
-                        step.status === 'current' ? 'bg-info/10 text-info' : 'text-muted-foreground/50'}`}>
-                      {step.status === 'completed' ? 'Selesai' : step.status === 'current' ? 'Proses' : 'Menunggu'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
           </CardContent>
         </Card>
 
         <RecentNotifications />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/my-bookings')}>
-            <CardContent className="p-6 flex items-center space-x-4">
-              <div className="bg-orange-100 p-3 rounded-xl group-hover:bg-orange-200 transition-colors">
-                <FileText className="h-6 w-6 text-orange-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Riwayat Booking</h3>
-                <p className="text-sm text-muted-foreground">Lihat semua transaksi</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/profile')}>
-            <CardContent className="p-6 flex items-center space-x-4">
-              <div className="bg-purple-100 p-3 rounded-xl group-hover:bg-purple-200 transition-colors">
-                <User className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Edit Profil</h3>
-                <p className="text-sm text-muted-foreground">Update data jamaah</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/my-upgrades')}>
-            <CardContent className="p-6 flex items-center space-x-4">
-              <div className="bg-amber-100 p-3 rounded-xl group-hover:bg-amber-200 transition-colors">
-                <Crown className="h-6 w-6 text-amber-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Riwayat Upgrade</h3>
-                <p className="text-sm text-muted-foreground">Status pengajuan template</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={() => navigate('/my-documents')}>
-            <CardContent className="p-6 flex items-center space-x-4">
-              <div className="bg-teal-100 p-3 rounded-xl group-hover:bg-teal-200 transition-colors">
-                <Upload className="h-6 w-6 text-teal-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Dokumen Saya</h3>
-                <p className="text-sm text-muted-foreground">Upload & cek dokumen</p>
-              </div>
-            </CardContent>
-          </Card>
-          {isAgent && (
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer group border-primary/20 bg-primary/5" onClick={() => navigate('/agent-portal')}>
-              <CardContent className="p-6 flex items-center space-x-4">
-                <div className="bg-primary/10 p-3 rounded-xl group-hover:bg-primary/20 transition-colors">
-                  <Briefcase className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Portal Agen</h3>
-                  <p className="text-sm text-muted-foreground">Referral & komisi</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          {hasBranch && (
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer group border-info/20 bg-info/5" onClick={() => navigate('/branch-dashboard')}>
-              <CardContent className="p-6 flex items-center space-x-4">
-                <div className="bg-info/10 p-3 rounded-xl group-hover:bg-info/20 transition-colors">
-                  <Building2 className="h-6 w-6 text-info" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Dashboard Cabang</h3>
-                  <p className="text-sm text-muted-foreground">Kelola cabang Anda</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer group border-destructive/20 bg-destructive/5" onClick={handleSignOut}>
-            <CardContent className="p-6 flex items-center space-x-4">
-              <div className="bg-red-100 p-3 rounded-xl group-hover:bg-red-200 transition-colors">
-                <LogOut className="h-6 w-6 text-red-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-destructive">Keluar</h3>
-                <p className="text-sm text-muted-foreground">Logout dari akun</p>
-              </div>
-            </CardContent>
-          </Card>
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-4 px-1">Menu Cepat</h2>
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+          >
+            {quickActions.map((action) => (
+              <motion.div key={action.key} variants={fadeUp} transition={{ duration: 0.35 }}>
+                <QuickActionCard action={action} />
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
       </div>
     </div>
+  );
+};
+
+const QuickActionCard = ({ action }: { action: QuickAction }) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      action.onClick();
+    }
+  };
+
+  return (
+    <Card
+      role="button"
+      tabIndex={0}
+      aria-label={`${action.title} — ${action.description}`}
+      onClick={action.onClick}
+      onKeyDown={handleKeyDown}
+      className={`hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 h-full ${action.cardClass ?? ""}`}
+    >
+      <CardContent className="p-6 flex items-center space-x-4">
+        <div className={`p-3 rounded-xl transition-colors group-hover:brightness-95 ${action.colorClass}`}>
+          <action.icon className="h-6 w-6" />
+        </div>
+        <div>
+          <h3 className="font-semibold">{action.title}</h3>
+          <p className="text-sm text-muted-foreground">{action.description}</p>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
