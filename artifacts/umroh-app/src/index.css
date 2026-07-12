@@ -164,10 +164,6 @@
     background: linear-gradient(135deg, hsl(var(--elegant-black)) 0%, hsl(var(--elegant-black-dark)) 100%);
   }
 
-  .gradient-emerald {
-    background: linear-gradient(135deg, hsl(var(--elegant-black)) 0%, hsl(var(--elegant-black-dark)) 100%);
-  }
-
   .text-gradient-gold {
     background: linear-gradient(135deg, hsl(var(--gold)) 0%, hsl(var(--gold-light)) 100%);
     -webkit-background-clip: text;

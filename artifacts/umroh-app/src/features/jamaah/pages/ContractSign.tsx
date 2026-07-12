@@ -9,6 +9,7 @@ import SignaturePad from "@/features/jamaah/components/SignaturePad";
 import { CheckCircle2 } from "lucide-react";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { sanitizeHtml } from "@/shared/lib/sanitizeHtml";
 
 const defaultContractTemplate = (data: { name: string; bookingCode: string; packageName: string; total: number }) => `
   <h2>Kontrak Layanan Umroh</h2>
@@ -90,7 +91,7 @@ const ContractSign = () => {
         <Card className="mb-6">
           <CardHeader><CardTitle>Isi Kontrak</CardTitle></CardHeader>
           <CardContent>
-            <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: html }} />
+            <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
           </CardContent>
         </Card>
 

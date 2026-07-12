@@ -245,7 +245,7 @@ const Payment = () => {
             className="bg-card border border-border rounded-2xl overflow-hidden"
           >
             {/* Header */}
-            <div className="gradient-emerald p-6 text-center">
+            <div className="gradient-elegant p-6 text-center">
               <div className="w-16 h-16 mx-auto rounded-full bg-gold/20 flex items-center justify-center mb-4">
                 <Wallet className="w-8 h-8 text-gold" />
               </div>

@@ -39,6 +39,16 @@ Aplikasi manajemen umroh lengkap — paket, booking, jemaah, pembayaran, dan CMS
 - `pnpm run verify:deploy-env` — cek semua environment variable wajib sebelum deploy ke Vercel
 - `GET /api/health` — cek konektivitas database & Supabase sekaligus (status `ok`/`degraded`, latensi per service) — gunakan untuk verifikasi cepat setelah deploy ke Vercel
 
+## Frontend Bug Audit (2026-07-12)
+
+Audit atas `artifacts/umroh-app` (CSS + JS/TS) menemukan dan memperbaiki:
+- **[Security, High] Stored XSS**: `dangerouslySetInnerHTML` di `BlogDetail.tsx`, `DynamicPage.tsx` (konten CMS dari DB), `AdminContracts.tsx` (preview kontrak jamaah), dan `ContractSign.tsx` (template kontrak yang menyisipkan nama user langsung ke HTML) dirender tanpa sanitasi — nama jamaah (data milik user, bisa diisi bebas) bisa membawa payload script yang lalu dieksekusi ulang saat admin membuka preview kontrak di `AdminContracts.tsx` (stored XSS ke sesi admin). Fix: tambah `dompurify` + helper `src/shared/lib/sanitizeHtml.ts`, dipakai di keempat lokasi tersebut.
+- **[Medium] Silent failure**: `ChatBox.tsx` menelan error fetch/kirim pesan hanya dengan `console.error`, user tidak tahu pesan gagal terkirim. Fix: tambah toast error via `useToast`.
+- **[Low] Dead code]**: `src/App.css` adalah sisa boilerplate Vite default (logo-spin animation dll.) yang tidak pernah di-import — dihapus.
+- **[Low] Duplicate CSS]**: `.gradient-emerald` di `src/index.css` identik byte-for-byte dengan `.gradient-elegant` (nama menyiratkan warna hijau tapi hasilnya gradient hitam/gold) — dikonsolidasi jadi satu class, pemakaian di `Payment.tsx`/`DynamicPage.tsx` diarahkan ke `gradient-elegant`.
+
+Typecheck monorepo dan `vite build` production keduanya clean setelah perbaikan.
+
 ## Progress terhadap PRD (docs/PRD.md)
 
 - **Fase 1 UI/UX — Mobile Experience (P0, Q3 2026)**: selesai (2026-07-12). Ditambahkan bottom navigation bar mobile (Home/Paket/Booking/Profil) di `MobileBottomNav.tsx`, sticky CTA paket detail direposisi di atas bottom nav, step indicator booking diperjelas di mobile (label "Langkah X dari Y"), touch target tombol dinaikkan ke 44×44px (`button.tsx` size default/icon, hamburger menu, tombol +/- kamar booking). Payment gateway & WhatsApp notification sengaja dilewati sesuai permintaan.

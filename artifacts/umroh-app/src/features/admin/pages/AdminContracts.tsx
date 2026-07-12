@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { sanitizeHtml } from "@/shared/lib/sanitizeHtml";
 
 interface ContractRow {
   id: string;
@@ -219,7 +220,7 @@ const AdminContracts = () => {
               {preview.htmlContent && (
                 <div
                   className="border border-border rounded-lg p-4 text-sm bg-white text-black max-h-64 overflow-y-auto"
-                  dangerouslySetInnerHTML={{ __html: preview.htmlContent }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(preview.htmlContent) }}
                 />
               )}
               {preview.signatureDataUrl && (

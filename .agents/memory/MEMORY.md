@@ -24,3 +24,4 @@
 - [Seed file schema drift](seed-file-schema-drift.md) — supabase-seed.sql had stale columns (icon, bio) not in current Drizzle schema; check \d table before re-running seeds after schema push.
 - [Admin route frontend/backend mismatches](admin-route-frontend-backend-mismatches.md) — grep apiFetch admin paths vs actual router mounts; recurring bugs: flat-vs-nested mergeParams routes, unbuilt sub-features, resource naming drift, {data} vs bare-array response shape.
 - [Supabase project-ref mismatch](supabase-project-ref-mismatch.md) — 401s straight from *.supabase.co often mean env vars point at the wrong/stale project, not an RLS bug; diff anon-key `ref` claim vs VITE_SUPABASE_URL.
+- [Unsanitized dangerouslySetInnerHTML stored XSS](unsanitized-html-stored-xss.md) — CMS/contract HTML rendered raw let user-controlled fields (e.g. own name) become stored XSS hitting admin previews; always sanitize with DOMPurify before dangerouslySetInnerHTML.

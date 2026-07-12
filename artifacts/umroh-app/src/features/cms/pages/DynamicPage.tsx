@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { sanitizeHtml } from "@/shared/lib/sanitizeHtml";
 
 interface PageData {
   id: string;
@@ -108,7 +109,7 @@ const DynamicPage = () => {
             className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm"
           >
             {/* Header */}
-            <div className="gradient-emerald p-8 text-center">
+            <div className="gradient-elegant p-8 text-center">
               <h1 className="text-3xl md:text-4xl font-display font-bold text-primary-foreground">
                 {page.title || "Untitled"}
               </h1>
@@ -125,7 +126,7 @@ const DynamicPage = () => {
               {page.content ? (
                 <div
                   className="prose prose-lg max-w-none prose-headings:font-display prose-headings:text-foreground prose-p:text-muted-foreground prose-a:text-primary prose-strong:text-foreground"
-                  dangerouslySetInnerHTML={{ __html: page.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(page.content) }}
                 />
               ) : (
                 <p className="text-center text-muted-foreground">

@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import SEO from "@/shared/components/seo/SEO";
 import BreadcrumbJsonLd from "@/shared/components/seo/BreadcrumbJsonLd";
+import { sanitizeHtml } from "@/shared/lib/sanitizeHtml";
 import RelatedPackages from "@/features/paket/components/RelatedPackages";
 import RelatedArticles from "@/features/cms/components/RelatedArticles";
 import { toast } from "sonner";
@@ -225,7 +226,7 @@ const BlogDetail = () => {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
                 className="prose prose-lg dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: post.content || "" }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
               />
             </div>
           </div>

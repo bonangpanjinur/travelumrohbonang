@@ -50,7 +50,6 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "@workspace/api-client-react": "workspace:*",
-
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "cmdk": "^1.1.1",
@@ -86,6 +85,7 @@
     "@tiptap/extension-underline": "^3.27.1",
     "@tiptap/react": "^3.27.1",
     "@tiptap/starter-kit": "^3.27.1",
+    "dompurify": "^3.4.12",
     "html5-qrcode": "^2.3.8",
     "jspdf": "^4.2.1",
     "otpauth": "^9.5.1",

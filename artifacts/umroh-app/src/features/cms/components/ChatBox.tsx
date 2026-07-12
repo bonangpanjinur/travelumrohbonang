@@ -5,6 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Send, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/shared/hooks/use-toast";
 
 interface Props {
   bookingId: string;
@@ -13,6 +14,7 @@ interface Props {
 
 export default function ChatBox({ bookingId, asAdmin = false }: Props) {
   const { user, isAdmin } = useAuth();
+  const { toast } = useToast();
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -27,8 +29,11 @@ export default function ChatBox({ bookingId, asAdmin = false }: Props) {
       try {
         const { data } = await apiFetch<{ data: any[] }>(`/api/cms/chat-messages?booking_id=${bookingId}`);
         if (active) setMessages(data || []);
-      } catch (error) {
+      } catch (error: any) {
         console.error(error);
+        if (active) {
+          toast({ title: "Gagal memuat pesan", description: error?.message, variant: "destructive" });
+        }
       }
     })();
 
@@ -55,7 +60,10 @@ export default function ChatBox({ bookingId, asAdmin = false }: Props) {
       // Re-fetch messages after sending
       const { data } = await apiFetch<{ data: any[] }>(`/api/cms/chat-messages?booking_id=${bookingId}`);
       setMessages(data || []);
-    } catch (e: any) { console.error(e); }
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Gagal mengirim pesan", description: e?.message, variant: "destructive" });
+    }
     finally { setSending(false); }
   };
 
