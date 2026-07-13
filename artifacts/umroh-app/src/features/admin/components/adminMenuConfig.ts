@@ -26,7 +26,6 @@ import {
   BarChart3,
   FileCheck,
   Wallet,
-  BrainCircuit,
   Languages,
   GitBranch,
   ArrowUpCircle,
@@ -152,7 +151,9 @@ export const menuGroups: MenuGroup[] = [
       { label: "Leaderboard Agen", labelKey: "menu.agent_leaderboard", href: "/admin/leaderboard", icon: Trophy, roles: [...SUPER_ADMIN_ADMIN, "branch_manager", "agent"] },
       { label: "Ulasan Paket", labelKey: "menu.reviews", href: "/admin/reviews", icon: Star, roles: SUPER_ADMIN_ADMIN },
       { label: "Poin Loyalitas", labelKey: "menu.loyalty", href: "/admin/loyalty", icon: Coins, roles: SUPER_ADMIN_ADMIN },
-      { label: "Analitik AI", labelKey: "menu.ai_analytics", href: "/admin/analytics-ai", icon: BrainCircuit, roles: SUPER_ADMIN_ADMIN },
+      // "Analitik AI" disembunyikan sementara — halaman ini memanggil Supabase Edge Function
+      // yang belum ada di project ini (lihat docs/BUG_TRACKER.md B10). Aktifkan kembali
+      // setelah backend AI-nya dibangun.
     ],
   },
   {

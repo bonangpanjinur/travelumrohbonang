@@ -1,6 +1,6 @@
 # BUG_TRACKER.md
 > Daftar bug dan technical debt yang ditemukan saat audit.
-> Terakhir diperbarui: 2026-07-10
+> Terakhir diperbarui: 2026-07-13 (lihat juga `docs/ADMIN_PANEL_AUDIT_2026-07-13.md` untuk audit panel admin lengkap)
 
 ---
 
@@ -132,7 +132,7 @@
 | **Lokasi** | `artifacts/umroh-app/src/features/admin/AnalyticsAI.tsx` |
 | **Dampak** | Halaman admin Analytics AI ada tapi tidak fungsional |
 | **Solusi** | Pilih: (A) Implementasi koneksi ke AI model, atau (B) Sembunyikan menu ini sampai siap. |
-| **Status** | 🔲 Open — future feature |
+| **Status** | ✅ Partially fixed (2026-07-13) — opsi B dipilih: menu "Analitik AI" disembunyikan dari sidebar admin (`adminMenuConfig.ts`) sampai backend-nya dibangun. Halaman/route lama masih ada di kode tapi tidak lagi ditautkan. |
 
 ---
 
@@ -211,7 +211,7 @@
 | B7 | 🔲 Open (needs payment keys) |
 | B8 | ✅ Fixed |
 | B9 | ✅ Fixed |
-| B10 | 🔲 Open |
+| B10 | ✅ Partially fixed (menu hidden) |
 | B11 | 🔲 Open |
 | B12 | ✅ Fixed |
 | B13 | 🔲 Open |
