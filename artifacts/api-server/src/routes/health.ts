@@ -558,7 +558,7 @@ async function checkSchemaHealth(): Promise<SchemaHealthResult> {
         function_exists: hookExists,
         grant_ok: grantOk,
       },
-      migration_sql_path: "supabase/migrations/fix_all_tables.sql",
+      migration_sql_path: "sql/migrations/fix_all_tables.sql",
     };
   } catch (err) {
     return {
@@ -573,7 +573,7 @@ async function checkSchemaHealth(): Promise<SchemaHealthResult> {
       tables: { existing: [], missing: [...DRIZZLE_TABLES] },
       column_drift: {},
       jwt_hook: { function_exists: false, grant_ok: null },
-      migration_sql_path: "supabase/migrations/fix_all_tables.sql",
+      migration_sql_path: "sql/migrations/fix_all_tables.sql",
       error: err instanceof Error ? err.message : "Database unreachable",
     };
   } finally {

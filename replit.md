@@ -82,14 +82,12 @@ lib/replit-auth-web/     — Legacy Replit Auth helper (TIDAK dipakai — app pa
 vercel.json              — Konfigurasi deployment Vercel
 .env.example             — Template environment variables
 
-sql/                     — Semua SQL non-Supabase-CLI (patch, snapshot, seed)
-  migrations/            — Ad-hoc SQL patches (FK, trigger, dll.) — riwayat, jangan duplikat
-  schema/                — Snapshot schema historis (LEGACY, bukan sumber aktif)
+sql/                     — Satu-satunya lokasi SQL proyek ini (folder `supabase/` dihapus 2026-07-13, digabung ke sini)
+  migrations/            — Semua SQL patch/migration (FK, trigger, RLS, function, dll.) — riwayat, cek header sebelum jalankan ulang
+  schema/                — Snapshot DDL bootstrap/disaster-recovery (bukan untuk sync rutin — lihat sql/README.md)
   seeds/
     supabase-seed.sql    — Seed untuk Supabase dev / reseed lokal Replit Postgres
     supabase-seed-prod.sql — Seed untuk Supabase production (dipakai scripts/push-to-supabase.mjs)
-
-supabase/migrations/     — Migration resmi Supabase CLI (folder ini WAJIB di lokasi ini — dipakai `supabase` CLI, jangan digabung ke sql/)
 
 scripts/                 — Semua utility script Node.js/TypeScript (bukan SQL)
   seed.ts                — ORM seed script (Drizzle)

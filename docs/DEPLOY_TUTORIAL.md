@@ -51,13 +51,13 @@ Ada dua cara, pilih salah satu:
 
 #### Cara A — Via Supabase SQL Editor (direkomendasikan, khusus project baru/kosong)
 
-`sql/schema/supabase-schema.sql` adalah snapshot bootstrap/disaster-recovery — dipakai sekali untuk membuat semua tabel di project Supabase yang masih kosong, bukan untuk sinkronisasi rutin. Setelah project berjalan, perubahan schema lewat Drizzle (`pnpm --filter @workspace/db run push`) dan perubahan RLS/function lewat `supabase/migrations/` (Supabase CLI). Detail lihat `sql/README.md`.
+`sql/schema/supabase-schema.sql` adalah snapshot bootstrap/disaster-recovery — dipakai sekali untuk membuat semua tabel di project Supabase yang masih kosong, bukan untuk sinkronisasi rutin. Setelah project berjalan, perubahan schema lewat Drizzle (`pnpm --filter @workspace/db run push`) dan perubahan RLS/function lewat patch baru di `sql/migrations/`. Detail lihat `sql/README.md`.
 
 1. Buka **SQL Editor** di Supabase Dashboard
 2. Klik **New query**
 3. Copy-paste isi file `sql/schema/supabase-schema.sql` → **Run**
 4. Untuk data awal (opsional), jalankan juga `sql/seeds/supabase-seed-prod.sql`
-5. Terapkan juga patch di `sql/migrations/*.sql` (riwayat perbaikan yang sudah pernah dijalankan manual — lihat header masing-masing file) dan seluruh isi `supabase/migrations/*.sql` (RLS & function, ledger resmi Supabase CLI)
+5. Terapkan juga seluruh patch di `sql/migrations/*.sql` (riwayat perbaikan — termasuk RLS & function — lihat header masing-masing file untuk status apply)
 
 #### Cara B — Via Supabase CLI
 

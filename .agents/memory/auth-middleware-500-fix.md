@@ -21,7 +21,7 @@ Fixed: `WHERE user_roles.user_id = event->>'user_id'`
 
 ### 3. user_roles in Supabase
 Table must exist in Supabase for getSupabaseRole and persistRole to work.
-Migration: `supabase/migrations/create_user_roles_table.sql` — idempotent, safe to re-run.
+Migration: `sql/migrations/create_user_roles_table.sql` — idempotent, safe to re-run.
 Uses DO $$ block for policy creation (CREATE POLICY IF NOT EXISTS not valid in all PG versions).
 
 ## Full setup checklist for Supabase (one-time)
