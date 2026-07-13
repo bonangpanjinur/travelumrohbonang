@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db, packages, packageDepartures, departurePrices, packageHotels, eq, asc, inArray } from "@workspace/db";
+import { sendAdminError } from "../../lib/adminApiError";
 import {
   PackageSchema,
   PackageListResponse,
@@ -50,8 +51,7 @@ router.post("/", validate(AdminCreatePackageRequest), async (req, res) => {
 
     res.status(201).json(PackageSchema.parse(created));
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to create package" });
+    return sendAdminError(res, "POST /api/admin/packages", err);
   }
 });
 

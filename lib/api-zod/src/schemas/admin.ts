@@ -1,16 +1,20 @@
 import { z } from "zod";
 
 export const AdminCreatePackageRequest = z.object({
-  title: z.string().min(1),
-  slug: z.string().min(1),
-  description: z.string().optional(),
-  imageUrl: z.string().optional(),
-  durationDays: z.number().int().positive().optional(),
-  packageType: z.string().optional(),
-  categoryId: z.string().optional(),
-  minimumDp: z.number().int().nonnegative().optional(),
-  dpDeadlineDays: z.number().int().nonnegative().optional(),
-  fullDeadlineDays: z.number().int().nonnegative().optional(),
+  title: z.string().trim().min(1, "Nama paket wajib diisi").max(200),
+  slug: z.string().trim().min(1, "Slug wajib diisi").max(200),
+  description: z.string().nullish(),
+  imageUrl: z.string().nullish(),
+  durationDays: z.number().int().positive().nullish(),
+  packageType: z.string().nullish(),
+  categoryId: z.string().nullish(),
+  hotelMakkahId: z.string().nullish(),
+  hotelMadinahId: z.string().nullish(),
+  airlineId: z.string().nullish(),
+  airportId: z.string().nullish(),
+  minimumDp: z.number().int().nonnegative().nullish(),
+  dpDeadlineDays: z.number().int().nonnegative().nullish(),
+  fullDeadlineDays: z.number().int().nonnegative().nullish(),
   isActive: z.boolean().default(true),
 });
 
