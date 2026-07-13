@@ -119,7 +119,7 @@ const Booking = () => {
       ]);
 
       setBranches(branchRes.data || []);
-      setAgents(agentRes.data || []);
+      setAgents((agentRes.data as any) || []);
 
       if (pkgRes.data) {
         setPkg(pkgRes.data);
@@ -247,8 +247,9 @@ const Booking = () => {
             .select("id")
             .eq("referral_code", ref)
             .maybeSingle();
-          if (ag?.id) {
-            agentIdFromRef = ag.id;
+          const agRow = ag as { id: string } | null;
+          if (agRow?.id) {
+            agentIdFromRef = agRow.id;
             clearStoredReferral();
           }
         }
