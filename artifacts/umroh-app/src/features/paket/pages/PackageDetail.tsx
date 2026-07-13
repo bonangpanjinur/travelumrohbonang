@@ -78,7 +78,7 @@ const PackageDetail = () => {
           category:package_categories!packages_category_id_fkey(name),
           hotel_makkah:hotels!packages_hotel_makkah_id_fkey(name, star),
           hotel_madinah:hotels!packages_hotel_madinah_id_fkey(name, star),
-          airline:airlines(name),
+          airline:airlines!packages_airline_id_fkey(name),
           airport:airports(name, city)
         `)
         .eq("slug", slug!)
