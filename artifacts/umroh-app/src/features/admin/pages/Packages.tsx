@@ -553,7 +553,7 @@ const AdminPackages = () => {
                         accept="image/*"
                         onChange={handleFileUpload}
                         disabled={uploading}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
                       />
                       <div className="text-center">
                         <Plus className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
@@ -578,7 +578,7 @@ const AdminPackages = () => {
                             accept="image/*"
                             onChange={handleFileUpload}
                             disabled={uploading}
-                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
                           />
                         </div>
                         <Button
