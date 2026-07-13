@@ -281,36 +281,36 @@ const Navbar = () => {
         </div>
 
         {/* CTA */}
-        <div className="hidden lg:flex items-center gap-1.5">
+        <div className="hidden lg:flex items-center">
           <div className="flex items-center gap-0.5 bg-primary-foreground/[0.04] rounded-full px-1.5 py-1">
             <LanguageSwitcher variant="navbar" />
             <span className="w-px h-4 bg-primary-foreground/15" />
             <CurrencySwitcher />
             <span className="w-px h-4 bg-primary-foreground/15" />
             <ThemeToggle variant="navbar" />
-          </div>
 
-          {user && (
-            <div className="ml-1">
-              <NotificationBell />
-            </div>
-          )}
+            {user && (
+              <>
+                <span className="w-px h-4 bg-primary-foreground/15" />
+                <NotificationBell />
+              </>
+            )}
 
-          <span className="w-px h-6 bg-primary-foreground/15 mx-1" />
-
-          {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 text-primary-foreground/80 hover:text-gold hover:bg-primary-foreground/10 rounded-full p-1 pr-2.5">
-                  <Avatar className="w-8 h-8 ring-2 ring-primary-foreground/10 group-hover:ring-gold/40 transition-all">
-                    <AvatarImage src={userProfile?.avatar_url} alt={userProfile?.name} />
-                    <AvatarFallback className="bg-gold/20 text-gold text-sm font-semibold">
-                      {userProfile?.name?.charAt(0)?.toUpperCase() || <User className="w-4 h-4" />}
-                    </AvatarFallback>
-                  </Avatar>
-                  <ChevronDown className="w-3.5 h-3.5 opacity-70" />
-                </Button>
-              </DropdownMenuTrigger>
+            {user ? (
+              <>
+                <span className="w-px h-4 bg-primary-foreground/15" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="flex items-center gap-1.5 text-primary-foreground/80 hover:text-gold hover:bg-primary-foreground/10 rounded-full p-1 pr-2">
+                      <Avatar className="w-7 h-7 ring-2 ring-primary-foreground/10 group-hover:ring-gold/40 transition-all">
+                        <AvatarImage src={userProfile?.avatar_url} alt={userProfile?.name} />
+                        <AvatarFallback className="bg-gold/20 text-gold text-sm font-semibold">
+                          {userProfile?.name?.charAt(0)?.toUpperCase() || <User className="w-4 h-4" />}
+                        </AvatarFallback>
+                      </Avatar>
+                      <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+                    </Button>
+                  </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-card border-border z-[120]">
                 <div className="px-2 py-1.5">
                   <p className="text-xs font-medium text-muted-foreground px-2 py-1 uppercase tracking-wider">{t("nav.my_account")}</p>
@@ -355,15 +355,17 @@ const Navbar = () => {
                   <LogOut className="w-4 h-4" />
                   {t("nav.logout")}
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Link to="/auth">
-              <Button className="gradient-gold text-primary font-semibold hover:opacity-90 transition-opacity">
-                {t("nav.login")}
-              </Button>
-            </Link>
-          )}
+                </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <Link to="/auth" className="ml-1">
+                <Button className="gradient-gold text-primary font-semibold hover:opacity-90 transition-opacity">
+                  {t("nav.login")}
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Mobile Toggle */}
