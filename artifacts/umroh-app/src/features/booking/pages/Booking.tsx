@@ -243,10 +243,9 @@ const Booking = () => {
         const ref = getStoredReferral();
         if (ref) {
           const { data: ag } = await supabase
-            .from("agents")
+            .from("agents_public" as any)
             .select("id")
             .eq("referral_code", ref)
-            .eq("is_active", true)
             .maybeSingle();
           if (ag?.id) {
             agentIdFromRef = ag.id;
