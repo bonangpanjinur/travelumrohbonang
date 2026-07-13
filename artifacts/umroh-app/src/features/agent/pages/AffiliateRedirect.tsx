@@ -15,12 +15,12 @@ const AffiliateRedirect = () => {
         return;
       }
       const { data } = await supabase
-        .from("agents")
+        .from("agents_public" as any)
         .select("id, is_active")
         .eq("referral_code", code)
         .maybeSingle();
 
-      if (data?.is_active) {
+      if ((data as any)?.is_active) {
         setAffiliateCookie(code);
         const landing = search.get("to") || "/";
         await trackAffiliateClick(data.id, code, landing);
