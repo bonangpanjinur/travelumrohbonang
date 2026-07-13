@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db, packages, packageDepartures, departurePrices, packageHotels, eq, asc, inArray } from "@workspace/db";
+import { sendAdminError } from "../../lib/adminApiError";
 import {
   PackageSchema,
   PackageListResponse,
