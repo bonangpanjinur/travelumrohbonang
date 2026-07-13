@@ -43,7 +43,7 @@ const RelatedPackages = ({
   useEffect(() => {
     const run = async () => {
       setLoading(true);
-      const baseSelect = `id, title, slug, image_url, description, duration_days, category:package_categories(name)`;
+      const baseSelect = `id, title, slug, image_url, description, duration_days, category:package_categories!packages_category_id_fkey(name)`;
 
       let primary: RelatedPackage[] = [];
       if (categoryId) {

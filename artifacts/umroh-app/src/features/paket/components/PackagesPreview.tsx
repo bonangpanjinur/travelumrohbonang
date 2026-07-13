@@ -16,7 +16,7 @@ const PackagesPreview = () => {
         .from("packages")
         .select(`
           id, title, slug, image_url, duration_days, package_type,
-          category:package_categories(id, name),
+          category:package_categories!packages_category_id_fkey(id, name),
           hotel_makkah:hotels!packages_hotel_makkah_id_fkey(star, name),
           airline:airlines!packages_airline_id_fkey(id, name),
           airport:airports!packages_airport_id_fkey(id, name, city),
