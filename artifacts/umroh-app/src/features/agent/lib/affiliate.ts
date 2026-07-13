@@ -27,7 +27,7 @@ export async function resolveAffiliateAgentId(): Promise<string | null> {
     .select("id")
     .eq("referral_code", code)
     .maybeSingle();
-  return data?.id ?? null;
+  return (data as { id: string } | null)?.id ?? null;
 }
 
 export async function trackAffiliateClick(agentId: string, code: string, landingPath: string) {
