@@ -48,6 +48,12 @@ interface DeparturePrice {
 
 const ROOM_TYPES = ["quad", "triple", "double"];
 
+const safeFormatDate = (value: string | null | undefined, pattern: string) => {
+  if (!value) return "-";
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? "-" : format(d, pattern, { locale: localeId });
+};
+
 const AdminDepartures = () => {
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
@@ -327,7 +333,7 @@ const AdminDepartures = () => {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-muted-foreground" />
-                      {format(new Date(dep.departure_date), "d MMM yyyy", { locale: localeId })}
+                      {safeFormatDate(dep.departure_date, "d MMM yyyy")}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -383,7 +389,7 @@ const AdminDepartures = () => {
           {galleryDep && (
             <DepartureGalleryPanel
               departureId={galleryDep.id}
-              departureLabel={format(new Date(galleryDep.departure_date), "d MMMM yyyy", { locale: localeId })}
+              departureLabel={safeFormatDate(galleryDep.departure_date, "d MMMM yyyy")}
             />
           )}
         </GalleryDialogContent>
