@@ -2779,6 +2779,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tenant_sites_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tenant_sites_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
@@ -2881,6 +2888,38 @@ export type Database = {
       }
     }
     Views: {
+      agents_public: {
+        Row: {
+          branch_id: string | null
+          id: string | null
+          is_active: boolean | null
+          name: string | null
+          referral_code: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          referral_code?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          referral_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty_balances: {
         Row: {
           total_points: number | null
