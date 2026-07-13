@@ -47,6 +47,7 @@ const defaultBranding: BrandingSettings = {
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [dynamicPages, setDynamicPages] = useState<{title: string, slug: string}[]>([]);
   const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
@@ -55,6 +56,13 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, isAdmin, role, signOut } = useAuth();
   const { t } = useLanguage();
+
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const fetchNavItems = async () => {
@@ -178,16 +186,16 @@ const Navbar = () => {
     const showText = branding.display_mode === "text_only" || branding.display_mode === "both";
 
     return (
-      <Link to="/" className="flex items-center gap-2">
+      <Link to="/" className="flex items-center gap-2.5 group shrink-0">
         {showLogo && (
           branding.logo_url ? (
             <img 
               src={branding.logo_url} 
               alt={branding.company_name} 
-              className="h-10 w-auto object-contain"
+              className="h-9 md:h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center">
+            <div className="relative w-9 h-9 md:w-10 md:h-10 rounded-full gradient-gold flex items-center justify-center shadow-[0_0_0_3px_rgba(255,255,255,0.06)] transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3">
               <span className="font-display font-bold text-lg text-primary">
                 {branding.company_name.charAt(0)}
               </span>
@@ -195,11 +203,11 @@ const Navbar = () => {
           )
         )}
         {showText && (
-          <div>
-            <span className="font-display text-xl font-bold text-primary-foreground">
+          <div className="leading-none">
+            <span className="font-display text-lg md:text-xl font-bold text-primary-foreground tracking-tight">
               {branding.company_name}
             </span>
-            <span className="block text-[10px] text-gold-light tracking-widest uppercase -mt-1">
+            <span className="block text-[9px] md:text-[10px] text-gold-light/90 tracking-[0.2em] uppercase mt-0.5">
               {branding.tagline}
             </span>
           </div>
@@ -209,66 +217,98 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-[100] bg-primary/95 backdrop-blur-md border-b border-primary-foreground/10">
-      <div className="container-custom flex items-center justify-between h-16 md:h-20 px-4 sm:px-6 lg:px-8">
+    <nav
+      className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${
+        isScrolled
+          ? "bg-primary/98 backdrop-blur-md shadow-lg shadow-black/10 border-b border-primary-foreground/10"
+          : "bg-primary/90 backdrop-blur-sm border-b border-transparent"
+      }`}
+    >
+      <div
+        className={`container-custom flex items-center justify-between px-4 sm:px-6 lg:px-8 transition-all duration-300 ${
+          isScrolled ? "h-14 md:h-16" : "h-16 md:h-20"
+        }`}
+      >
         {renderLogo()}
 
         {/* Desktop Nav */}
-        <div className="hidden lg:flex items-center gap-1">
-          {displayLinks.map((link) => (
-            <div key={link.id} className="relative group">
-              <Link
-                to={link.url}
-                target={link.open_in_new_tab ? "_blank" : undefined}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors inline-flex items-center gap-1 ${
-                  location.pathname === link.url
-                    ? "text-gold bg-primary-foreground/10"
-                    : "text-primary-foreground/80 hover:text-gold hover:bg-primary-foreground/10"
-                }`}
-              >
-                {link.label}
+        <div className="hidden lg:flex items-center gap-0.5 bg-primary-foreground/[0.04] rounded-full px-1 py-1">
+          {displayLinks.map((link) => {
+            const isActive = location.pathname === link.url;
+            return (
+              <div key={link.id} className="relative group">
+                <Link
+                  to={link.url}
+                  target={link.open_in_new_tab ? "_blank" : undefined}
+                  className={`relative z-10 px-4 py-2 text-sm font-medium rounded-full transition-colors inline-flex items-center gap-1 ${
+                    isActive
+                      ? "text-primary"
+                      : "text-primary-foreground/75 hover:text-gold"
+                  }`}
+                >
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-active-pill"
+                      className="absolute inset-0 -z-10 rounded-full bg-gold"
+                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  <span className="relative z-10">{link.label}</span>
+                  {link.children && link.children.length > 0 && (
+                    <ChevronDown className="relative z-10 w-3 h-3" />
+                  )}
+                </Link>
+                
                 {link.children && link.children.length > 0 && (
-                  <ChevronDown className="w-3 h-3" />
-                )}
-              </Link>
-              
-              {link.children && link.children.length > 0 && (
-                <div className="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[110]">
-                  <div className="bg-card border border-border rounded-lg shadow-xl py-2 min-w-[160px]">
-                    {link.children.map((child) => (
-                      <Link
-                        key={child.id}
-                        to={child.url}
-                        target={child.open_in_new_tab ? "_blank" : undefined}
-                        className="block px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                      >
-                        {child.label}
-                      </Link>
-                    ))}
+                  <div className="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[110]">
+                    <div className="bg-card border border-border rounded-lg shadow-xl py-2 min-w-[160px]">
+                      {link.children.map((child) => (
+                        <Link
+                          key={child.id}
+                          to={child.url}
+                          target={child.open_in_new_tab ? "_blank" : undefined}
+                          className="block px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                        >
+                          {child.label}
+                        </Link>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* CTA */}
-        <div className="hidden lg:flex items-center gap-2">
-          <LanguageSwitcher variant="navbar" />
-          <CurrencySwitcher />
-          <ThemeToggle variant="navbar" />
-          {user && <NotificationBell />}
+        <div className="hidden lg:flex items-center gap-1.5">
+          <div className="flex items-center gap-0.5 bg-primary-foreground/[0.04] rounded-full px-1.5 py-1">
+            <LanguageSwitcher variant="navbar" />
+            <span className="w-px h-4 bg-primary-foreground/15" />
+            <CurrencySwitcher />
+            <span className="w-px h-4 bg-primary-foreground/15" />
+            <ThemeToggle variant="navbar" />
+          </div>
+
+          {user && (
+            <div className="ml-1">
+              <NotificationBell />
+            </div>
+          )}
+
+          <span className="w-px h-6 bg-primary-foreground/15 mx-1" />
+
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 text-primary-foreground/80 hover:text-gold hover:bg-primary-foreground/10 p-1">
-                  <Avatar className="w-8 h-8">
+                <Button variant="ghost" className="flex items-center gap-2 text-primary-foreground/80 hover:text-gold hover:bg-primary-foreground/10 rounded-full p-1 pr-2.5">
+                  <Avatar className="w-8 h-8 ring-2 ring-primary-foreground/10 group-hover:ring-gold/40 transition-all">
                     <AvatarImage src={userProfile?.avatar_url} alt={userProfile?.name} />
-                    <AvatarFallback className="bg-gold/20 text-gold text-sm">
+                    <AvatarFallback className="bg-gold/20 text-gold text-sm font-semibold">
                       {userProfile?.name?.charAt(0)?.toUpperCase() || <User className="w-4 h-4" />}
                     </AvatarFallback>
                   </Avatar>
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className="w-3.5 h-3.5 opacity-70" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-card border-border z-[120]">
