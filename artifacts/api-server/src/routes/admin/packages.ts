@@ -51,8 +51,7 @@ router.post("/", validate(AdminCreatePackageRequest), async (req, res) => {
 
     res.status(201).json(PackageSchema.parse(created));
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to create package" });
+    return sendAdminError(res, "POST /api/admin/packages", err);
   }
 });
 
