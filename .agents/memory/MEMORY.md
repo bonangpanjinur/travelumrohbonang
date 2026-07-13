@@ -26,3 +26,4 @@
 - [Supabase project-ref mismatch](supabase-project-ref-mismatch.md) — 401s straight from *.supabase.co often mean env vars point at the wrong/stale project, not an RLS bug; diff anon-key `ref` claim vs VITE_SUPABASE_URL.
 - [Unsanitized dangerouslySetInnerHTML stored XSS](unsanitized-html-stored-xss.md) — CMS/contract HTML rendered raw let user-controlled fields (e.g. own name) become stored XSS hitting admin previews; always sanitize with DOMPurify before dangerouslySetInnerHTML.
 - [Duplicate FK on packages.category_id](packages-duplicate-fk-pgrst201.md) — two FK constraints to package_categories cause PGRST201; disambiguate embeds with `!packages_category_id_fkey` across all package-listing components.
+- [Supabase storage buckets missing](supabase-storage-buckets-missing.md) — live Supabase project had zero storage buckets/RLS policies despite code assuming they exist; check storage.buckets & pg_policies directly via SUPABASE_DATABASE_URL.
