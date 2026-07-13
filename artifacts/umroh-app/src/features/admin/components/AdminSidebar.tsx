@@ -268,52 +268,29 @@ const AdminSidebar = ({
             ))}
           </nav>
 
-          {/* Footer */}
-          <div className="p-3 border-t border-primary-foreground/10 space-y-2 shrink-0">
-            <a
-              href="/"
-              target="_blank"
-              rel="noreferrer"
-              title={collapsed ? t("menu.main_website") : undefined}
-              className={`flex items-center gap-3 py-2.5 w-full rounded-lg text-sm font-medium text-primary-foreground/60 hover:bg-primary-foreground/10 hover:text-primary-foreground/90 transition-colors ${
-                collapsed ? "lg:justify-center lg:px-0 px-3" : "px-3"
-              }`}
-            >
-              <span className="flex items-center justify-center w-7 h-7 rounded-md shrink-0">
+          {/* Footer — condensed into a single compact row of icon actions so the nav list above gets more room */}
+          <div className={`p-2 border-t border-primary-foreground/10 shrink-0 ${collapsed ? "hidden lg:block" : ""}`}>
+            <div className={`flex items-center gap-0.5 ${collapsed ? "lg:flex-col" : "justify-between"}`}>
+              <a
+                href="/"
+                target="_blank"
+                rel="noreferrer"
+                title={t("menu.main_website")}
+                className="flex items-center justify-center w-8 h-8 rounded-md text-primary-foreground/60 hover:bg-primary-foreground/10 hover:text-primary-foreground/90 transition-colors shrink-0"
+              >
                 <Globe className="w-4 h-4" />
-              </span>
-              <span className={collapsed ? "lg:hidden" : ""}>{t("menu.main_website")}</span>
-            </a>
-            {!collapsed && (
-              <div className="flex items-center justify-between px-1">
-                <span className="text-[10px] text-primary-foreground/40 uppercase tracking-wider font-semibold">
-                  {t("common.language")}
-                </span>
-                <div className="flex items-center gap-1">
-                  <ThemeToggle variant="admin" />
-                  <AdminNotificationBell />
-                  <LanguageSwitcher variant="admin" />
-                </div>
-              </div>
-            )}
-            {collapsed && (
-              <div className="hidden lg:flex flex-col items-center gap-1">
-                <ThemeToggle variant="admin" />
-                <AdminNotificationBell />
-              </div>
-            )}
-            <button
-              onClick={onLogout}
-              title={collapsed ? t("nav.logout") : undefined}
-              className={`flex items-center gap-3 py-2.5 w-full rounded-lg text-sm font-medium text-primary-foreground/60 hover:bg-destructive/10 hover:text-destructive transition-colors ${
-                collapsed ? "lg:justify-center lg:px-0 px-3" : "px-3"
-              }`}
-            >
-              <span className="flex items-center justify-center w-7 h-7 rounded-md shrink-0">
+              </a>
+              <ThemeToggle variant="admin" />
+              <AdminNotificationBell />
+              {!collapsed && <LanguageSwitcher variant="admin" />}
+              <button
+                onClick={onLogout}
+                title={t("nav.logout")}
+                className="flex items-center justify-center w-8 h-8 rounded-md text-primary-foreground/60 hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
+              >
                 <LogOut className="w-4 h-4" />
-              </span>
-              <span className={collapsed ? "lg:hidden" : ""}>{t("nav.logout")}</span>
-            </button>
+              </button>
+            </div>
           </div>
         </div>
       </aside>
