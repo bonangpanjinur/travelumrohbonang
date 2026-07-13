@@ -23,10 +23,9 @@ export async function resolveAffiliateAgentId(): Promise<string | null> {
   const code = getAffiliateCookie();
   if (!code) return null;
   const { data } = await supabase
-    .from("agents")
+    .from("agents_public" as any)
     .select("id")
     .eq("referral_code", code)
-    .eq("is_active", true)
     .maybeSingle();
   return data?.id ?? null;
 }
