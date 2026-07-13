@@ -20,10 +20,11 @@ const AffiliateRedirect = () => {
         .eq("referral_code", code)
         .maybeSingle();
 
-      if ((data as any)?.is_active) {
+      const agent = data as { id: string; is_active: boolean } | null;
+      if (agent?.is_active) {
         setAffiliateCookie(code);
         const landing = search.get("to") || "/";
-        await trackAffiliateClick(data.id, code, landing);
+        await trackAffiliateClick(agent.id, code, landing);
         navigate(landing, { replace: true });
       } else {
         navigate("/", { replace: true });
