@@ -115,7 +115,7 @@ const Booking = () => {
       const [pkgRes, branchRes, agentRes] = await Promise.all([
         supabase.from("packages").select("id, title, slug").eq("slug", slug).maybeSingle(),
         supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
-        supabase.from("agents").select("id, name, branch_id, branch:branches(name)").eq("is_active", true).order("name")
+        supabase.from("agents_public" as any).select("id, name, branch_id, branch:branches(name)").order("name")
       ]);
 
       setBranches(branchRes.data || []);
