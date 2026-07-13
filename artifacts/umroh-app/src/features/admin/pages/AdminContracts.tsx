@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { Loader2, FileCheck, Eye, Trash2, Search, Plus } from "lucide-react";
+import { Loader2, FileCheck, Eye, Trash2, Search, Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -62,6 +62,11 @@ const AdminContracts = () => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Edit an existing contract (correct signer name / signed date)
+  const [editRow, setEditRow] = useState<ContractRow | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ signerName: "", signedAt: "" });
 
   // Manual contract creation (admin-side, e.g. for paper contracts signed offline)
   const [createOpen, setCreateOpen] = useState(false);
@@ -149,6 +154,39 @@ const AdminContracts = () => {
       toast.error(e.message);
     } finally {
       setPreviewLoading(false);
+    }
+  };
+
+  const openEdit = (row: ContractRow) => {
+    setEditRow(row);
+    setEditForm({
+      signerName: row.signerName ?? "",
+      signedAt: row.signedAt ? row.signedAt.slice(0, 16) : "",
+    });
+  };
+
+  const handleEdit = async () => {
+    if (!editRow) return;
+    if (!editForm.signerName.trim()) {
+      toast.error("Nama penandatangan wajib diisi");
+      return;
+    }
+    setEditing(true);
+    try {
+      await apiFetch(`/api/admin/contracts/${editRow.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          signerName: editForm.signerName.trim(),
+          ...(editForm.signedAt ? { signedAt: editForm.signedAt } : {}),
+        }),
+      });
+      toast.success("Kontrak berhasil diperbarui");
+      setEditRow(null);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Gagal memperbarui kontrak");
+    } finally {
+      setEditing(false);
     }
   };
 
@@ -259,6 +297,14 @@ const AdminContracts = () => {
                             >
                               <Eye className="w-3 h-3 mr-1" />
                               Preview
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openEdit(c)}
+                            >
+                              <Pencil className="w-3 h-3 mr-1" />
+                              Edit
                             </Button>
                             {canDelete && (
                               <Button
@@ -386,6 +432,44 @@ const AdminContracts = () => {
             <Button onClick={handleCreate} disabled={creating}>
               {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Simpan Kontrak
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Contract Dialog */}
+      <Dialog open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              Edit Kontrak — {editRow?.bookingCode ?? editRow?.bookingId?.slice(0, 8)}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nama Penandatangan</Label>
+              <Input
+                value={editForm.signerName}
+                onChange={(e) => setEditForm((f) => ({ ...f, signerName: e.target.value }))}
+                placeholder="Nama lengkap sesuai identitas"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tanggal Tanda Tangan</Label>
+              <Input
+                type="datetime-local"
+                value={editForm.signedAt}
+                onChange={(e) => setEditForm((f) => ({ ...f, signedAt: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditRow(null)} disabled={editing}>
+              Batal
+            </Button>
+            <Button onClick={handleEdit} disabled={editing}>
+              {editing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Simpan Perubahan
             </Button>
           </DialogFooter>
         </DialogContent>

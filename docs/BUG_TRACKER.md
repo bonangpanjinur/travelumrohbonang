@@ -140,10 +140,10 @@
 | | |
 |---|---|
 | **Severity** | P2 |
-| **Lokasi** | `artifacts/api-server/src/routes/admin/`, `features/admin/AdminContracts.tsx` |
+| **Lokasi** | `artifacts/api-server/src/routes/admin/`, `features/admin/pages/AdminContracts.tsx` |
 | **Dampak** | Fitur kontrak tidak bisa digunakan sepenuhnya |
-| **Solusi** | Implementasi create/update/delete operations di backend route. |
-| **Status** | 🔲 Open — future sprint |
+| **Solusi** | Backend sudah punya create/read/update/delete di `admin/contracts.ts`; yang hilang adalah UI untuk edit (PATCH). Ditambahkan dialog "Edit" di `AdminContracts.tsx` yang memanggil `PATCH /api/admin/contracts/:id` untuk mengoreksi nama penandatangan / tanggal TTD. |
+| **Status** | ✅ Fixed (2026-07-13) — full CRUD (create, read, edit, delete) tersedia di UI admin |
 
 ---
 
@@ -166,7 +166,8 @@
 | **Severity** | P3 |
 | **Lokasi** | `artifacts/api-server/src/routes/faqs.ts` baris 40 |
 | **Dampak** | Error response format tidak konsisten |
-| **Status** | 🔲 Open — low priority |
+| **Solusi** | Route ini sudah mengirim `res.status(500).json({ error, message, stack })` dengan `message`/`stack` hanya di `NODE_ENV=development` (tidak ada leak di production). Ini bukan route `/api/admin/*` sehingga skema `sendAdminError` (lihat `ADMIN_API_ERROR_SCHEMA.md`) tidak berlaku di sini — format legacy `{ error }` sudah cukup konsisten dengan route publik lain (`services.ts`, `pages.ts`, dst). |
+| **Status** | ✅ Closed (2026-07-13) — response sudah proper untuk route publik, tidak perlu migrasi ke schema admin |
 
 ---
 
@@ -176,8 +177,8 @@
 | **Severity** | P3 |
 | **Lokasi** | Semua packages (monorepo) |
 | **Dampak** | `pnpm run typecheck` bisa melaporkan 0 error padahal error nyata ada |
-| **Solusi** | Jalankan: `find . -name "*.tsbuildinfo" -delete && pnpm typecheck` sebelum percaya pada hasil typecheck |
-| **Status** | 🔲 Open — known limitation, documented |
+| **Solusi** | Ditambahkan script `typecheck:clean` (root `package.json`) yang menghapus semua `*.tsbuildinfo` secara otomatis sebelum `typecheck:libs` berjalan — tidak perlu lagi diingat manual. |
+| **Status** | ✅ Fixed (2026-07-13) — `pnpm run typecheck` sekarang selalu bersih dari cache basi |
 
 ---
 
@@ -212,7 +213,7 @@
 | B8 | ✅ Fixed |
 | B9 | ✅ Fixed |
 | B10 | ✅ Partially fixed (menu hidden) |
-| B11 | 🔲 Open |
+| B11 | ✅ Fixed |
 | B12 | ✅ Fixed |
-| B13 | 🔲 Open |
-| B14 | 🔲 Open |
+| B13 | ✅ Closed |
+| B14 | ✅ Fixed |
