@@ -67,10 +67,11 @@ const PackageDetail = () => {
   const [extraHotels, setExtraHotels] = useState<ExtraHotel[]>([]);
   const [selectedDeparture, setSelectedDeparture] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPackage = async () => {
-      const { data: pkgData } = await supabase
+      const { data: pkgData, error } = await supabase
         .from("packages")
         .select(`
           *,
@@ -82,6 +83,16 @@ const PackageDetail = () => {
         `)
         .eq("slug", slug!)
         .maybeSingle();
+
+      if (error) {
+        // A real query error (RLS denial, missing FK constraint breaking the embed, network, etc.)
+        // is a different situation than "no such package" — surface it instead of silently
+        // falling through to the generic not-found screen, which makes this undiagnosable.
+        console.error("[PackageDetail] failed to fetch package by slug:", slug, error);
+        setFetchError(error.message);
+        setLoading(false);
+        return;
+      }
 
       if (pkgData) {
         setPkg(pkgData as unknown as Package);
@@ -139,8 +150,16 @@ const PackageDetail = () => {
 
   if (!pkg) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <h1 className="text-2xl font-bold mb-4">Paket tidak ditemukan</h1>
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 text-center">
+        <h1 className="text-2xl font-bold mb-4">
+          {fetchError ? "Gagal memuat paket" : "Paket tidak ditemukan"}
+        </h1>
+        {fetchError && (
+          <p className="text-sm text-muted-foreground mb-4 max-w-md">
+            Terjadi kendala teknis saat mengambil data paket ini. Coba muat ulang halaman, atau hubungi admin jika
+            masalah berlanjut.
+          </p>
+        )}
         <Link to="/paket">
           <Button>Lihat Semua Paket</Button>
         </Link>
