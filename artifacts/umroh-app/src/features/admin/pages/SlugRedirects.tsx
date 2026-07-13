@@ -51,6 +51,7 @@ const AdminSlugRedirects = () => {
       setTenants(t || []);
     } catch (error) {
       console.error(error);
+      toast({ title: "Gagal memuat data redirect", variant: "destructive" });
     }
     setLoading(false);
   };

@@ -6,6 +6,16 @@ import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Switch } from "@/shared/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
 import { useToast } from "@/shared/hooks/use-toast";
 import { Save, Image, Globe, Building2, Phone, Palette, ImageIcon, Layout, Check, Banknote, Share2, Wallet, Eye, EyeOff } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
@@ -308,6 +318,7 @@ const AdminSettings = () => {
   const [showMidtransKey, setShowMidtransKey] = useState(false);
   const [showXenditKey, setShowXenditKey] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [hexErrors, setHexErrors] = useState<{ primary?: string; accent?: string }>({});
 
   useEffect(() => {
@@ -396,11 +407,6 @@ const AdminSettings = () => {
   };
 
   const handleResetAppearance = async () => {
-    const confirmed = window.confirm(
-      "Kembalikan Template, Warna, Font, dan Branding ke pengaturan bawaan sistem? Perubahan yang belum disimpan akan hilang."
-    );
-    if (!confirmed) return;
-
     setResetting(true);
     setTemplate(defaultTemplate);
     setBranding(defaultBranding);
@@ -496,12 +502,33 @@ const AdminSettings = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={handleResetAppearance}
+                onClick={() => setResetConfirmOpen(true)}
                 disabled={resetting || saving}
                 className="shrink-0"
               >
                 {resetting ? "Mereset..." : "Reset ke Default"}
               </Button>
+              <AlertDialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Reset tampilan ke default?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Template, Warna, Font, dan Branding akan dikembalikan ke pengaturan bawaan sistem. Perubahan yang belum disimpan akan hilang. Tindakan ini tidak dapat dibatalkan.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        setResetConfirmOpen(false);
+                        handleResetAppearance();
+                      }}
+                    >
+                      Reset
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
 
             {/* Template Cards — 3 variants */}

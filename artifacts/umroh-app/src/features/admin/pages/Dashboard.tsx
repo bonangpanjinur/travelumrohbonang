@@ -15,6 +15,7 @@ import { apiFetch } from "@/shared/lib/apiClient";
 import { format, subMonths, startOfMonth } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { toast } from "sonner";
 
 interface RecentBooking {
   id: string;
@@ -104,6 +105,7 @@ const AdminDashboard = () => {
         setMonthlyTrend(trends);
       } catch (error) {
         console.error("Error fetching stats:", error);
+        toast.error("Gagal memuat statistik dashboard");
       } finally {
         setLoading(false);
       }

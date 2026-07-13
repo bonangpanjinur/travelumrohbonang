@@ -41,6 +41,7 @@ const AdminCoupons = () => {
       setCoupons(data || []);
     } catch (e) {
       console.error(e);
+      toast.error("Gagal memuat data kupon");
     } finally {
       setLoading(false);
     }

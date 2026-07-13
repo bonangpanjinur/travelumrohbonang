@@ -91,6 +91,7 @@ const RestDiagLogs = () => {
       if (data.length) lastIdRef.current = data[data.length - 1].id;
     } catch (e) {
       console.error(e);
+      toast({ title: "Gagal memuat REST diagnostic log", variant: "destructive" });
     }
   };
 

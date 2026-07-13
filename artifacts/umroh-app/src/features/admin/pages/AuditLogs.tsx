@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, ShieldAlert } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { toast } from "sonner";
 
 const AuditLogs = () => {
   const [items, setItems] = useState<any[]>([]);
@@ -38,6 +39,7 @@ const AuditLogs = () => {
       setItems(filtered);
     } catch (e) {
       console.error(e);
+      toast.error("Gagal memuat audit log");
     } finally {
       setLoading(false);
     }

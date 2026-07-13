@@ -41,6 +41,7 @@ const AdminCheckIn = () => {
       );
     } catch (err) {
       console.error(err);
+      toast.error("Gagal memuat riwayat check-in");
     }
   };
 

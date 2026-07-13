@@ -93,6 +93,7 @@ const AdminAgents = () => {
       setBranches(branchesRes || []);
     } catch (e) {
       console.error(e);
+      toast({ title: "Gagal memuat data agen", variant: "destructive" });
     } finally {
       setLoading(false);
     }

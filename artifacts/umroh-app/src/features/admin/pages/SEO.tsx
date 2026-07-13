@@ -67,6 +67,7 @@ const AdminSEO = () => {
       setAuditFindings(data || []);
     } catch (e) {
       console.error(e);
+      toast.error("Gagal memuat temuan audit SEO");
     }
   };
 

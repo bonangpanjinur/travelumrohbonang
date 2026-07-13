@@ -88,6 +88,7 @@ const AdminBranches = () => {
       })));
     } catch (e) {
       console.error(e);
+      toast({ title: "Gagal memuat data cabang", variant: "destructive" });
     } finally {
       setLoading(false);
     }

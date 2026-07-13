@@ -39,6 +39,7 @@ const AdminAgentWithdrawals = () => {
       setItems(data || []);
     } catch (e) {
       console.error(e);
+      toast.error("Gagal memuat data penarikan dana agen");
     } finally {
       setLoading(false);
     }

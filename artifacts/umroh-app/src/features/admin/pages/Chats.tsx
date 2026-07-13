@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button";
 import { MessageCircle, Loader2 } from "lucide-react";
 import ChatBox from "@/features/cms/components/ChatBox";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 const AdminChats = () => {
   const [conversations, setConversations] = useState<any[]>([]);
@@ -23,6 +24,7 @@ const AdminChats = () => {
       setConversations(Array.from(seen.values()));
     } catch (error) {
       console.error(error);
+      toast.error("Gagal memuat percakapan");
     }
     setLoading(false);
   };

@@ -29,6 +29,7 @@ const AdminErrorLogs = () => {
       setLogs(data || []);
     } catch (e) {
       console.error(e);
+      toast({ title: "Gagal memuat log error", variant: "destructive" });
     } finally {
       setLoading(false);
     }
