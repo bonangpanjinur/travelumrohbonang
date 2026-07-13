@@ -12,8 +12,69 @@ import {
   desc,
 } from "@workspace/db";
 import { requireAdmin } from "../../middlewares/requireAdmin";
+import crypto from "node:crypto";
 
 const router = Router();
+
+// POST / — admin creates a contract manually for a booking (e.g. paper contract
+// signed offline, or a contract entered on the pilgrim's behalf).
+router.post("/", requireAdmin, async (req, res) => {
+  try {
+    const { bookingId, signerName, htmlContent, signedAt } = req.body as {
+      bookingId?: string;
+      signerName?: string;
+      htmlContent?: string;
+      signedAt?: string;
+    };
+
+    if (!bookingId || typeof bookingId !== "string") {
+      return res.status(400).json({ error: "bookingId wajib diisi" });
+    }
+    if (!signerName || typeof signerName !== "string" || !signerName.trim()) {
+      return res.status(400).json({ error: "Nama penandatangan wajib diisi" });
+    }
+
+    const [booking] = await db
+      .select({ id: bookings.id, userId: bookings.userId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+
+    if (!booking) {
+      return res.status(404).json({ error: "Booking tidak ditemukan" });
+    }
+    if (!booking.userId) {
+      return res.status(400).json({ error: "Booking ini tidak memiliki pemilik akun, kontrak tidak dapat dibuat" });
+    }
+
+    const [existing] = await db
+      .select({ id: contracts.id })
+      .from(contracts)
+      .where(eq(contracts.bookingId, bookingId))
+      .limit(1);
+    if (existing) {
+      return res.status(409).json({ error: "Booking ini sudah memiliki kontrak. Hapus kontrak lama terlebih dahulu jika ingin membuat ulang." });
+    }
+
+    const [inserted] = await db
+      .insert(contracts)
+      .values({
+        id: crypto.randomUUID(),
+        bookingId,
+        userId: booking.userId,
+        signerName: signerName.trim(),
+        htmlContent: htmlContent?.trim() || null,
+        signedAt: signedAt ? new Date(signedAt) : new Date(),
+        createdAt: new Date(),
+      })
+      .returning();
+
+    res.status(201).json(inserted);
+  } catch (err) {
+    console.error("[POST /api/admin/contracts] failed:", err);
+    res.status(500).json({ error: "Failed to create contract" });
+  }
+});
 
 // GET / — list all contracts with booking info
 router.get("/", async (_req, res) => {

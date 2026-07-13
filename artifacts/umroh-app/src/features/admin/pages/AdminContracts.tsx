@@ -9,10 +9,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/shared/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog";
 import { Input } from "@/shared/components/ui/input";
-import { Loader2, FileCheck, Eye, Trash2, Search } from "lucide-react";
+import { Label } from "@/shared/components/ui/label";
+import { Textarea } from "@/shared/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
+import { Loader2, FileCheck, Eye, Trash2, Search, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -35,6 +44,13 @@ interface ContractDetail extends ContractRow {
   signatureDataUrl: string | null;
 }
 
+interface BookingOption {
+  id: string;
+  bookingCode: string;
+  packageTitle: string;
+  userName: string;
+}
+
 const AdminContracts = () => {
   const { role } = useAuth();
   const canDelete = role === "super_admin" || role === "admin";
@@ -46,6 +62,69 @@ const AdminContracts = () => {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Manual contract creation (admin-side, e.g. for paper contracts signed offline)
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [bookingOptions, setBookingOptions] = useState<BookingOption[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [form, setForm] = useState({ bookingId: "", signerName: "", htmlContent: "", signedAt: "" });
+
+  const loadBookingOptions = async () => {
+    setBookingsLoading(true);
+    try {
+      const res = await apiFetch<{ data: any[] }>("/api/admin/bookings?limit=200");
+      const list = (res as any)?.data ?? res ?? [];
+      setBookingOptions(
+        (Array.isArray(list) ? list : []).map((b: any) => ({
+          id: b.id,
+          bookingCode: b.bookingCode,
+          packageTitle: b.packageTitle || "-",
+          userName: b.userName || "-",
+        }))
+      );
+    } catch (e: any) {
+      toast.error(e.message || "Gagal memuat daftar booking");
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  const openCreate = () => {
+    setForm({ bookingId: "", signerName: "", htmlContent: "", signedAt: "" });
+    setCreateOpen(true);
+    if (bookingOptions.length === 0) loadBookingOptions();
+  };
+
+  const handleCreate = async () => {
+    if (!form.bookingId) {
+      toast.error("Pilih booking terlebih dahulu");
+      return;
+    }
+    if (!form.signerName.trim()) {
+      toast.error("Nama penandatangan wajib diisi");
+      return;
+    }
+    setCreating(true);
+    try {
+      await apiFetch("/api/admin/contracts", {
+        method: "POST",
+        body: JSON.stringify({
+          bookingId: form.bookingId,
+          signerName: form.signerName.trim(),
+          htmlContent: form.htmlContent.trim() || undefined,
+          signedAt: form.signedAt || undefined,
+        }),
+      });
+      toast.success("Kontrak berhasil dibuat");
+      setCreateOpen(false);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Gagal membuat kontrak");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -104,14 +183,20 @@ const AdminContracts = () => {
           <FileCheck className="w-6 h-6 text-primary" />
           <h1 className="text-2xl font-bold">Kontrak Jamaah</h1>
         </div>
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Cari booking code / nama..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari booking code / nama..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button size="sm" onClick={openCreate} className="shrink-0">
+            <Plus className="w-4 h-4 mr-1" />
+            Buat Kontrak
+          </Button>
         </div>
       </div>
 
@@ -237,6 +322,72 @@ const AdminContracts = () => {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Contract Creation Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Buat Kontrak Manual</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Gunakan ini untuk mencatat kontrak yang ditandatangani secara offline (di kantor / kertas) atas nama jamaah.
+            </p>
+            <div className="space-y-2">
+              <Label>Booking</Label>
+              <Select
+                value={form.bookingId}
+                onValueChange={(v) => setForm((f) => ({ ...f, bookingId: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={bookingsLoading ? "Memuat booking..." : "Pilih booking"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {bookingOptions.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.bookingCode} — {b.userName} ({b.packageTitle})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Nama Penandatangan</Label>
+              <Input
+                value={form.signerName}
+                onChange={(e) => setForm((f) => ({ ...f, signerName: e.target.value }))}
+                placeholder="Nama lengkap sesuai identitas"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tanggal Tanda Tangan (opsional, default sekarang)</Label>
+              <Input
+                type="datetime-local"
+                value={form.signedAt}
+                onChange={(e) => setForm((f) => ({ ...f, signedAt: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Catatan / Isi Kontrak (opsional)</Label>
+              <Textarea
+                value={form.htmlContent}
+                onChange={(e) => setForm((f) => ({ ...f, htmlContent: e.target.value }))}
+                placeholder="Ringkasan isi kontrak atau catatan tambahan..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>
+              Batal
+            </Button>
+            <Button onClick={handleCreate} disabled={creating}>
+              {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Simpan Kontrak
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
