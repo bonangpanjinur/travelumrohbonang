@@ -26,3 +26,16 @@ so try-catch in application code cannot save you.
 - `SUPABASE_SERVICE_ROLE_KEY` ✅
 - `VITE_SUPABASE_URL` ✅
 - `VITE_SUPABASE_ANON_KEY` ✅
+
+## This rule applies per-route-file, not just rest.ts/auth.ts
+
+Any route file that queries via Drizzle/`db.select()` directly (bypassing `rest.ts`'s proxy)
+needs its own `USE_SUPABASE_HTTP` branch + PostgREST fallback — the `rest.ts` fix does not
+cover it. Found `routes/packages.ts` (list/detail/filter-options/reviews) doing direct
+`db.select()` with no fallback, so package listing/detail worked fine in Replit dev (real
+`SUPABASE_DATABASE_URL` present) but failed with a generic "gagal memuat paket" on Vercel
+(pool falls back to `postgres://localhost/placeholder`, every query hangs until timeout).
+When embedding relations via PostgREST in the fallback, remember every `packages.*_id` FK in
+this app has a duplicate constraint (see `packages-duplicate-fk-pgrst201.md`) — the fallback
+`select=` string must disambiguate every embed (including `package_departures` and
+`departure_prices`) with `!fkName`, not just the ones already hit in the frontend.
