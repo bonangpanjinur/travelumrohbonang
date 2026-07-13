@@ -119,7 +119,7 @@ const Booking = () => {
       ]);
 
       setBranches(branchRes.data || []);
-      setAgents(agentRes.data || []);
+      setAgents((agentRes.data as any) || []);
 
       if (pkgRes.data) {
         setPkg(pkgRes.data);
