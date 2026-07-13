@@ -1,3 +1,6 @@
+-- Status: cek dulu apakah sudah diterapkan sebelum jalankan ulang. Riwayat
+-- patch — lihat sql/README.md.
+--
 -- Auto-create a row in public.profiles (and default role in public.user_roles)
 -- whenever a new user signs up via Supabase Auth (auth.users).
 --

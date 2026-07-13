@@ -1,5 +1,8 @@
 -- =============================================================================
 -- FIX ALL TABLES — v3 (definitive)
+-- Status: cek dulu apakah sudah diterapkan sebelum jalankan ulang. Riwayat
+-- patch — lihat sql/README.md. ("v3" berarti ini superseding versi sebelumnya,
+-- yang tidak lagi disimpan sebagai file terpisah.)
 -- =============================================================================
 -- Berdasarkan analisis mendalam supabase-schema.sql vs Drizzle schema.
 --

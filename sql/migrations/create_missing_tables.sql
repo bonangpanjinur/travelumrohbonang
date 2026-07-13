@@ -1,5 +1,7 @@
 -- =============================================================================
 -- Migration: Buat tabel yang hilang di Supabase
+-- Status: cek dulu apakah sudah diterapkan sebelum jalankan ulang (idempotent).
+-- Riwayat patch — lihat sql/README.md.
 -- =============================================================================
 -- Jalankan di: Supabase Dashboard → SQL Editor → New Query → Run
 -- Script ini IDEMPOTENT — aman dijalankan berulang kali.

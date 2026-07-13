@@ -1,5 +1,6 @@
 -- =============================================================================
 -- Supabase Custom Access Token Hook
+-- Status: sudah diterapkan ke production. Riwayat patch — lihat sql/README.md.
 -- =============================================================================
 -- Tujuan: Embed app_metadata.role ke dalam JWT setiap kali user login atau
 -- token di-refresh. Dengan ini, JWT selalu berisi role yang benar sehingga

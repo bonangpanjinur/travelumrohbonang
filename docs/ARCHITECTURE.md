@@ -98,10 +98,10 @@ umroh-app/                          ← root
 │   ├── verify-deploy-env.mjs       ← pre-deploy env check
 │   └── scripts/push-to-supabase.mjs ← schema push script
 │
-├── supabase-schema.sql             ← Drizzle-generated schema (source of truth)
+├── supabase-schema.sql             ← Drizzle-generated schema (bootstrap/DR snapshot, see sql/README.md)
 ├── supabase-seed.sql               ← General seed data
 ├── supabase-seed-prod.sql          ← Production seed (idempotent)
-├── supabase-deploy.sql             ← Combined deploy script
+├── supabase-deploy.sql             ← Combined deploy script (used by scripts/push-to-supabase.mjs)
 ├── pnpm-workspace.yaml
 ├── vercel.json
 └── tsconfig.json

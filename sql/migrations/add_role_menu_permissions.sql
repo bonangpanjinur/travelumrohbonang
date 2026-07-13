@@ -1,5 +1,7 @@
 -- =============================================================================
 -- Migration: Add role_menu_permissions table
+-- Status: cek dulu apakah sudah diterapkan sebelum jalankan ulang. Riwayat
+-- patch — lihat sql/README.md.
 -- =============================================================================
 -- Purpose: Stores per-role menu visibility overrides set by super_admin.
 -- menu_key maps to MenuItem.labelKey values in adminMenuConfig.ts.

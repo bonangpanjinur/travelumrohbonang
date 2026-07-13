@@ -1,5 +1,6 @@
 -- =============================================================================
 -- Setup user_roles table di Supabase
+-- Status: sudah diterapkan ke production. Riwayat patch — lihat sql/README.md.
 -- =============================================================================
 -- Jalankan di Supabase SQL Editor SEBELUM mengaktifkan JWT hook.
 -- Tabel ini dipakai oleh authMiddleware (via REST API) untuk menyimpan role

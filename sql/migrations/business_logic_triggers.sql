@@ -1,5 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 --  Business Logic Triggers — UmrohPlus
+--  Status: sudah diterapkan ke production. Riwayat patch — lihat sql/README.md.
 --  Jalankan di: local Postgres (Replit) via psql $DATABASE_URL -f <file>
 --              Supabase: paste di SQL Editor (skip bagian "Local user profile")
 --

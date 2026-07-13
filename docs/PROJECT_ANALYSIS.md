@@ -99,7 +99,7 @@ umroh-app/                          ← root
 │   ├── verify-deploy-env.mjs       ← pre-deploy env check
 │   └── scripts/push-to-supabase.mjs ← schema push script
 │
-├── supabase-schema.sql             ← Drizzle-generated schema
+├── supabase-schema.sql             ← Drizzle-generated schema (bootstrap/DR snapshot, see sql/README.md)
 ├── supabase-seed.sql               ← General seed
 ├── supabase-seed-prod.sql          ← Production seed
 ├── supabase-deploy.sql             ← Combined deploy script
@@ -539,8 +539,8 @@ logs
 
 | File | Kategori | Keterangan | Sinkron? |
 |------|----------|------------|----------|
-| `supabase-schema.sql` | Schema | Generated dari Drizzle, idempotent | ✅ Source of truth |
-| `supabase-deploy.sql` | Schema + Config | Combined deploy script | ✅ |
+| `supabase-schema.sql` | Schema | Generated dari Drizzle, idempotent | Bootstrap/DR snapshot only — lihat `sql/README.md` |
+| `supabase-deploy.sql` | Schema + Config | Combined deploy script | Dipakai `scripts/push-to-supabase.mjs` untuk project Supabase baru/kosong |
 | `supabase-seed.sql` | Seed | Data awal umum | ✅ |
 | `supabase-seed-prod.sql` | Seed | Production seed, idempotent | ✅ |
 | `scripts/seed.sql` | Seed | Dev environment seed | ✅ |

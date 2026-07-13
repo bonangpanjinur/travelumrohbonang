@@ -86,10 +86,8 @@ sql/                     — Semua SQL non-Supabase-CLI (patch, snapshot, seed)
   migrations/            — Ad-hoc SQL patches (FK, trigger, dll.) — riwayat, jangan duplikat
   schema/                — Snapshot schema historis (LEGACY, bukan sumber aktif)
   seeds/
-    seed-demo.sql        — Data demo untuk Replit Postgres (konten publik)
-    seed.sql             — Data awal minimal
-    supabase-seed.sql    — Seed untuk Supabase dev
-    supabase-seed-prod.sql — Seed untuk Supabase production
+    supabase-seed.sql    — Seed untuk Supabase dev / reseed lokal Replit Postgres
+    supabase-seed-prod.sql — Seed untuk Supabase production (dipakai scripts/push-to-supabase.mjs)
 
 supabase/migrations/     — Migration resmi Supabase CLI (folder ini WAJIB di lokasi ini — dipakai `supabase` CLI, jangan digabung ke sql/)
 
@@ -167,8 +165,9 @@ _Isi sesuai preferensi pengguna._
 
 - Lihat `.env.example` untuk template lengkap environment variables
 - Lihat `pnpm-workspace.yaml` untuk struktur workspace
+- Lihat `sql/README.md` untuk panduan lengkap folder `sql/` (mana yang aktif, mana yang bootstrap/DR-only, alur perubahan baru)
 - Lihat `sql/` untuk semua file SQL:
-  - `sql/migrations/` — patch & migrasi inkremental (FK, trigger, role, dll.)
-  - `sql/schema/` — snapshot schema historis (LEGACY, lihat README di folder itu)
-  - `sql/seeds/` — data awal (`seed-demo.sql` untuk demo, `supabase-seed.sql` untuk dev, `supabase-seed-prod.sql` untuk prod)
+  - `sql/migrations/` — patch & migrasi inkremental (FK, trigger, role, dll.), riwayat — lihat header masing-masing file untuk status apply
+  - `sql/schema/` — snapshot DDL bootstrap/disaster-recovery (bukan untuk sync rutin — lihat `sql/README.md`)
+  - `sql/seeds/` — data awal (`supabase-seed.sql` untuk dev, `supabase-seed-prod.sql` untuk prod)
 - Lihat `docs/` untuk semua dokumentasi proyek (blueprint, arsitektur, bug tracker, roadmap)

@@ -367,8 +367,8 @@ createdAt
 
 | File | Kategori | Status | Keterangan |
 |------|----------|--------|------------|
-| `supabase-schema.sql` | Schema | ✅ Source of truth | Generated dari Drizzle ORM, idempotent |
-| `supabase-deploy.sql` | Schema + Config | ✅ | Combined deploy script |
+| `supabase-schema.sql` | Schema | Bootstrap/DR snapshot | Generated dari Drizzle ORM, idempotent — lihat `sql/README.md` |
+| `supabase-deploy.sql` | Schema + Config | Dipakai `deploy:supabase` | Combined deploy script, untuk project Supabase baru/kosong |
 | `supabase-seed.sql` | Seed | ✅ | Data awal umum |
 | `supabase-seed-prod.sql` | Seed | ✅ | Production seed, idempotent |
 | `scripts/seed.sql` | Seed | ✅ | Dev environment seed |

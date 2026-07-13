@@ -1,6 +1,8 @@
 -- ============================================================
 -- Tambah FK constraints yang hilang di Supabase live DB
--- 
+-- Status: cek dulu apakah sudah diterapkan sebelum jalankan ulang (idempotent,
+-- aman kalau sudah). Riwayat patch — lihat sql/README.md.
+--
 -- CARA PAKAI:
 --   Buka Supabase Dashboard → SQL Editor → paste & jalankan
 --

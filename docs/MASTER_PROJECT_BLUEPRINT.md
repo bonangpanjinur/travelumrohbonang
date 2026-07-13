@@ -95,7 +95,7 @@ umroh-app/                          ← root
 │   ├── PRD.md, repair-plan.md
 │
 ├── attached_assets/                ← File yang diupload user selama sesi kerja
-├── supabase-schema.sql             ← Schema Drizzle-generated (source of truth skema)
+├── supabase-schema.sql             ← Schema Drizzle-generated (bootstrap/DR snapshot, see sql/README.md)
 ├── supabase-seed.sql / -prod.sql   ← Seed data
 ├── supabase-deploy.sql             ← Combined deploy script
 ├── PROJECT_ANALYSIS.md             ← Audit awal (arsip)
@@ -327,8 +327,8 @@ ERD lengkap dengan semua kolom: lihat `docs/DATABASE_MAP.md`.
 
 | File | Kategori | Status sinkronisasi |
 |---|---|---|
-| `supabase-schema.sql` | Schema, generated dari Drizzle | ✅ Source of truth (nominal) |
-| `supabase-deploy.sql` | Schema + Config gabungan | ✅ |
+| `supabase-schema.sql` | Schema, generated dari Drizzle | Bootstrap/DR snapshot only — lihat `sql/README.md` |
+| `supabase-deploy.sql` | Schema + Config gabungan | Dipakai `scripts/push-to-supabase.mjs` untuk project Supabase baru/kosong |
 | `supabase-seed.sql` / `supabase-seed-prod.sql` | Seed data | ✅ |
 | `scripts/seed.sql` | Dev seed | ✅ |
 | `scripts/migrations/supabase_schema.sql` | Schema manual + RLS policy | ⚠️ **Berpotensi drift** dari Drizzle — lihat schema drift `profiles.id`/`user_roles.user_id` di atas |

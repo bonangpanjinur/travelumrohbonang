@@ -1,4 +1,6 @@
 -- Migration: tambah kolom show_extra_hotels ke tabel package_categories
+-- Status: cek dulu apakah sudah diterapkan sebelum jalankan ulang. Riwayat
+-- patch — lihat sql/README.md.
 -- Jalankan di: Supabase Dashboard → SQL Editor
 --
 -- Kolom ini mengontrol apakah form paket menampilkan pilihan "Hotel Tambahan"
