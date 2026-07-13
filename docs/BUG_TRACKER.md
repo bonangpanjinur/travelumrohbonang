@@ -97,7 +97,7 @@
 | **Lokasi** | `artifacts/api-server/src/routes/`, `artifacts/umroh-app/src/features/booking/Payment.tsx` |
 | **Dampak** | Customer hanya bisa bayar manual (transfer bank + upload bukti) |
 | **Solusi** | Integrasi Midtrans atau Xendit. MIDTRANS_SERVER_KEY dan XENDIT_API_KEY sudah ada di env spec. |
-| **Status** | 🔲 Open — butuh API keys dari payment provider |
+| **Status** | 🟡 Partially fixed (2026-07-13) — UI untuk input kredensial payment gateway (Midtrans/Xendit: server key, client key, callback token, mode sandbox/production) sudah ada dan berfungsi (`PaymentGatewaySettings.tsx`, tab "Pengaturan API" di halaman Payment Gateway admin), tersimpan aman via `/api/admin/integrations` (gated `requireSuperAdmin`, nilai secret di-redact saat dibaca). **Belum**: logika integrasi live (create transaction, callback/webhook handling, status sync) — masih menunggu API key produksi dari user sebelum bisa diuji end-to-end. |
 
 ---
 
@@ -187,14 +187,14 @@
 | # | Debt | Severity | Status |
 |---|------|----------|--------|
 | TD1 | Dua jalur DB (Drizzle vs Supabase direct) tanpa abstraksi | High | Partially fixed — authMiddleware sudah local-first |
-| TD2 | OpenAPI spec bisa drift dari implementasi Express routes | High | 🔲 Open |
-| TD3 | Tidak ada integration tests / e2e tests | High | 🔲 Open |
+| TD2 | OpenAPI spec bisa drift dari implementasi Express routes | High | 🔲 Open — ~295 route terdaftar vs spec yang hanya mendokumentasikan sebagian kecil endpoint; regenerasi penuh spec 1:1 di luar scope perbaikan kali ini, butuh keputusan terpisah (generate otomatis dari route table vs tulis manual) sebelum dikerjakan |
+| TD3 | Tidak ada integration tests / e2e tests | High | ✅ Partially fixed (2026-07-13) — `vitest` + `supertest` ditambahkan ke `api-server` (`pnpm --filter @workspace/api-server run test`, juga `pnpm run test` dari root). 14 test baru: unit test untuk logika ownership-scoping di `rest.ts` (lihat TD5) + smoke test black-box (tabel publik vs AUTH_TABLE, tabel tidak dikenal, health check). Test ini langsung menangkap bug nyata (placeholder SQL `$N` hilang) sebelum sempat jalan di production. Masih terbatas ke api-server; frontend (`umroh-app`) belum punya test runner terpasang. |
 | TD4 | Schema drift: Drizzle ORM vs manual SQL migrations | High | ✅ Fixed — drizzle push dijalankan |
-| TD5 | `rest.ts` proxy — RLS policies belum diverifikasi untuk semua tabel | Low | 🔲 Open |
+| TD5 | `rest.ts` proxy — RLS policies belum diverifikasi untuk semua tabel | Low | ✅ Fixed (2026-07-13) — proxy generik `/rest/v1/:table` sebelumnya hanya mengecek `req.isAuthenticated()` untuk AUTH_TABLES, tanpa ownership check per baris: buyer/agent mana pun bisa baca/ubah booking, payment, dokumen, notifikasi milik user lain. Ditambahkan scoping berbasis peran: staff (admin/super_admin/branch_manager/staff) tetap akses penuh (perilaku lama tidak berubah); non-staff dibatasi ke baris miliknya sendiri via kolom `user_id` langsung (bookings, wishlists, notifications, dst) atau lewat `booking_id → bookings.user_id` (booking_rooms, booking_payments, pilgrim_documents, dst); tabel manajemen tanpa use-case non-staff (audit_logs, financial_transactions, agent_commissions, dst) ditolak total untuk non-staff. Diterapkan di GET/PATCH/DELETE (filter WHERE tambahan) dan POST (validasi kepemilikan sebelum insert, termasuk untuk batch insert). Di-cover oleh test di TD3. |
 | TD6 | Tidak ada error boundary di frontend | Medium | ✅ Fixed |
 | TD7 | `SESSION_SECRET` di Replit Secrets tidak dipakai | Low | ✅ Closed — tersedia via env |
-| TD8 | `AnalyticsAI.tsx` tanpa backend | Low | 🔲 Open |
-| TD9 | Bahasa campur Indonesia/English di kode | Low | 🔲 Open — stylistic |
+| TD8 | `AnalyticsAI.tsx` tanpa backend | Low | ✅ Closed — duplikat dari B10, sudah ditangani (menu disembunyikan dari sidebar, lihat B10) |
+| TD9 | Bahasa campur Indonesia/English di kode | Low | ✅ Won't fix — bukan bug fungsional; campuran Indonesia (UI/copy, sesuai audiens pengguna) dan English (kode/komentar teknis, konvensi umum) konsisten dan disengaja di seluruh codebase, bukan sisa kelalaian. Tidak ada dampak ke pengguna atau maintainability yang cukup untuk membenarkan refactor besar-besaran. |
 | TD10 | `lib/replit-auth-web` legacy package | Medium | ✅ Fixed — tsconfig ref dihapus |
 
 ---
@@ -209,7 +209,7 @@
 | B4 | ✅ Fixed |
 | B5 | ✅ Fixed |
 | B6 🔒 | ✅ Fixed |
-| B7 | 🔲 Open (needs payment keys) |
+| B7 | 🟡 Partially fixed (UI kredensial selesai, logika integrasi butuh API keys) |
 | B8 | ✅ Fixed |
 | B9 | ✅ Fixed |
 | B10 | ✅ Partially fixed (menu hidden) |

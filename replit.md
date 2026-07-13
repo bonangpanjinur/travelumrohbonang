@@ -152,6 +152,7 @@ Frontend dan API otomatis di-deploy bersama di satu domain:
 - **Drizzle over raw SQL**: Schema sebagai TypeScript, type-safe queries, mudah di-push ke Supabase Postgres.
 - **RBAC role lookup**: `/api/auth/user` dan `authMiddleware` membaca role aktual dari tabel `user_roles` (bukan hanya email allowlist). Role hierarchy: `super_admin > admin > branch_manager > staff > agent > buyer`. Role-assignment API dilindungi `requireSuperAdmin`.
 - **Dynamic theme**: `useActiveTemplate` membaca `site_settings` (key=`template`, category=`appearance`) dan menerapkan CSS variables ke `:root` secara real-time via Supabase channel. Custom hex colors dikonversi ke HSL dan override template preset.
+- **Generic REST proxy row-level ownership**: `/rest/v1/:table` men-scope non-staff request ke baris miliknya sendiri (langsung via `user_id` atau tidak langsung via `booking_id → bookings.user_id`); staff (admin/super_admin/branch_manager/staff) tetap akses penuh tanpa scoping. Tabel manajemen internal (audit log, komisi, dll.) ditolak total untuk non-staff. Lihat `DIRECT_OWNER_TABLES` / `BOOKING_OWNED_TABLES` / `STAFF_ONLY_AUTH_TABLES` di `artifacts/api-server/src/routes/rest.ts`.
 
 ## User Preferences
 
@@ -163,6 +164,7 @@ _Isi sesuai preferensi pengguna._
 - `DATABASE_URL` adalah runtime-managed di Replit; jangan set manual di Replit env.
 - Jalankan `pnpm --filter @workspace/db run push` setelah perubahan schema untuk sync ke Supabase.
 - Vite dev server mem-proxy `/api/*` ke port 8080 — pastikan API server berjalan lebih dulu.
+- Test: `pnpm run test` (root) atau `pnpm --filter @workspace/api-server run test` menjalankan vitest+supertest untuk `api-server` (route ownership + smoke test). `umroh-app` belum punya test runner terpasang.
 
 ## Pointers
 

@@ -186,7 +186,7 @@ const PUBLIC_READ_TABLES = new Set([
 // the dedicated `GET /api/cms/chat-messages` route (routes/cms.ts), which
 // enforces booking ownership or staff role. Do not re-add chat_messages here
 // without adding the same ownership check to this generic handler first.
-const AUTH_TABLES = new Set([
+export const AUTH_TABLES = new Set([
   "profiles", "bookings", "booking_rooms", "booking_pilgrims", "booking_payments",
   "wishlists", "notifications", "pilgrim_documents", "contracts",
   "crm_contacts", "audit_logs", "error_logs", "request_log",
@@ -212,6 +212,90 @@ const AUTH_TABLES = new Set([
 
 // All tables allowed through the proxy (union of both sets).
 const ALLOWED_TABLES = new Set([...PUBLIC_READ_TABLES, ...AUTH_TABLES]);
+
+// ── Row-level ownership (TD5 fix, 2026-07-13) ────────────────────────────────
+//
+// AUTH_TABLES previously only gated on `req.isAuthenticated()` with NO
+// per-row ownership check — any authenticated buyer/agent could read or
+// tamper with every other user's bookings, payments, contracts, and
+// documents (e.g. `GET /rest/v1/bookings?select=*` returned every booking in
+// the system to any logged-in buyer). Staff roles (branch_manager and above,
+// same set as WRITE_STAFF_ROLES) still get unrestricted access for admin
+// dashboards that rely on this proxy; everyone else is scoped to their own
+// rows below.
+//
+// Tables where the row itself carries the owning user's id directly.
+export const DIRECT_OWNER_TABLES: Record<string, string> = {
+  profiles: "id",
+  bookings: "user_id",
+  wishlists: "user_id",
+  notifications: "user_id",
+  loyalty_balances: "user_id",
+  loyalty_points: "user_id",
+  contracts: "user_id",
+  payment_proof_access_logs: "user_id",
+  pilgrim_doc_access_logs: "user_id",
+};
+
+// Tables owned indirectly via a `booking_id` FK into `bookings.user_id`.
+export const BOOKING_OWNED_TABLES: Record<string, string> = {
+  booking_rooms: "booking_id",
+  booking_pilgrims: "booking_id",
+  booking_payments: "booking_id",
+  pilgrim_documents: "booking_id",
+  payments: "booking_id",
+};
+
+// Internal/management tables with no legitimate end-user (buyer/agent) use
+// case — staff-only, even for reads, through this generic proxy.
+export const STAFF_ONLY_AUTH_TABLES = new Set([
+  "audit_logs", "error_logs", "request_log", "template_upgrade_orders",
+  "affiliate_clicks", "leads", "lead_follow_ups", "financial_transactions",
+  "package_costs", "agent_commissions", "flight_details",
+  "installment_schedules", "payment_gateway_transactions", "crm_contacts",
+]);
+
+export function isStaffRole(req: Request): boolean {
+  const role = (req as any).user?.role as string | undefined;
+  return !!role && WRITE_STAFF_ROLES.has(role);
+}
+
+/**
+ * Returns a SQL WHERE fragment (already using the next available $ params,
+ * appended to `values`) that scopes a non-staff request to rows it owns, or
+ * `null` for staff (no extra scoping — matches prior behaviour), or
+ * `{ forbidden: true }` if the table has no legitimate non-staff access path.
+ */
+export function ownershipClause(
+  table: string,
+  req: Request,
+  values: unknown[]
+): { clause: string } | { forbidden: true } | null {
+  if (isStaffRole(req)) return null;
+  if (!AUTH_TABLES.has(table)) return null;
+
+  const userId = (req as any).user?.id as string | undefined;
+  if (!userId) return { forbidden: true };
+
+  if (STAFF_ONLY_AUTH_TABLES.has(table)) return { forbidden: true };
+
+  const directCol = DIRECT_OWNER_TABLES[table];
+  if (directCol) {
+    values.push(userId);
+    return { clause: `"${table}"."${directCol}" = $${values.length}` };
+  }
+
+  const bookingCol = BOOKING_OWNED_TABLES[table];
+  if (bookingCol) {
+    values.push(userId);
+    return {
+      clause: `"${table}"."${bookingCol}" IN (SELECT id FROM "bookings" WHERE "user_id" = $${values.length})`,
+    };
+  }
+
+  // Unknown AUTH_TABLE with no ownership mapping — fail closed.
+  return { forbidden: true };
+}
 
 // ── FK maps for nested selects ───────────────────────────────────────────────
 
@@ -502,7 +586,19 @@ router.get("/:table", async (req: Request, res: Response) => {
     const values: unknown[] = [];
 
     const selectClause = buildSelectClause(table, q.select || "*");
-    const whereClause = buildWhere(table, q, values);
+    let whereClause = buildWhere(table, q, values);
+
+    const ownership = ownershipClause(table, req, values);
+    if (ownership && "forbidden" in ownership) {
+      logDiag(req, table, "rejected:ownership_forbidden");
+      return res.status(403).json({ message: "You do not have access to this data" });
+    }
+    if (ownership) {
+      whereClause = whereClause
+        ? `${whereClause} AND ${ownership.clause}`
+        : `WHERE ${ownership.clause}`;
+    }
+
     const orderClause = buildOrderClause(table, q.order || "");
     const limitClause = q.limit ? `LIMIT ${Math.max(0, parseInt(q.limit, 10))}` : "";
     const offsetClause = q.offset ? `OFFSET ${Math.max(0, parseInt(q.offset, 10))}` : "";
@@ -559,6 +655,17 @@ router.post("/:table", requireAuth, async (req: Request, res: Response) => {
     }
   }
 
+  // TD5 fix: non-staff users may only insert rows they own. STAFF_ONLY_AUTH_TABLES
+  // reject them entirely; DIRECT_OWNER_TABLES / BOOKING_OWNED_TABLES require the
+  // submitted row to actually belong to the requester (checked per-row below,
+  // since POST can be a batch insert).
+  if (AUTH_TABLES.has(table) && !isStaffRole(req)) {
+    if (STAFF_ONLY_AUTH_TABLES.has(table)) {
+      logDiag(req, table, "rejected:ownership_forbidden");
+      return res.status(403).json({ message: "You do not have access to this data" });
+    }
+  }
+
   if (USE_SUPABASE_HTTP) {
     await supabaseForward(req, res, table);
     return;
@@ -584,6 +691,39 @@ router.post("/:table", requireAuth, async (req: Request, res: Response) => {
 
     if (!rows.length) {
       return res.status(201).json(isSingle ? {} : []);
+    }
+
+    // TD5 fix: verify every row in a non-staff insert actually belongs to the
+    // requester before touching the DB, so a buyer can't POST a row with
+    // someone else's user_id / booking_id.
+    if (AUTH_TABLES.has(table) && !isStaffRole(req)) {
+      const requesterId = (req as any).user?.id as string | undefined;
+      const directCol = DIRECT_OWNER_TABLES[table];
+      const bookingCol = BOOKING_OWNED_TABLES[table];
+
+      if (directCol) {
+        const violates = rows.some((row) => row[directCol] && row[directCol] !== requesterId);
+        if (violates) {
+          logDiag(req, table, "rejected:ownership_forbidden");
+          return res.status(403).json({ message: "Cannot create a row owned by another user" });
+        }
+      } else if (bookingCol) {
+        const bookingIds = [...new Set(rows.map((r) => r[bookingCol]).filter(Boolean))];
+        if (bookingIds.length) {
+          const { rows: owned } = await pool.query(
+            `SELECT id FROM "bookings" WHERE "id" = ANY($1) AND "user_id" = $2`,
+            [bookingIds, requesterId]
+          );
+          if (owned.length !== bookingIds.length) {
+            logDiag(req, table, "rejected:ownership_forbidden");
+            return res.status(403).json({ message: "Cannot create a row for a booking you don't own" });
+          }
+        }
+      } else {
+        // AUTH_TABLE with no ownership mapping at all — fail closed.
+        logDiag(req, table, "rejected:ownership_forbidden");
+        return res.status(403).json({ message: "You do not have access to this data" });
+      }
     }
 
     const insertedRows: unknown[] = [];
@@ -665,12 +805,21 @@ router.patch("/:table", requireAuth, async (req: Request, res: Response) => {
     const setClause = setCols.map((c, i) => `"${c}" = ${i + 1}`).join(", ");
 
     const whereVals: unknown[] = [...setVals];
-    const whereClause = buildWhere(table, req.query as Record<string, string>, whereVals);
+    let whereClause = buildWhere(table, req.query as Record<string, string>, whereVals);
 
     // Mirror the DELETE guard below: an unfiltered PATCH would silently
     // update every row in the table (see incident 2026-07-08, user_roles).
     if (!whereClause) {
       return res.status(400).json({ message: "PATCH without a filter is not allowed" });
+    }
+
+    const ownership = ownershipClause(table, req, whereVals);
+    if (ownership && "forbidden" in ownership) {
+      logDiag(req, table, "rejected:ownership_forbidden");
+      return res.status(403).json({ message: "You do not have access to this data" });
+    }
+    if (ownership) {
+      whereClause = `${whereClause} AND ${ownership.clause}`;
     }
 
     let sql = `UPDATE "${table}" SET ${setClause} ${whereClause}`;
@@ -719,11 +868,21 @@ router.delete("/:table", requireAuth, async (req: Request, res: Response) => {
 
   try {
     const values: unknown[] = [];
-    const whereClause = buildWhere(table, req.query as Record<string, string>, values);
+    let whereClause = buildWhere(table, req.query as Record<string, string>, values);
     if (!whereClause) {
       logDiag(req, table, "rejected:no_filter");
       return res.status(400).json({ message: "DELETE without WHERE is not allowed" });
     }
+
+    const ownership = ownershipClause(table, req, values);
+    if (ownership && "forbidden" in ownership) {
+      logDiag(req, table, "rejected:ownership_forbidden");
+      return res.status(403).json({ message: "You do not have access to this data" });
+    }
+    if (ownership) {
+      whereClause = `${whereClause} AND ${ownership.clause}`;
+    }
+
     await pool.query(`DELETE FROM "${table}" ${whereClause}`, values);
     return res.status(204).send();
   } catch (err: any) {
