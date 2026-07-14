@@ -1,0 +1,32 @@
+- [Restoring after an incomplete Replit pnpm-workspace auto-migration](incomplete-migration-restore.md) — how to detect and undo a partial auto-migration that left the real app in `.migration-backup/`.
+- [Re-registering artifacts after restoring files from a backup](artifact-reregistration-after-restore.md) — force-register artifacts when valid `artifact.toml` files exist on disk but `listArtifacts()` doesn't see them.
+- [Admin route frontend/backend path mismatches](admin-route-frontend-backend-mismatches.md) — find/fix admin pages calling API paths that don't match the actual Express mount.
+- [Agent withdrawals schema](agent-withdrawals-schema.md) — correct field names in the `agentWithdrawals` table.
+- [Admin API camelCase vs frontend snake_case mismatch](api-camelcase-mismatch.md) — two parallel data-access layers (REST shim vs Drizzle routes) return different casing.
+- [apiFetch auto auth token](apifetch-auth-token.md) — apiClient.ts must attach the Supabase session token as Authorization header automatically.
+- [authMiddleware 500 fix + Supabase JWT hook setup](auth-middleware-500-fix.md) — why the admin dashboard button didn't appear, and the full fix chain.
+- [esbuild pg externalization](esbuild-pg-external.md) — `pg` must be external in esbuild AND a direct dep of the bundling package, or runtime throws ERR_MODULE_NOT_FOUND.
+- [Express 5 handler typing](express5-handler-typing.md) — how to type Express 5 route handlers to avoid TS errors on Vercel.
+- [Express 5 wildcard routes](express5-wildcard-routes.md) — unnamed wildcards (`*`) are rejected at startup under path-to-regexp v8.
+- [Generic REST proxy table-level auth is not row-level auth](generic-rest-proxy-auth-gaps.md) — `AUTH_TABLES` in `/rest/v1` only gates on authentication, not per-row ownership.
+- [Local DB + Supabase Auth hybrid dev setup](local-db-proxy-setup.md) — how dev mode routes data to local Postgres while keeping Supabase for auth.
+- [Masterdata route error handling](masterdata-error-handling.md) — error handling pattern for `/api/admin/masterdata/*` POST/PATCH/DELETE.
+- [pnpm workspace test setup](monorepo-vitest-setup.md) — add vitest/supertest per-package with `pnpm add -D` from that package's dir, not repo root.
+- [packages.category_id duplicate FK causes PGRST201](packages-duplicate-fk-pgrst201.md) — nested-select embeds fail with "more than one relationship was found"; fix pattern.
+- [Payment gateway architecture](payment-gateway-architecture.md) — how Midtrans/Xendit payment routes are structured in the Express API.
+- [pg.Pool unhandled error on Vercel](pg-pool-error-handler.md) — Pool needs an error handler or background connection failures crash serverless functions.
+- [Generic REST proxy unfiltered-write guard](rest-proxy-unfiltered-write-guard.md) — PATCH/DELETE on `/rest/v1/:table` must reject empty filters; privilege tables must never be reachable through it.
+- [Role resolution strategy](role-resolution-strategy.md) — Supabase is authoritative for user roles in authMiddleware.
+- [Seed file schema drift](seed-file-schema-drift.md) — `sql/seeds/supabase-seed.sql` can reference columns removed from the live Drizzle schema.
+- [SQL quota trigger logic for bookings/package_departures](sql-triggers-quota-logic.md) — business-logic triggers for quota management, auto-confirm, commission, notifications.
+- [Supabase backend auth on Node 20](supabase-backend-auth.md) — verify Supabase JWT on the Express API server without crashing on missing WebSocket.
+- [Supabase DATABASE_URL split-brain on Replit import](supabase-database-url-split-brain.md) — Drizzle/admin routes can silently point at an empty local DB after importing a Supabase-backed app into Replit.
+- [Supabase project-ref mismatch after re-import](supabase-project-ref-mismatch.md) — env vars can point at the wrong Supabase project after a Replit re-import; service role key always wiped.
+- [PostgREST upsert on non-PK unique column](supabase-rest-upsert.md) — correct upsert pattern via Supabase REST API when the unique column isn't the primary key.
+- [Supabase storage buckets missing on this project](supabase-storage-buckets-missing.md) — the live Supabase project can have zero storage buckets/RLS policies despite code assuming they exist.
+- [Stale tsc incremental cache hides real errors](tsc-incremental-cache-hides-errors.md) — `pnpm run typecheck` can report 0 errors due to stale `.tsbuildinfo` caches.
+- [Umroh App Stack](umroh-app-stack.md) — Vite+React+Supabase app migrated from Vercel; auth stays on Supabase Auth, not Replit Auth.
+- [Unregistered routes pattern](unregistered-routes-pattern.md) — some route files in `artifacts/api-server/src/routes/` aren't mounted in index.ts; IDOR/rate-limiter notes.
+- [Unsanitized dangerouslySetInnerHTML stored XSS](unsanitized-html-stored-xss.md) — any DB-stored HTML rendered via `dangerouslySetInnerHTML` must be sanitized.
+- [Vercel API tsconfig — express type double-loading conflict](vercel-api-tsconfig-typeroots.md) — root cause/fix for TS2339 errors compiling api-server on Vercel in a pnpm monorepo.
+- [Vercel DATABASE_URL not needed](vercel-supabase-http-proxy.md) — when DATABASE_URL isn't set on Vercel, DB routes must use the Supabase HTTP API, not a pg pool (pool timeouts kill serverless functions).
