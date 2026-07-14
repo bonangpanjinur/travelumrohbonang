@@ -94,6 +94,17 @@ CREATE TABLE IF NOT EXISTS airports (
   created_at TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS equipment (
+  id          TEXT PRIMARY KEY,
+  name        TEXT    NOT NULL,
+  category    TEXT,
+  description TEXT,
+  image_url   TEXT,
+  is_active   BOOLEAN NOT NULL DEFAULT true,
+  sort_order  INTEGER,
+  created_at  TIMESTAMPTZ
+);
+
 CREATE TABLE IF NOT EXISTS branches (
   id            TEXT PRIMARY KEY,
   name          TEXT    NOT NULL,
@@ -1163,6 +1174,7 @@ ALTER TABLE hotels                    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE airlines                  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE airports                  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE muthawifs                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE equipment                 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE branches                  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE currencies                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE packages                  ENABLE ROW LEVEL SECURITY;
@@ -1274,6 +1286,7 @@ DROP POLICY IF EXISTS hotels_public_read ON hotels;     DROP POLICY IF EXISTS ho
 DROP POLICY IF EXISTS airlines_public_read ON airlines; DROP POLICY IF EXISTS airlines_admin_all ON airlines;
 DROP POLICY IF EXISTS airports_public_read ON airports; DROP POLICY IF EXISTS airports_admin_all ON airports;
 DROP POLICY IF EXISTS muthawifs_public_read ON muthawifs; DROP POLICY IF EXISTS muthawifs_admin_all ON muthawifs;
+DROP POLICY IF EXISTS equipment_public_read ON equipment; DROP POLICY IF EXISTS equipment_admin_all ON equipment;
 DROP POLICY IF EXISTS branches_public_read ON branches; DROP POLICY IF EXISTS branches_admin_all ON branches;
 DROP POLICY IF EXISTS currencies_public_read ON currencies; DROP POLICY IF EXISTS currencies_admin_all ON currencies;
 
@@ -1285,6 +1298,8 @@ CREATE POLICY airports_public_read   ON airports   FOR SELECT TO anon, authentic
 CREATE POLICY airports_admin_all     ON airports   FOR ALL    TO authenticated        USING (is_admin()) WITH CHECK (is_admin());
 CREATE POLICY muthawifs_public_read  ON muthawifs  FOR SELECT TO anon, authenticated USING (true);
 CREATE POLICY muthawifs_admin_all    ON muthawifs  FOR ALL    TO authenticated        USING (is_admin()) WITH CHECK (is_admin());
+CREATE POLICY equipment_public_read  ON equipment  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY equipment_admin_all    ON equipment  FOR ALL    TO authenticated        USING (is_admin()) WITH CHECK (is_admin());
 CREATE POLICY branches_public_read   ON branches   FOR SELECT TO anon, authenticated USING (true);
 CREATE POLICY branches_admin_all     ON branches   FOR ALL    TO authenticated        USING (is_admin()) WITH CHECK (is_admin());
 CREATE POLICY currencies_public_read ON currencies FOR SELECT TO anon, authenticated USING (true);

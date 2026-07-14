@@ -45,6 +45,7 @@ import {
   Megaphone,
   Database,
   SlidersHorizontal,
+  Backpack,
   type LucideIcon
 
 } from "lucide-react";
@@ -168,6 +169,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Cabang", labelKey: "menu.branches", href: "/admin/branches", icon: Building2, roles: [...SUPER_ADMIN_ADMIN, "branch_manager"] },
       { label: "Agen", labelKey: "menu.agents", href: "/admin/agents", icon: Briefcase, roles: SUPER_ADMIN_ADMIN },
       { label: "Muthawif", labelKey: "menu.muthawifs", href: "/admin/muthawifs", icon: User, roles: SUPER_ADMIN_ADMIN },
+      { label: "Perlengkapan", labelKey: "menu.equipment", href: "/admin/equipment", icon: Backpack, roles: SUPER_ADMIN_ADMIN },
     ],
   },
   {

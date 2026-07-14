@@ -90,6 +90,17 @@ export const branches = pgTable("branches", {
   uniqueIndex("uq_branches_slug").on(t.slug),
 ]);
 
+export const equipment = pgTable("equipment", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  category: text("category"),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order"),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+});
+
 export const currencies = pgTable("currencies", {
   id: text("id").primaryKey(),
   code: text("code").notNull(),

@@ -7,6 +7,7 @@ import {
   muthawifs,
   packageCategories,
   packageHotels,
+  equipment,
   eq,
   asc,
 } from "@workspace/db";
@@ -291,6 +292,59 @@ router.delete("/categories/:id", async (req, res) => {
     res.json({ message: "Category deleted" });
   } catch (err) {
     dbError(res, "category", "delete", err);
+  }
+});
+
+// Equipment (Perlengkapan)
+router.get("/equipment", async (_req, res) => {
+  try {
+    const data = await db.select().from(equipment).orderBy(asc(equipment.sortOrder), asc(equipment.name));
+    res.json({ data, total: data.length });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch equipment" });
+  }
+});
+
+router.post("/equipment", async (req, res) => {
+  if (!req.body?.name?.trim()) {
+    res.status(400).json({ error: "name is required" });
+    return;
+  }
+  try {
+    const [created] = await db
+      .insert(equipment)
+      .values({
+        id: crypto.randomUUID(),
+        ...req.body,
+      })
+      .returning();
+    res.status(201).json(created);
+  } catch (err) {
+    dbError(res, "equipment", "create", err);
+  }
+});
+
+router.patch("/equipment/:id", async (req, res) => {
+  try {
+    const [updated] = await db
+      .update(equipment)
+      .set(req.body)
+      .where(eq(equipment.id, req.params.id))
+      .returning();
+    if (!updated) return res.status(404).json({ error: "Equipment not found" });
+    res.json(updated);
+  } catch (err) {
+    dbError(res, "equipment", "update", err);
+  }
+});
+
+router.delete("/equipment/:id", async (req, res) => {
+  try {
+    const [deleted] = await db.delete(equipment).where(eq(equipment.id, req.params.id)).returning();
+    if (!deleted) return res.status(404).json({ error: "Equipment not found" });
+    res.json({ message: "Equipment deleted" });
+  } catch (err) {
+    dbError(res, "equipment", "delete", err);
   }
 });
 

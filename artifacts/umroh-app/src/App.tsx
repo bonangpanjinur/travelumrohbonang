@@ -48,6 +48,7 @@ import AdminNotificationsPage from "./features/admin/pages/AdminNotifications";
 import AdminPages from "./features/admin/pages/Pages";
 import AdminHotels from "./features/admin/pages/Hotels";
 import AdminAirlines from "./features/admin/pages/Airlines";
+import AdminEquipment from "./features/admin/pages/Equipment";
 import AdminAirports from "./features/admin/pages/Airports";
 import AdminBranches from "./features/admin/pages/Branches";
 import AdminGallery from "./features/admin/pages/Gallery";
@@ -186,6 +187,7 @@ const AppContent = () => {
           <Route path="muthawifs" element={<AdminMuthawifs />} />
           <Route path="hotels" element={<AdminHotels />} />
           <Route path="airlines" element={<AdminAirlines />} />
+          <Route path="equipment" element={<AdminEquipment />} />
           <Route path="airports" element={<AdminAirports />} />
           <Route path="gallery" element={<AdminGallery />} />
           <Route path="testimonials" element={<AdminTestimonials />} />
