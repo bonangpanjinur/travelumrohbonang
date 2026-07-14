@@ -47,8 +47,3 @@ Thumbs.db
 # Replit
 .cache/
 .local/
-
-# Local environment — jangan pernah di-commit
-.env
-.env.local
-.env.*.local
