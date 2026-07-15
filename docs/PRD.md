@@ -1,8 +1,8 @@
 # Product Requirements Document (PRD)
 ## UmrohPlus — Platform Manajemen Perjalanan Umroh
 
-**Versi:** 1.1 (digabung dengan bekas `PRD_OPERASIONAL.md`)  
-**Tanggal:** Juli 2026  
+**Versi:** 1.2 (sinkron dengan audit `docs/FEATURE_STATUS.md` per 2026-07-10)  
+**Tanggal:** 15 Juli 2026  
 **Status:** Draft Aktif  
 **Pemilik Produk:** Tim UmrohPlus
 
@@ -45,7 +45,7 @@ Saat ini platform sudah memiliki fondasi teknis yang solid (React 19, TypeScript
 | Upload bukti pembayaran | ✅ Aktif | Manual proof upload |
 | Cicilan | ⚠️ Parsial | Kalkulator & tabel `installment_schedules` ada, alur end-to-end belum jalan — lihat [F-05](#f-05--installment-system-end-to-end) |
 | E-Tiket | ✅ Aktif | Bisa dicetak |
-| Permintaan refund | ✅ Aktif | Form pengajuan refund |
+| Permintaan refund | ⚠️ Parsial | Form pengajuan ada, tapi approval flow & status tracking backend belum lengkap — lihat `AdminRefunds.tsx` |
 | Wishlist | ✅ Aktif | Simpan paket favorit |
 | Profil & dokumen jemaah | ✅ Aktif | Passport, visa |
 | Blog & galeri | ✅ Aktif | CMS-driven |
@@ -73,10 +73,18 @@ Saat ini platform sudah memiliki fondasi teknis yang solid (React 19, TypeScript
 #### Backend API
 - Auth: Supabase Auth (JWT) — lihat catatan di §2.2
 - Paket, booking, pembayaran, profil, notifikasi, wishlist
-- Payment gateway Midtrans/Xendit: create transaction + webhook → update status booking (✅ Aktif — lihat [F-01](#f-01--payment-status-sync-webhook--booking))
+- Payment gateway Midtrans/Xendit: kode create transaction + webhook → update status booking sudah aktif (✅ Selesai — lihat [F-01](#f-01--payment-status-sync-webhook--booking)), **tapi transaksi live masih ❌ Broken** karena env `MIDTRANS_SERVER_KEY`/`MIDTRANS_CLIENT_KEY` atau `XENDIT_API_KEY` belum diisi di environment — lihat §10.1
 - Verifikasi pembayaran manual oleh admin dengan audit trail (✅ Aktif — lihat [F-02](#f-02--admin-payment-verification-endpoint))
 - Rekening bank transfer manual dikonfigurasi dari Settings, bukan hardcode (✅ Aktif — lihat [F-09](#f-09--konfigurasi-rekening-bank-dari-settings))
 - Admin: paket, booking, user, departure, pembayaran, dokumen, CRM, system health
+
+#### Gap Tambahan dari Audit Kode (`docs/FEATURE_STATUS.md`)
+| Fitur | Status | Keterangan |
+|-------|--------|------------|
+| Analytics AI (admin) | 🔲 Unused | Komponen `AnalyticsAI.tsx` ada di UI tapi tidak terhubung ke model AI apapun |
+| Contracts (admin) | ⚠️ Parsial | Permission check ada, CRUD kontrak belum diimplementasi |
+| Agent Withdrawals | ⚠️ Parsial | UI penarikan komisi ada, approval flow belum jalan |
+| Kelola Biaya / Costs (admin) | ⚠️ Parsial | Belum diverifikasi penuh end-to-end |
 
 ### 2.2 Stack Teknologi
 - **Frontend:** React 19, Vite, Tailwind CSS 4, shadcn/ui, TanStack Query, Framer Motion
@@ -604,7 +612,7 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 |------------|--------|--------|
 | Supabase PostgreSQL | Database utama | ✅ Aktif |
 | Vercel | Deployment API & frontend | ✅ Aktif |
-| Midtrans / Xendit | Payment gateway | ✅ Aktif |
+| Midtrans / Xendit | Payment gateway | ❌ Broken — kode webhook aktif, tapi `MIDTRANS_SERVER_KEY`/`MIDTRANS_CLIENT_KEY`/`XENDIT_API_KEY` belum diisi |
 | Resend | Email transaksional (F-03) | ⏳ Belum integrasi |
 | Fonnte | WhatsApp API (F-04) | ⏳ Belum integrasi |
 | Cloudinary / Supabase Storage | Upload foto jemaah & paket | ⏳ Evaluasi |
@@ -653,4 +661,4 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 
 *Dokumen ini adalah living document — diperbarui setiap sprint planning dan quarterly review.*  
 *Bekas `docs/PRD_OPERASIONAL.md` sudah digabung ke dalam §7.0, §8.3, dan §8.4 di atas agar tidak ada dua PRD terpisah.*  
-*Terakhir diperbarui: Juli 2026*
+*Terakhir diperbarui: 15 Juli 2026 — disinkronkan dengan audit kode di `docs/FEATURE_STATUS.md` (refund, payment gateway, analytics AI, contracts, agent withdrawals).*
