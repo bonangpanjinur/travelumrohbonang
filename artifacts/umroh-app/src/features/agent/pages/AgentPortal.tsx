@@ -128,7 +128,7 @@ const AgentPortal = () => {
       branch_id: form.branch_id === "__none__" ? null : form.branch_id,
     });
     if (!parsed.success) {
-      toast.error(parsed.error.errors[0]?.message || "Input tidak valid");
+      toast.error(parsed.error.issues[0]?.message || "Input tidak valid");
       return;
     }
     setSaving(true);

@@ -13,6 +13,7 @@ import {
   eq,
   and,
   desc,
+  sql,
 } from "@workspace/db";
 import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../lib/supabaseEnv";
 
@@ -377,11 +378,12 @@ router.get("/reviews/:packageId", async (req: Request, res: Response) => {
         userName: profiles.name,
       })
       .from(packageReviews)
-      .leftJoin(profiles, eq(packageReviews.userId, profiles.id))
+      .leftJoin(profiles, sql`${profiles.id}::text = ${packageReviews.userId}`)
       .where(and(eq(packageReviews.packageId, String(req.params.packageId)), eq(packageReviews.isApproved, true)))
       .orderBy(desc(packageReviews.createdAt));
     res.json({ data });
-  } catch {
+  } catch (err) {
+    console.error("[packages] failed to fetch reviews:", err);
     res.status(500).json({ error: "Failed to fetch reviews" });
   }
 });

@@ -9,7 +9,7 @@ export const pilgrimSchema = z.object({
     .max(100, "Nama maksimal 100 karakter")
     .regex(/^[a-zA-Z\s'.-]+$/, "Nama hanya boleh berisi huruf, spasi, dan tanda baca"),
   gender: z.enum(["male", "female"], {
-    required_error: "Jenis kelamin wajib dipilih",
+    error: "Jenis kelamin wajib dipilih",
   }),
   phone: z
     .string()
@@ -80,7 +80,7 @@ export function validatePilgrim(data: unknown): { valid: boolean; errors: Record
   }
   
   const errors: Record<string, string> = {};
-  result.error.errors.forEach((err) => {
+  result.error.issues.forEach((err) => {
     const path = err.path.join(".");
     errors[path] = err.message;
   });
@@ -96,7 +96,7 @@ export function validateBooking(data: unknown): { valid: boolean; errors: string
   
   return { 
     valid: false, 
-    errors: result.error.errors.map((e) => e.message) 
+    errors: result.error.issues.map((e) => e.message) 
   };
 }
 
