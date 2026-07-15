@@ -15,12 +15,7 @@ async function buildAll() {
   await rm(distDir, { recursive: true, force: true });
 
   await esbuild({
-    entryPoints: [
-      path.resolve(artifactDir, "src/index.ts"),
-      // app.ts is built as a separate entry so Vercel serverless functions
-      // can import the Express app without calling listen().
-      path.resolve(artifactDir, "src/app.ts"),
-    ],
+    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
     platform: "node",
     bundle: true,
     format: "esm",
@@ -51,7 +46,6 @@ async function buildAll() {
       "dtrace-provider",
       "isolated-vm",
       "lightningcss",
-      "pg",
       "pg-native",
       "oracledb",
       "mongodb-client-encryption",
@@ -126,22 +120,7 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
   });
 }
 
-async function writeTypeDefs(distDir) {
-  const { writeFile } = await import("node:fs/promises");
-  // Type declaration for the Vercel serverless entry — app.mjs exports an Express app.
-  await writeFile(
-    path.join(distDir, "app.d.mts"),
-    [
-      `import type { Express } from 'express';`,
-      `declare const app: Express;`,
-      `export default app;`,
-    ].join("\n") + "\n",
-  );
-}
-
-buildAll()
-  .then(() => writeTypeDefs(path.resolve(artifactDir, "dist")))
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+buildAll().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
