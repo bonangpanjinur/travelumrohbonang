@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 ## UmrohPlus — Platform Manajemen Perjalanan Umroh
 
-**Versi:** 1.3 (dirapikan & disinkronkan dengan audit `docs/FEATURE_STATUS.md` per 2026-07-10)  
+**Versi:** 1.4 (audit codebase langsung per 2026-07-15 — status F-03 s/d F-08 diperbarui)  
 **Tanggal:** 15 Juli 2026  
 **Status:** Draft Aktif  
 **Pemilik Produk:** Tim UmrohPlus
@@ -43,7 +43,7 @@ Saat ini platform sudah memiliki fondasi teknis yang solid (React 19, TypeScript
 | Detail paket | ✅ Aktif | Itinerary, hotel, maskapai |
 | Pemesanan multi-step | ✅ Aktif | Pilih kamar → data pilgrim → konfirmasi |
 | Upload bukti pembayaran | ✅ Aktif | Manual proof upload |
-| Cicilan | ⚠️ Parsial | Kalkulator & tabel `installment_schedules` ada, alur end-to-end belum jalan — lihat [F-05](#f-05--installment-system-end-to-end) |
+| Cicilan | ⚠️ Parsial | Kalkulator ada di UI, tapi tabel `installment_schedules` **belum ada di Drizzle schema** — alur end-to-end belum jalan sama sekali — lihat [F-05](#f-05--installment-system-end-to-end) |
 | E-Tiket | ✅ Aktif | Bisa dicetak |
 | Permintaan refund | ⚠️ Parsial | Form pengajuan ada, tapi approval flow & status tracking backend belum lengkap — lihat `AdminRefunds.tsx` |
 | Wishlist | ✅ Aktif | Simpan paket favorit |
@@ -283,7 +283,7 @@ Webhook Midtrans/Xendit meneruskan status pembayaran ke `bookings.status` secara
 `PATCH /api/admin/payments/verify/:id` dan `.../reject/:id` (`artifacts/api-server/src/routes/admin/payments.ts`) sudah tersedia dengan audit trail (`verifiedBy`/`verifiedAt`).
 
 #### F-03 · Email Notification System — ✅ Selesai (kode), ⏳ Butuh kredensial
-**Status terkini (diverifikasi 2026-07-15):** Sudah terimplementasi penuh di kode — paket `lib/email` (client, service, 5 template) sudah ada dan sudah dipanggil dari `bookings.ts`, `admin/payments.ts`, `admin/documents.ts`, `payment-gateway-webhooks.ts`, dan `paymentSync.ts` lewat dispatcher `emailNotifications.ts`. Yang belum ada hanya kredensial (`RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`) — tanpa itu, pengiriman email di-skip secara graceful (tidak crash, hanya log).
+**Status terkini (diverifikasi 2026-07-15):** Sudah terimplementasi di kode — paket `lib/email` (client, service, **4 dari 5 template**) sudah ada dan sudah dipanggil dari `bookings.ts`, `admin/payments.ts`, `admin/documents.ts`, `payment-gateway-webhooks.ts`, dan `paymentSync.ts` lewat dispatcher `emailNotifications.ts`. Retry logic (MAX_ATTEMPTS=2, exponential backoff) sudah ada. Yang belum ada: template `installment_reminder`, unsubscribe link, dan admin preview template. Kredensial (`RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`) belum diisi — tanpa itu, pengiriman email di-skip secara graceful (tidak crash, hanya log).
 
 **Provider yang dipilih:** Resend (free tier 3.000 email/bulan, SDK TypeScript native, tidak perlu SMTP).
 
@@ -293,9 +293,10 @@ Webhook Midtrans/Xendit meneruskan status pembayaran ke `bookings.status` secara
 - Jamaah dapat reminder H-7 sebelum keberangkatan.
 
 **Acceptance criteria:**
-- [ ] 5 template email wajib (lihat tabel di bawah)
+- [x] 4 template email sudah ada: `booking_created`, `payment_received`, `documents_complete`, `departure_reminder`
+- [ ] Template ke-5: `installment_reminder` (belum dibuat — menunggu F-05)
 - [ ] Email terkirim dalam 30 detik setelah event terjadi
-- [ ] Jika Resend error, event tidak hilang (retry / at-least-once)
+- [x] Jika Resend error, event tidak hilang — retry MAX_ATTEMPTS=2 dengan exponential backoff sudah ada
 - [ ] Admin bisa preview template dari Settings
 - [ ] Email punya unsubscribe link (CAN-SPAM compliance)
 
@@ -335,10 +336,10 @@ artifacts/api-server/src/lib/notifications/emailNotifications.ts  (dispatch per 
 
 **Acceptance criteria:**
 - [ ] WA terkirim dalam 60 detik setelah event
-- [ ] Template pesan disimpan di `site_settings` (bisa diubah admin)
-- [ ] Nomor tidak valid → dicatat ke log, tidak crash
+- [ ] Template pesan disimpan di `site_settings` (bisa diubah admin) — ⚠️ saat ini masih hardcoded di `templates.ts`
+- [x] Nomor tidak valid → dicatat ke log, tidak crash (normalisasi nomor + retry MAX_ATTEMPTS=2 sudah ada)
 - [ ] Admin bisa kirim WA manual dari halaman detail booking
-- [ ] Admin bisa kirim WA blast per keberangkatan
+- [x] Admin bisa kirim WA blast per keberangkatan — endpoint `POST /api/admin/chats/blast/:departureId` sudah ada
 
 **Arsitektur:**
 ```
@@ -364,40 +365,39 @@ artifacts/api-server/src/lib/notifications/waNotifications.ts
 
 **Reminder cron:** tiap hari 08:00 WIB, cari `due_date = CURRENT_DATE + 7 AND status='pending'`, kirim WA+email.
 
-#### F-06 · PDF Export — ⏳ Belum
-**Problem:** Hanya ada `exportToCsv` client-side yang kasar; butuh Surat Konfirmasi Booking, Manifest Jamaah, dan Laporan Keuangan resmi dalam PDF/Excel.
+#### F-06 · PDF Export — ⚠️ Parsial
+**Status terkini (diverifikasi 2026-07-15):** Dua dari tiga deliverable sudah ada di `artifacts/api-server/src/lib/pdf/` — `bookingConfirmation.ts` dan `manifest.ts` sudah terimplementasi server-side. Yang belum ada: Excel laporan komisi (`exceljs`) dan tombol download dari UI jemaah belum terhubung penuh.
 
 **Library:** `@react-pdf/renderer` (PDF, server-side), `exceljs` (Excel).
 
 **Acceptance criteria:**
-- [ ] PDF konfirmasi booking (kop surat, data jamaah, paket, harga, status pembayaran)
-- [ ] PDF manifest per keberangkatan (tabel jamaah + foto + QR code)
-- [ ] Excel laporan komisi agen (per periode/agen, subtotal)
-- [ ] Semua digenerate server-side untuk keamanan data
+- [x] PDF konfirmasi booking — `bookingConfirmation.ts` sudah ada (`GET /api/bookings/:id/confirmation.pdf`)
+- [x] PDF manifest per keberangkatan — `manifest.ts` sudah ada (`GET /api/admin/departures/:id/manifest.pdf`)
+- [ ] Excel laporan komisi agen (per periode/agen, subtotal) — `exceljs` belum diimplementasi
+- [x] Semua digenerate server-side untuk keamanan data
 
-**Endpoint baru:** `GET /api/bookings/:id/confirmation.pdf`, `GET /api/admin/departures/:id/manifest.pdf`, `GET /api/admin/reports/commissions.xlsx`, di bawah `artifacts/api-server/src/lib/pdf/`.
-
-#### F-07 · User-Facing Loyalty System — ⏳ Belum
-**Problem:** Admin sudah bisa kelola poin jamaah manual, tapi jamaah tidak bisa melihat poin mereka sendiri.
+#### F-07 · User-Facing Loyalty System — ⚠️ Parsial
+**Status terkini (diverifikasi 2026-07-15):** UI sudah ada — `LoyaltyWidget.tsx` di dashboard dan halaman `/loyalty` (`Loyalty.tsx`) sudah terimplementasi. Yang belum ada: logika auto-award poin saat booking completed dan opsi "Gunakan Poin" saat checkout.
 
 **Acceptance criteria:**
-- [ ] Widget "Poin Saya" di `/dashboard` user
-- [ ] Halaman `/loyalty` dengan riwayat poin
+- [x] Widget "Poin Saya" di `/dashboard` user — `LoyaltyWidget.tsx` sudah ada
+- [x] Halaman `/loyalty` dengan riwayat poin — `Loyalty.tsx` sudah ada
 - [ ] Poin otomatis bertambah saat booking `status → completed` (1 poin / Rp 100.000)
 - [ ] Opsi "Gunakan Poin" untuk diskon saat booking (min. tukar 100 poin = Rp 10.000)
 
 **Arsitektur:** trigger DB atau event API saat booking selesai → `fn_award_loyalty_points(booking_id)` → hitung dari `total_harga` → insert `loyalty_points` → upsert `loyalty_balances`.
 
-#### F-08 · Manasik — Sesi & Absensi — ⏳ Belum
-**Problem:** Materi manasik (PDF/video) sudah bisa diupload dan diakses, tapi belum ada penjadwalan sesi tatap muka, absensi, atau undangan otomatis.
+#### F-08 · Manasik — Sesi & Absensi — ⚠️ Parsial
+**Status terkini (diverifikasi 2026-07-15):** Manajemen **materi** manasik (upload PDF/video, CMS public GET) sudah ada di `admin/content.ts` dan `cms.ts`. Yang belum ada: penjadwalan sesi tatap muka, absensi, dan notifikasi otomatis.
 
 **Acceptance criteria:**
+- [x] Upload dan akses materi manasik (PDF/video) — sudah ada via `admin/content.ts`
 - [ ] CRUD jadwal sesi manasik per departure (tanggal, waktu, lokasi, kapasitas)
 - [ ] Daftar hadir per sesi (centang manual atau scan QR dari manifest)
 - [ ] Notifikasi WA otomatis H-1 sebelum sesi
 - [ ] Jamaah lihat jadwal manasik di `/my-bookings/:id`; admin lihat rekap kehadiran
 
-**Schema baru:** tabel `manasik_sessions` (departure_id, title, session_date, start_time, end_time, location, notes) dan `manasik_attendances` (session_id, booking_id, pilgrim_id, attended, attended_at, notes).
+**Schema baru (masih dibutuhkan):** tabel `manasik_sessions` (departure_id, title, session_date, start_time, end_time, location, notes) dan `manasik_attendances` (session_id, booking_id, pilgrim_id, attended, attended_at, notes).
 
 #### F-09 · Konfigurasi Rekening Bank dari Settings — ✅ Selesai
 Rekening bank transfer manual sekarang disimpan di `site_settings` (key `bank_accounts`) dan diatur lewat `GET`/`PUT /api/misc/payment-settings` (`artifacts/api-server/src/routes/misc.ts`) — admin bisa ubah tanpa deploy ulang, mendukung banyak rekening sekaligus.
@@ -423,8 +423,8 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 - [ ] **Sertifikat keberangkatan:** Generate otomatis setelah perjalanan selesai
 
 **7.1.3 Notifikasi & Komunikasi**
-- [ ] **WhatsApp integration (Fonnte):** Notifikasi booking, pembayaran, keberangkatan via WA — lihat [F-04](#f-04--whatsapp-automation-fonnte)
-- [ ] **Email transaksional:** Konfirmasi booking, payment receipt, reminder dokumen — lihat [F-03](#f-03--email-notification-system)
+- [x] **WhatsApp integration (Fonnte):** Kode selesai — tinggal isi `FONNTE_API_TOKEN` & `WA_SENDER_NUMBER` — lihat [F-04](#f-04--whatsapp-automation-fonnte)
+- [x] **Email transaksional:** Kode selesai (4/5 template) — tinggal isi `RESEND_API_KEY` — lihat [F-03](#f-03--email-notification-system)
 - [ ] **Push notification:** Via PWA untuk update status booking real-time
 - [ ] **Notification center:** Riwayat semua notifikasi dengan filter (baca/belum baca)
 
@@ -498,11 +498,11 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 | UI/UX | Fase 1 — Audit & Perbaikan Dasar (§6.2) | ⏳ Belum Selesai | **P0** | Mobile UX, performa, dan aksesibilitas dasar berdampak langsung ke seluruh basis pengguna (45+ tahun, mayoritas mobile) |
 | Bahasa | Fase 1 — Penyempurnaan Bilingual ID/EN (§5.2) | ⏳ Belum Selesai | **P1** | Kualitas produk saat ini, tapi tidak seblocking transaksi/mobile UX |
 | Fitur | F-05 Cicilan End-to-End | ⏳ Belum | **P1** | Revenue driver untuk paket mahal, banyak jemaah pakai cicilan |
-| Fitur | F-06 PDF Export | ⏳ Belum | **P1** | Kebutuhan operasional (invoice, manifest) yang sering diminta admin |
+| Fitur | F-06 PDF Export | ⚠️ Parsial | **P1** | PDF booking & manifest sudah ada; Excel laporan komisi belum |
 | Fitur | Manajemen Dokumen (checklist, validasi, reminder) (§7.1.2) | ⏳ Belum | **P1** | Wajib untuk kepatuhan syarat keberangkatan (paspor, visa) |
 | Fitur | Dashboard Agen Lengkap (§7.2.1) | ⏳ Belum | **P1** | Mendorong pertumbuhan booking lewat agen yang sudah ada |
-| Fitur | F-07 Loyalty User-Facing | ⏳ Belum | **P2** | Nice-to-have untuk retensi, tidak mendesak |
-| Fitur | F-08 Manasik — Sesi & Absensi | ⏳ Belum | **P2** | Operasional pendukung, bukan jalur transaksi utama |
+| Fitur | F-07 Loyalty User-Facing | ⚠️ Parsial | **P2** | UI (widget + halaman) sudah ada; auto-award & redeem saat checkout belum |
+| Fitur | F-08 Manasik — Sesi & Absensi | ⚠️ Parsial | **P2** | Materi upload sudah ada; sesi, absensi, dan notifikasi H-1 belum |
 | UI/UX | Fase 2 — Peningkatan Konversi (§6.3) | ⏳ Belum Dimulai | **P2** | Baru relevan setelah fondasi (Fase 1 UI/UX & fitur) selesai |
 | Fitur | Booking Grup & Room Assignment (§7.2.2) | ⏳ Belum | **P2** | Effort tinggi, dibutuhkan untuk segmen grup/keluarga |
 | Fitur | CRM Pipeline & Leads (§7.2.3) | ⏳ Belum | **P2** | Mendukung pertumbuhan, tapi CRM dasar (data jemaah) sudah ada |
@@ -523,12 +523,12 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 | WhatsApp notifikasi (F-04) | 🔴 Tinggi | 🟢 Rendah | P0 | ✅ Kode selesai — butuh `FONNTE_API_TOKEN` |
 | Mobile UX audit & fix | 🔴 Tinggi | 🟡 Sedang | P0 | ⏳ Belum |
 | Cicilan end-to-end (F-05) | 🔴 Tinggi | 🟡 Sedang | P1 | ⏳ Belum |
-| PDF export (F-06) | 🟡 Sedang | 🟢 Rendah | P1 | ⏳ Belum |
+| PDF export (F-06) | 🟡 Sedang | 🟢 Rendah | P1 | ⚠️ Parsial — PDF booking & manifest selesai; Excel komisi belum |
 | Bilingual ID/EN sempurna | 🟡 Sedang | 🟢 Rendah | P1 | ⏳ Belum |
 | Checklist & upload dokumen | 🔴 Tinggi | 🟡 Sedang | P1 | ⏳ Belum |
 | Dashboard agen lengkap | 🟡 Sedang | 🟡 Sedang | P1 | ⏳ Belum |
-| Loyalty user-facing (F-07) | 🟡 Sedang | 🟢 Rendah | P1 | ⏳ Belum |
-| Manasik sesi & absensi (F-08) | 🟡 Sedang | 🟡 Sedang | P1 | ⏳ Belum |
+| Loyalty user-facing (F-07) | 🟡 Sedang | 🟢 Rendah | P2 | ⚠️ Parsial — UI sudah ada; auto-award & redeem belum |
+| Manasik sesi & absensi (F-08) | 🟡 Sedang | 🟡 Sedang | P2 | ⚠️ Parsial — materi upload ada; sesi & absensi belum |
 | Booking grup | 🟡 Sedang | 🔴 Tinggi | P2 | ⏳ Belum |
 | Bahasa Arab + RTL | 🟡 Sedang | 🔴 Tinggi | P2 | ⏳ Belum |
 | CRM pipeline | 🟡 Sedang | 🟡 Sedang | P2 | ⏳ Belum |
@@ -574,8 +574,8 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 |---|---|---|---|
 | Sprint 1 — Stabilitasi Transaksi | Kritis: tanpa ini transaksi tidak aman | F-01, F-02, F-09 | ✅ Selesai |
 | Sprint 2 — Komunikasi Dasar | Tinggi: standar minimum bisnis travel | F-03, F-04 | ✅ Kode selesai — tinggal isi kredensial provider |
-| Sprint 3 — Cicilan & Dokumen | Tinggi: revenue driver paket mahal | F-05, F-06 | ⏳ Belum |
-| Sprint 4 — Engagement & Operasional | Sedang: kualitas layanan | F-07, F-08 | ⏳ Belum |
+| Sprint 3 — Cicilan & Dokumen | Tinggi: revenue driver paket mahal | F-05 (belum), F-06 (parsial — Excel komisi saja yang sisa) | ⚠️ Parsial |
+| Sprint 4 — Engagement & Operasional | Sedang: kualitas layanan | F-07 (parsial — auto-award & redeem belum), F-08 (parsial — sesi & absensi belum) | ⚠️ Parsial |
 
 ### 8.5 Library & Environment Variables Baru (untuk F-03–F-08)
 
@@ -685,4 +685,4 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 
 *Dokumen ini adalah living document — diperbarui setiap sprint planning dan quarterly review.*  
 *Bekas `docs/PRD_OPERASIONAL.md` sudah digabung ke dalam §7.0, §8.3, dan §8.4 di atas agar tidak ada dua PRD terpisah.*  
-*Terakhir diperbarui: 15 Juli 2026 — disinkronkan dengan audit kode di `docs/FEATURE_STATUS.md` (refund, payment gateway, analytics AI, contracts, agent withdrawals).*
+*Terakhir diperbarui: 15 Juli 2026 — v1.4: audit codebase langsung (bukan asumsi). F-06 diperbarui ke ⚠️ Parsial (PDF booking & manifest ada, Excel komisi belum). F-07 diperbarui ke ⚠️ Parsial (UI widget & halaman ada, auto-award & redeem belum). F-08 diperbarui ke ⚠️ Parsial (materi upload ada, sesi & absensi belum). F-03 diperbarui: 4/5 template ada, retry ada, installment_reminder & unsubscribe belum. F-04 diperbarui: blast endpoint ada, template masih hardcoded (belum di site_settings). installment_schedules dikonfirmasi belum ada di Drizzle schema.*
