@@ -25,6 +25,7 @@ export const CreateBookingRequest = z.object({
   picType: z.string().optional(),
   picId: z.string().optional(),
   agentId: z.string().optional(),
+  redeemPoints: z.number().int().positive().optional(),
 });
 
 export const BookingWithDetailsSchema = BookingSchema.extend({

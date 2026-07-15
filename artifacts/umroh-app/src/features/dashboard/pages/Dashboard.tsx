@@ -15,6 +15,7 @@ import LoadingSpinner from "@/shared/components/ui/loading-spinner";
 import AdminBanner from "@/features/dashboard/components/AdminBanner";
 import RecentNotifications from "@/features/dashboard/components/RecentNotifications";
 import TestimonialForm from "@/features/dashboard/components/TestimonialForm";
+import LoyaltyWidget from "@/features/dashboard/components/LoyaltyWidget";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
@@ -393,6 +394,8 @@ const Dashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        <LoyaltyWidget />
 
         <RecentNotifications />
 

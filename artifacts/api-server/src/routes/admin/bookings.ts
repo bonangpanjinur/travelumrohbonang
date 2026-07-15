@@ -23,6 +23,7 @@ import {
 } from "@workspace/api-zod";
 import { validate } from "../../middlewares/validate";
 import { sendAdminError } from "../../lib/adminApiError";
+import { awardLoyaltyPointsForBooking } from "../../lib/loyalty";
 
 const router = Router();
 
@@ -276,6 +277,18 @@ router.patch(
       if (!updated) {
         res.status(404).json({ error: "Booking not found" });
         return;
+      }
+
+      // Auto-award loyalty points (1 point / Rp 100.000) the first time a
+      // booking transitions to "completed". Idempotent — safe on retries.
+      if (updated.status === "completed") {
+        awardLoyaltyPointsForBooking(
+          updated.id,
+          updated.userId,
+          updated.totalPrice,
+        ).catch((err) => {
+          console.error("[loyalty] Failed to auto-award points:", err);
+        });
       }
 
       res.json({ id: updated.id, status: updated.status, notes: updated.notes });

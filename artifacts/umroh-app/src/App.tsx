@@ -93,6 +93,7 @@ import AdminLeaderboard from "./features/admin/pages/Leaderboard";
 import AdminCurrencies from "./features/admin/pages/Currencies";
 import { CurrencyProvider } from "@/shared/hooks/useCurrency";
 import Wishlist from "./features/wishlist/pages/Wishlist";
+import Loyalty from "./features/loyalty/pages/Loyalty";
 import Compare from "./features/paket/pages/Compare";
 import AdminReviews from "./features/admin/pages/Reviews";
 import AdminLoyalty from "./features/admin/pages/Loyalty";
@@ -150,6 +151,7 @@ const AppContent = () => {
         <Route path="/booking/payment/:bookingId" element={<Payment />} />
         <Route path="/my-bookings" element={<MyBookings />} />
         <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/loyalty" element={<Loyalty />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/my-upgrades" element={<MyUpgrades />} />

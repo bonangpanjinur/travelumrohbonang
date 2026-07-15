@@ -15,6 +15,9 @@ import {
 } from "@workspace/db";
 import { emailNotifications } from "../lib/notifications/emailNotifications";
 import { waNotifications } from "../lib/notifications/waNotifications";
+import { redeemLoyaltyPointsForBooking } from "../lib/loyalty";
+import { generateBookingConfirmationPdf } from "../lib/pdf/bookingConfirmation";
+import { branches } from "@workspace/db";
 import {
   BookingListResponse,
   BookingWithDetailsSchema,
@@ -216,6 +219,62 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// --- PDF confirmation (F-06) — must come before generic /:id ---
+
+router.get("/:id/confirmation.pdf", async (req, res) => {
+  try {
+    if (!req.isAuthenticated()) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    const id = req.params.id as string;
+
+    const [row] = await db
+      .select({
+        bookingCode: bookings.bookingCode,
+        status: bookings.status,
+        totalPrice: bookings.totalPrice,
+        currency: bookings.currency,
+        paymentScheme: bookings.paymentScheme,
+        createdAt: bookings.createdAt,
+        packageTitle: packages.title,
+        departureDate: packageDepartures.departureDate,
+        returnDate: packageDepartures.returnDate,
+        branchName: branches.name,
+      })
+      .from(bookings)
+      .leftJoin(packages, eq(bookings.packageId, packages.id))
+      .leftJoin(packageDepartures, eq(bookings.departureId, packageDepartures.id))
+      .leftJoin(branches, eq(bookings.branchId, branches.id))
+      .where(and(eq(bookings.id, id), eq(bookings.userId, req.user.id)))
+      .limit(1);
+
+    if (!row) {
+      res.status(404).json({ error: "Booking not found" });
+      return;
+    }
+
+    const rooms = await db.select().from(bookingRooms).where(eq(bookingRooms.bookingId, id));
+    const pilgrims = await db.select().from(bookingPilgrims).where(eq(bookingPilgrims.bookingId, id));
+
+    const pdfBuffer = await generateBookingConfirmationPdf({
+      ...row,
+      rooms: rooms.map((r) => ({ roomType: r.roomType, quantity: r.quantity, subtotal: r.subtotal })),
+      pilgrims: pilgrims.map((p) => ({ name: p.name, gender: p.gender, nik: p.nik })),
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="konfirmasi-${row.bookingCode}.pdf"`,
+    );
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error("[bookings] Failed to generate confirmation PDF:", err);
+    res.status(500).json({ error: "Failed to generate confirmation PDF" });
+  }
+});
+
 router.post("/", validate(CreateBookingRequest), async (req, res) => {
   try {
     const {
@@ -228,6 +287,7 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
       picType,
       picId,
       agentId,
+      redeemPoints,
     } = req.body as CreateBookingInput;
 
     if (!req.isAuthenticated()) {
@@ -236,16 +296,35 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
     }
     const userId = req.user.id;
     const bookingCode = generateBookingCode();
+    const bookingId = crypto.randomUUID();
+
+    // Optional loyalty point redemption — discount applied before insert.
+    let finalPrice = totalPrice;
+    if (redeemPoints) {
+      try {
+        const { discount } = await redeemLoyaltyPointsForBooking(
+          userId,
+          redeemPoints,
+          bookingId,
+        );
+        finalPrice = Math.max(0, totalPrice - discount);
+      } catch (err) {
+        res.status(400).json({
+          error: err instanceof Error ? err.message : "Gagal menukar poin",
+        });
+        return;
+      }
+    }
 
     const [created] = await db
       .insert(bookings)
       .values({
-        id: crypto.randomUUID(),
+        id: bookingId,
         bookingCode,
         userId,
         packageId,
         departureId,
-        totalPrice,
+        totalPrice: finalPrice,
         currency,
         paymentScheme: paymentScheme ?? null,
         notes: notes ?? null,

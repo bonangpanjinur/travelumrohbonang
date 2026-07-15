@@ -13,6 +13,7 @@ import logsRouter from "./logs";
 import pilgrimDocumentsRouter from "./pilgrim-documents";
 import pilgrimsRouter from "./pilgrims";
 import notificationsRouter from "./notifications";
+import loyaltyRouter from "./loyalty";
 import wishlistsRouter from "./wishlists";
 import pilgrimTestimonialsRouter from "./pilgrim-testimonials";
 import paymentGatewayWebhooksRouter from "./payment-gateway-webhooks";
@@ -62,6 +63,8 @@ router.use("/pilgrim-documents", pilgrimDocumentsRouter);
 router.use("/pilgrims", strictLimiter, pilgrimsRouter);
 
 router.use("/notifications", strictLimiter, notificationsRouter);
+
+router.use("/loyalty", strictLimiter, loyaltyRouter);
 
 router.use("/wishlists", strictLimiter);
 router.post("/wishlists/toggle", writeLimiter);

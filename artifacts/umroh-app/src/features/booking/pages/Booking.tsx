@@ -88,6 +88,8 @@ const Booking = () => {
   const [picBranchId, setPicBranchId] = useState<string>("");
   const [selectedAgentType, setSelectedAgentType] = useState<string>("pusat"); // "pusat" or branch_id
   const [picAgentId, setPicAgentId] = useState<string>("");
+  const [myPoints, setMyPoints] = useState<number>(0);
+  const [redeemPointsInput, setRedeemPointsInput] = useState<string>("");
 
   useEffect(() => {
     if (authLoading) return;
@@ -168,6 +170,31 @@ const Booking = () => {
   const getTotalPrice = () => {
     return rooms.reduce((sum, r) => sum + r.quantity * r.price, 0);
   };
+
+  const LOYALTY_MIN_REDEEM = 100;
+  const LOYALTY_IDR_PER_POINT = 100;
+
+  const getRedeemPoints = () => {
+    const n = parseInt(redeemPointsInput, 10);
+    if (!Number.isFinite(n) || n < LOYALTY_MIN_REDEEM) return 0;
+    return Math.min(n, myPoints);
+  };
+
+  const getLoyaltyDiscount = () => getRedeemPoints() * LOYALTY_IDR_PER_POINT;
+
+  const getFinalPrice = () => Math.max(0, getTotalPrice() - getLoyaltyDiscount());
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const res = await apiFetch<{ totalPoints: number }>("/api/loyalty/my");
+        setMyPoints(res.totalPoints);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  }, [user]);
 
   const handleNextStep = () => {
     if (step === 0) {
@@ -259,6 +286,7 @@ const Booking = () => {
       } catch (e) { console.warn("referral attach failed", e); }
 
       // Create booking via API (handles auth, code generation, and ownership)
+      const redeemPoints = getRedeemPoints();
       const booking = await apiFetch<{ id: string; bookingCode: string }>("/api/bookings", {
         method: "POST",
         body: JSON.stringify({
@@ -269,6 +297,7 @@ const Booking = () => {
           picType: finalPicType,
           picId: finalPicId ?? undefined,
           agentId: agentIdFromRef ?? undefined,
+          redeemPoints: redeemPoints >= LOYALTY_MIN_REDEEM ? redeemPoints : undefined,
         }),
       });
 
@@ -567,14 +596,47 @@ const Booking = () => {
                   )}
                 </div>
 
+                {myPoints >= LOYALTY_MIN_REDEEM && (
+                  <div className="p-4 border border-gold/30 bg-gold/5 rounded-xl space-y-2">
+                    <Label htmlFor="redeem-points">
+                      Gunakan Poin Loyalitas (saldo: {myPoints.toLocaleString("id-ID")} poin)
+                    </Label>
+                    <Input
+                      id="redeem-points"
+                      type="number"
+                      min={LOYALTY_MIN_REDEEM}
+                      max={myPoints}
+                      step={1}
+                      placeholder={`Minimal ${LOYALTY_MIN_REDEEM} poin`}
+                      value={redeemPointsInput}
+                      onChange={(e) => setRedeemPointsInput(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Setiap 100 poin = Rp 10.000 diskon. Kosongkan jika tidak ingin menukar poin.
+                    </p>
+                  </div>
+                )}
+
                 <div className="p-4 bg-muted rounded-xl space-y-2">
                   <div className="flex justify-between">
                     <span>Total Jemaah</span>
                     <span className="font-bold">{getTotalPeople()} Orang</span>
                   </div>
+                  {getLoyaltyDiscount() > 0 && (
+                    <>
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>Subtotal</span>
+                        <span>{formatPrice(getTotalPrice())}</span>
+                      </div>
+                      <div className="flex justify-between text-sm text-success">
+                        <span>Diskon Poin ({getRedeemPoints()} poin)</span>
+                        <span>-{formatPrice(getLoyaltyDiscount())}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between text-lg">
                     <span className="font-bold">Total Harga</span>
-                    <span className="font-bold text-gold">{formatPrice(getTotalPrice())}</span>
+                    <span className="font-bold text-gold">{formatPrice(getFinalPrice())}</span>
                   </div>
                 </div>
               </div>

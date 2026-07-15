@@ -12,6 +12,7 @@ import { Calendar, Package, ArrowRight, AlertCircle, MapPin, ChevronDown, Ticket
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import InvoiceButton from "@/features/booking/components/InvoiceButton";
+import ConfirmationPdfButton from "@/features/booking/components/ConfirmationPdfButton";
 import LoadingSpinner from "@/shared/components/ui/loading-spinner";
 import EmptyState from "@/shared/components/ui/empty-state";
 import { useToast } from "@/shared/hooks/use-toast";
@@ -144,6 +145,9 @@ const MyBookings = () => {
                       <div className="flex gap-2 flex-wrap">
                         {b.status !== "draft" && (
                           <InvoiceButton bookingId={b.id} />
+                        )}
+                        {b.status !== "draft" && (
+                          <ConfirmationPdfButton bookingId={b.id} />
                         )}
                         {b.status === "paid" && (
                           <Link to={`/e-ticket/${b.id}`}>
