@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search, Images } from "lucide-react";
+import { Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search, Images, FileDown } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import AdminPagination from "@/features/admin/components/AdminPagination";
@@ -363,6 +363,17 @@ const AdminDepartures = () => {
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" title="Galeri Foto" onClick={() => setGalleryDep(dep)}>
                         <Images className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Manifest Jemaah (PDF)"
+                        onClick={() => {
+                          const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+                          window.open(`${API_BASE}/api/admin/departures/${dep.id}/manifest.pdf`, "_blank");
+                        }}
+                      >
+                        <FileDown className="w-4 h-4 text-muted-foreground" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(dep)}>
                         <Pencil className="w-4 h-4" />

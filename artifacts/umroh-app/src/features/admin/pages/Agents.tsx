@@ -378,6 +378,16 @@ const AdminAgents = () => {
         }}>
           <Download className="w-4 h-4 mr-2" /> Export CSV
         </Button>
+        <Button
+          variant="outline"
+          className="shrink-0"
+          onClick={() => {
+            const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+            window.open(`${API_BASE}/api/admin/reports/commissions.xlsx`, "_blank");
+          }}
+        >
+          <Download className="w-4 h-4 mr-2" /> Export Komisi (Excel)
+        </Button>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input

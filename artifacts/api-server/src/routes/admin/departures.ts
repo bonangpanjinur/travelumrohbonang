@@ -8,10 +8,14 @@ import {
   airlines,
   airports,
   muthawifs,
+  bookings,
+  bookingPilgrims,
+  pilgrimDocuments,
   eq,
   and,
   inArray,
 } from "@workspace/db";
+import { generateManifestPdf } from "../../lib/pdf/manifest";
 
 // mergeParams: true so req.params.packageId from parent router is accessible here
 const router = Router({ mergeParams: true });
@@ -63,6 +67,86 @@ router.get("/", async (req, res) => {
     res.json({ data: departuresWithPrices, total: departuresWithPrices.length });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch departures" });
+  }
+});
+
+// --- Manifest PDF (F-06) — must come before generic /:id routes ---
+
+router.get("/:id/manifest.pdf", async (req, res) => {
+  try {
+    const departureId = req.params.id as string;
+
+    const [departure] = await db
+      .select({
+        id: packageDepartures.id,
+        departureDate: packageDepartures.departureDate,
+        returnDate: packageDepartures.returnDate,
+        quota: packageDepartures.quota,
+        remainingQuota: packageDepartures.remainingQuota,
+        packageTitle: packages.title,
+      })
+      .from(packageDepartures)
+      .leftJoin(packages, eq(packageDepartures.packageId, packages.id))
+      .where(eq(packageDepartures.id, departureId))
+      .limit(1);
+
+    if (!departure) {
+      res.status(404).json({ error: "Departure not found" });
+      return;
+    }
+
+    const departureBookings = await db
+      .select({ id: bookings.id, bookingCode: bookings.bookingCode })
+      .from(bookings)
+      .where(eq(bookings.departureId, departureId));
+
+    const bookingIds = departureBookings.map((b) => b.id);
+    const bookingCodeById = new Map(departureBookings.map((b) => [b.id, b.bookingCode]));
+
+    const pilgrims = bookingIds.length
+      ? await db.select().from(bookingPilgrims).where(inArray(bookingPilgrims.bookingId, bookingIds))
+      : [];
+
+    const photoDocs = pilgrims.length
+      ? await db
+          .select()
+          .from(pilgrimDocuments)
+          .where(
+            and(
+              inArray(pilgrimDocuments.pilgrimId, pilgrims.map((p) => p.id)),
+              eq(pilgrimDocuments.documentType, "foto"),
+            ),
+          )
+      : [];
+    const photoByPilgrimId = new Map(photoDocs.map((d) => [d.pilgrimId, d.fileUrl]));
+
+    const pdfBuffer = await generateManifestPdf({
+      packageTitle: departure.packageTitle,
+      departureDate: departure.departureDate,
+      returnDate: departure.returnDate,
+      quota: departure.quota,
+      remainingQuota: departure.remainingQuota,
+      pilgrims: pilgrims.map((p) => ({
+        id: p.id,
+        bookingCode: bookingCodeById.get(p.bookingId) ?? "-",
+        name: p.name,
+        gender: p.gender,
+        nik: p.nik,
+        passportNumber: p.passportNumber,
+        roomType: p.roomType,
+        photoUrl: photoByPilgrimId.get(p.id) ?? null,
+      })),
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="manifest-${departure.departureDate}.pdf"`,
+    );
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error("[departures] Failed to generate manifest PDF:", err);
+    res.status(500).json({ error: "Failed to generate manifest PDF" });
   }
 });
 

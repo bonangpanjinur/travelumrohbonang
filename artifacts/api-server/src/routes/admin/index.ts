@@ -42,6 +42,7 @@ import adminAnalyticsRouter from "./analytics";
 import adminContractsRouter from "./contracts";
 import adminPaymentGatewayRouter from "./payment-gateway";
 import adminIncidentReportsRouter from "./incidentReports";
+import adminReportsRouter from "./reports";
 import { logDiag } from "../../lib/tempDiagnosticLog"; // TEMP DIAG
 
 const router = Router();
@@ -66,6 +67,7 @@ router.use(
   adminMenuPermissionsRouter,
 );
 router.use("/analytics", requireFinance, adminAnalyticsRouter);
+router.use("/reports", requireFinance, adminReportsRouter);
 
 // ── Full admin routes (super_admin + admin only) ────────────────────────────
 router.use("/users", requireAdmin, adminUsersRouter);
