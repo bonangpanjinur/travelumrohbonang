@@ -282,8 +282,10 @@ Webhook Midtrans/Xendit meneruskan status pembayaran ke `bookings.status` secara
 #### F-02 · Admin Payment Verification Endpoint — ✅ Selesai
 `PATCH /api/admin/payments/verify/:id` dan `.../reject/:id` (`artifacts/api-server/src/routes/admin/payments.ts`) sudah tersedia dengan audit trail (`verifiedBy`/`verifiedAt`).
 
-#### F-03 · Email Notification System — ⏳ Belum
-**Problem:** Tidak ada satupun baris kode email di codebase — jemaah tidak dapat konfirmasi booking, receipt, atau reminder apapun via email.
+#### F-03 · Email Notification System — ✅ Selesai (kode), ⏳ Butuh kredensial
+**Status terkini (diverifikasi 2026-07-15):** Sudah terimplementasi penuh di kode — paket `lib/email` (client, service, 5 template) sudah ada dan sudah dipanggil dari `bookings.ts`, `admin/payments.ts`, `admin/documents.ts`, `payment-gateway-webhooks.ts`, dan `paymentSync.ts` lewat dispatcher `emailNotifications.ts`. Yang belum ada hanya kredensial (`RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`) — tanpa itu, pengiriman email di-skip secara graceful (tidak crash, hanya log).
+
+**Problem (historis, sudah tidak akurat):** ~~Tidak ada satupun baris kode email di codebase~~ — deskripsi di bawah ini dipertahankan sebagai referensi desain asli.
 
 **Provider yang dipilih:** Resend (free tier 3.000 email/bulan, SDK TypeScript native, tidak perlu SMTP).
 
@@ -323,8 +325,10 @@ artifacts/api-server/src/lib/notifications/emailNotifications.ts  (dispatch per 
 
 **Env baru:** `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`
 
-#### F-04 · WhatsApp Automation (Fonnte) — ⏳ Belum
-**Problem:** Hanya ada link `wa.me` manual — tidak bisa dikirim otomatis oleh sistem, padahal WA adalah channel utama di Indonesia.
+#### F-04 · WhatsApp Automation (Fonnte) — ✅ Selesai (kode), ⏳ Butuh kredensial
+**Status terkini (diverifikasi 2026-07-15):** Sudah terimplementasi penuh di kode — paket `lib/whatsapp` (client, service, template) sudah ada dan sudah dipanggil dari rute booking/payment/dokumen/chat lewat dispatcher `waNotifications.ts`, termasuk endpoint blast (`POST /api/admin/chats/blast/:departureId`). Yang belum ada hanya kredensial (`FONNTE_API_TOKEN`, `WA_SENDER_NUMBER`) — tanpa itu, pengiriman WA di-skip secara graceful (tidak crash, hanya log).
+
+**Problem (historis, sudah tidak akurat):** ~~Hanya ada link `wa.me` manual~~ — deskripsi di bawah ini dipertahankan sebagai referensi desain asli.
 
 **Provider yang dipilih:** Fonnte (REST sederhana, tidak perlu WhatsApp Business API resmi, umum dipakai travel agent Indonesia).
 
@@ -495,8 +499,8 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 | Fitur | Impact | Effort | Prioritas | Status |
 |-------|--------|--------|-----------|--------|
 | Payment gateway (Midtrans/Xendit) | 🔴 Tinggi | 🟡 Sedang | P0 | ✅ Selesai |
-| Email transaksional (F-03) | 🔴 Tinggi | 🟢 Rendah | P0 | ⏳ Belum |
-| WhatsApp notifikasi (F-04) | 🔴 Tinggi | 🟢 Rendah | P0 | ⏳ Belum |
+| Email transaksional (F-03) | 🔴 Tinggi | 🟢 Rendah | P0 | ✅ Kode selesai — butuh `RESEND_API_KEY` |
+| WhatsApp notifikasi (F-04) | 🔴 Tinggi | 🟢 Rendah | P0 | ✅ Kode selesai — butuh `FONNTE_API_TOKEN` |
 | Mobile UX audit & fix | 🔴 Tinggi | 🟡 Sedang | P0 | ⏳ Belum |
 | Cicilan end-to-end (F-05) | 🔴 Tinggi | 🟡 Sedang | P1 | ⏳ Belum |
 | PDF export (F-06) | 🟡 Sedang | 🟢 Rendah | P1 | ⏳ Belum |
@@ -549,7 +553,7 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 | Sprint | Fokus | Item | Status |
 |---|---|---|---|
 | Sprint 1 — Stabilitasi Transaksi | Kritis: tanpa ini transaksi tidak aman | F-01, F-02, F-09 | ✅ Selesai |
-| Sprint 2 — Komunikasi Dasar | Tinggi: standar minimum bisnis travel | F-03, F-04 | ⏳ Belum |
+| Sprint 2 — Komunikasi Dasar | Tinggi: standar minimum bisnis travel | F-03, F-04 | ✅ Kode selesai — tinggal isi kredensial provider |
 | Sprint 3 — Cicilan & Dokumen | Tinggi: revenue driver paket mahal | F-05, F-06 | ⏳ Belum |
 | Sprint 4 — Engagement & Operasional | Sedang: kualitas layanan | F-07, F-08 | ⏳ Belum |
 
