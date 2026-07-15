@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 ## UmrohPlus — Platform Manajemen Perjalanan Umroh
 
-**Versi:** 1.2 (sinkron dengan audit `docs/FEATURE_STATUS.md` per 2026-07-10)  
+**Versi:** 1.3 (dirapikan & disinkronkan dengan audit `docs/FEATURE_STATUS.md` per 2026-07-10)  
 **Tanggal:** 15 Juli 2026  
 **Status:** Draft Aktif  
 **Pemilik Produk:** Tim UmrohPlus
@@ -285,8 +285,6 @@ Webhook Midtrans/Xendit meneruskan status pembayaran ke `bookings.status` secara
 #### F-03 · Email Notification System — ✅ Selesai (kode), ⏳ Butuh kredensial
 **Status terkini (diverifikasi 2026-07-15):** Sudah terimplementasi penuh di kode — paket `lib/email` (client, service, 5 template) sudah ada dan sudah dipanggil dari `bookings.ts`, `admin/payments.ts`, `admin/documents.ts`, `payment-gateway-webhooks.ts`, dan `paymentSync.ts` lewat dispatcher `emailNotifications.ts`. Yang belum ada hanya kredensial (`RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME`) — tanpa itu, pengiriman email di-skip secara graceful (tidak crash, hanya log).
 
-**Problem (historis, sudah tidak akurat):** ~~Tidak ada satupun baris kode email di codebase~~ — deskripsi di bawah ini dipertahankan sebagai referensi desain asli.
-
 **Provider yang dipilih:** Resend (free tier 3.000 email/bulan, SDK TypeScript native, tidak perlu SMTP).
 
 **User stories:**
@@ -327,8 +325,6 @@ artifacts/api-server/src/lib/notifications/emailNotifications.ts  (dispatch per 
 
 #### F-04 · WhatsApp Automation (Fonnte) — ✅ Selesai (kode), ⏳ Butuh kredensial
 **Status terkini (diverifikasi 2026-07-15):** Sudah terimplementasi penuh di kode — paket `lib/whatsapp` (client, service, template) sudah ada dan sudah dipanggil dari rute booking/payment/dokumen/chat lewat dispatcher `waNotifications.ts`, termasuk endpoint blast (`POST /api/admin/chats/blast/:departureId`). Yang belum ada hanya kredensial (`FONNTE_API_TOKEN`, `WA_SENDER_NUMBER`) — tanpa itu, pengiriman WA di-skip secara graceful (tidak crash, hanya log).
-
-**Problem (historis, sudah tidak akurat):** ~~Hanya ada link `wa.me` manual~~ — deskripsi di bawah ini dipertahankan sebagai referensi desain asli.
 
 **Provider yang dipilih:** Fonnte (REST sederhana, tidak perlu WhatsApp Business API resmi, umum dipakai travel agent Indonesia).
 
