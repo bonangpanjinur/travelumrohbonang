@@ -43,6 +43,8 @@ import adminContractsRouter from "./contracts";
 import adminPaymentGatewayRouter from "./payment-gateway";
 import adminIncidentReportsRouter from "./incidentReports";
 import adminReportsRouter from "./reports";
+import adminRoomAssignmentRouter from "./room-assignment";
+import adminSocialKitRouter from "./social-kit";
 import { logDiag } from "../../lib/tempDiagnosticLog"; // TEMP DIAG
 
 const router = Router();
@@ -110,5 +112,9 @@ router.use("/contracts", requireStaff, adminContractsRouter);
 
 // ── P1-2: Payment Gateway (webhook routes exposed at app level in index.ts) ───
 router.use("/payment-gateway", requireAdmin, adminPaymentGatewayRouter);
+
+// ── P2 Pertumbuhan ────────────────────────────────────────────────────────────
+router.use("/room-assignment", requireStaff, adminRoomAssignmentRouter);
+router.use("/social-kit", requireAdmin, adminSocialKitRouter);
 
 export default router;

@@ -99,6 +99,8 @@ import AdminReviews from "./features/admin/pages/Reviews";
 import AdminLoyalty from "./features/admin/pages/Loyalty";
 import AdminDepartureGallery from "./features/admin/pages/DepartureGallery";
 import AdminCheckIn from "./features/admin/pages/CheckIn";
+import AdminRoomAssignment from "./features/admin/pages/RoomAssignment";
+import AdminSocialKit from "./features/admin/pages/SocialKit";
 import AdminManasik from "./features/admin/pages/Manasik";
 import Manasik from "./features/cms/pages/Manasik";
 import AffiliateRedirect from "./features/agent/pages/AffiliateRedirect";
@@ -232,6 +234,7 @@ const AppContent = () => {
           <Route path="slug-redirects" element={<AdminSlugRedirects />} />
           <Route path="package-categories" element={<AdminPackageCategories />} />
           <Route path="departure-gallery" element={<AdminDepartureGallery />} />
+          <Route path="room-assignment" element={<AdminRoomAssignment />} />
           <Route path="check-in" element={<AdminCheckIn />} />
           <Route path="manasik" element={<AdminManasik />} />
           <Route path="error-logs" element={<AdminErrorLogs />} />
@@ -240,6 +243,7 @@ const AppContent = () => {
           <Route path="integrations" element={<AdminIntegrations />} />
           <Route path="login-settings" element={<AdminLoginSettings />} />
           <Route path="seo" element={<AdminSEO />} />
+          <Route path="social-kit" element={<AdminSocialKit />} />
           <Route path="menu-permissions" element={<AdminMenuPermissions />} />
         </Route>
       </Route>

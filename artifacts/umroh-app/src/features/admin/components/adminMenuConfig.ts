@@ -46,6 +46,7 @@ import {
   Database,
   SlidersHorizontal,
   Backpack,
+  BedDouble,
   type LucideIcon
 
 } from "lucide-react";
@@ -111,6 +112,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Booking", labelKey: "menu.bookings", href: "/admin/bookings", icon: Ticket, roles: OPERATIONAL },
       { label: "Jemaah", labelKey: "menu.pilgrims", href: "/admin/pilgrims", icon: Users, roles: ALL_STAFF },
       { label: "Manifest", labelKey: "menu.manifest", href: "/admin/manifest", icon: ClipboardList, roles: ALL_STAFF },
+      { label: "Room Assignment", labelKey: "menu.room_assignment", href: "/admin/room-assignment", icon: BedDouble, roles: ALL_STAFF },
       { label: "Check-In QR", labelKey: "menu.checkin_qr", href: "/admin/check-in", icon: ShieldCheck, roles: ALL_STAFF },
       { label: "Manasik Kit", labelKey: "menu.manasik_kit", href: "/admin/manasik", icon: BookOpen, roles: SUPER_ADMIN_ADMIN },
       { label: "Dokumen Jemaah", labelKey: "menu.pilgrim_documents", href: "/admin/documents", icon: FileCheck, roles: OPERATIONAL },
@@ -147,7 +149,8 @@ export const menuGroups: MenuGroup[] = [
     labelKey: "menu.group.marketing",
     icon: Megaphone,
     items: [
-      { label: "CRM & Follow-up", labelKey: "menu.crm", href: "/admin/crm", icon: MessageCircle, roles: SUPER_ADMIN_ADMIN },
+      { label: "CRM & Pipeline", labelKey: "menu.crm", href: "/admin/crm", icon: MessageCircle, roles: SUPER_ADMIN_ADMIN },
+      { label: "Social Media Kit", labelKey: "menu.social_kit", href: "/admin/social-kit", icon: Megaphone, roles: SUPER_ADMIN_ADMIN },
       { label: "Kupon", labelKey: "menu.coupons", href: "/admin/coupons", icon: Ticket, roles: SUPER_ADMIN_ADMIN },
       { label: "Leaderboard Agen", labelKey: "menu.agent_leaderboard", href: "/admin/leaderboard", icon: Trophy, roles: [...SUPER_ADMIN_ADMIN, "branch_manager", "agent"] },
       { label: "Ulasan Paket", labelKey: "menu.reviews", href: "/admin/reviews", icon: Star, roles: SUPER_ADMIN_ADMIN },

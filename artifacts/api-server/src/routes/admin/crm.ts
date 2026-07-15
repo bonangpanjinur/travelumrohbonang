@@ -1,10 +1,30 @@
 import { Router } from "express";
-import { db, leads, leadFollowUps, eq, desc } from "@workspace/db";
+import { db, leads, leadFollowUps, leadInteractions, eq, desc, asc, and, sql } from "@workspace/db";
 
 const router = Router();
 
-// Joined follow-ups list — avoids the frontend N+1 pattern of fetching all
-// leads then issuing one follow-ups request per lead (see .lovable/plan.md P3).
+// ─── Pipeline (Kanban) ───────────────────────────────────────────────────────
+
+/**
+ * GET /api/admin/crm/pipeline
+ * Returns leads grouped by status for Kanban board view
+ */
+router.get("/pipeline", async (_req, res) => {
+  try {
+    const data = await db.select().from(leads).orderBy(asc(leads.createdAt));
+    const statuses = ["new", "contacted", "interested", "negotiation", "converted", "lost"];
+    const pipeline = statuses.reduce<Record<string, typeof data>>((acc, s) => {
+      acc[s] = data.filter((l) => l.status === s);
+      return acc;
+    }, {});
+    res.json(pipeline);
+  } catch (err) {
+    res.status(500).json({ error: "Gagal mengambil pipeline" });
+  }
+});
+
+// ─── Follow-ups (joined) ──────────────────────────────────────────────────────
+
 router.get("/follow-ups", async (req, res) => {
   try {
     const data = await db
@@ -25,17 +45,46 @@ router.get("/follow-ups", async (req, res) => {
       .orderBy(desc(leadFollowUps.followUpDate));
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch follow ups" });
+    res.status(500).json({ error: "Gagal mengambil follow-ups" });
   }
 });
 
-// Leads
+// ─── Leads ───────────────────────────────────────────────────────────────────
+
 router.get("/leads", async (req, res) => {
   try {
-    const data = await db.select().from(leads).orderBy(desc(leads.createdAt));
+    const { status, tag, search } = req.query as Record<string, string>;
+    let query = db.select().from(leads).$dynamic();
+
+    const conditions = [];
+    if (status) conditions.push(eq(leads.status, status));
+    if (search) {
+      conditions.push(
+        sql`(${leads.name} ilike ${"%" + search + "%"} or ${leads.phone} ilike ${"%" + search + "%"} or ${leads.email} ilike ${"%" + search + "%"})`,
+      );
+    }
+    if (tag) {
+      conditions.push(sql`${leads.tags} @> ${JSON.stringify([tag])}::jsonb`);
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    const data = await query.orderBy(desc(leads.createdAt));
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch leads" });
+    res.status(500).json({ error: "Gagal mengambil leads" });
+  }
+});
+
+router.get("/leads/:id", async (req, res) => {
+  try {
+    const [lead] = await db.select().from(leads).where(eq(leads.id, req.params.id));
+    if (!lead) return res.status(404).json({ error: "Lead tidak ditemukan" });
+    res.json(lead);
+  } catch (err) {
+    res.status(500).json({ error: "Gagal mengambil lead" });
   }
 });
 
@@ -49,17 +98,17 @@ router.post("/leads", async (req, res) => {
     }).returning();
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to create lead" });
+    res.status(500).json({ error: "Gagal membuat lead" });
   }
 });
 
 router.patch("/leads/:id", async (req, res) => {
   try {
     const [data] = await db.update(leads).set(req.body).where(eq(leads.id, req.params.id)).returning();
-    if (!data) return res.status(404).json({ error: "Lead not found" });
+    if (!data) return res.status(404).json({ error: "Lead tidak ditemukan" });
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to update lead" });
+    res.status(500).json({ error: "Gagal update lead" });
   }
 });
 
@@ -68,17 +117,79 @@ router.delete("/leads/:id", async (req, res) => {
     await db.delete(leads).where(eq(leads.id, req.params.id));
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete lead" });
+    res.status(500).json({ error: "Gagal hapus lead" });
   }
 });
 
-// Follow ups
-router.get("/leads/:leadId/follow-ups", async (req, res) => {
+// ─── Lead Tags ────────────────────────────────────────────────────────────────
+
+router.patch("/leads/:id/tags", async (req, res) => {
   try {
-    const data = await db.select().from(leadFollowUps).where(eq(leadFollowUps.leadId, req.params.leadId)).orderBy(desc(leadFollowUps.createdAt));
+    const { tags } = req.body as { tags: string[] };
+    if (!Array.isArray(tags)) return res.status(400).json({ error: "Tags harus array" });
+    const [data] = await db
+      .update(leads)
+      .set({ tags })
+      .where(eq(leads.id, req.params.id))
+      .returning();
+    if (!data) return res.status(404).json({ error: "Lead tidak ditemukan" });
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch follow ups" });
+    res.status(500).json({ error: "Gagal update tags" });
+  }
+});
+
+// ─── Lead Interactions ───────────────────────────────────────────────────────
+
+router.get("/leads/:leadId/interactions", async (req, res) => {
+  try {
+    const data = await db
+      .select()
+      .from(leadInteractions)
+      .where(eq(leadInteractions.leadId, req.params.leadId))
+      .orderBy(desc(leadInteractions.createdAt));
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Gagal mengambil riwayat interaksi" });
+  }
+});
+
+router.post("/leads/:leadId/interactions", async (req, res) => {
+  try {
+    const id = crypto.randomUUID();
+    const [data] = await db.insert(leadInteractions).values({
+      ...req.body,
+      id,
+      leadId: req.params.leadId,
+      createdAt: new Date(),
+    }).returning();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Gagal tambah interaksi" });
+  }
+});
+
+router.delete("/interactions/:id", async (req, res) => {
+  try {
+    await db.delete(leadInteractions).where(eq(leadInteractions.id, req.params.id));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Gagal hapus interaksi" });
+  }
+});
+
+// ─── Follow-ups ───────────────────────────────────────────────────────────────
+
+router.get("/leads/:leadId/follow-ups", async (req, res) => {
+  try {
+    const data = await db
+      .select()
+      .from(leadFollowUps)
+      .where(eq(leadFollowUps.leadId, req.params.leadId))
+      .orderBy(desc(leadFollowUps.createdAt));
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Gagal mengambil follow-ups" });
   }
 });
 
@@ -93,17 +204,17 @@ router.post("/leads/:leadId/follow-ups", async (req, res) => {
     }).returning();
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to create follow up" });
+    res.status(500).json({ error: "Gagal buat follow-up" });
   }
 });
 
 router.patch("/follow-ups/:id", async (req, res) => {
   try {
     const [data] = await db.update(leadFollowUps).set(req.body).where(eq(leadFollowUps.id, req.params.id)).returning();
-    if (!data) return res.status(404).json({ error: "Follow up not found" });
+    if (!data) return res.status(404).json({ error: "Follow-up tidak ditemukan" });
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to update follow up" });
+    res.status(500).json({ error: "Gagal update follow-up" });
   }
 });
 
@@ -112,7 +223,39 @@ router.delete("/follow-ups/:id", async (req, res) => {
     await db.delete(leadFollowUps).where(eq(leadFollowUps.id, req.params.id));
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete follow up" });
+    res.status(500).json({ error: "Gagal hapus follow-up" });
+  }
+});
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+
+router.get("/stats", async (_req, res) => {
+  try {
+    const allLeads = await db.select().from(leads);
+    const allFollowUps = await db.select().from(leadFollowUps);
+    const now = new Date();
+
+    const stats = {
+      total: allLeads.length,
+      byStatus: Object.fromEntries(
+        ["new", "contacted", "interested", "negotiation", "converted", "lost"].map((s) => [
+          s,
+          allLeads.filter((l) => l.status === s).length,
+        ]),
+      ),
+      pendingFollowUps: allFollowUps.filter((f) => !f.isDone).length,
+      overdueFollowUps: allFollowUps.filter(
+        (f) => !f.isDone && f.followUpDate && new Date(f.followUpDate) < now,
+      ).length,
+      conversionRate:
+        allLeads.length > 0
+          ? Math.round((allLeads.filter((l) => l.status === "converted").length / allLeads.length) * 100)
+          : 0,
+    };
+
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: "Gagal mengambil statistik CRM" });
   }
 });
 

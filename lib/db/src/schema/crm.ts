@@ -12,9 +12,25 @@ export const leads = pgTable("leads", {
   status: text("status").notNull().default("new"),
   packageInterest: text("package_interest"),
   notes: text("notes"),
+  tags: jsonb("tags").$type<string[]>().default([]),
+  assignedTo: text("assigned_to"),
+  estimatedValue: integer("estimated_value"),
+  expectedCloseDate: timestamp("expected_close_date", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_leads_status").on(t.status),
+]);
+
+export const leadInteractions = pgTable("lead_interactions", {
+  id: text("id").primaryKey(),
+  leadId: text("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // call, whatsapp, email, meeting, note
+  summary: text("summary").notNull(),
+  outcome: text("outcome"), // interested, callback, not_interested, booked
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+}, (t) => [
+  index("idx_lead_interactions_lead_id").on(t.leadId),
 ]);
 
 export const leadFollowUps = pgTable("lead_follow_ups", {

@@ -55,6 +55,7 @@ export const bookingPilgrims = pgTable("booking_pilgrims", {
   passportNumber: text("passport_number"),
   passportExpiry: text("passport_expiry"),
   roomType: text("room_type"),
+  roomNumber: text("room_number"),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_booking_pilgrims_booking_id").on(t.bookingId),
