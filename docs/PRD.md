@@ -145,7 +145,7 @@ Saat ini platform sudah memiliki fondasi teknis yang solid (React 19, TypeScript
 - Mekanisme: `LanguageContext` + `translations.ts` (statis) + Supabase Edge Function untuk terjemahan dinamis
 - Masalah: terjemahan belum konsisten di semua halaman, konten CMS (blog, FAQ) masih satu bahasa
 
-### 5.2 Fase 1 — Penyempurnaan Bilingual ID/EN (Q3 2026)
+### 5.2 Fase 1 — Penyempurnaan Bilingual ID/EN (Q3 2026) — ⏳ Belum Selesai
 
 **Tujuan:** Semua halaman dan komponen 100% bilingual tanpa teks hardcoded.
 
@@ -163,7 +163,7 @@ Saat ini platform sudah memiliki fondasi teknis yang solid (React 19, TypeScript
 - Tidak ada teks Bahasa Indonesia yang muncul saat EN dipilih (vice versa)
 - Language preference persist setelah login ulang
 
-### 5.3 Fase 2 — Dukungan Bahasa Arab (Q4 2026)
+### 5.3 Fase 2 — Dukungan Bahasa Arab (Q4 2026) — ⏳ Belum Dimulai
 
 **Tujuan:** Tambah Bahasa Arab sebagai bahasa ketiga, dengan dukungan RTL penuh.
 
@@ -184,7 +184,7 @@ Saat ini platform sudah memiliki fondasi teknis yang solid (React 19, TypeScript
 - Seluruh halaman publik tampil benar di mode RTL Arab
 - Teks campuran (angka, nama Latin) render dengan benar di dalam teks Arab
 
-### 5.4 Fase 3 — Bahasa Melayu & Lokalisasi Regional (2027)
+### 5.4 Fase 3 — Bahasa Melayu & Lokalisasi Regional (2027) — ⏳ Belum Dimulai
 
 **Tujuan:** Ekspansi ke Malaysia dan Brunei dengan dukungan Bahasa Melayu.
 
@@ -205,7 +205,7 @@ Saat ini platform sudah memiliki fondasi teknis yang solid (React 19, TypeScript
 - **Kecepatan:** Core Web Vitals LCP < 2.5s, TTI < 3.5s
 - **Aksesibilitas:** WCAG 2.1 AA — penting untuk segmen usia 45+
 
-### 6.2 Fase 1 — Audit & Perbaikan Dasar (Q3 2026)
+### 6.2 Fase 1 — Audit & Perbaikan Dasar (Q3 2026) — ⏳ Belum Selesai
 
 **6.2.1 Mobile Experience**
 - [ ] Audit semua halaman di viewport 375px (iPhone SE) dan 390px (iPhone 14)
@@ -226,7 +226,7 @@ Saat ini platform sudah memiliki fondasi teknis yang solid (React 19, TypeScript
 - [ ] Focus ring yang terlihat (penting untuk keyboard navigation)
 - [ ] Alt text untuk semua gambar paket dan galeri
 
-### 6.3 Fase 2 — Peningkatan Konversi (Q4 2026)
+### 6.3 Fase 2 — Peningkatan Konversi (Q4 2026) — ⏳ Belum Dimulai
 
 **6.3.1 Halaman Paket & Detail**
 - [ ] **Social proof strip:** Total jemaah yang sudah berangkat + rating
@@ -256,7 +256,7 @@ Saat ini platform sudah memiliki fondasi teknis yang solid (React 19, TypeScript
 - [ ] **Bulk operations:** Approve/reject multiple pembayaran sekaligus
 - [ ] **Collapse/expand sidebar:** Lebih banyak ruang kerja di layar kecil
 
-### 6.4 Fase 3 — Personalisasi & Delight (2027)
+### 6.4 Fase 3 — Personalisasi & Delight (2027) — ⏳ Belum Dimulai
 
 - [ ] **Onboarding jemaah baru:** Guided tour interaktif saat pertama login
 - [ ] **Rekomendasi paket:** Berdasarkan budget dan tanggal preferensi
@@ -408,7 +408,7 @@ Rekening bank transfer manual sekarang disimpan di `site_settings` (key `bank_ac
 
 ---
 
-### 7.1 Fase 1 — Penyelesaian & Penguatan Inti (Q3 2026)
+### 7.1 Fase 1 — Penyelesaian & Penguatan Inti (Q3 2026) — ⚠️ Sebagian Selesai
 
 Prioritas: Fitur yang sudah ada tapi belum sempurna.
 
@@ -432,7 +432,7 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 - [ ] **Push notification:** Via PWA untuk update status booking real-time
 - [ ] **Notification center:** Riwayat semua notifikasi dengan filter (baca/belum baca)
 
-### 7.2 Fase 2 — Fitur Pertumbuhan (Q4 2026)
+### 7.2 Fase 2 — Fitur Pertumbuhan (Q4 2026) — ⏳ Belum Dimulai
 
 **7.2.1 Sistem Agen & Referral**
 - [ ] **Dashboard agen yang lengkap:** Statistik booking dari referral, pendapatan, konversi
@@ -462,7 +462,7 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 - [ ] **Countdown package:** Timer keberangkatan yang bisa di-embed di landing page
 - [ ] **Social media kit:** Generate konten siap post untuk Instagram/Facebook
 
-### 7.3 Fase 3 — Fitur Lanjutan & Inovasi (2027)
+### 7.3 Fase 3 — Fitur Lanjutan & Inovasi (2027) — ⏳ Belum Dimulai
 
 **7.3.1 Operasional Lapangan**
 - [ ] **Mobile app untuk musyrif/guide:** Check-in jemaah, absensi, lokasi GPS
@@ -494,7 +494,31 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 
 ## 8. Prioritas & Timeline
 
-### 8.1 Matriks Prioritas
+### 8.1 Ringkasan Status & Prioritas per Fase
+
+| Area | Fase | Status | Prioritas | Alasan |
+|---|---|---|---|---|
+| Fitur | Fase 1 — Penyelesaian & Penguatan Inti (§7.1) | ⚠️ Sebagian Selesai | **P0** | Payment gateway & F-01/F-02/F-09 sudah aktif; F-03/F-04 kode selesai tinggal kredensial; sisanya (refund tracking, PDF invoice, checklist dokumen) belum — ini fondasi transaksi, harus dituntaskan dulu sebelum fitur baru |
+| UI/UX | Fase 1 — Audit & Perbaikan Dasar (§6.2) | ⏳ Belum Selesai | **P0** | Mobile UX, performa, dan aksesibilitas dasar berdampak langsung ke seluruh basis pengguna (45+ tahun, mayoritas mobile) |
+| Bahasa | Fase 1 — Penyempurnaan Bilingual ID/EN (§5.2) | ⏳ Belum Selesai | **P1** | Kualitas produk saat ini, tapi tidak seblocking transaksi/mobile UX |
+| Fitur | F-05 Cicilan End-to-End | ⏳ Belum | **P1** | Revenue driver untuk paket mahal, banyak jemaah pakai cicilan |
+| Fitur | F-06 PDF Export | ⏳ Belum | **P1** | Kebutuhan operasional (invoice, manifest) yang sering diminta admin |
+| Fitur | Manajemen Dokumen (checklist, validasi, reminder) (§7.1.2) | ⏳ Belum | **P1** | Wajib untuk kepatuhan syarat keberangkatan (paspor, visa) |
+| Fitur | Dashboard Agen Lengkap (§7.2.1) | ⏳ Belum | **P1** | Mendorong pertumbuhan booking lewat agen yang sudah ada |
+| Fitur | F-07 Loyalty User-Facing | ⏳ Belum | **P2** | Nice-to-have untuk retensi, tidak mendesak |
+| Fitur | F-08 Manasik — Sesi & Absensi | ⏳ Belum | **P2** | Operasional pendukung, bukan jalur transaksi utama |
+| UI/UX | Fase 2 — Peningkatan Konversi (§6.3) | ⏳ Belum Dimulai | **P2** | Baru relevan setelah fondasi (Fase 1 UI/UX & fitur) selesai |
+| Fitur | Booking Grup & Room Assignment (§7.2.2) | ⏳ Belum | **P2** | Effort tinggi, dibutuhkan untuk segmen grup/keluarga |
+| Fitur | CRM Pipeline & Leads (§7.2.3) | ⏳ Belum | **P2** | Mendukung pertumbuhan, tapi CRM dasar (data jemaah) sudah ada |
+| Bahasa | Fase 2 — Bahasa Arab + RTL (§5.3) | ⏳ Belum Dimulai | **P2** | Effort tinggi (RTL layout), nilai strategis tapi bukan kebutuhan mendesak |
+| Fitur | Konten & Pemasaran (§7.2.4) | ⏳ Belum | **P2** | Mendukung akuisisi, bisa berjalan paralel dengan tim marketing |
+| UI/UX | Fase 3 — Personalisasi & Delight (§6.4) | ⏳ Belum Dimulai | **P3** | Polish jangka panjang, butuh fondasi konversi selesai dulu |
+| Bahasa | Fase 3 — Bahasa Melayu & Regional (§5.4) | ⏳ Belum Dimulai | **P3** | Ekspansi pasar baru (Malaysia/Brunei), bukan kebutuhan pasar saat ini |
+| Fitur | Fase 3 — Fitur Lanjutan & Inovasi (§7.3) | ⏳ Belum Dimulai | **P3** | Operasional lapangan, integrasi eksternal, multi-tenant white-label — semua butuh fondasi P0–P2 selesai lebih dulu |
+
+**Legenda:** ✅ Selesai · ⚠️ Sebagian Selesai · ⏳ Belum Dimulai/Belum Selesai · **P0** = blocker inti bisnis, kerjakan sekarang · **P1** = dampak tinggi, kerjakan berikutnya · **P2** = pertumbuhan, setelah fondasi kuat · **P3** = jangka panjang/ekspansi
+
+### 8.2 Matriks Prioritas
 
 | Fitur | Impact | Effort | Prioritas | Status |
 |-------|--------|--------|-----------|--------|
@@ -515,7 +539,7 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 | Multi-tenant white-label | 🔴 Tinggi | 🔴 Tinggi | P3 | ⏳ Belum |
 | Mobile app lapangan | 🟡 Sedang | 🔴 Tinggi | P3 | ⏳ Belum |
 
-### 8.2 Timeline Indikatif
+### 8.3 Timeline Indikatif
 
 ```
 2026
@@ -548,7 +572,7 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
     └── [FITUR]   Manasik digital & tracking perjalanan
 ```
 
-### 8.3 Sprint Plan — Gap Operasional (F-01–F-09)
+### 8.4 Sprint Plan — Gap Operasional (F-01–F-09)
 
 | Sprint | Fokus | Item | Status |
 |---|---|---|---|
@@ -557,7 +581,7 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 | Sprint 3 — Cicilan & Dokumen | Tinggi: revenue driver paket mahal | F-05, F-06 | ⏳ Belum |
 | Sprint 4 — Engagement & Operasional | Sedang: kualitas layanan | F-07, F-08 | ⏳ Belum |
 
-### 8.4 Library & Environment Variables Baru (untuk F-03–F-08)
+### 8.5 Library & Environment Variables Baru (untuk F-03–F-08)
 
 | Library | Paket Target | Kegunaan |
 |---|---|---|
