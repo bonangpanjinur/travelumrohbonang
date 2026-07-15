@@ -45,6 +45,7 @@ import adminIncidentReportsRouter from "./incidentReports";
 import adminReportsRouter from "./reports";
 import adminRoomAssignmentRouter from "./room-assignment";
 import adminSocialKitRouter from "./social-kit";
+import adminInstallmentsRouter from "./installments";
 import { logDiag } from "../../lib/tempDiagnosticLog"; // TEMP DIAG
 
 const router = Router();
@@ -116,5 +117,8 @@ router.use("/payment-gateway", requireAdmin, adminPaymentGatewayRouter);
 // ── P2 Pertumbuhan ────────────────────────────────────────────────────────────
 router.use("/room-assignment", requireStaff, adminRoomAssignmentRouter);
 router.use("/social-kit", requireAdmin, adminSocialKitRouter);
+
+// ── F-05: Installment management ─────────────────────────────────────────────
+router.use("/installments", requireOperational, adminInstallmentsRouter);
 
 export default router;

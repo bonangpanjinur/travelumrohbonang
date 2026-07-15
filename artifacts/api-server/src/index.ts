@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { validateRequiredEnv, logEnvStatus } from "./lib/envValidation";
 import { logStartupBanner } from "./lib/startupLogger";
+import { startInstallmentReminderCron } from "./lib/installmentReminderCron";
 
 // ── Step 1: Validate required env vars — fail fast before anything else ───────
 // If SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY are missing the process exits
@@ -35,6 +36,9 @@ app.listen(port, async (err) => {
 
   // logStartupBanner checks Supabase connectivity and prints all registered routes
   await logStartupBanner(app, port);
+
+  // F-05: start daily H-7 installment reminder scheduler
+  startInstallmentReminderCron();
 
   logger.info({ port }, "Server listening");
 });

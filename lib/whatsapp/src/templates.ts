@@ -86,3 +86,28 @@ Pastikan seluruh dokumen dan persiapan sudah lengkap sebelum tanggal keberangkat
 
 Semoga menjadi umroh yang mabrur 🤲`;
 }
+
+export function installmentReminderWA(data: {
+  jamaahName: string;
+  bookingCode: string;
+  packageName: string;
+  installmentNumber: number;
+  amountDue: number | string;
+  dueDate: string;
+}): string {
+  return `Assalamu'alaikum *${data.jamaahName}* 👋
+
+⚠️ *Pengingat Cicilan — H-7*
+
+Cicilan ke-*${data.installmentNumber}* untuk paket *${data.packageName}* akan jatuh tempo dalam 7 hari.
+
+📋 *Detail:*
+• Kode Booking: *${data.bookingCode}*
+• Cicilan ke: *${data.installmentNumber}*
+• Jumlah: *${formatIDR(data.amountDue)}*
+• Jatuh Tempo: *${data.dueDate}*
+
+Silakan lakukan pembayaran sebelum tanggal jatuh tempo agar jadwal perjalanan Anda tidak terganggu.
+
+Terima kasih 🙏`;
+}

@@ -20,6 +20,7 @@ import { createHash } from "crypto";
 import { db, paymentGatewayTransactions, eq } from "@workspace/db";
 import { syncFromGatewayTransaction } from "../lib/paymentSync";
 import { waNotifications } from "../lib/notifications/waNotifications";
+import { markInstallmentPaid } from "../lib/installments";
 
 const router = Router();
 
@@ -95,6 +96,10 @@ router.post("/midtrans", async (req, res) => {
       });
       // F-04: WA notification on gateway-confirmed payment
       void waNotifications.paymentReceived(updated.bookingId, amountInt);
+      // F-05: if this transaction was for a specific installment, mark it paid
+      if (updated.installmentScheduleId) {
+        void markInstallmentPaid(updated.installmentScheduleId, order_id);
+      }
     }
 
     res.json({ ok: true });
@@ -160,6 +165,10 @@ router.post("/xendit", async (req, res) => {
       });
       // F-04: WA notification on gateway-confirmed payment
       void waNotifications.paymentReceived(updated.bookingId, amountInt);
+      // F-05: mark specific installment as paid if this was an installment payment
+      if (updated.installmentScheduleId) {
+        void markInstallmentPaid(updated.installmentScheduleId, external_id);
+      }
     }
 
     res.json({ ok: true });

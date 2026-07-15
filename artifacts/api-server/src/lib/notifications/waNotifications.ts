@@ -13,6 +13,7 @@ import {
   paymentReceivedWA,
   documentsCompleteWA,
   departureReminderWA,
+  installmentReminderWA,
 } from "@workspace/whatsapp";
 
 interface BookingWAContext {
@@ -105,6 +106,26 @@ export const waNotifications = {
       await sendWhatsApp({ to: ctx.phone, message });
     } catch (err) {
       console.error("[waNotifications] documentsComplete failed:", err);
+    }
+  },
+
+  /** F-05: sent by installment reminder cron, H-7 before cicilan due date. */
+  async installmentReminder(
+    phone: string,
+    data: {
+      jamaahName: string;
+      bookingCode: string;
+      packageName: string;
+      installmentNumber: number;
+      amountDue: number | string;
+      dueDate: string;
+    },
+  ): Promise<void> {
+    try {
+      const message = installmentReminderWA(data);
+      await sendWhatsApp({ to: phone, message });
+    } catch (err) {
+      console.error("[waNotifications] installmentReminder failed:", err);
     }
   },
 

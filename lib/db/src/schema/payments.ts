@@ -4,6 +4,27 @@ import {
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
 
+// ── Installment Schedules ─────────────────────────────────────────────────────
+// F-05: Auto-generated cicilan schedule for bookings with paymentScheme
+// 'dp' | 'installment' | 'cicilan'.
+// installmentNumber = 0 → DP; 1..n → monthly installments.
+export const installmentSchedules = pgTable("installment_schedules", {
+  id: text("id").primaryKey(),
+  bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
+  installmentNumber: integer("installment_number").notNull(), // 0=DP, 1..n=cicilan ke-n
+  dueDate: timestamp("due_date", { withTimezone: true }).notNull(),
+  amount: integer("amount").notNull(),
+  status: text("status").notNull().default("pending"), // pending | paid | overdue
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  paymentGatewayOrderId: text("payment_gateway_order_id"), // VA/QRIS orderId jika dibayar via gateway
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+}, (t) => [
+  index("idx_installment_schedules_booking_id").on(t.bookingId),
+  index("idx_installment_schedules_due_date").on(t.dueDate),
+  index("idx_installment_schedules_status").on(t.status),
+]);
+
 // ── Payment Gateway Transactions ─────────────────────────────────────────────
 // P1-2: Stores all payment gateway transactions (Midtrans / Xendit).
 // Created via /api/admin/payment-gateway/transactions endpoint.
@@ -23,6 +44,8 @@ export const paymentGatewayTransactions = pgTable("payment_gateway_transactions"
   expiryTime: timestamp("expiry_time", { withTimezone: true }),
   paidAt: timestamp("paid_at", { withTimezone: true }),
   rawResponse: text("raw_response"),
+  // F-05: links this gateway transaction to a specific installment (nullable)
+  installmentScheduleId: text("installment_schedule_id"),
   createdAt: timestamp("created_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [

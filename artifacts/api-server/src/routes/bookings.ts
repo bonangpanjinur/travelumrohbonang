@@ -8,14 +8,22 @@ import {
   bookingPilgrims,
   payments,
   paymentProofAccessLogs,
+  paymentGatewayTransactions,
+  installmentSchedules,
   refundRequests,
   eq,
   and,
   desc,
+  asc,
 } from "@workspace/db";
 import { emailNotifications } from "../lib/notifications/emailNotifications";
 import { waNotifications } from "../lib/notifications/waNotifications";
 import { redeemLoyaltyPointsForBooking } from "../lib/loyalty";
+import {
+  generateInstallmentSchedule,
+  requiresInstallmentSchedule,
+  syncOverdueStatus,
+} from "../lib/installments";
 import { generateBookingConfirmationPdf } from "../lib/pdf/bookingConfirmation";
 import { branches } from "@workspace/db";
 import {
@@ -341,6 +349,10 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
     // Fire-and-forget: never let email/WA failure affect the booking response.
     void emailNotifications.bookingCreated(created.id);
     void waNotifications.bookingCreated(created.id);
+    // F-05: auto-generate installment schedule for dp/cicilan bookings
+    if (requiresInstallmentSchedule(paymentScheme)) {
+      void generateInstallmentSchedule(created.id, packageId);
+    }
   } catch {
     res.status(500).json({ error: "Failed to create booking" });
   }
@@ -529,6 +541,233 @@ router.post("/payments/proof-access-log", async (req, res) => {
     res.status(204).end();
   } catch {
     res.status(500).json({ error: "Failed to log access" });
+  }
+});
+
+// ── F-05: Installment Schedule Endpoints ─────────────────────────────────────
+
+/**
+ * GET /api/bookings/:id/installments
+ * Returns the installment schedule for a booking (owner only).
+ * Lazily updates overdue status before responding.
+ */
+router.get("/:id/installments", async (req, res) => {
+  try {
+    const bookingId = req.params.id as string;
+    const userId = req.user!.id;
+
+    // Verify ownership
+    const [booking] = await db
+      .select({ userId: bookings.userId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+
+    if (!booking || booking.userId !== userId) {
+      res.status(404).json({ error: "Booking not found" });
+      return;
+    }
+
+    // Lazily sync overdue status before returning
+    await syncOverdueStatus(bookingId);
+
+    const rows = await db
+      .select()
+      .from(installmentSchedules)
+      .where(eq(installmentSchedules.bookingId, bookingId))
+      .orderBy(asc(installmentSchedules.installmentNumber));
+
+    res.json(rows);
+  } catch (err) {
+    console.error("[bookings] GET installments:", err);
+    res.status(500).json({ error: "Failed to fetch installment schedule" });
+  }
+});
+
+/**
+ * POST /api/bookings/:id/installments/:n/pay
+ * Create a payment gateway transaction (VA/QRIS) for installment n.
+ * Body: { gateway, bankCode?, paymentMethod?, customerName, customerEmail }
+ */
+router.post("/:id/installments/:n/pay", async (req, res) => {
+  try {
+    const bookingId = req.params.id as string;
+    const installmentNumber = parseInt(req.params.n as string, 10);
+    const userId = req.user!.id;
+
+    if (Number.isNaN(installmentNumber)) {
+      res.status(400).json({ error: "Invalid installment number" });
+      return;
+    }
+
+    // Verify ownership
+    const [booking] = await db
+      .select({ userId: bookings.userId, bookingCode: bookings.bookingCode })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+
+    if (!booking || booking.userId !== userId) {
+      res.status(404).json({ error: "Booking not found" });
+      return;
+    }
+
+    // Fetch the specific installment
+    const [installment] = await db
+      .select()
+      .from(installmentSchedules)
+      .where(
+        and(
+          eq(installmentSchedules.bookingId, bookingId),
+          eq(installmentSchedules.installmentNumber, installmentNumber),
+        ),
+      )
+      .limit(1);
+
+    if (!installment) {
+      res.status(404).json({ error: "Installment not found" });
+      return;
+    }
+
+    if (installment.status === "paid") {
+      res.status(409).json({ error: "Installment already paid" });
+      return;
+    }
+
+    const {
+      gateway = "midtrans",
+      bankCode,
+      paymentMethod = "bank_transfer",
+      customerName,
+      customerEmail,
+    } = req.body as {
+      gateway?: "midtrans" | "xendit";
+      bankCode?: string;
+      paymentMethod?: string;
+      customerName?: string;
+      customerEmail?: string;
+    };
+
+    const label =
+      installmentNumber === 0 ? "DP" : `Cicilan-${installmentNumber}`;
+    const orderId = `INST-${installment.id}-${Date.now()}`;
+
+    // Call the existing payment gateway logic (same as admin/payment-gateway.ts)
+    let vaNumber: string | undefined;
+    let gatewayTransactionId: string | undefined;
+    let expiryTime: Date | undefined;
+    let rawResponse: string | undefined;
+
+    if (gateway === "midtrans") {
+      const serverKey = process.env["MIDTRANS_SERVER_KEY"];
+      if (!serverKey) {
+        res.status(503).json({ error: "Payment gateway not configured" });
+        return;
+      }
+      const isProd = process.env["MIDTRANS_IS_PRODUCTION"] === "true";
+      const base = isProd
+        ? "https://api.midtrans.com/v2"
+        : "https://api.sandbox.midtrans.com/v2";
+      const headers = {
+        Authorization: `Basic ${Buffer.from(`${serverKey}:`).toString("base64")}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      };
+      const body = {
+        payment_type: "bank_transfer",
+        transaction_details: { order_id: orderId, gross_amount: installment.amount },
+        bank_transfer: { bank: (bankCode ?? "bca").toLowerCase() },
+        customer_details: { first_name: customerName, email: customerEmail },
+        custom_field1: `installment:${installment.id}`,
+      };
+      const resp = await fetch(`${base}/charge`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15_000),
+      });
+      const data = (await resp.json()) as Record<string, unknown>;
+      rawResponse = JSON.stringify(data);
+      if (!resp.ok) {
+        res.status(502).json({ error: "Midtrans error", detail: data });
+        return;
+      }
+      const vaInfo = (data["va_numbers"] as Array<{ bank: string; va_number: string }> | undefined)?.[0];
+      vaNumber = vaInfo?.va_number;
+      gatewayTransactionId = data["transaction_id"] as string | undefined;
+      const expStr = data["expiry_time"] as string | undefined;
+      if (expStr) expiryTime = new Date(expStr);
+    } else {
+      // Xendit
+      const apiKey = process.env["XENDIT_API_KEY"];
+      if (!apiKey) {
+        res.status(503).json({ error: "Payment gateway not configured" });
+        return;
+      }
+      const headers = {
+        Authorization: `Basic ${Buffer.from(`${apiKey}:`).toString("base64")}`,
+        "Content-Type": "application/json",
+      };
+      const body = {
+        external_id: orderId,
+        bank_code: bankCode ?? "BCA",
+        name: customerName ?? "Jamaah UmrohPlus",
+        expected_amount: installment.amount,
+      };
+      const resp = await fetch("https://api.xendit.co/callback_virtual_accounts", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15_000),
+      });
+      const data = (await resp.json()) as Record<string, unknown>;
+      rawResponse = JSON.stringify(data);
+      if (!resp.ok) {
+        res.status(502).json({ error: "Xendit error", detail: data });
+        return;
+      }
+      vaNumber = data["account_number"] as string | undefined;
+      gatewayTransactionId = data["id"] as string | undefined;
+    }
+
+    // Record in payment_gateway_transactions, linking to the installment
+    const [tx] = await db
+      .insert(paymentGatewayTransactions)
+      .values({
+        id: crypto.randomUUID(),
+        bookingId,
+        gateway,
+        orderId,
+        gatewayTransactionId: gatewayTransactionId ?? null,
+        amount: installment.amount,
+        paymentMethod,
+        bankCode: bankCode ?? null,
+        vaNumber: vaNumber ?? null,
+        status: "pending",
+        customerName: customerName ?? null,
+        customerEmail: customerEmail ?? null,
+        expiryTime: expiryTime ?? null,
+        rawResponse: rawResponse ?? null,
+        installmentScheduleId: installment.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    res.status(201).json({
+      gateway,
+      orderId,
+      vaNumber,
+      bankCode,
+      paymentMethod,
+      expiryTime: tx.expiryTime,
+      amount: installment.amount,
+      installmentNumber,
+      label,
+    });
+  } catch (err) {
+    console.error("[bookings] POST installments/:n/pay:", err);
+    res.status(500).json({ error: "Failed to create installment payment" });
   }
 });
 

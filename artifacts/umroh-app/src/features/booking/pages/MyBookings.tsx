@@ -17,6 +17,7 @@ import LoadingSpinner from "@/shared/components/ui/loading-spinner";
 import EmptyState from "@/shared/components/ui/empty-state";
 import { useToast } from "@/shared/hooks/use-toast";
 import BookingItinerary from "@/features/booking/components/BookingItinerary";
+import InstallmentSchedule from "@/features/booking/components/InstallmentSchedule";
 import ChatBox from "@/features/cms/components/ChatBox";
 import { useCurrency } from "@/shared/hooks/useCurrency";
 
@@ -199,6 +200,9 @@ const MyBookings = () => {
                       )}
                     </div>
                   )}
+                  {/* F-05: Installment schedule (only shown for dp/cicilan bookings) */}
+                  <InstallmentSchedule bookingId={b.id} />
+
                   <div className="mt-3 pt-3 border-t border-border flex gap-2 flex-wrap text-xs">
                     <Link to="/refund-request" className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary">
                       <Receipt className="w-3.5 h-3.5" />Ajukan Refund

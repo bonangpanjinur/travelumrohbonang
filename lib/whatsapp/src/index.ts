@@ -5,5 +5,6 @@ export {
   paymentReceivedWA,
   documentsCompleteWA,
   departureReminderWA,
+  installmentReminderWA,
 } from "./templates";
 export type { SendWAInput, SendWAResult } from "./waService";

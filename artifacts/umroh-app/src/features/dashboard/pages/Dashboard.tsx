@@ -4,8 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { 
   CreditCard, FileText, Plane, User, 
-  CheckCircle2, Clock, LogOut, Crown, Upload, Briefcase, Building2
+  CheckCircle2, Clock, LogOut, Crown, Upload, Briefcase, Building2,
+  CalendarClock, AlertCircle,
 } from "lucide-react";
+import { useInstallments } from "@/features/booking/hooks/useInstallments";
+import { useCurrency } from "@/shared/hooks/useCurrency";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useEffect, useState, useMemo, type KeyboardEvent } from "react";
 import { motion } from "framer-motion";
@@ -21,6 +24,60 @@ const fadeUp = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0 },
 };
+
+/** F-05: Shows the next upcoming pending/overdue installment for a booking. */
+function UpcomingInstallmentCard({ bookingId }: { bookingId: string }) {
+  const { installments, loading } = useInstallments(bookingId);
+  const { format: fmt } = useCurrency();
+
+  if (loading) return null;
+
+  const next = installments.find(
+    (i) => i.status === "pending" || i.status === "overdue",
+  );
+  if (!next) return null;
+
+  const isOverdue = next.status === "overdue";
+  const dueDateStr = next.dueDate
+    ? new Date(next.dueDate).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : "—";
+  const label = next.installmentNumber === 0 ? "DP (Uang Muka)" : `Cicilan ke-${next.installmentNumber}`;
+
+  return (
+    <Card className={`border ${isOverdue ? "border-destructive/40 bg-destructive/5" : "border-warning/40 bg-warning/5"}`}>
+      <CardContent className="p-4 flex items-center gap-4">
+        <div className={`rounded-full p-2 ${isOverdue ? "bg-destructive/10" : "bg-warning/10"}`}>
+          {isOverdue ? (
+            <AlertCircle className="w-5 h-5 text-destructive" />
+          ) : (
+            <CalendarClock className="w-5 h-5 text-warning" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium">
+            {isOverdue ? "⚠️ Cicilan Jatuh Tempo" : "Cicilan Mendatang"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {label} — {fmt(next.amount)} · {dueDateStr}
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant={isOverdue ? "destructive" : "outline"}
+          className="shrink-0 text-xs"
+          onClick={() => window.location.href = "/booking/my-bookings"}
+        >
+          <CreditCard className="w-3 h-3 mr-1" />
+          Bayar
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
 
 interface QuickAction {
   key: string;
@@ -396,6 +453,11 @@ const Dashboard = () => {
         </Card>
 
         <LoyaltyWidget />
+
+        {/* F-05: Upcoming installment widget */}
+        {activeBooking?.payment_scheme && ["dp", "installment", "cicilan"].includes(activeBooking.payment_scheme) && (
+          <UpcomingInstallmentCard bookingId={activeBooking.id} />
+        )}
 
         <RecentNotifications />
 
