@@ -237,7 +237,11 @@ const Payment = () => {
       <Navbar />
       <main className="pt-24 pb-16">
         <div className="container-custom max-w-2xl">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6">
+          <button
+            onClick={() => navigate(-1)}
+            aria-label="Kembali ke halaman sebelumnya"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 min-h-[44px] px-1"
+          >
             <ArrowLeft className="w-4 h-4" /> Kembali
           </button>
 
@@ -327,7 +331,7 @@ const Payment = () => {
                         <button
                           key={i}
                           onClick={() => setSelectedBankIndex(i)}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${selectedBankIndex === i ? "border-gold bg-gold/10 text-gold" : "border-border text-muted-foreground"}`}
+                          className={`px-4 py-2 min-h-[44px] rounded-full text-xs font-semibold border transition-colors ${selectedBankIndex === i ? "border-gold bg-gold/10 text-gold" : "border-border text-muted-foreground"}`}
                         >
                           {acc.bank}
                         </button>

@@ -183,7 +183,8 @@ const MyBookings = () => {
                         onClick={() =>
                           setExpanded(expanded === b.id ? null : b.id)
                         }
-                        className="text-sm font-medium text-primary hover:text-gold transition-colors flex items-center gap-1"
+                        aria-expanded={expanded === b.id}
+                        className="text-sm font-medium text-primary hover:text-gold transition-colors flex items-center gap-1 min-h-[44px]"
                       >
                         <MapPin className="w-4 h-4" />
                         {expanded === b.id ? "Sembunyikan" : "Lihat"} Itinerary
@@ -204,10 +205,15 @@ const MyBookings = () => {
                   <InstallmentSchedule bookingId={b.id} />
 
                   <div className="mt-3 pt-3 border-t border-border flex gap-2 flex-wrap text-xs">
-                    <Link to="/refund-request" className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary">
+                    <Link to="/refund-request" className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary min-h-[44px] px-1">
                       <Receipt className="w-3.5 h-3.5" />Ajukan Refund
                     </Link>
-                    <button type="button" onClick={() => setChatOpen(chatOpen === b.id ? null : b.id)} className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary">
+                    <button
+                      type="button"
+                      onClick={() => setChatOpen(chatOpen === b.id ? null : b.id)}
+                      aria-expanded={chatOpen === b.id}
+                      className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary min-h-[44px] px-1"
+                    >
                       <MessageCircle className="w-3.5 h-3.5" />{chatOpen === b.id ? "Tutup" : "Buka"} Chat CS
                     </button>
                   </div>
