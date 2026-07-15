@@ -17,8 +17,8 @@ export default function StickyMobileCTA({ price, onBook, disabled, waLink }: {
           <Button variant="outline" size="icon" className="shrink-0"><MessageCircle className="w-4 h-4" /></Button>
         </a>
       )}
-      <Button onClick={onBook} disabled={disabled} className="gradient-gold text-primary font-semibold min-h-11">
-        Pesan <ArrowRight className="w-4 h-4 ml-1" />
+      <Button onClick={onBook} disabled={disabled} className="gradient-gold text-primary font-semibold min-h-11 px-5">
+        Pesan Sekarang <ArrowRight className="w-4 h-4 ml-1" />
       </Button>
     </div>
   );

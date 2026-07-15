@@ -43,8 +43,17 @@ const BlogSection = () => {
     return (
       <section className="section-padding bg-muted/50">
         <div className="container-custom">
-          <div className="flex justify-center py-16">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold"></div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="rounded-xl overflow-hidden bg-card border border-border">
+                <div className="h-48 bg-muted animate-pulse" />
+                <div className="p-5 space-y-3">
+                  <div className="h-5 bg-muted animate-pulse rounded w-3/4" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-full" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-2/3" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

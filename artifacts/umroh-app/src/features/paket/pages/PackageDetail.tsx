@@ -142,8 +142,44 @@ const PackageDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+      <div className="min-h-screen">
+        <Navbar />
+        <main className="pt-20">
+          {/* Hero skeleton */}
+          <div className="relative h-[50vh] bg-muted animate-pulse" />
+          <div className="container-custom section-padding">
+            <div className="grid lg:grid-cols-3 gap-12">
+              <div className="lg:col-span-2 space-y-8">
+                {/* Quick info skeleton */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="bg-muted animate-pulse rounded-xl h-24" />
+                  ))}
+                </div>
+                {/* Description skeleton */}
+                <div className="space-y-3">
+                  <div className="h-7 bg-muted animate-pulse rounded w-48" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-full" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-5/6" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-4/6" />
+                </div>
+                {/* Hotels skeleton */}
+                <div className="space-y-3">
+                  <div className="h-7 bg-muted animate-pulse rounded w-36" />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {[...Array(2)].map((_, i) => (
+                      <div key={i} className="bg-muted animate-pulse rounded-xl h-32" />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {/* Sidebar skeleton */}
+              <div className="lg:col-span-1">
+                <div className="bg-muted animate-pulse rounded-2xl h-72" />
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -201,8 +237,10 @@ const PackageDetail = () => {
         <div className="relative h-[50vh] overflow-hidden">
           <img
             src={pkg.image_url || "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=1200&q=80"}
-            alt={pkg.title}
+            alt={`${pkg.title} — foto paket umroh`}
             className="w-full h-full object-cover"
+            fetchPriority="high"
+            decoding="async"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/50 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-8">

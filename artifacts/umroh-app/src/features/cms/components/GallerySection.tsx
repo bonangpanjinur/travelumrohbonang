@@ -55,8 +55,13 @@ const GallerySection = () => {
         </motion.div>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gold"></div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[200px]">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className={`rounded-xl bg-muted animate-pulse ${i === 0 || i === 3 ? "col-span-2 row-span-2" : ""}`}
+              />
+            ))}
           </div>
         ) : images.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[200px]">

@@ -198,10 +198,10 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
               {formatPrice(lowestPrice)}
             </div>
           </div>
-          <Link to={`/paket/${pkg.slug}`}>
+          <Link to={`/paket/${pkg.slug}`} aria-label={`Lihat detail paket ${pkg.title}`}>
             <Button
               size="sm"
-              className={`group/btn transition-transform duration-300 hover:scale-105 ${
+              className={`group/btn transition-transform duration-300 hover:scale-105 min-h-[44px] ${
                 pkg.popular ? "gradient-gold text-primary" : "bg-primary text-primary-foreground hover:bg-primary/90"
               }`}
             >

@@ -346,8 +346,39 @@ const Booking = () => {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-gold" />
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="pt-24 pb-16">
+          <div className="container-custom max-w-3xl space-y-6">
+            <div className="h-8 bg-muted animate-pulse rounded w-56" />
+            <div className="h-5 bg-muted animate-pulse rounded w-40" />
+            {/* Step indicator skeleton */}
+            <div className="flex items-center gap-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center flex-1">
+                  <div className="w-11 h-11 rounded-full bg-muted animate-pulse shrink-0" />
+                  {i < 2 && <div className="flex-1 h-0.5 bg-muted animate-pulse mx-2" />}
+                </div>
+              ))}
+            </div>
+            {/* Card skeleton */}
+            <div className="bg-card border border-border rounded-2xl p-6 md:p-8 space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-4 border border-border rounded-xl">
+                  <div className="space-y-2">
+                    <div className="h-5 bg-muted animate-pulse rounded w-32" />
+                    <div className="h-4 bg-muted animate-pulse rounded w-24" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-muted animate-pulse" />
+                    <div className="w-6 h-6 bg-muted animate-pulse rounded" />
+                    <div className="w-11 h-11 rounded-full bg-muted animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -367,7 +398,11 @@ const Booking = () => {
         <div className="container-custom max-w-3xl">
           {/* Header */}
           <div className="mb-8">
-            <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4">
+            <button
+              onClick={() => navigate(-1)}
+              aria-label="Kembali ke halaman sebelumnya"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 min-h-[44px] px-1"
+            >
               <ArrowLeft className="w-4 h-4" /> Kembali
             </button>
             <h1 className="text-2xl md:text-3xl font-display font-bold">Booking {pkg.title}</h1>
@@ -378,23 +413,41 @@ const Booking = () => {
 
           {/* Steps */}
           <div className="mb-8">
-            <p className="sm:hidden text-xs font-medium text-muted-foreground mb-2">
-              Langkah {step + 1} dari {STEPS.length}: <span className="text-foreground font-semibold">{STEPS[step]}</span>
-            </p>
+            {/* Mobile: compact step banner */}
+            <div className="sm:hidden mb-3 px-4 py-2 bg-muted rounded-xl flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                Langkah <span className="font-bold text-foreground">{step + 1}</span> dari {STEPS.length}
+              </span>
+              <span className="text-sm font-semibold text-gold">{STEPS[step]}</span>
+            </div>
+            {/* Step dots */}
             <div className="flex items-center gap-1 sm:gap-2">
               {STEPS.map((s, i) => (
                 <div key={s} className="flex items-center flex-1 sm:flex-initial">
                   <div
-                    className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${
-                      i <= step ? "gradient-gold text-primary" : "bg-muted text-muted-foreground"
+                    aria-current={i === step ? "step" : undefined}
+                    className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                      i < step
+                        ? "gradient-gold text-primary"
+                        : i === step
+                        ? "gradient-gold text-primary ring-4 ring-gold/30"
+                        : "bg-muted text-muted-foreground"
                     }`}
                   >
-                    {i + 1}
+                    {i < step ? (
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      i + 1
+                    )}
                   </div>
                   <span className={`ml-2 text-sm hidden sm:block ${i <= step ? "font-semibold" : "text-muted-foreground"}`}>
                     {s}
                   </span>
-                  {i < STEPS.length - 1 && <div className="flex-1 sm:w-8 sm:flex-initial h-0.5 bg-border mx-2" />}
+                  {i < STEPS.length - 1 && (
+                    <div className={`flex-1 sm:w-8 sm:flex-initial h-0.5 mx-2 transition-colors ${i < step ? "bg-gold" : "bg-border"}`} />
+                  )}
                 </div>
               ))}
             </div>

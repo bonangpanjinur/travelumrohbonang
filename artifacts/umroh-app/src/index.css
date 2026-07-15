@@ -236,6 +236,24 @@
     }
   }
 
+  /* ── Accessibility: focus ring ──────────────────────────────────────────
+     Visible keyboard focus ring on all interactive elements.
+     Uses the gold accent colour to match the brand and meet WCAG 2.1 AA. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--gold));
+    outline-offset: 2px;
+  }
+
+  /* Touch target helpers – apply to any interactive element that might be
+     smaller than 44×44 px (WCAG 2.5.5 / Apple HIG recommendation). */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   /* Thin, unobtrusive scrollbar for the admin sidebar nav */
   .scrollbar-thin-primary {
     scrollbar-width: thin;

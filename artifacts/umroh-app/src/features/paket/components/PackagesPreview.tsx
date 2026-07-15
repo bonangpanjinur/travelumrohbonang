@@ -54,8 +54,21 @@ const PackagesPreview = () => {
         </motion.div>
 
         {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="rounded-2xl overflow-hidden bg-card border border-border">
+                <div className="h-48 bg-muted animate-pulse" />
+                <div className="p-5 space-y-3">
+                  <div className="h-6 bg-muted animate-pulse rounded w-3/4" />
+                  <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
+                  <div className="h-2 bg-muted animate-pulse rounded w-full" />
+                  <div className="flex justify-between items-end pt-2">
+                    <div className="h-7 bg-muted animate-pulse rounded w-28" />
+                    <div className="h-9 bg-muted animate-pulse rounded w-20" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : packages.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
