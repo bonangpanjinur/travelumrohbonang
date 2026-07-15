@@ -1,0 +1,2 @@
+- [Vercel-import artifact duplication](vercel-import-artifact-dupes.md) — a `.migration-backup`/import tree with its own `.replit-artifact` folders gets auto-registered as duplicate artifacts/workflows; delete those folders from the backup tree, not the real ones.
+- [Supabase dev/prod REST split](supabase-dev-prod-rest-split.md) — pattern for apps ported from Supabase-backed Vercel/Lovable exports: dev uses a local API shim, prod can point at real Supabase, by user's explicit choice.

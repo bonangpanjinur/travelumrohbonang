@@ -1,36 +1,44 @@
-# [Project name]
+# UmrohPlus — Umroh & Haji Travel Agency SaaS
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Multi-tenant SaaS for Umrah/Hajj travel agencies: package browsing & booking, installment payments, jamaah (pilgrim) document management, branch/agent commissions, a CMS-driven public booking site per tenant, and a full admin back office.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/umroh-app run dev` — frontend (Vite + React, artifact `umroh-app`)
+- `pnpm --filter @workspace/api-server run dev` — backend API (Express, artifact `api-server`)
+- `pnpm run typecheck:libs` — typecheck shared libs (`lib/db`, `lib/email`, `lib/whatsapp`, `lib/api-*`)
+- `pnpm --filter @workspace/api-server run typecheck` / `pnpm --filter @workspace/umroh-app run typecheck`
+- `pnpm --filter @workspace/db run push` — push Drizzle schema changes (dev only)
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks/Zod schemas from `lib/api-spec/openapi.yaml` (covers only the small auth/health surface; most business routes are hand-written in `artifacts/api-server/src/routes/*`)
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Frontend: React + Vite, React Router, TanStack Query, shadcn/Radix UI, Tailwind
+- Backend: Express 5, exposes a Supabase-REST-compatible shim (`/:table`, `/rpc/:funcname`, `/object/:bucket`, `/auth/user`) backed by Postgres/Drizzle
+- DB: PostgreSQL + Drizzle ORM (`lib/db`) — prefers `SUPABASE_DATABASE_URL` over `DATABASE_URL` if both are set
+- Email: Resend (`lib/email`); WhatsApp: Fonnte (`lib/whatsapp`) — both inert without their API keys, app degrades gracefully
+- Payments: Midtrans / Xendit gateway integrations (optional keys)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/umroh-app/src/features/*` — feature modules (admin, agent, auth, booking, cms, dashboard, jamaah, paket, tenant, wishlist)
+- `artifacts/umroh-app/src/shared/*` — shared UI, hooks, i18n, Supabase client wrappers
+- `artifacts/api-server/src/routes/*` — hand-written REST routes (not all covered by the OpenAPI spec)
+- `lib/db/src` — Drizzle schema (packages, bookings, profiles, agents, payments, cms, tenant, contracts, itineraries, auth, etc.)
+- `lib/api-spec/openapi.yaml` — auth + health-only OpenAPI spec used for codegen
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- **REST/Storage split by environment**: `src/shared/integrations/supabase/client.ts` uses the local Replit API shim (same-origin) in dev, and the real external Supabase project (`VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`) in production builds — by explicit choice, since the app was originally Supabase-backed and the user wants production data/RLS to stay on the real Supabase project.
+- **Auth always goes to real Supabase** (`auth-client.ts`): PKCE OAuth/login/signup require Supabase's actual Auth service; the local API shim only exposes `/auth/user` and `/logout`, not full auth.
+- This project was migrated from a Vercel-hosted Next.js-style export into Replit's pnpm multi-artifact layout: `umroh-app` (frontend) + `api-server` (backend) as separate artifacts, replacing `vercel.json` routing with Replit's path-based artifact proxy (`artifact.toml`).
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Public site: package browsing, comparison, booking flow with DP/installments, blog, gallery, FAQ, testimonials, tenant subdomains with CMS-driven pages.
+- User area: my bookings, payments, e-tickets, documents, wishlist, 2FA, contract signing.
+- Admin back office: packages, departures, itineraries, bookings, payments, agents/branches/commissions, CRM, accounting, contracts, manifests, reports/analytics, role management, and more.
 
 ## User preferences
 
@@ -38,7 +46,8 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- `.migration-backup/` contains the original imported Vercel export — kept as reference only, not part of the pnpm workspace build. Do not re-register artifacts from inside it (it previously created duplicate `.replit-artifact` workflows).
+- Optional integrations (Supabase service role, Resend, Fonnte, Midtrans, Xendit) are all missing by default; the app is designed to run without them — check `artifacts/api-server/src/lib/envValidation.ts` for the full list and what each unlocks.
 
 ## Pointers
 
