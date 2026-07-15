@@ -1,0 +1,572 @@
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "@/shared/lib/apiClient";
+import { useAuth } from "@/shared/hooks/useAuth";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { Badge } from "@/shared/components/ui/badge";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { Checkbox } from "@/shared/components/ui/checkbox";
+import { toast } from "sonner";
+import {
+  Plus, Search, Pencil, Trash2, Users, UserPlus, Clock, CheckCircle2,
+  Phone, Mail, Calendar, MessageSquare, Bell, AlertTriangle,
+} from "lucide-react";
+import { format, isPast, isToday, addDays } from "date-fns";
+import { id as localeId } from "date-fns/locale";
+import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
+import AdminPagination from "@/features/admin/components/AdminPagination";
+import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
+
+const leadStatuses = [
+  { value: "new", label: "Baru", color: "bg-blue-100 text-blue-700" },
+  { value: "contacted", label: "Sudah Dihubungi", color: "bg-yellow-100 text-yellow-700" },
+  { value: "interested", label: "Tertarik", color: "bg-success/10 text-success" },
+  { value: "negotiation", label: "Negosiasi", color: "bg-purple-100 text-purple-700" },
+  { value: "converted", label: "Booking", color: "bg-primary/20 text-primary" },
+  { value: "lost", label: "Lost", color: "bg-destructive/20 text-destructive" },
+];
+
+const leadSources = ["Website", "WhatsApp", "Instagram", "Facebook", "Referral", "Walk-in", "Telepon", "Lainnya"];
+const followUpTypes = [
+  { value: "call", label: "Telepon", icon: Phone },
+  { value: "whatsapp", label: "WhatsApp", icon: MessageSquare },
+  { value: "email", label: "Email", icon: Mail },
+  { value: "meeting", label: "Meeting", icon: Users },
+];
+
+interface LeadForm {
+  name: string;
+  phone: string;
+  email: string;
+  source: string;
+  status: string;
+  packageInterest: string;
+  notes: string;
+}
+
+interface FollowUpForm {
+  leadId: string;
+  followUpDate: string;
+  type: string;
+  notes: string;
+}
+
+const defaultLeadForm: LeadForm = {
+  name: "", phone: "", email: "", source: "Website", status: "new", packageInterest: "", notes: "",
+};
+
+const defaultFollowUpForm: FollowUpForm = {
+  leadId: "", followUpDate: addDays(new Date(), 1).toISOString().slice(0, 16), type: "call", notes: "",
+};
+
+const AdminCRM = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [leadDialogOpen, setLeadDialogOpen] = useState(false);
+  const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false);
+  const [editLeadId, setEditLeadId] = useState<string | null>(null);
+  const [leadForm, setLeadForm] = useState<LeadForm>(defaultLeadForm);
+  const [followUpForm, setFollowUpForm] = useState<FollowUpForm>(defaultFollowUpForm);
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"leads" | "follow-ups">("leads");
+
+  // Fetch leads
+  const { data: leads = [], isLoading: leadsLoading } = useQuery({
+    queryKey: ["crm_leads"],
+    queryFn: () => apiFetch<any[]>("/api/admin/crm/leads"),
+  });
+
+  // Fetch follow-ups via a single joined endpoint (avoids N+1: previously this
+  // fetched every lead then issued one follow-ups request per lead).
+  const { data: followUps = [], isLoading: followUpsLoading } = useQuery({
+    queryKey: ["crm_follow_ups"],
+    queryFn: () => apiFetch<any[]>("/api/admin/crm/follow-ups"),
+  });
+
+  // Fetch packages for interest dropdown
+  const { data: packages = [] } = useQuery({
+    queryKey: ["packages_for_crm"],
+    queryFn: async () => {
+      const res = await apiFetch<{ data: any[] }>("/api/packages?active=true");
+      return res.data || [];
+    },
+  });
+
+  const filteredLeads = leads.filter((l: any) => {
+    const matchSearch = !search ||
+      l.name?.toLowerCase().includes(search.toLowerCase()) ||
+      l.phone?.toLowerCase().includes(search.toLowerCase()) ||
+      l.email?.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = filterStatus === "all" || l.status === filterStatus;
+    return matchSearch && matchStatus;
+  });
+
+  const { page, setPage, totalPages, totalCount, paginatedItems, pageSize } =
+    useAdminPagination(filteredLeads);
+
+  // Summary stats
+  const stats = useMemo(() => {
+    const total = leads.length;
+    const newLeads = leads.filter((l: any) => l.status === "new").length;
+    const interested = leads.filter((l: any) => l.status === "interested").length;
+    const converted = leads.filter((l: any) => l.status === "converted").length;
+    const pendingFollowUps = followUps.filter((f: any) => !f.isDone).length;
+    const overdueFollowUps = followUps.filter(
+      (f: any) => !f.isDone && isPast(new Date(f.followUpDate))
+    ).length;
+    return { total, newLeads, interested, converted, pendingFollowUps, overdueFollowUps };
+  }, [leads, followUps]);
+
+  // Lead mutations
+  const saveLeadMutation = useMutation({
+    mutationFn: async (data: LeadForm) => {
+      if (editLeadId) {
+        await apiFetch(`/api/admin/crm/leads/${editLeadId}`, {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        });
+      } else {
+        await apiFetch("/api/admin/crm/leads", {
+          method: "POST",
+          body: JSON.stringify(data),
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm_leads"] });
+      toast.success(editLeadId ? "Lead diperbarui" : "Lead ditambahkan");
+      setLeadDialogOpen(false);
+      setEditLeadId(null);
+      setLeadForm(defaultLeadForm);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const deleteLeadMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/admin/crm/leads/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm_leads"] });
+      queryClient.invalidateQueries({ queryKey: ["crm_follow_ups"] });
+      toast.success("Lead dihapus");
+      setDeleteLeadId(null);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // Follow-up mutations
+  const saveFollowUpMutation = useMutation({
+    mutationFn: async (data: FollowUpForm) => {
+      await apiFetch(`/api/admin/crm/leads/${data.leadId}/follow-ups`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm_follow_ups"] });
+      toast.success("Follow-up dijadwalkan");
+      setFollowUpDialogOpen(false);
+      setFollowUpForm(defaultFollowUpForm);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const toggleFollowUpDone = useMutation({
+    mutationFn: ({ id, isDone: nextIsDone }: { id: string; isDone: boolean }) =>
+      apiFetch(`/api/admin/crm/follow-ups/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isDone: nextIsDone, doneAt: nextIsDone ? new Date().toISOString() : null }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm_follow_ups"] });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const handleEditLead = (l: any) => {
+    setEditLeadId(l.id);
+    setLeadForm({
+      name: l.name, phone: l.phone || "", email: l.email || "",
+      source: l.source || "Website", status: l.status, packageInterest: l.packageInterest || "", notes: l.notes || "",
+    });
+    setLeadDialogOpen(true);
+  };
+
+  const handleAddFollowUp = (leadId: string) => {
+    setFollowUpForm({ ...defaultFollowUpForm, leadId: leadId });
+    setFollowUpDialogOpen(true);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const s = leadStatuses.find((ls) => ls.value === status);
+    return <Badge variant="outline" className={s?.color || ""}>{s?.label || status}</Badge>;
+  };
+
+  const getFollowUpUrgency = (date: string, isDone: boolean) => {
+    if (isDone) return "text-muted-foreground line-through";
+    if (isPast(new Date(date))) return "text-destructive font-bold";
+    if (isToday(new Date(date))) return "text-amber-600 font-semibold";
+    return "";
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-bold">CRM & Follow-up</h1>
+          <p className="text-muted-foreground text-sm">Tracking leads dan reminder follow-up</p>
+        </div>
+        <div className="flex gap-2">
+          <Dialog open={followUpDialogOpen} onOpenChange={(o) => { setFollowUpDialogOpen(o); if (!o) setFollowUpForm(defaultFollowUpForm); }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader><DialogTitle>Jadwalkan Follow-up</DialogTitle></DialogHeader>
+              <form onSubmit={(e) => { e.preventDefault(); saveFollowUpMutation.mutate(followUpForm); }} className="space-y-4">
+                <div>
+                  <Label>Lead</Label>
+                  <Select value={followUpForm.leadId} onValueChange={(v) => setFollowUpForm({ ...followUpForm, leadId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Pilih lead" /></SelectTrigger>
+                    <SelectContent>
+                      {leads.map((l: any) => (
+                        <SelectItem key={l.id} value={l.id}>{l.name} {l.phone ? `(${l.phone})` : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Tanggal & Waktu</Label>
+                    <Input type="datetime-local" value={followUpForm.followUpDate} onChange={(e) => setFollowUpForm({ ...followUpForm, followUpDate: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Tipe</Label>
+                    <Select value={followUpForm.type} onValueChange={(v) => setFollowUpForm({ ...followUpForm, type: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {followUpTypes.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label>Catatan</Label>
+                  <Textarea value={followUpForm.notes} onChange={(e) => setFollowUpForm({ ...followUpForm, notes: e.target.value })} placeholder="Catatan follow-up..." />
+                </div>
+                <Button type="submit" className="w-full" disabled={saveFollowUpMutation.isPending || !followUpForm.leadId}>
+                  {saveFollowUpMutation.isPending ? "Menyimpan..." : "Jadwalkan"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={leadDialogOpen} onOpenChange={(o) => { setLeadDialogOpen(o); if (!o) { setEditLeadId(null); setLeadForm(defaultLeadForm); } }}>
+            <DialogTrigger asChild>
+              <Button><Plus className="w-4 h-4 mr-2" /> Tambah Lead</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader><DialogTitle>{editLeadId ? "Edit Lead" : "Tambah Lead Baru"}</DialogTitle></DialogHeader>
+              <form onSubmit={(e) => { e.preventDefault(); if (!leadForm.name) { toast.error("Nama harus diisi"); return; } saveLeadMutation.mutate(leadForm); }} className="space-y-4">
+                <div>
+                  <Label>Nama *</Label>
+                  <Input value={leadForm.name} onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })} placeholder="Nama calon jemaah" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Telepon</Label>
+                    <Input value={leadForm.phone} onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })} placeholder="08xx" />
+                  </div>
+                  <div>
+                    <Label>Email</Label>
+                    <Input type="email" value={leadForm.email} onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })} placeholder="email@..." />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Sumber</Label>
+                    <Select value={leadForm.source} onValueChange={(v) => setLeadForm({ ...leadForm, source: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {leadSources.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Status</Label>
+                    <Select value={leadForm.status} onValueChange={(v) => setLeadForm({ ...leadForm, status: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {leadStatuses.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div>
+                  <Label>Paket Diminati</Label>
+                  <Select value={leadForm.packageInterest} onValueChange={(v) => setLeadForm({ ...leadForm, packageInterest: v })}>
+                    <SelectTrigger><SelectValue placeholder="Pilih paket" /></SelectTrigger>
+                    <SelectContent>
+                      {packages.map((p: any) => <SelectItem key={p.id} value={p.title}>{p.title}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Catatan</Label>
+                  <Textarea value={leadForm.notes} onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })} placeholder="Catatan tentang lead..." />
+                </div>
+                <Button type="submit" className="w-full" disabled={saveLeadMutation.isPending}>
+                  {saveLeadMutation.isPending ? "Menyimpan..." : editLeadId ? "Perbarui" : "Simpan"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" />
+              <span className="text-xs text-muted-foreground">Total Lead</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">{stats.total}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center gap-2">
+              <UserPlus className="w-4 h-4 text-blue-500" />
+              <span className="text-xs text-muted-foreground">Baru</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">{stats.newLeads}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-success" />
+              <span className="text-xs text-muted-foreground">Tertarik</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">{stats.interested}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-primary" />
+              <span className="text-xs text-muted-foreground">Converted</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">{stats.converted}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-500" />
+              <span className="text-xs text-muted-foreground">Follow-up</span>
+            </div>
+            <p className="text-2xl font-bold mt-1">{stats.pendingFollowUps}</p>
+          </CardContent>
+        </Card>
+        <Card className={stats.overdueFollowUps > 0 ? "border-destructive" : ""}>
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className={`w-4 h-4 ${stats.overdueFollowUps > 0 ? "text-destructive" : "text-muted-foreground"}`} />
+              <span className="text-xs text-muted-foreground">Overdue</span>
+            </div>
+            <p className={`text-2xl font-bold mt-1 ${stats.overdueFollowUps > 0 ? "text-destructive" : ""}`}>{stats.overdueFollowUps}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b">
+        <button
+          onClick={() => setActiveTab("leads")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "leads" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          <Users className="w-4 h-4 inline mr-1.5" />Leads ({leads.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("follow-ups")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "follow-ups" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          <Bell className="w-4 h-4 inline mr-1.5" />
+          Follow-up ({followUps.filter((f: any) => !f.isDone).length})
+          {stats.overdueFollowUps > 0 && (
+            <span className="ml-1.5 bg-destructive text-destructive-foreground text-xs rounded-full px-1.5 py-0.5">{stats.overdueFollowUps}</span>
+          )}
+        </button>
+      </div>
+
+      {/* Leads Tab */}
+      {activeTab === "leads" && (
+        <>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Cari lead..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-full sm:w-48"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Status</SelectItem>
+                {leadStatuses.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Kontak</TableHead>
+                      <TableHead>Sumber</TableHead>
+                      <TableHead>Paket</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead className="text-center">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leadsLoading ? (
+                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Memuat...</TableCell></TableRow>
+                    ) : paginatedItems.length === 0 ? (
+                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Belum ada lead</TableCell></TableRow>
+                    ) : (
+                      paginatedItems.map((l: any) => (
+                        <TableRow key={l.id}>
+                          <TableCell className="font-semibold">{l.name}</TableCell>
+                          <TableCell>
+                            <div className="text-sm space-y-0.5">
+                              {l.phone && <div className="flex items-center gap-1"><Phone className="w-3 h-3 text-muted-foreground" />{l.phone}</div>}
+                              {l.email && <div className="flex items-center gap-1"><Mail className="w-3 h-3 text-muted-foreground" />{l.email}</div>}
+                            </div>
+                          </TableCell>
+                          <TableCell><Badge variant="outline">{l.source}</Badge></TableCell>
+                          <TableCell className="max-w-[150px] truncate text-sm">{l.packageInterest || "-"}</TableCell>
+                          <TableCell>{getStatusBadge(l.status)}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                            {format(new Date(l.createdAt), "dd MMM yyyy", { locale: localeId })}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-1">
+                              <Button variant="ghost" size="icon" title="Follow-up" onClick={() => handleAddFollowUp(l.id)}>
+                                <Calendar className="w-4 h-4 text-amber-500" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleEditLead(l)}>
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => setDeleteLeadId(l.id)} className="text-destructive hover:text-destructive">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+          <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
+        </>
+      )}
+
+      {/* Follow-ups Tab */}
+      {activeTab === "follow-ups" && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg">Jadwal Follow-up</CardTitle>
+            <Button size="sm" variant="outline" onClick={() => setFollowUpDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-1" /> Tambah
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">✓</TableHead>
+                    <TableHead>Lead</TableHead>
+                    <TableHead>Tipe</TableHead>
+                    <TableHead>Jadwal</TableHead>
+                    <TableHead>Catatan</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {followUpsLoading ? (
+                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Memuat...</TableCell></TableRow>
+                  ) : followUps.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Belum ada jadwal follow-up</TableCell></TableRow>
+                  ) : (
+                    followUps.map((f: any) => {
+                      const typeInfo = followUpTypes.find((t) => t.value === f.type);
+                      const Icon = typeInfo?.icon || Phone;
+                      return (
+                        <TableRow key={f.id} className={f.isDone ? "opacity-60" : ""}>
+                          <TableCell>
+                            <Checkbox
+                              checked={f.isDone}
+                              onCheckedChange={(checked) => toggleFollowUpDone.mutate({ id: f.id, isDone: !!checked })}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <span className="font-semibold">{f.leadName || "-"}</span>
+                              {f.leadPhone && <span className="text-xs text-muted-foreground ml-2">{f.leadPhone}</span>}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5">
+                              <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                              <span className="text-sm">{typeInfo?.label || f.type}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className={getFollowUpUrgency(f.followUpDate, f.isDone)}>
+                            {format(new Date(f.followUpDate), "dd MMM yyyy HH:mm", { locale: localeId })}
+                            {!f.isDone && isPast(new Date(f.followUpDate)) && (
+                              <span className="ml-1.5 text-xs">⚠️ Overdue</span>
+                            )}
+                            {!f.isDone && isToday(new Date(f.followUpDate)) && (
+                              <span className="ml-1.5 text-xs">📌 Hari ini</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate text-sm">{f.notes || "-"}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <DeleteAlertDialog
+        open={!!deleteLeadId}
+        onOpenChange={(o) => !o && setDeleteLeadId(null)}
+        onConfirm={() => deleteLeadId && deleteLeadMutation.mutate(deleteLeadId)}
+        title="Hapus Lead"
+        description="Lead dan semua follow-up terkait akan dihapus permanen."
+      />
+    </div>
+  );
+};
+
+export default AdminCRM;
