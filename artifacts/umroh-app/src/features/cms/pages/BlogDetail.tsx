@@ -119,9 +119,18 @@ const BlogDetail = () => {
     return (
       <div className="min-h-screen">
         <Navbar />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
-        </div>
+        <main className="pt-20">
+          <div className="h-64 md:h-80 bg-muted animate-pulse" />
+          <div className="container-custom max-w-3xl py-12 space-y-4">
+            <div className="h-8 bg-muted animate-pulse rounded w-3/4" />
+            <div className="h-4 bg-muted animate-pulse rounded w-1/3" />
+            <div className="space-y-3 pt-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className={`h-4 bg-muted animate-pulse rounded ${i === 2 || i === 5 ? "w-2/3" : "w-full"}`} />
+              ))}
+            </div>
+          </div>
+        </main>
         <Footer />
       </div>
     );
@@ -171,6 +180,8 @@ const BlogDetail = () => {
             src={post.image_url || "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=1200&q=80"}
             alt={post.title}
             className="w-full h-full object-cover"
+            fetchPriority="high"
+            decoding="async"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
           <div className="absolute inset-0 flex items-end">

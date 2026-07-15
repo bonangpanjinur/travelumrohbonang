@@ -148,8 +148,18 @@ const Blog = () => {
         <section className="section-padding bg-background">
           <div className="container-custom">
             {loading ? (
-              <div className="flex justify-center py-16">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="rounded-xl overflow-hidden bg-card border border-border">
+                    <div className="h-48 bg-muted animate-pulse" />
+                    <div className="p-5 space-y-3">
+                      <div className="h-5 bg-muted animate-pulse rounded w-3/4" />
+                      <div className="h-4 bg-muted animate-pulse rounded w-full" />
+                      <div className="h-4 bg-muted animate-pulse rounded w-2/3" />
+                      <div className="h-4 bg-muted animate-pulse rounded w-1/3" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : filteredPosts.length === 0 ? (
               <div className="text-center py-16">
@@ -171,6 +181,8 @@ const Blog = () => {
                             src={featuredPost.image_url || "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=800&q=80"}
                             alt={featuredPost.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                            decoding="async"
                           />
                         </div>
                         <div className="p-8 flex flex-col justify-center">

@@ -112,8 +112,10 @@ const Gallery = () => {
         <section className="section-padding">
           <div className="container-custom">
             {loading ? (
-              <div className="flex justify-center py-16">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="aspect-square rounded-xl bg-muted animate-pulse" />
+                ))}
               </div>
             ) : images.length === 0 ? (
               <div className="text-center py-16">
@@ -133,8 +135,10 @@ const Gallery = () => {
                   >
                     <img
                       src={image.image_url}
-                      alt={image.title || "Gallery image"}
+                      alt={image.title || "Foto galeri perjalanan umroh"}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      loading="lazy"
+                      decoding="async"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <div className="absolute bottom-0 left-0 right-0 p-4">
