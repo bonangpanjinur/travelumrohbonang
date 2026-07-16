@@ -257,68 +257,131 @@ router.get("/:id/manifest.pdf", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    const { prices, ...depData } = req.body;
-    const id = crypto.randomUUID();
-    
-    const [created] = await db
-      .insert(packageDepartures)
-      .values({
-        id,
-        ...depData,
-        remainingQuota: depData.remainingQuota ?? depData.quota,
-      })
-      .returning();
+    // Frontend sends snake_case; map to Drizzle camelCase schema keys.
+    const {
+      prices,
+      package_id,       departure_date,  return_date,
+      muthawif_id,      quota,           status,
+      // accept camelCase too in case callers are updated
+      packageId: _pkgId, departureDate: _depDate, returnDate: _retDate,
+      muthawifId: _mId,
+    } = req.body;
 
-    if (prices) {
-      const priceInserts = Object.entries(prices).map(([roomType, price]) => ({
-        id: crypto.randomUUID(),
-        departureId: id,
-        roomType,
-        price: Number(price),
-      }));
-      if (priceInserts.length > 0) {
-        await db.insert(departurePrices).values(priceInserts);
+    const resolvedPackageId   = package_id   ?? _pkgId;
+    const resolvedDepDate     = departure_date ?? _depDate;
+    const resolvedRetDate     = return_date   ?? _retDate ?? null;
+    const resolvedMuthawifId  = muthawif_id  ?? _mId ?? null;
+    const resolvedQuota       = Number(quota) || 45;
+
+    if (!resolvedPackageId)   return res.status(400).json({ error: "package_id diperlukan" });
+    if (!resolvedDepDate)     return res.status(400).json({ error: "departure_date diperlukan" });
+
+    const id = crypto.randomUUID();
+
+    // Wrap in transaction so departure + prices are always consistent.
+    const created = await db.transaction(async (tx) => {
+      const [dep] = await tx
+        .insert(packageDepartures)
+        .values({
+          id,
+          packageId:      resolvedPackageId,
+          departureDate:  resolvedDepDate,
+          returnDate:     resolvedRetDate,
+          quota:          resolvedQuota,
+          remainingQuota: resolvedQuota,
+          status:         status ?? "active",
+          muthawifId:     resolvedMuthawifId || null,
+        })
+        .returning();
+
+      if (prices && typeof prices === "object") {
+        const priceInserts = Object.entries(prices)
+          .filter(([, p]) => Number(p) > 0)
+          .map(([roomType, price]) => ({
+            id: crypto.randomUUID(),
+            departureId: id,
+            roomType,
+            price: Number(price),
+          }));
+        if (priceInserts.length > 0) {
+          await tx.insert(departurePrices).values(priceInserts);
+        }
       }
-    }
+
+      return dep;
+    });
 
     res.status(201).json(created);
   } catch (err) {
+    console.error("[departures] POST failed:", err);
     res.status(500).json({ error: "Failed to create departure" });
   }
 });
 
 router.patch("/:id", async (req, res) => {
   try {
-    const { prices, ...depData } = req.body;
-    const [updated] = await db
-      .update(packageDepartures)
-      .set(depData)
-      .where(eq(packageDepartures.id, req.params.id))
-      .returning();
+    // Accept both snake_case (from legacy frontend form) and camelCase.
+    const {
+      prices,
+      package_id, departure_date, return_date, muthawif_id,
+      packageId: _pkgId, departureDate: _depDate, returnDate: _retDate, muthawifId: _mId,
+      id: _id, createdAt: _ca, // strip immutable fields
+      ...rest
+    } = req.body;
 
-    if (prices) {
-      for (const [roomType, price] of Object.entries(prices)) {
-        const [existing] = await db
-          .select()
-          .from(departurePrices)
-          .where(and(eq(departurePrices.departureId, req.params.id), eq(departurePrices.roomType, roomType)))
-          .limit(1);
-        
-        if (existing) {
-          await db.update(departurePrices).set({ price: Number(price) }).where(eq(departurePrices.id, existing.id));
-        } else {
-          await db.insert(departurePrices).values({
-            id: crypto.randomUUID(),
-            departureId: req.params.id,
-            roomType,
-            price: Number(price),
-          });
+    // Build Drizzle-compatible update object (camelCase only)
+    const updates: Record<string, unknown> = { ...rest };
+    if (package_id   ?? _pkgId)    updates.packageId      = package_id   ?? _pkgId;
+    if (departure_date ?? _depDate) updates.departureDate  = departure_date ?? _depDate;
+    if ("return_date" in req.body)  updates.returnDate     = return_date ?? _retDate ?? null;
+    if (muthawif_id  !== undefined) updates.muthawifId     = muthawif_id  || null;
+    else if (_mId    !== undefined) updates.muthawifId     = _mId         || null;
+    if (rest.quota !== undefined)   updates.quota          = Number(rest.quota);
+
+    // Wrap in transaction so departure + prices stay consistent.
+    const updated = await db.transaction(async (tx) => {
+      const [dep] = await tx
+        .update(packageDepartures)
+        .set(updates)
+        .where(eq(packageDepartures.id, req.params.id))
+        .returning();
+
+      if (!dep) return null;
+
+      if (prices && typeof prices === "object") {
+        for (const [roomType, price] of Object.entries(prices)) {
+          const [existing] = await tx
+            .select()
+            .from(departurePrices)
+            .where(and(
+              eq(departurePrices.departureId, req.params.id),
+              eq(departurePrices.roomType, roomType),
+            ))
+            .limit(1);
+
+          if (existing) {
+            await tx
+              .update(departurePrices)
+              .set({ price: Number(price) })
+              .where(eq(departurePrices.id, existing.id));
+          } else {
+            await tx.insert(departurePrices).values({
+              id: crypto.randomUUID(),
+              departureId: req.params.id,
+              roomType,
+              price: Number(price),
+            });
+          }
         }
       }
-    }
 
+      return dep;
+    });
+
+    if (!updated) return res.status(404).json({ error: "Departure not found" });
     res.json(updated);
   } catch (err) {
+    console.error("[departures] PATCH failed:", err);
     res.status(500).json({ error: "Failed to update departure" });
   }
 });

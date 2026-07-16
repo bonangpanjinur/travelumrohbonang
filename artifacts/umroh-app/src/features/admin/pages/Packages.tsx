@@ -252,7 +252,12 @@ const AdminPackages = () => {
           method: "PATCH",
           body: JSON.stringify(payload),
         });
-        await saveExtraHotels(editing.id);
+        // Extra hotels saved separately; failure shows warning but doesn't roll back the main save
+        try {
+          await saveExtraHotels(editing.id);
+        } catch {
+          toast({ title: "Paket diupdate, tapi hotel tambahan gagal disimpan", variant: "destructive" });
+        }
         clearDraft();
         toast({ title: "Paket diupdate!" });
         fetchPackages();
@@ -263,7 +268,13 @@ const AdminPackages = () => {
           method: "POST",
           body: JSON.stringify(payload),
         });
-        if (data?.id) await saveExtraHotels(data.id);
+        if (data?.id) {
+          try {
+            await saveExtraHotels(data.id);
+          } catch {
+            toast({ title: "Paket ditambahkan, tapi hotel tambahan gagal disimpan", variant: "destructive" });
+          }
+        }
         clearDraft();
         toast({ title: "Paket ditambahkan!" });
         fetchPackages();

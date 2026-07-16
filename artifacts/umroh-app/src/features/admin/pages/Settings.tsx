@@ -384,26 +384,38 @@ const AdminSettings = () => {
 
   const saveSetting = async (key: string, category: string, value: object) => {
     setSaving(true);
-    
-    const { data: existing } = await supabase
-      .from("site_settings")
-      .select("id")
-      .eq("key", key)
-      .maybeSingle();
+    try {
+      const { data: existing, error: fetchError } = await supabase
+        .from("site_settings")
+        .select("id")
+        .eq("key", key)
+        .maybeSingle();
 
-    if (existing) {
-      await supabase
-        .from("site_settings")
-        .update({ value: value as Json })
-        .eq("id", existing.id);
-    } else {
-      await supabase
-        .from("site_settings")
-        .insert({ id: crypto.randomUUID(), key, category, value: value as Json });
+      if (fetchError) throw fetchError;
+
+      if (existing) {
+        const { error: updateError } = await supabase
+          .from("site_settings")
+          .update({ value: value as Json })
+          .eq("id", existing.id);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from("site_settings")
+          .insert({ id: crypto.randomUUID(), key, category, value: value as Json });
+        if (insertError) throw insertError;
+      }
+
+      toast({ title: "Pengaturan disimpan!" });
+    } catch (err: any) {
+      toast({
+        title: "Gagal menyimpan pengaturan",
+        description: err?.message || "Terjadi kesalahan, coba lagi",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
-
-    toast({ title: "Pengaturan disimpan!" });
-    setSaving(false);
   };
 
   const handleResetAppearance = async () => {

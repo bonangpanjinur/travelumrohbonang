@@ -239,7 +239,7 @@ const AdminDepartures = () => {
                   <Input
                     type="number"
                     value={form.quota}
-                    onChange={(e) => setForm({ ...form, quota: parseInt(e.target.value) })}
+                    onChange={(e) => { const v = parseInt(e.target.value); setForm({ ...form, quota: Number.isNaN(v) ? form.quota : v }); }}
                     className="mt-1"
                   />
                 </div>

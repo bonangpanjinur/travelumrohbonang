@@ -240,19 +240,22 @@ router.post("/leads/:leadId/interactions", async (req, res) => {
     const id = crypto.randomUUID();
     const now = new Date();
 
-    // Persist interaction
-    const [data] = await db.insert(leadInteractions).values({
-      ...req.body,
-      id,
-      leadId: req.params.leadId,
-      createdAt: now,
-    }).returning();
+    // Wrap both writes in a transaction — interaction + lead.lastInteractionAt must be atomic.
+    const data = await db.transaction(async (tx) => {
+      const [interaction] = await tx.insert(leadInteractions).values({
+        ...req.body,
+        id,
+        leadId: req.params.leadId,
+        createdAt: now,
+      }).returning();
 
-    // Update lastInteractionAt on the parent lead (staleness tracking)
-    await db
-      .update(leads)
-      .set({ lastInteractionAt: now })
-      .where(eq(leads.id, req.params.leadId));
+      await tx
+        .update(leads)
+        .set({ lastInteractionAt: now })
+        .where(eq(leads.id, req.params.leadId));
+
+      return interaction;
+    });
 
     res.json(data);
   } catch (err) {
