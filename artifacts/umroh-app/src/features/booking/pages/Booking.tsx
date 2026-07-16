@@ -9,8 +9,10 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/shared/components/ui/radio-group";
+import { Switch } from "@/shared/components/ui/switch";
+import { Badge } from "@/shared/components/ui/badge";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Users, Minus, Plus, Building2, UserCheck, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Users, Minus, Plus, Building2, UserCheck, Loader2, UsersRound, PhoneCall } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useToast } from "@/shared/hooks/use-toast";
@@ -80,20 +82,27 @@ const Booking = () => {
   const [submitting, setSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [pilgrimErrors, setPilgrimErrors] = useState<Record<number, Record<string, string>>>({});
-  
+
+  // Group booking
+  const [isGroupBooking, setIsGroupBooking] = useState(false);
+  const [groupName, setGroupName] = useState("");
+  const [coordName, setCoordName] = useState("");
+  const [coordPhone, setCoordPhone] = useState("");
+  const [coordEmail, setCoordEmail] = useState("");
+
   // PIC State
   const [branches, setBranches] = useState<Branch[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [picType, setPicType] = useState<string>("pusat");
   const [picBranchId, setPicBranchId] = useState<string>("");
-  const [selectedAgentType, setSelectedAgentType] = useState<string>("pusat"); // "pusat" or branch_id
+  const [selectedAgentType, setSelectedAgentType] = useState<string>("pusat");
   const [picAgentId, setPicAgentId] = useState<string>("");
   const [myPoints, setMyPoints] = useState<number>(0);
   const [redeemPointsInput, setRedeemPointsInput] = useState<string>("");
 
   useEffect(() => {
     if (authLoading) return;
-    
+
     if (!user) {
       toast({
         title: "Login Diperlukan",
@@ -105,7 +114,6 @@ const Booking = () => {
     }
 
     const fetchData = async () => {
-      // Guard: params must be present — can be missing if user navigates to /booking directly
       if (!slug || !departureId) {
         toast({ title: "Paket tidak valid", description: "Silakan pilih paket dan keberangkatan terlebih dahulu.", variant: "destructive" });
         setLoading(false);
@@ -113,7 +121,6 @@ const Booking = () => {
         return;
       }
 
-      // Fetch package, departure, branches, and agents in parallel
       const [pkgRes, branchRes, agentRes] = await Promise.all([
         supabase.from("packages").select("id, title, slug").eq("slug", slug).maybeSingle(),
         supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
@@ -134,7 +141,6 @@ const Booking = () => {
 
         if (depData) {
           setDeparture(depData as unknown as Departure);
-          // Initialize rooms
           const initialRooms = (depData as unknown as Departure).prices.map((p) => ({
             room_type: p.room_type,
             quantity: 0,
@@ -161,15 +167,8 @@ const Booking = () => {
     );
   };
 
-  // Jumlah jemaah = total quantity kamar yang dipilih (bukan kapasitas kamar)
-  const getTotalPeople = () => {
-    return rooms.reduce((sum, r) => sum + r.quantity, 0);
-  };
-
-  // Harga total = quantity × harga per orang (1 kamar = 1 jemaah)
-  const getTotalPrice = () => {
-    return rooms.reduce((sum, r) => sum + r.quantity * r.price, 0);
-  };
+  const getTotalPeople = () => rooms.reduce((sum, r) => sum + r.quantity, 0);
+  const getTotalPrice = () => rooms.reduce((sum, r) => sum + r.quantity * r.price, 0);
 
   const LOYALTY_MIN_REDEEM = 100;
   const LOYALTY_IDR_PER_POINT = 100;
@@ -181,7 +180,6 @@ const Booking = () => {
   };
 
   const getLoyaltyDiscount = () => getRedeemPoints() * LOYALTY_IDR_PER_POINT;
-
   const getFinalPrice = () => Math.max(0, getTotalPrice() - getLoyaltyDiscount());
 
   useEffect(() => {
@@ -203,18 +201,21 @@ const Booking = () => {
         toast({ title: "Pilih minimal 1 kamar", variant: "destructive" });
         return;
       }
-      // Initialize pilgrims
-      setPilgrims(Array(total).fill(null).map(() => ({
-        name: "",
-        phone: "",
-        email: "",
+      if (isGroupBooking && !groupName.trim()) {
+        toast({ title: "Nama rombongan wajib diisi", variant: "destructive" });
+        return;
+      }
+      // Initialize pilgrims; pre-fill first pilgrim with coordinator info for group bookings
+      setPilgrims(Array(total).fill(null).map((_, i) => ({
+        name: isGroupBooking && i === 0 && coordName ? coordName : "",
+        phone: isGroupBooking && i === 0 && coordPhone ? coordPhone : "",
+        email: isGroupBooking && i === 0 && coordEmail ? coordEmail : "",
         gender: "",
         nik: "",
       })));
     }
 
     if (step === 1) {
-      // Validate pilgrims with zod
       const errors: Record<number, Record<string, string>> = {};
       let hasErrors = false;
       pilgrims.forEach((p, i) => {
@@ -251,10 +252,7 @@ const Booking = () => {
 
     setSubmitting(true);
 
-
-
     try {
-      // Determine PIC
       let finalPicId: string | null = null;
       const finalPicType = picType;
 
@@ -264,7 +262,6 @@ const Booking = () => {
         finalPicId = picAgentId;
       }
 
-      // Attach agent_id from referral code if present (URL/localStorage first, then 30-day affiliate cookie)
       let agentIdFromRef: string | null = null;
       try {
         const ref = getStoredReferral();
@@ -285,7 +282,6 @@ const Booking = () => {
         }
       } catch (e) { console.warn("referral attach failed", e); }
 
-      // Create booking via API (handles auth, code generation, and ownership)
       const redeemPoints = getRedeemPoints();
       const booking = await apiFetch<{ id: string; bookingCode: string }>("/api/bookings", {
         method: "POST",
@@ -298,10 +294,15 @@ const Booking = () => {
           picId: finalPicId ?? undefined,
           agentId: agentIdFromRef ?? undefined,
           redeemPoints: redeemPoints >= LOYALTY_MIN_REDEEM ? redeemPoints : undefined,
+          // Group booking fields
+          isGroupBooking: isGroupBooking || undefined,
+          groupName: isGroupBooking && groupName ? groupName : undefined,
+          picName: isGroupBooking && coordName ? coordName : undefined,
+          picPhone: isGroupBooking && coordPhone ? coordPhone : undefined,
+          picEmail: isGroupBooking && coordEmail ? coordEmail : undefined,
         }),
       });
 
-      // Create booking rooms via API
       await apiFetch(`/api/bookings/${booking.id}/rooms`, {
         method: "POST",
         body: JSON.stringify({
@@ -316,7 +317,6 @@ const Booking = () => {
         }),
       });
 
-      // Create pilgrims via API
       await apiFetch(`/api/bookings/${booking.id}/pilgrims`, {
         method: "POST",
         body: JSON.stringify({
@@ -334,10 +334,10 @@ const Booking = () => {
       navigate(`/booking/payment/${booking.id}`);
     } catch (error: any) {
       console.error("Booking error:", error);
-      toast({ 
-        title: "Gagal membuat booking", 
+      toast({
+        title: "Gagal membuat booking",
         description: error?.message || "Terjadi kesalahan saat membuat booking",
-        variant: "destructive" 
+        variant: "destructive"
       });
     } finally {
       setSubmitting(false);
@@ -352,7 +352,6 @@ const Booking = () => {
           <div className="container-custom max-w-3xl space-y-6">
             <div className="h-8 bg-muted animate-pulse rounded w-56" />
             <div className="h-5 bg-muted animate-pulse rounded w-40" />
-            {/* Step indicator skeleton */}
             <div className="flex items-center gap-2">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="flex items-center flex-1">
@@ -361,7 +360,6 @@ const Booking = () => {
                 </div>
               ))}
             </div>
-            {/* Card skeleton */}
             <div className="bg-card border border-border rounded-2xl p-6 md:p-8 space-y-4">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="flex items-center justify-between p-4 border border-border rounded-xl">
@@ -405,7 +403,14 @@ const Booking = () => {
             >
               <ArrowLeft className="w-4 h-4" /> Kembali
             </button>
-            <h1 className="text-2xl md:text-3xl font-display font-bold">Booking {pkg.title}</h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl md:text-3xl font-display font-bold">Booking {pkg.title}</h1>
+              {isGroupBooking && (
+                <Badge className="bg-gold/10 text-gold border-gold/30 gap-1.5">
+                  <UsersRound className="w-3 h-3" /> Booking Grup
+                </Badge>
+              )}
+            </div>
             <p className="text-muted-foreground mt-1">
               Keberangkatan: {format(new Date(departure.departure_date), "d MMMM yyyy", { locale: localeId })}
             </p>
@@ -413,14 +418,12 @@ const Booking = () => {
 
           {/* Steps */}
           <div className="mb-8">
-            {/* Mobile: compact step banner */}
             <div className="sm:hidden mb-3 px-4 py-2 bg-muted rounded-xl flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
                 Langkah <span className="font-bold text-foreground">{step + 1}</span> dari {STEPS.length}
               </span>
               <span className="text-sm font-semibold text-gold">{STEPS[step]}</span>
             </div>
-            {/* Step dots */}
             <div className="flex items-center gap-1 sm:gap-2">
               {STEPS.map((s, i) => (
                 <div key={s} className="flex items-center flex-1 sm:flex-initial">
@@ -462,6 +465,75 @@ const Booking = () => {
           >
             {step === 0 && (
               <div className="space-y-6">
+                {/* Group Booking Toggle */}
+                <div className="flex items-start gap-4 p-4 rounded-xl border border-border bg-muted/30">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <UsersRound className="w-4 h-4 text-gold" />
+                      <span className="font-semibold text-sm">Booking Grup / Rombongan</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Aktifkan untuk booking keluarga besar, rombongan masjid, atau grup dengan satu koordinator (PIC).
+                    </p>
+                  </div>
+                  <Switch
+                    checked={isGroupBooking}
+                    onCheckedChange={setIsGroupBooking}
+                    aria-label="Aktifkan booking grup"
+                  />
+                </div>
+
+                {/* Group info fields */}
+                {isGroupBooking && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="space-y-4 p-4 border border-gold/30 bg-gold/5 rounded-xl"
+                  >
+                    <p className="text-sm font-semibold text-gold flex items-center gap-2">
+                      <UsersRound className="w-4 h-4" /> Detail Rombongan
+                    </p>
+                    <div className="space-y-2">
+                      <Label>Nama Rombongan *</Label>
+                      <Input
+                        placeholder="cth: Rombongan Masjid Al-Ikhlas Jakarta"
+                        value={groupName}
+                        onChange={(e) => setGroupName(e.target.value)}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 mt-3">
+                      <PhoneCall className="w-3 h-3" /> Data Koordinator / PIC Rombongan
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label>Nama Koordinator</Label>
+                        <Input
+                          placeholder="Nama lengkap PIC"
+                          value={coordName}
+                          onChange={(e) => setCoordName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>No. HP Koordinator</Label>
+                        <Input
+                          placeholder="08xxxxxxxxxx"
+                          value={coordPhone}
+                          onChange={(e) => setCoordPhone(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Email Koordinator (Opsional)</Label>
+                        <Input
+                          type="email"
+                          placeholder="koordinator@email.com"
+                          value={coordEmail}
+                          onChange={(e) => setCoordEmail(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
                 <h2 className="text-xl font-display font-bold">Pilih Tipe Kamar</h2>
                 {rooms.map((room) => (
                   <div key={room.room_type} className="flex items-center justify-between p-4 border border-border rounded-xl">
@@ -493,10 +565,27 @@ const Booking = () => {
 
             {step === 1 && (
               <div className="space-y-6">
-                <h2 className="text-xl font-display font-bold">Data Jemaah</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-display font-bold">Data Jemaah</h2>
+                  {isGroupBooking && groupName && (
+                    <Badge variant="outline" className="text-xs border-gold/40 text-gold gap-1">
+                      <UsersRound className="w-3 h-3" /> {groupName}
+                    </Badge>
+                  )}
+                </div>
+                {isGroupBooking && (
+                  <p className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+                    Isi data seluruh jemaah rombongan. Data Jemaah #1 sudah diisi dari koordinator, silakan sesuaikan jika perlu.
+                  </p>
+                )}
                 {pilgrims.map((p, i) => (
                   <div key={i} className={`space-y-4 p-4 border rounded-xl ${pilgrimErrors[i] ? 'border-destructive/50' : 'border-border'}`}>
-                    <p className="font-bold text-gold">Jemaah #{i + 1}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-gold">Jemaah #{i + 1}</p>
+                      {isGroupBooking && i === 0 && (
+                        <Badge variant="outline" className="text-xs border-gold/40 text-gold">Koordinator</Badge>
+                      )}
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Nama Lengkap (Sesuai Paspor) *</Label>
@@ -579,7 +668,32 @@ const Booking = () => {
             {step === 2 && (
               <div className="space-y-6">
                 <h2 className="text-xl font-display font-bold">PIC & Konfirmasi</h2>
-                
+
+                {/* Group booking summary */}
+                {isGroupBooking && (
+                  <div className="p-4 border border-gold/30 bg-gold/5 rounded-xl space-y-2">
+                    <p className="text-sm font-semibold text-gold flex items-center gap-2">
+                      <UsersRound className="w-4 h-4" /> Booking Grup
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                      <span className="text-muted-foreground">Nama Rombongan</span>
+                      <span className="font-medium">{groupName || "-"}</span>
+                      {coordName && (
+                        <>
+                          <span className="text-muted-foreground">Koordinator</span>
+                          <span className="font-medium">{coordName}</span>
+                        </>
+                      )}
+                      {coordPhone && (
+                        <>
+                          <span className="text-muted-foreground">HP Koordinator</span>
+                          <span className="font-medium">{coordPhone}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-4">
                   <Label>Siapa yang membantu pendaftaran Anda?</Label>
                   <RadioGroup value={picType} onValueChange={setPicType} className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -629,7 +743,6 @@ const Booking = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                      
                       <div className="space-y-2">
                         <Label>Pilih Nama Agen</Label>
                         <Select value={picAgentId} onValueChange={setPicAgentId}>
@@ -675,6 +788,12 @@ const Booking = () => {
                     <span>Total Jemaah</span>
                     <span className="font-bold">{getTotalPeople()} Orang</span>
                   </div>
+                  {isGroupBooking && groupName && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Rombongan</span>
+                      <span className="font-medium text-gold">{groupName}</span>
+                    </div>
+                  )}
                   {getLoyaltyDiscount() > 0 && (
                     <>
                       <div className="flex justify-between text-sm text-muted-foreground">
@@ -712,7 +831,9 @@ const Booking = () => {
                 <div className="flex flex-col items-end gap-3">
                   <TurnstileCaptcha onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
                   <Button onClick={handleSubmit} disabled={submitting || !captchaToken} className="gradient-gold text-primary">
-                    {submitting ? "Memproses..." : "Konfirmasi Booking"}
+                    {submitting ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Memproses...</>
+                    ) : "Konfirmasi Booking"}
                   </Button>
                 </div>
               )}

@@ -324,6 +324,14 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
       }
     }
 
+    const {
+      isGroupBooking,
+      groupName,
+      picName: groupPicName,
+      picPhone: groupPicPhone,
+      picEmail: groupPicEmail,
+    } = req.body as CreateBookingInput;
+
     const [created] = await db
       .insert(bookings)
       .values({
@@ -340,6 +348,11 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
         picType: picType ?? null,
         picId: picId ?? null,
         agentId: agentId ?? null,
+        isGroupBooking: isGroupBooking ?? false,
+        groupName: groupName ?? null,
+        picName: groupPicName ?? null,
+        picPhone: groupPicPhone ?? null,
+        picEmail: groupPicEmail ?? null,
         createdAt: new Date(),
       })
       .returning();

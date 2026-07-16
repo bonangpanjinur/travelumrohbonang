@@ -72,6 +72,110 @@ router.get("/", async (req, res) => {
 
 // --- Manifest PDF (F-06) — must come before generic /:id routes ---
 
+/**
+ * GET /api/admin/departures/:id/manifest-data
+ * Returns full pilgrim manifest data (JSON) for the airline standard manifest page.
+ */
+router.get("/:id/manifest-data", async (req, res) => {
+  try {
+    const departureId = req.params.id as string;
+
+    const [departure] = await db
+      .select({
+        id: packageDepartures.id,
+        departureDate: packageDepartures.departureDate,
+        returnDate: packageDepartures.returnDate,
+        quota: packageDepartures.quota,
+        remainingQuota: packageDepartures.remainingQuota,
+        status: packageDepartures.status,
+        packageTitle: packages.title,
+        muthawifId: packageDepartures.muthawifId,
+      })
+      .from(packageDepartures)
+      .leftJoin(packages, eq(packageDepartures.packageId, packages.id))
+      .where(eq(packageDepartures.id, departureId))
+      .limit(1);
+
+    if (!departure) {
+      res.status(404).json({ error: "Departure not found" });
+      return;
+    }
+
+    const departureBookings = await db
+      .select({
+        id: bookings.id,
+        bookingCode: bookings.bookingCode,
+        isGroupBooking: bookings.isGroupBooking,
+        groupName: bookings.groupName,
+        picName: bookings.picName,
+      })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.departureId, departureId),
+          inArray(bookings.status, ["paid", "confirmed", "processing", "completed"]),
+        ),
+      );
+
+    const bookingIds = departureBookings.map((b) => b.id);
+    const bookingInfoById = new Map(
+      departureBookings.map((b) => [b.id, b]),
+    );
+
+    const pilgrims = bookingIds.length
+      ? await db
+          .select({
+            id: bookingPilgrims.id,
+            bookingId: bookingPilgrims.bookingId,
+            name: bookingPilgrims.name,
+            gender: bookingPilgrims.gender,
+            phone: bookingPilgrims.phone,
+            email: bookingPilgrims.email,
+            nik: bookingPilgrims.nik,
+            birthDate: bookingPilgrims.birthDate,
+            nationality: bookingPilgrims.nationality,
+            passportNumber: bookingPilgrims.passportNumber,
+            passportExpiry: bookingPilgrims.passportExpiry,
+            roomType: bookingPilgrims.roomType,
+            roomNumber: bookingPilgrims.roomNumber,
+          })
+          .from(bookingPilgrims)
+          .where(inArray(bookingPilgrims.bookingId, bookingIds))
+      : [];
+
+    const rows = pilgrims.map((p) => {
+      const bk = bookingInfoById.get(p.bookingId ?? "");
+      return {
+        id: p.id,
+        bookingCode: bk?.bookingCode ?? "-",
+        isGroupBooking: bk?.isGroupBooking ?? false,
+        groupName: bk?.groupName ?? null,
+        picName: bk?.picName ?? null,
+        name: p.name,
+        gender: p.gender,
+        phone: p.phone,
+        email: p.email,
+        nik: p.nik,
+        birthDate: p.birthDate,
+        nationality: p.nationality,
+        passportNumber: p.passportNumber,
+        passportExpiry: p.passportExpiry,
+        roomType: p.roomType,
+        roomNumber: p.roomNumber,
+      };
+    });
+
+    res.json({
+      departure,
+      pilgrims: rows,
+      total: rows.length,
+    });
+  } catch (err) {
+    console.error("[departures] manifest-data error:", err);
+    res.status(500).json({ error: "Failed to fetch manifest data" });
+  }
+});
+
 router.get("/:id/manifest.pdf", async (req, res) => {
   try {
     const departureId = req.params.id as string;

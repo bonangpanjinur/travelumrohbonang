@@ -20,6 +20,12 @@ export const bookings = pgTable("bookings", {
   currency: text("currency").notNull(),
   paymentScheme: text("payment_scheme"),
   notes: text("notes"),
+  // Group booking fields
+  isGroupBooking: boolean("is_group_booking").notNull().default(false),
+  groupName: text("group_name"),            // e.g. "Rombongan Masjid Al-Ikhlas"
+  picName: text("pic_name"),                // Group coordinator name
+  picPhone: text("pic_phone"),              // Group coordinator phone
+  picEmail: text("pic_email"),              // Group coordinator email
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   uniqueIndex("uq_bookings_code").on(t.bookingCode),

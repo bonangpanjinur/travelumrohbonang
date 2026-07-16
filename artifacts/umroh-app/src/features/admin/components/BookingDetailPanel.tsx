@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
-import { Users, UserCheck, DollarSign, FileDown, Building2 } from "lucide-react";
+import { Users, UserCheck, DollarSign, FileDown, Building2, UsersRound, PhoneCall } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { fetchInvoiceData, generateInvoiceHTML, openInvoicePrintWindow } from "./InvoiceGenerator";
 import { toast } from "sonner";
@@ -19,6 +20,11 @@ interface BookingDetailPanelProps {
   packageTitle: string;
   branchId?: string | null;
   onBranchChange?: () => void;
+  // Group booking
+  isGroupBooking?: boolean;
+  groupName?: string | null;
+  groupPicName?: string | null;
+  groupPicPhone?: string | null;
 }
 
 interface Pilgrim {
@@ -27,7 +33,7 @@ interface Pilgrim {
   gender: string | null;
 }
 
-const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle, branchId, onBranchChange }: BookingDetailPanelProps) => {
+const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle, branchId, onBranchChange, isGroupBooking, groupName, groupPicName, groupPicPhone }: BookingDetailPanelProps) => {
   const [pilgrims, setPilgrims] = useState<Pilgrim[]>([]);
   const [commissionRate, setCommissionRate] = useState<number>(0);
   const [picName, setPicName] = useState<string>("-");
@@ -160,6 +166,37 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
           <FileDown className="w-4 h-4 mr-2" /> Cetak Invoice
         </Button>
       </div>
+      {/* Group Booking Info */}
+      {isGroupBooking && (
+        <div className="p-3 border border-gold/30 bg-gold/5 rounded-lg">
+          <h4 className="font-semibold flex items-center gap-2 text-sm mb-2 text-gold">
+            <UsersRound className="w-4 h-4" /> Booking Grup
+          </h4>
+          <div className="text-sm grid grid-cols-2 gap-x-4 gap-y-1">
+            {groupName && (
+              <>
+                <span className="text-muted-foreground">Nama Rombongan</span>
+                <span className="font-medium">{groupName}</span>
+              </>
+            )}
+            {groupPicName && (
+              <>
+                <span className="text-muted-foreground">Koordinator</span>
+                <span className="font-medium">{groupPicName}</span>
+              </>
+            )}
+            {groupPicPhone && (
+              <>
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <PhoneCall className="w-3 h-3" /> HP Koordinator
+                </span>
+                <span className="font-medium">{groupPicPhone}</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2">
       {/* Commission Info */}
       <div className="bg-muted/50 rounded-lg p-4 space-y-2">

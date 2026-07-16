@@ -12,6 +12,12 @@ export const BookingSchema = z.object({
   currency: z.string(),
   paymentScheme: z.string().nullable(),
   notes: z.string().nullable(),
+  // Group booking fields
+  isGroupBooking: z.boolean().default(false),
+  groupName: z.string().nullable().optional(),
+  picName: z.string().nullable().optional(),
+  picPhone: z.string().nullable().optional(),
+  picEmail: z.string().nullable().optional(),
   createdAt: z.coerce.date().nullable(),
 });
 
@@ -26,6 +32,12 @@ export const CreateBookingRequest = z.object({
   picId: z.string().optional(),
   agentId: z.string().optional(),
   redeemPoints: z.number().int().positive().optional(),
+  // Group booking
+  isGroupBooking: z.boolean().optional(),
+  groupName: z.string().max(200).optional(),
+  picName: z.string().max(100).optional(),
+  picPhone: z.string().max(30).optional(),
+  picEmail: z.string().email().optional(),
 });
 
 export const BookingWithDetailsSchema = BookingSchema.extend({
@@ -72,8 +84,11 @@ export const BookingPilgrimSchema = z.object({
   gender: z.string().nullable(),
   nik: z.string().nullable(),
   birthDate: z.string().nullable().optional(),
+  nationality: z.string().nullable().optional(),
   passportNumber: z.string().nullable().optional(),
   passportExpiry: z.string().nullable().optional(),
+  roomType: z.string().nullable().optional(),
+  roomNumber: z.string().nullable().optional(),
 });
 
 export const CreateBookingPilgrimItem = z.object({
@@ -82,6 +97,10 @@ export const CreateBookingPilgrimItem = z.object({
   email: z.string().optional(),
   gender: z.enum(["male", "female"]),
   nik: z.string().optional(),
+  birthDate: z.string().optional(),
+  nationality: z.string().optional(),
+  passportNumber: z.string().optional(),
+  passportExpiry: z.string().optional(),
 });
 
 export const CreateBookingPilgrimsRequest = z.object({

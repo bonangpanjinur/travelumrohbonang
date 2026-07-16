@@ -1,6 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Button } from "@/shared/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { Badge } from "@/shared/components/ui/badge";
+import { Eye, EyeOff, UsersRound } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import BookingStatusBadge from "./BookingStatusBadge";
@@ -18,6 +19,10 @@ interface Booking {
   pic_type: string | null;
   pic_id: string | null;
   branch_id: string | null;
+  is_group_booking?: boolean;
+  group_name?: string | null;
+  pic_name?: string | null;
+  pic_phone?: string | null;
   package: { title: string } | null;
   departure: { departure_date: string } | null;
   profile: { name: string; email: string } | null;
@@ -75,6 +80,10 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
                   packageTitle={b.package?.title || "-"}
                   branchId={b.branch_id}
                   onBranchChange={onRefresh}
+                  isGroupBooking={b.is_group_booking}
+                  groupName={b.group_name}
+                  groupPicName={b.pic_name}
+                  groupPicPhone={b.pic_phone}
                 />
               </div>
             )}
@@ -104,11 +113,20 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
             {bookings.map((b) => (
               <>
                 <TableRow key={b.id} className={expandedId === b.id ? "border-b-0" : ""}>
-                  <TableCell className="font-mono text-sm">{b.booking_code}</TableCell>
+                  <TableCell className="font-mono text-sm">
+                    <div>{b.booking_code}</div>
+                    {b.is_group_booking && (
+                      <Badge variant="outline" className="mt-1 text-[10px] border-gold/40 text-gold px-1 py-0 gap-1">
+                        <UsersRound className="w-2.5 h-2.5" />
+                        {b.group_name ? (b.group_name.length > 16 ? b.group_name.slice(0, 16) + "…" : b.group_name) : "Grup"}
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div className="font-semibold">{b.profile?.name || "-"}</div>
                     <div className="text-xs text-muted-foreground">{b.profile?.email}</div>
                   </TableCell>
+                  
                   <TableCell>{b.package?.title || "-"}</TableCell>
                   <TableCell>
                     {b.departure?.departure_date
@@ -144,6 +162,10 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
                         packageTitle={b.package?.title || "-"}
                         branchId={b.branch_id}
                         onBranchChange={onRefresh}
+                        isGroupBooking={b.is_group_booking}
+                        groupName={b.group_name}
+                        groupPicName={b.pic_name}
+                        groupPicPhone={b.pic_phone}
                       />
                     </TableCell>
                   </TableRow>
