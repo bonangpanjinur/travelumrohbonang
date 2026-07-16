@@ -55,6 +55,43 @@ router.post("/", validate(AdminCreatePackageRequest), async (req, res) => {
   }
 });
 
+/** GET /api/admin/packages/:id/document-requirements */
+router.get("/:id/document-requirements", async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const [pkg] = await db
+      .select({ requiredDocTypes: packages.requiredDocTypes })
+      .from(packages)
+      .where(eq(packages.id, id))
+      .limit(1);
+    if (!pkg) return res.status(404).json({ error: "Package not found" });
+    const types: string[] = pkg.requiredDocTypes
+      ? JSON.parse(pkg.requiredDocTypes)
+      : ["paspor", "ktp", "foto"];
+    return res.json({ packageId: id, requiredDocTypes: types });
+  } catch {
+    return res.status(500).json({ error: "Failed to fetch document requirements" });
+  }
+});
+
+/** PATCH /api/admin/packages/:id/document-requirements */
+router.patch("/:id/document-requirements", async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    const { requiredDocTypes } = req.body as { requiredDocTypes: string[] };
+    if (!Array.isArray(requiredDocTypes) || !requiredDocTypes.every((t) => typeof t === "string")) {
+      return res.status(422).json({ error: "requiredDocTypes must be a string array" });
+    }
+    await db
+      .update(packages)
+      .set({ requiredDocTypes: JSON.stringify(requiredDocTypes) })
+      .where(eq(packages.id, id));
+    return res.json({ packageId: id, requiredDocTypes });
+  } catch {
+    return res.status(500).json({ error: "Failed to update document requirements" });
+  }
+});
+
 router.get("/:id", async (req, res) => {
   try {
     const id = req.params.id as string;

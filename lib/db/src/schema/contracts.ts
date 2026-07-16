@@ -54,6 +54,8 @@ export const refundRequests = pgTable("refund_requests", {
   adminNotes: text("admin_notes"),
   processedBy: text("processed_by"),
   processedAt: timestamp("processed_at", { withTimezone: true }),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  refundedAt: timestamp("refunded_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_refund_requests_booking_id").on(t.bookingId),

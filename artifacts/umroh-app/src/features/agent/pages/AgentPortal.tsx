@@ -11,7 +11,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
-import { Briefcase, Users, DollarSign, TrendingUp, Copy, Check, ExternalLink, ShoppingBag, User, Mail, Phone, Building2, Percent, Pencil, Loader2 } from "lucide-react";
+import { Briefcase, Users, DollarSign, TrendingUp, Copy, Check, ExternalLink, ShoppingBag, User, Mail, Phone, Building2, Percent, Pencil, Loader2, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -37,10 +37,18 @@ type AgentRow = {
   name: string;
   phone: string | null;
   email: string | null;
-  commission_percent: number;
-  referral_code: string | null;
-  branch_id: string | null;
-  monthly_target: number | null;
+  // camelCase from /api/agent/profile
+  commissionPercent: number;
+  referralCode: string | null;
+  branchId: string | null;
+  monthlyTarget: number | null;
+  stats?: {
+    totalBookings: number;
+    paidBookings: number;
+    totalRevenue: number;
+    totalCommission: number;
+    pendingBookings: number;
+  };
 };
 
 const AgentPortal = () => {
@@ -50,6 +58,7 @@ const AgentPortal = () => {
   const [branchName, setBranchName] = useState<string | null>(null);
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -71,22 +80,24 @@ const AgentPortal = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Get current user's agent profile
-      const agents = await apiFetch<any[]>("/api/admin/agents"); // We might need a proper public/agent profile endpoint
-      const agentData = agents.find(a => a.userId === user?.id);
+      // §7.2.1: Use dedicated /api/agent/* endpoints — no IDOR risk, scoped to current user
+      const [agentData, agentBookings, leaderboard] = await Promise.all([
+        apiFetch<any>("/api/agent/profile"),
+        apiFetch<any[]>("/api/agent/bookings"),
+        apiFetch<any[]>("/api/agent/leaderboard").catch(() => []),
+      ]);
+
       setAgent(agentData);
+      setBookings(agentBookings || []);
+      setLeaderboard(leaderboard || []);
 
-      if (agentData) {
-        if (agentData.branchId) {
-          const branches = await apiFetch<any[]>("/api/admin/branches");
-          const br = branches.find(b => b.id === agentData.branchId);
-          setBranchName(br?.name || null);
-        }
-
-        // Fetch bookings for this agent
-        const bookings = await apiFetch<any[]>("/api/admin/bookings"); // Assuming we can filter or fetch all and filter
-        const agentBookings = bookings.filter(b => b.agentId === agentData.id);
-        setBookings(agentBookings);
+      if (agentData?.branchId) {
+        apiFetch<any[]>("/api/admin/branches")
+          .then((branches) => {
+            const br = (branches || []).find((b: any) => b.id === agentData.branchId);
+            setBranchName(br?.name || null);
+          })
+          .catch(() => {});
       }
     } catch (err: any) {
       console.error(err);
@@ -96,8 +107,8 @@ const AgentPortal = () => {
     }
   };
 
-  const referralUrl = agent?.referral_code
-    ? `${window.location.origin}/?ref=${agent.referral_code}`
+  const referralUrl = agent?.referralCode
+    ? `${window.location.origin}/?ref=${agent.referralCode}`
     : "";
 
   const copyReferral = () => {
@@ -114,7 +125,7 @@ const AgentPortal = () => {
       name: agent.name || "",
       email: agent.email || "",
       phone: agent.phone || "",
-      branch_id: agent.branch_id || "__none__",
+      branch_id: (agent as any).branchId ?? (agent as any).branch_id ?? "__none__",
     });
     setEditOpen(true);
   };
@@ -153,16 +164,24 @@ const AgentPortal = () => {
     }
   };
 
-  // Stats
-  const paidBookings = bookings.filter((b) => b.status === "paid");
-  const totalRevenue = paidBookings.reduce((s, b) => s + (Number(b.total_price) || 0), 0);
-  const totalCommission = totalRevenue * ((agent?.commission_percent || 0) / 100);
-  const pendingCount = bookings.filter((b) => b.status === "pending" || b.status === "waiting_payment").length;
+  // Stats — come from agent.stats populated by /api/agent/profile
+  const paidCount = agent?.stats?.paidBookings ?? bookings.filter((b) => b.status === "paid").length;
+  const totalRevenue = agent?.stats?.totalRevenue ?? 0;
+  const totalCommission = agent?.stats?.totalCommission ?? 0;
+  const pendingCount = agent?.stats?.pendingBookings ?? 0;
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+      <div className="min-h-screen bg-muted/30 p-4 lg:p-6">
+        <div className="max-w-6xl mx-auto space-y-6 pt-4">
+          <div className="h-8 bg-muted animate-pulse rounded w-48" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-muted animate-pulse rounded-xl" />
+            ))}
+          </div>
+          <div className="h-64 bg-muted animate-pulse rounded-xl" />
+        </div>
       </div>
     );
   }
@@ -221,8 +240,8 @@ const AgentPortal = () => {
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <StatCard icon={ShoppingBag} label="Total Booking" value={bookings.length} />
-            <StatCard icon={Users} label="Lunas" value={paidBookings.length} color="text-success" />
+            <StatCard icon={ShoppingBag} label="Total Booking" value={agent.stats?.totalBookings ?? bookings.length} />
+            <StatCard icon={Users} label="Lunas" value={paidCount} color="text-success" />
             <StatCard
               icon={DollarSign}
               label="Total Revenue"
@@ -231,7 +250,7 @@ const AgentPortal = () => {
             />
             <StatCard
               icon={TrendingUp}
-              label={`Komisi (${agent.commission_percent}%)`}
+              label={`Komisi (${agent.commissionPercent}%)`}
               value={`Rp ${totalCommission.toLocaleString("id-ID")}`}
               color="text-primary"
             />
@@ -240,18 +259,18 @@ const AgentPortal = () => {
           {/* Target & Forecast */}
           {(() => {
             const now = new Date();
-            const thisMonth = paidBookings.filter((b) => {
-              const d = new Date(b.created_at);
-              return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+            const thisMonth = bookings.filter((b) => {
+              const d = new Date(b.createdAt ?? b.created_at);
+              return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && b.status === "paid";
             });
             const thisMonthCommission = thisMonth.reduce(
-              (s, b) => s + (Number(b.total_price) || 0) * (agent.commission_percent / 100),
+              (s, b) => s + (Number(b.commission) || (Number(b.totalPrice ?? b.total_price) || 0) * ((agent.commissionPercent ?? 0) / 100)),
               0
             );
             const pendingCommission = bookings
               .filter((b) => b.status === "pending" || b.status === "waiting_payment")
-              .reduce((s, b) => s + (Number(b.total_price) || 0) * (agent.commission_percent / 100), 0);
-            const target = Number(agent.monthly_target || 0);
+              .reduce((s, b) => s + (Number(b.totalPrice ?? b.total_price) || 0) * ((agent.commissionPercent ?? 0) / 100), 0);
+            const target = Number(agent.monthlyTarget ?? 0);
             const progress = target > 0 ? Math.min(100, (thisMonthCommission / target) * 100) : 0;
             const forecast = thisMonthCommission + pendingCommission;
             return (
@@ -328,11 +347,11 @@ const AgentPortal = () => {
                 <ProfileField icon={Mail} label="Email" value={agent.email || "-"} />
                 <ProfileField icon={Phone} label="Telepon" value={agent.phone || "-"} />
                 <ProfileField icon={Building2} label="Cabang" value={branchName || "Pusat / Tanpa Cabang"} />
-                <ProfileField icon={Percent} label="Komisi" value={`${agent.commission_percent}%`} />
+                <ProfileField icon={Percent} label="Komisi" value={`${agent.commissionPercent}%`} />
                 <ProfileField
                   icon={Briefcase}
                   label="Kode Referral"
-                  value={agent.referral_code || "Belum diatur"}
+                  value={agent.referralCode || "Belum diatur"}
                   mono
                 />
               </div>
@@ -348,7 +367,7 @@ const AgentPortal = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {agent.referral_code ? (
+              {agent.referralCode ? (
                 <div className="flex gap-2">
                   <Input value={referralUrl} readOnly className="font-mono text-sm" />
                   <Button variant="outline" size="icon" onClick={copyReferral}>
@@ -367,6 +386,51 @@ const AgentPortal = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* §7.2.1 Leaderboard Agen */}
+          {leaderboard.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-primary" /> Leaderboard Agen
+                </CardTitle>
+                <CardDescription>Top 10 agen berdasarkan total booking lunas</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">#</TableHead>
+                        <TableHead>Nama Agen</TableHead>
+                        <TableHead className="text-right">Booking Lunas</TableHead>
+                        <TableHead className="text-right">Total Revenue</TableHead>
+                        <TableHead className="text-right">Komisi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {leaderboard.map((lb, i) => (
+                        <TableRow key={lb.agentId} className={lb.agentId === agent.id ? "bg-primary/5" : ""}>
+                          <TableCell>
+                            <span className={i < 3 ? "font-bold text-primary" : "text-muted-foreground"}>{i + 1}</span>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {lb.name}
+                            {lb.agentId === agent.id && (
+                              <span className="ml-1.5 text-xs text-primary">(Anda)</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">{lb.paidBookingCount}</TableCell>
+                          <TableCell className="text-right text-sm">Rp {Number(lb.totalRevenue).toLocaleString("id-ID")}</TableCell>
+                          <TableCell className="text-right text-sm text-primary font-medium">Rp {Number(lb.commission).toLocaleString("id-ID")}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Bookings List */}
           <Card>
@@ -398,18 +462,16 @@ const AgentPortal = () => {
                       </TableRow>
                     ) : (
                       bookings.map((b) => {
-                        const commission = b.status === "paid"
-                          ? (Number(b.total_price) || 0) * (agent.commission_percent / 100)
-                          : 0;
+                        const commission = Number(b.commission) || 0;
                         return (
                           <TableRow key={b.id}>
-                            <TableCell className="font-mono text-xs">{b.booking_code}</TableCell>
-                            <TableCell className="text-sm">{b.packages?.title || "-"}</TableCell>
+                            <TableCell className="font-mono text-xs">{b.bookingCode ?? b.booking_code}</TableCell>
+                            <TableCell className="text-sm">{b.packageTitle ?? b.packages?.title ?? "-"}</TableCell>
                             <TableCell className="text-sm">
-                              {format(new Date(b.created_at), "dd MMM yyyy", { locale: localeId })}
+                              {format(new Date(b.createdAt ?? b.created_at), "dd MMM yyyy", { locale: localeId })}
                             </TableCell>
                             <TableCell className="text-right text-sm">
-                              Rp {Number(b.total_price).toLocaleString("id-ID")}
+                              Rp {Number(b.totalPrice ?? b.total_price).toLocaleString("id-ID")}
                             </TableCell>
                             <TableCell className="text-right text-sm font-medium text-primary">
                               {commission > 0 ? `Rp ${commission.toLocaleString("id-ID")}` : "-"}

@@ -25,6 +25,8 @@ router.get("/", async (req, res) => {
         adminNotes: refundRequests.adminNotes,
         processedBy: refundRequests.processedBy,
         processedAt: refundRequests.processedAt,
+        approvedAt: refundRequests.approvedAt,
+        refundedAt: refundRequests.refundedAt,
         createdAt: refundRequests.createdAt,
         bookingCode: bookings.bookingCode,
         totalPrice: bookings.totalPrice,
@@ -43,13 +45,17 @@ router.patch("/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const { status, adminNotes, processedBy } = req.body;
+    const now = new Date();
     const [updated] = await db
       .update(refundRequests)
       .set({
         status,
         adminNotes,
         processedBy,
-        processedAt: new Date(),
+        processedAt: now,
+        // Track individual transition timestamps for the user-facing timeline
+        ...(status === "approved" ? { approvedAt: now } : {}),
+        ...(status === "refunded" ? { refundedAt: now } : {}),
       })
       .where(eq(refundRequests.id, id))
       .returning();

@@ -142,6 +142,33 @@ export const waNotifications = {
     }
   },
 
+  /** §7.1.2: sent by document reminder cron at H-60, H-30, H-14 before departure. */
+  async documentReminder(
+    phone: string,
+    data: {
+      jamaahName: string;
+      bookingCode: string;
+      packageName: string;
+      daysUntilDeparture: number;
+      departureDate: string;
+    },
+  ): Promise<void> {
+    try {
+      const { jamaahName, bookingCode, packageName, daysUntilDeparture, departureDate } = data;
+      const message =
+        `Halo ${jamaahName},\n\n` +
+        `⚠️ *Pengingat Dokumen Umroh* — H-${daysUntilDeparture}\n\n` +
+        `Booking *${bookingCode}* (${packageName}) berangkat pada *${departureDate}*.\n\n` +
+        `Dokumen perjalanan Anda belum lengkap/terverifikasi. Segera upload dan lengkapi dokumen ` +
+        `Anda agar proses keberangkatan tidak terhambat.\n\n` +
+        `Akses dokumen: https://travelumrohbonang.replit.app/dokumen-saya\n\n` +
+        `Terima kasih — Tim Umroh Plus`;
+      await sendWhatsApp({ to: phone, message });
+    } catch (err) {
+      console.error("[waNotifications] documentReminder failed:", err);
+    }
+  },
+
   /**
    * F-04 WA Blast — sends a custom message to ALL jamaah in a departure.
    * Returns { sent, skipped } counts for admin feedback.

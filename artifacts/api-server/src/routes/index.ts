@@ -17,6 +17,7 @@ import loyaltyRouter from "./loyalty";
 import wishlistsRouter from "./wishlists";
 import pilgrimTestimonialsRouter from "./pilgrim-testimonials";
 import paymentGatewayWebhooksRouter from "./payment-gateway-webhooks";
+import agentRouter from "./agent";
 import { strictLimiter, writeLimiter } from "../middlewares/rateLimiter";
 import { logDiag } from "../lib/tempDiagnosticLog"; // TEMP DIAG
 
@@ -77,6 +78,9 @@ router.use("/pilgrim-testimonials", strictLimiter, pilgrimTestimonialsRouter);
 // Configure Midtrans notification URL: https://<host>/api/payments/webhook/midtrans
 // Configure Xendit callback URL:       https://<host>/api/payments/webhook/xendit
 router.use("/payments/webhook", writeLimiter, paymentGatewayWebhooksRouter);
+
+// Agent portal — dedicated endpoints scoped to the authenticated user's own agent record
+router.use("/agent", strictLimiter, agentRouter);
 
 // Client-side logging (no auth required — best-effort; write-rate-limited at router level)
 router.use("/logs", writeLimiter, logsRouter);

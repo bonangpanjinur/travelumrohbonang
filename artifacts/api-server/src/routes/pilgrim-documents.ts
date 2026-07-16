@@ -1,6 +1,6 @@
 import { Router } from "express";
 import crypto from "crypto";
-import { db, pilgrimDocuments, pilgrimDocAccessLogs, bookings, bookingPilgrims, eq, and, inArray } from "@workspace/db";
+import { db, pilgrimDocuments, pilgrimDocAccessLogs, bookings, bookingPilgrims, packageDepartures, eq, and, inArray } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth";
 
 interface AuthRequest extends Request {
@@ -61,11 +61,11 @@ router.get("/", async (req: any, res) => {
 router.post("/", async (req: any, res) => {
   try {
     const userId = req.user.id;
-    const { pilgrimId, bookingId, documentType, fileUrl, fileName, notes } = req.body;
+    const { pilgrimId, bookingId, documentType, fileUrl, fileName, notes, passportExpiryDate } = req.body;
 
     // Verify ownership
     const [booking] = await db
-      .select()
+      .select({ id: bookings.id, departureId: bookings.departureId })
       .from(bookings)
       .where(and(eq(bookings.id, bookingId), eq(bookings.userId, userId)))
       .limit(1);
@@ -83,6 +83,36 @@ router.post("/", async (req: any, res) => {
 
     if (!pilgrim) {
       return res.status(403).json({ error: "Forbidden" });
+    }
+
+    // §7.1.2: Passport expiry validation — must be valid ≥6 months from departure
+    if (documentType === "paspor" && passportExpiryDate) {
+      const expiry = new Date(passportExpiryDate);
+      if (isNaN(expiry.getTime())) {
+        return res.status(422).json({ error: "Format tanggal kadaluarsa paspor tidak valid" });
+      }
+      let referenceDate = new Date();
+      if (booking.departureId) {
+        const [dep] = await db
+          .select({ departureDate: packageDepartures.departureDate })
+          .from(packageDepartures)
+          .where(eq(packageDepartures.id, booking.departureId))
+          .limit(1);
+        if (dep?.departureDate) referenceDate = new Date(dep.departureDate);
+      }
+      const minExpiry = new Date(referenceDate);
+      minExpiry.setMonth(minExpiry.getMonth() + 6);
+      if (expiry < minExpiry) {
+        const fmt = new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "long", year: "numeric" });
+        return res.status(422).json({
+          error: `Paspor harus berlaku ≥6 bulan dari tanggal keberangkatan (${fmt.format(referenceDate)}). Minimum kadaluarsa: ${fmt.format(minExpiry)}.`,
+        });
+      }
+      // Persist expiry to pilgrim record
+      await db
+        .update(bookingPilgrims)
+        .set({ passportExpiry: passportExpiryDate })
+        .where(eq(bookingPilgrims.id, pilgrimId));
     }
 
     const [existing] = await db

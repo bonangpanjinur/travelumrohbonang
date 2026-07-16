@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { validateRequiredEnv, logEnvStatus } from "./lib/envValidation";
 import { logStartupBanner } from "./lib/startupLogger";
 import { startInstallmentReminderCron } from "./lib/installmentReminderCron";
+import { startDocumentReminderCron } from "./lib/documentReminderCron";
 
 // ── Step 1: Validate required env vars — fail fast before anything else ───────
 // If SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY are missing the process exits
@@ -39,6 +40,8 @@ app.listen(port, async (err) => {
 
   // F-05: start daily H-7 installment reminder scheduler
   startInstallmentReminderCron();
+  // §7.1.2: start daily document reminder scheduler (H-60, H-30, H-14)
+  startDocumentReminderCron();
 
   logger.info({ port }, "Server listening");
 });

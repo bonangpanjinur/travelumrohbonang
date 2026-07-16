@@ -136,4 +136,35 @@ export const emailNotifications = {
       console.error("[emailNotifications] departureReminder failed:", err);
     }
   },
+
+  /** §7.1.2: document reminder at H-60, H-30, H-14 before departure. */
+  async documentReminder(
+    email: string,
+    data: {
+      jamaahName: string;
+      bookingCode: string;
+      packageName: string;
+      daysUntilDeparture: number;
+      departureDate: string;
+    },
+  ): Promise<void> {
+    try {
+      const { jamaahName, bookingCode, packageName, daysUntilDeparture, departureDate } = data;
+      const subject = `[H-${daysUntilDeparture}] Lengkapi Dokumen Umroh Anda — ${bookingCode}`;
+      const html = `
+        <p>Halo <strong>${jamaahName}</strong>,</p>
+        <p>Booking <strong>${bookingCode}</strong> (${packageName}) berangkat pada <strong>${departureDate}</strong>.</p>
+        <p>Dokumen perjalanan Anda <strong>belum lengkap atau belum terverifikasi</strong>. 
+           Segera upload dan lengkapi dokumen Anda agar proses keberangkatan tidak terhambat.</p>
+        <p><a href="https://travelumrohbonang.replit.app/dokumen-saya" 
+              style="background:#b8860b;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;">
+          Lengkapi Dokumen Sekarang
+        </a></p>
+        <p>Terima kasih,<br/>Tim Umroh Plus</p>
+      `;
+      await sendEmail({ to: email, subject, html });
+    } catch (err) {
+      console.error("[emailNotifications] documentReminder failed:", err);
+    }
+  },
 };

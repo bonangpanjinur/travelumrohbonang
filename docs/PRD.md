@@ -415,11 +415,11 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 - [ ] **Invoice/konfirmasi booking PDF otomatis** — lihat [F-06](#f-06--pdf-export)
 - [ ] **Laporan keuangan:** Export ke Excel/PDF, rekonsiliasi otomatis — lihat [F-06](#f-06--pdf-export)
 
-**7.1.2 Manajemen Dokumen**
-- [ ] **Checklist dokumen per paket:** Admin bisa tentukan dokumen apa yang wajib
-- [ ] **Upload dokumen jemaah:** Scan paspor, KTP, foto, vaksin
-- [ ] **Validasi dokumen:** Masa berlaku paspor minimal 6 bulan otomatis dicek
-- [ ] **Reminder dokumen:** Notifikasi H-60, H-30, H-14 sebelum keberangkatan
+**7.1.2 Manajemen Dokumen** ✅ Selesai (2026-07-15)
+- [x] **Checklist dokumen per paket:** Admin bisa tentukan dokumen apa yang wajib — `requiredDocTypes` JSON field di `packages` + `GET/PATCH /api/admin/packages/:id/document-requirements`; MyDocuments.tsx fetch per-paket secara dinamis
+- [x] **Upload dokumen jemaah:** Scan paspor, KTP, foto, vaksin — MyDocuments.tsx menerima hingga 7 tipe dokumen termasuk vaksin; file diupload ke Supabase Storage
+- [x] **Validasi dokumen:** Masa berlaku paspor minimal 6 bulan otomatis dicek — `POST /api/pilgrim-documents` menolak upload jika expiry < departureDate + 6 bulan; input tanggal kadaluarsa paspor ditambahkan di MyDocuments.tsx
+- [x] **Reminder dokumen:** Notifikasi H-60, H-30, H-14 sebelum keberangkatan — `documentReminderCron.ts` berjalan harian 08:00 WIB; kirim WA + email ke jemaah dengan dokumen belum lengkap
 - [ ] **Sertifikat keberangkatan:** Generate otomatis setelah perjalanan selesai
 
 **7.1.3 Notifikasi & Komunikasi**
@@ -430,12 +430,12 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 
 ### 7.2 Fase 2 — Fitur Pertumbuhan (Q4 2026) — ⏳ Belum Dimulai
 
-**7.2.1 Sistem Agen & Referral**
-- [ ] **Dashboard agen yang lengkap:** Statistik booking dari referral, pendapatan, konversi
+**7.2.1 Sistem Agen & Referral** ⚠️ Parsial (2026-07-15)
+- [x] **Dashboard agen yang lengkap:** Statistik booking dari referral, pendapatan, konversi — dedicated `/api/agent/profile` (stats), `/api/agent/bookings`, `/api/agent/leaderboard`; AgentPortal.tsx diperbarui ke endpoint baru (no IDOR); skeleton loading, camelCase fields
 - [ ] **Materi promosi:** Download banner, flyer digital siap pakai per paket
 - [ ] **Multi-level komisi:** Agen bisa punya sub-agen dengan komisi berjenjang
 - [ ] **Withdrawal otomatis:** Transfer komisi ke rekening setelah threshold terpenuhi
-- [ ] **Leaderboard agen:** Gamifikasi untuk mendorong performa
+- [x] **Leaderboard agen:** Gamifikasi untuk mendorong performa — Top 10 leaderboard ditambahkan ke AgentPortal.tsx; endpoint `/api/agent/leaderboard` sorted by revenue
 - [ ] **Landing page agen:** Setiap agen punya microsite dengan URL custom (`agen.umrohplus.com/budi`)
 
 **7.2.2 Manajemen Grup & Multi-Jemaah**
@@ -499,8 +499,8 @@ Prioritas: Fitur yang sudah ada tapi belum sempurna.
 | Bahasa | Fase 1 — Penyempurnaan Bilingual ID/EN (§5.2) | ⏳ Belum Selesai | **P1** | Kualitas produk saat ini, tapi tidak seblocking transaksi/mobile UX |
 | Fitur | F-05 Cicilan End-to-End | ⏳ Belum | **P1** | Revenue driver untuk paket mahal, banyak jemaah pakai cicilan |
 | Fitur | F-06 PDF Export | ⚠️ Parsial | **P1** | PDF booking & manifest sudah ada; Excel laporan komisi belum |
-| Fitur | Manajemen Dokumen (checklist, validasi, reminder) (§7.1.2) | ⏳ Belum | **P1** | Wajib untuk kepatuhan syarat keberangkatan (paspor, visa) |
-| Fitur | Dashboard Agen Lengkap (§7.2.1) | ⏳ Belum | **P1** | Mendorong pertumbuhan booking lewat agen yang sudah ada |
+| Fitur | Manajemen Dokumen (checklist, validasi, reminder) (§7.1.2) | ✅ Selesai | **P1** | Wajib untuk kepatuhan syarat keberangkatan (paspor, visa) |
+| Fitur | Dashboard Agen Lengkap (§7.2.1) | ⚠️ Parsial | **P1** | Dedicated endpoints + leaderboard selesai; materi promosi & multi-level komisi belum |
 | Fitur | F-07 Loyalty User-Facing | ⚠️ Parsial | **P2** | UI (widget + halaman) sudah ada; auto-award & redeem saat checkout belum |
 | Fitur | F-08 Manasik — Sesi & Absensi | ⚠️ Parsial | **P2** | Materi upload sudah ada; sesi, absensi, dan notifikasi H-1 belum |
 | UI/UX | Fase 2 — Peningkatan Konversi (§6.3) | ⏳ Belum Dimulai | **P2** | Baru relevan setelah fondasi (Fase 1 UI/UX & fitur) selesai |

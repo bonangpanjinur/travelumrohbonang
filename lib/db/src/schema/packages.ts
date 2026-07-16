@@ -21,6 +21,9 @@ export const packages = pgTable("packages", {
   dpDeadlineDays: integer("dp_deadline_days"),
   fullDeadlineDays: integer("full_deadline_days"),
   isActive: boolean("is_active"),
+  // JSON array of document type strings admin has configured as required for this package.
+  // Example: '["paspor","ktp","foto","vaksin"]'  — falls back to global REQUIRED_DOCUMENT_TYPES if null.
+  requiredDocTypes: text("required_doc_types"),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   uniqueIndex("uq_packages_slug").on(t.slug),
