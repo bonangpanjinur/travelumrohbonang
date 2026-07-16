@@ -54,6 +54,54 @@ router.put("/seo", async (req, res) => {
   }
 });
 
+// Single-key get — used by feature pages (LoginSettings, etc.)
+router.get("/:key", async (req, res) => {
+  // Guard against shadowing specific named routes above (e.g. /seo)
+  const reserved = ["seo"];
+  if (reserved.includes(req.params.key)) {
+    return res.status(404).json({ error: "Not found" });
+  }
+  try {
+    const [item] = await db.select().from(siteSettings).where(eq(siteSettings.key, req.params.key)).limit(1);
+    res.json({ data: item ?? null });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch setting" });
+  }
+});
+
+// Upsert by key — atomic check-then-insert-or-update by key name.
+// Called by Settings.tsx and LoginSettings.tsx instead of the old
+// non-atomic supabase select+insert/update pattern.
+router.put("/:key", async (req, res) => {
+  const reserved = ["seo"];
+  if (reserved.includes(req.params.key)) {
+    return res.status(404).json({ error: "Use the dedicated /seo endpoint" });
+  }
+  try {
+    const { category, value } = req.body;
+    const key = req.params.key;
+    const [existing] = await db.select({ id: siteSettings.id }).from(siteSettings).where(eq(siteSettings.key, key)).limit(1);
+
+    let item;
+    if (existing) {
+      [item] = await db
+        .update(siteSettings)
+        .set({ value, ...(category ? { category } : {}) })
+        .where(eq(siteSettings.key, key))
+        .returning();
+    } else {
+      [item] = await db
+        .insert(siteSettings)
+        .values({ id: crypto.randomUUID(), key, category: category ?? "general", value, createdAt: new Date() })
+        .returning();
+    }
+    res.json({ data: item });
+  } catch (err) {
+    console.error("[settings PUT/:key]", err);
+    res.status(500).json({ error: "Failed to upsert setting" });
+  }
+});
+
 router.post("/", async (req, res) => {
   try {
     const [item] = await db.insert(siteSettings).values({

@@ -89,8 +89,9 @@ const PaymentGateway = () => {
   const { data: bookings = [] } = useQuery({
     queryKey: ["bookings-for-gateway"],
     queryFn: async () => {
-      const data = await apiFetch<any[]>("/api/bookings") || [];
-      return data.filter((b: any) => ["pending", "draft", "confirmed"].includes(b.status));
+      const result = await apiFetch<{ data: any[]; total: number }>("/api/admin/bookings?limit=200")
+        .catch(() => ({ data: [], total: 0 }));
+      return (result?.data ?? []).filter((b: any) => ["pending", "draft", "confirmed"].includes(b.status));
     },
   });
 
@@ -161,9 +162,9 @@ const PaymentGateway = () => {
     setSelectedBookingId(bookingId);
     const booking = bookings.find((b: any) => b.id === bookingId);
     if (booking) {
-      setPaymentAmount(String(booking.totalPrice));
-      setCustomerName(booking.pilgrimName || booking.buyerName || "");
-      setCustomerEmail(booking.buyerEmail || "");
+      setPaymentAmount(String(booking.totalPrice ?? booking.total_price ?? ""));
+      setCustomerName(booking.pilgrimName ?? booking.buyerName ?? booking.buyer_name ?? "");
+      setCustomerEmail(booking.buyerEmail ?? booking.buyer_email ?? "");
     }
   };
 
@@ -369,7 +370,7 @@ const PaymentGateway = () => {
                 <SelectContent>
                   {bookings.map((b: any) => (
                     <SelectItem key={b.id} value={b.id}>
-                      {b.booking_code} - Rp {Number(b.total_price).toLocaleString("id-ID")}
+                      {b.bookingCode ?? b.booking_code} - Rp {Number(b.totalPrice ?? b.total_price ?? 0).toLocaleString("id-ID")}
                     </SelectItem>
                   ))}
                 </SelectContent>

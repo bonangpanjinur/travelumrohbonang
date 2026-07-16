@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
 import { Switch } from "@/shared/components/ui/switch";
@@ -23,14 +23,14 @@ const LoginSettings = () => {
   const [value, setValue] = useState<LoginSettingsValue>(DEFAULTS);
 
   const load = async () => {
-    const { data } = await supabase
-      .from("site_settings")
-      .select("value")
-      .eq("category", "auth")
-      .eq("key", "settings")
-      .maybeSingle();
-    setValue({ ...DEFAULTS, ...((data?.value as any) || {}) });
-    setLoading(false);
+    try {
+      const result = await apiFetch<{ data: { value: unknown } | null }>("/api/admin/settings/login_settings");
+      setValue({ ...DEFAULTS, ...((result?.data?.value as any) || {}) });
+    } catch {
+      // keep defaults on error
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -39,15 +39,17 @@ const LoginSettings = () => {
 
   const save = async () => {
     setSaving(true);
-    const { error } = await supabase
-      .from("site_settings")
-      .upsert({ category: "auth", key: "settings", value: value as any }, { onConflict: "category,key" });
-    setSaving(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    try {
+      await apiFetch("/api/admin/settings/login_settings", {
+        method: "PUT",
+        body: JSON.stringify({ category: "auth", value }),
+      });
+      toast.success("Pengaturan login disimpan");
+    } catch (err: any) {
+      toast.error(err?.message || "Gagal menyimpan");
+    } finally {
+      setSaving(false);
     }
-    toast.success("Pengaturan login disimpan");
   };
 
   if (!isAdmin) return null;

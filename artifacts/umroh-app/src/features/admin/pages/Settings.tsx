@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { supabase } from "@/shared/integrations/supabase/client"; // kept for storage upload only
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -19,7 +20,6 @@ import {
 import { useToast } from "@/shared/hooks/use-toast";
 import { Save, Image, Globe, Building2, Phone, Palette, ImageIcon, Layout, Check, Banknote, Share2, Wallet, Eye, EyeOff } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { type Json } from "@/shared/integrations/supabase/types";
 import { IconPicker } from "@/shared/components/ui/icon-picker";
 import { cn } from "@/shared/lib/utils";
 import { hslToHex } from "@/features/tenant/hooks/useActiveTemplate";
@@ -326,87 +326,66 @@ const AdminSettings = () => {
   }, []);
 
   const fetchSettings = async () => {
-    const { data, error } = await supabase
-      .from("site_settings")
-      .select("*");
-
-    if (error) {
+    try {
+      const result = await apiFetch<{ data: Array<{ key: string; value: unknown }> }>("/api/admin/settings");
+      (result?.data ?? []).forEach((setting) => {
+        const value = setting.value as object;
+        switch (setting.key) {
+          case "hero":
+            setHero({ ...defaultHero, ...value });
+            break;
+          case "about":
+            setAbout({ ...defaultAbout, ...value });
+            break;
+          case "branding":
+            setBranding({ ...defaultBranding, ...value });
+            break;
+          case "contact":
+            setContact({ ...defaultContact, ...value });
+            break;
+          case "seo":
+            setSeo({ ...defaultSeo, ...value });
+            break;
+          case "background":
+            setBackground({ ...defaultBackground, ...value });
+            break;
+          case "template": {
+            const loadedTemplate = { ...defaultTemplate, ...value } as TemplateSettings;
+            loadedTemplate.font_style = normalizeFontStyle(loadedTemplate.font_style);
+            setTemplate(loadedTemplate);
+            break;
+          }
+          case "bank":
+            setBank({ ...defaultBank, ...value });
+            break;
+          case "social":
+            setSocial({ ...defaultSocial, ...value });
+            break;
+          case "payment_gateway":
+            setPaymentGateway({ ...defaultPaymentGateway, ...value });
+            break;
+        }
+      });
+    } catch (error) {
       console.error("Gagal memuat pengaturan:", error);
       toast({
         title: "Gagal memuat pengaturan",
         description: "Coba muat ulang halaman.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
-
-    if (data) {
-      data.forEach((setting) => {
-        const value = setting.value as Json;
-        switch (setting.key) {
-          case "hero":
-            setHero({ ...defaultHero, ...(value as object) });
-            break;
-          case "about":
-            setAbout({ ...defaultAbout, ...(value as object) });
-            break;
-          case "branding":
-            setBranding({ ...defaultBranding, ...(value as object) });
-            break;
-          case "contact":
-            setContact({ ...defaultContact, ...(value as object) });
-            break;
-          case "seo":
-            setSeo({ ...defaultSeo, ...(value as object) });
-            break;
-          case "background":
-            setBackground({ ...defaultBackground, ...(value as object) });
-            break;
-          case "template": {
-            const loadedTemplate = { ...defaultTemplate, ...(value as object) } as TemplateSettings;
-            loadedTemplate.font_style = normalizeFontStyle(loadedTemplate.font_style);
-            setTemplate(loadedTemplate);
-            break;
-          }
-          case "bank":
-            setBank({ ...defaultBank, ...(value as object) });
-            break;
-          case "social":
-            setSocial({ ...defaultSocial, ...(value as object) });
-            break;
-          case "payment_gateway":
-            setPaymentGateway({ ...defaultPaymentGateway, ...(value as object) });
-            break;
-        }
-      });
-    }
-    setLoading(false);
   };
 
-  const saveSetting = async (key: string, category: string, value: object) => {
+  const saveSetting = async (key: string, category: string, value: object, silent = false) => {
     setSaving(true);
     try {
-      const { data: existing, error: fetchError } = await supabase
-        .from("site_settings")
-        .select("id")
-        .eq("key", key)
-        .maybeSingle();
-
-      if (fetchError) throw fetchError;
-
-      if (existing) {
-        const { error: updateError } = await supabase
-          .from("site_settings")
-          .update({ value: value as Json })
-          .eq("id", existing.id);
-        if (updateError) throw updateError;
-      } else {
-        const { error: insertError } = await supabase
-          .from("site_settings")
-          .insert({ id: crypto.randomUUID(), key, category, value: value as Json });
-        if (insertError) throw insertError;
-      }
-
-      toast({ title: "Pengaturan disimpan!" });
+      await apiFetch(`/api/admin/settings/${key}`, {
+        method: "PUT",
+        body: JSON.stringify({ category, value }),
+      });
+      if (!silent) toast({ title: "Pengaturan disimpan!" });
     } catch (err: any) {
       toast({
         title: "Gagal menyimpan pengaturan",
@@ -423,8 +402,10 @@ const AdminSettings = () => {
     setTemplate(defaultTemplate);
     setBranding(defaultBranding);
 
-    await saveSetting("template", "appearance", defaultTemplate);
-    await saveSetting("branding", "general", defaultBranding);
+    // Pass silent=true so each saveSetting does NOT fire its own "Pengaturan disimpan!" toast.
+    // We show a single reset-specific toast below instead.
+    await saveSetting("template", "appearance", defaultTemplate, true);
+    await saveSetting("branding", "general", defaultBranding, true);
 
     toast({ title: "Tampilan dikembalikan ke default!" });
     setResetting(false);
