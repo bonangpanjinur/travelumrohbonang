@@ -8,8 +8,9 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from "recharts";
-import { format } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { safeFormatDate } from "@/lib/utils";
 import {
   TrendingUp, TrendingDown, Users, Package, CreditCard,
   DollarSign, LayoutDashboard, RefreshCw, Calendar, ArrowRight, Minus
@@ -505,7 +506,7 @@ const AnalyticsDashboard = () => {
                             <span className="font-medium truncate max-w-[60%]">{dep.package_title}</span>
                             <div className="flex items-center gap-1.5 shrink-0">
                               <span className="text-xs text-muted-foreground">
-                                {format(new Date(dep.departure_date), "d MMM yyyy")}
+                                {safeFormatDate(dep.departure_date, "d MMM yyyy")}
                               </span>
                               <Badge
                                 variant={isFull ? "destructive" : isAlmostFull ? "outline" : "secondary"}

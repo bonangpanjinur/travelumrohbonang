@@ -6,8 +6,8 @@ import { Label } from "@/shared/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Badge } from "@/shared/components/ui/badge";
-import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { safeFormatDate } from "@/lib/utils";
 import { Eye, Download, RefreshCw, Search, ShieldCheck } from "lucide-react";
 import LoadingSpinner from "@/shared/components/ui/loading-spinner";
 import EmptyState from "@/shared/components/ui/empty-state";
@@ -114,7 +114,7 @@ const PaymentProofAccessLogs = () => {
   const handleExport = () => {
     const headers = ["Tanggal", "Nama", "Email", "Konteks", "Booking", "Pembayaran"];
     const rows = filtered.map((l) => [
-      format(new Date(l.created_at), "yyyy-MM-dd HH:mm:ss"),
+      safeFormatDate(l.created_at, "yyyy-MM-dd HH:mm:ss"),
       l.profile?.name || "-",
       l.profile?.email || "-",
       l.context || "-",
@@ -209,7 +209,7 @@ const PaymentProofAccessLogs = () => {
                   {paginatedItems.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell className="text-xs whitespace-nowrap">
-                        {format(new Date(log.created_at), "d MMM yyyy HH:mm:ss", { locale: localeId })}
+                        {safeFormatDate(log.created_at, "d MMM yyyy HH:mm:ss", { locale: localeId })}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm font-medium">{log.profile?.name || "-"}</div>

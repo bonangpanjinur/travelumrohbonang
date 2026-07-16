@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { safeFormatDate } from "@/lib/utils";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 import AdminPagination from "@/features/admin/components/AdminPagination";
 import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
@@ -373,7 +374,7 @@ const AdminAccounting = () => {
                   paginatedItems.map((t: any) => (
                     <TableRow key={t.id}>
                       <TableCell className="whitespace-nowrap">
-                        {format(new Date(t.transaction_date), "dd MMM yyyy", { locale: localeId })}
+                        {safeFormatDate(t.transaction_date, "dd MMM yyyy", { locale: localeId })}
                       </TableCell>
                       <TableCell>
                         <Badge variant={t.type === "income" ? "default" : "destructive"} className={t.type === "income" ? "bg-success/10 text-success hover:bg-success/10" : ""}>

@@ -66,7 +66,7 @@ router.get("/profile", async (req: any, res) => {
 
     const paid = agentBookings.filter((b) => b.status === "paid");
     const totalRevenue = paid.reduce((s, b) => s + (Number(b.totalPrice) || 0), 0);
-    const totalCommission = totalRevenue * ((agent.commissionPercent || 0) / 100);
+    const totalCommission = totalRevenue * ((Number(agent.commissionPercent) || 0) / 100);
 
     return res.json({
       ...agent,
@@ -124,7 +124,7 @@ router.get("/bookings", async (req: any, res) => {
         ...b,
         commission:
           b.status === "paid"
-            ? (Number(b.totalPrice) || 0) * ((agent.commissionPercent || 0) / 100)
+            ? (Number(b.totalPrice) || 0) * ((Number(agent.commissionPercent) || 0) / 100)
             : 0,
       }))
     );
@@ -176,7 +176,7 @@ router.get("/leaderboard", async (req: any, res) => {
           name: agent.name,
           paidBookingCount: agentBookings.length,
           totalRevenue,
-          commission: totalRevenue * ((agent.commissionPercent || 0) / 100),
+          commission: totalRevenue * ((Number(agent.commissionPercent) || 0) / 100),
         };
       })
       .sort((a, b) => b.totalRevenue - a.totalRevenue)

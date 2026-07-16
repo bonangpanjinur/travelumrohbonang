@@ -9,7 +9,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, LineChart, Line, Legend 
 } from "recharts";
-import { format, subDays, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { format, parseISO, isValid, subDays, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { 
   TrendingUp, Users, Package, Calendar, DollarSign, 
@@ -118,7 +118,8 @@ const AdminReports = () => {
 
     // Group bookings by date
     const grouped = bookings.reduce((acc: Record<string, { count: number; revenue: number }>, booking) => {
-      const date = format(new Date(booking.created_at || ""), "yyyy-MM-dd");
+      const _d = booking.created_at ? parseISO(booking.created_at) : null;
+      const date = _d && isValid(_d) ? format(_d, "yyyy-MM-dd") : "1970-01-01";
       if (!acc[date]) acc[date] = { count: 0, revenue: 0 };
       acc[date].count++;
       return acc;
@@ -126,7 +127,9 @@ const AdminReports = () => {
 
     // Add revenue from payments to the correct dates
     (payments || []).forEach(payment => {
-      const date = format(new Date(payment.paid_at || payment.created_at || ""), "yyyy-MM-dd");
+      const _pd = payment.paid_at || payment.created_at;
+      const _pdate = _pd ? parseISO(_pd) : null;
+      const date = _pdate && isValid(_pdate) ? format(_pdate, "yyyy-MM-dd") : "1970-01-01";
       if (!grouped[date]) grouped[date] = { count: 0, revenue: 0 };
       grouped[date].revenue += payment.amount || 0;
     });

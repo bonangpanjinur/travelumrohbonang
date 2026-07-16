@@ -224,50 +224,54 @@ router.post("/", async (req, res) => {
       bookingCode = `BNG-ADM-${Date.now().toString(36).toUpperCase()}`;
     }
 
-    const [booking] = await db
-      .insert(bookings)
-      .values({
-        id: crypto.randomUUID(),
-        bookingCode,
-        packageId,
-        departureId,
-        totalPrice,
-        currency: currency || "IDR",
-        paymentScheme: paymentScheme || "full",
-        notes,
-        branchId,
-        agentId,
-        userId,
-        status: "confirmed",
-        picType: "admin",
-        createdAt: new Date(),
-      })
-      .returning();
+    const booking = await db.transaction(async (tx) => {
+      const [newBooking] = await tx
+        .insert(bookings)
+        .values({
+          id: crypto.randomUUID(),
+          bookingCode,
+          packageId,
+          departureId,
+          totalPrice,
+          currency: currency || "IDR",
+          paymentScheme: paymentScheme || "full",
+          notes,
+          branchId,
+          agentId,
+          userId,
+          status: "confirmed",
+          picType: "admin",
+          createdAt: new Date(),
+        })
+        .returning();
 
-    await db.insert(bookingRooms).values({
-      id: crypto.randomUUID(),
-      bookingId: booking.id,
-      roomType,
-      price: String(totalPrice),
-      quantity: 1,
-      subtotal: String(totalPrice),
-      createdAt: new Date(),
-    });
-
-    if (customerName && !userId) {
-      await db.insert(bookingPilgrims).values({
+      await tx.insert(bookingRooms).values({
         id: crypto.randomUUID(),
-        bookingId: booking.id,
-        name: customerName,
-        email: customerEmail,
-        gender: "male",
+        bookingId: newBooking.id,
+        roomType,
+        price: String(totalPrice),
+        quantity: 1,
+        subtotal: String(totalPrice),
         createdAt: new Date(),
       });
-    }
+
+      if (customerName && !userId) {
+        await tx.insert(bookingPilgrims).values({
+          id: crypto.randomUUID(),
+          bookingId: newBooking.id,
+          name: customerName,
+          email: customerEmail,
+          gender: "male",
+          createdAt: new Date(),
+        });
+      }
+
+      return newBooking;
+    });
 
     res.status(201).json(booking);
   } catch (e) {
-    console.error(e);
+    console.error("[POST /api/admin/bookings]", e);
     res.status(500).json({ error: "Failed to create booking" });
   }
 });
@@ -307,7 +311,8 @@ router.patch(
       }
 
       res.json({ id: updated.id, status: updated.status, notes: updated.notes });
-    } catch {
+    } catch (e) {
+      console.error("[PATCH /api/admin/bookings/:id/status]", e);
       res.status(500).json({ error: "Failed to update booking status" });
     }
   },
@@ -322,7 +327,8 @@ router.patch("/:id/branch", async (req, res) => {
       .set({ branchId: branchId || null })
       .where(eq(bookings.id, id));
     res.status(204).end();
-  } catch {
+  } catch (e) {
+    console.error("[PATCH /api/admin/bookings/:id/branch]", e);
     res.status(500).json({ error: "Failed to update branch" });
   }
 });

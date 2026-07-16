@@ -14,8 +14,8 @@ import { useToast } from "@/shared/hooks/use-toast";
 import { Plus, Pencil, Trash2, Eye, Image, Calendar, Search as SearchIcon, ChevronUp, BarChart3, Globe } from "lucide-react";
 import { Link } from "react-router-dom";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
-import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
+import { safeFormatDate } from "@/lib/utils";
 import RichTextEditor from "@/shared/components/ui/rich-text-editor";
 
 interface BlogPost {
@@ -469,7 +469,7 @@ const AdminBlog = () => {
                   <TableCell>
                     <span className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Calendar className="w-3 h-3" />
-                      {format(new Date(post.created_at), "d MMM yy", { locale: idLocale })}
+                      {safeFormatDate(post.created_at, "d MMM yy", { locale: idLocale })}
                     </span>
                   </TableCell>
                   <TableCell>

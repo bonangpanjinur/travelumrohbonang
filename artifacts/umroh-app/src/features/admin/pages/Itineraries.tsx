@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { useToast } from "@/shared/hooks/use-toast";
 import { Plus, Pencil, Trash2, GripVertical, Calendar, MapPin } from "lucide-react";
-import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { safeFormatDate } from "@/lib/utils";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 
 interface Departure {
@@ -276,7 +276,7 @@ const AdminItineraries = () => {
                   <SelectContent>
                     {departures.map((dep) => (
                       <SelectItem key={dep.id} value={dep.id}>
-                        {dep.package?.title} - {format(new Date(dep.departure_date), "d MMM yyyy", { locale: localeId })}
+                        {dep.package?.title} - {safeFormatDate(dep.departure_date, "d MMM yyyy", { locale: localeId })}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -385,7 +385,7 @@ const AdminItineraries = () => {
                     <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
                       <Calendar className="w-4 h-4" />
                       {it.departure?.package?.title} -{" "}
-                      {format(new Date(it.departure?.departure_date || ""), "d MMM yyyy", { locale: localeId })}
+                      {safeFormatDate(it.departure?.departure_date, "d MMM yyyy", { locale: localeId })}
                     </div>
                   </div>
                   <div className="flex gap-2">

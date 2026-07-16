@@ -6,8 +6,9 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { safeFormatDate } from "@/lib/utils";
 import { useAdminNotifications, type AdminNotif } from "@/features/admin/hooks/useAdminNotifications";
 
 const TYPE_LABEL: Record<AdminNotif["type"], string> = {
@@ -82,13 +83,10 @@ const NotifCard = ({
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-            {format(new Date(notif.created_at), "d MMM, HH:mm", { locale: localeId })}
+            {safeFormatDate(notif.created_at, "d MMM, HH:mm", { locale: localeId })}
           </span>
           <span className="text-[10px] text-muted-foreground/60">
-            {formatDistanceToNow(new Date(notif.created_at), {
-              addSuffix: true,
-              locale: localeId,
-            })}
+            {(() => { try { const d = parseISO(notif.created_at); return isValid(d) ? formatDistanceToNow(d, { addSuffix: true, locale: localeId }) : "-"; } catch { return "-"; } })()}
           </span>
           {!notif.is_read && (
             <Button

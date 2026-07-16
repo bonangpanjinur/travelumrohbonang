@@ -42,7 +42,8 @@ Multi-tenant SaaS for Umrah/Hajj travel agencies: package browsing & booking, in
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Tujuan deployment: Vercel + Supabase (bukan Replit deployment)
+- Bahasa komunikasi: Bahasa Indonesia
 
 ## Gotchas
 

@@ -47,7 +47,12 @@ const AdminAdvantages = () => {
   };
 
   const handleEdit = (a: Advantage) => { setEditId(a.id); setForm({ title: a.title, icon: a.icon || "check-circle", sort_order: a.sort_order || 0, is_active: a.is_active ?? true }); setDialogOpen(true); };
-  const handleDelete = async (id: string) => { await supabase.from("advantages").delete().eq("id", id); toast.success("Dihapus"); fetch(); };
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("advantages").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Dihapus");
+    fetch();
+  };
 
   return (
     <div className="space-y-6">
@@ -60,7 +65,7 @@ const AdminAdvantages = () => {
             <div className="space-y-4">
               <div><Label>Judul</Label><Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></div>
               <div><Label>Icon (Lucide name)</Label><Input value={form.icon} onChange={e => setForm({ ...form, icon: e.target.value })} placeholder="check-circle" /></div>
-              <div><Label>Urutan</Label><Input type="number" value={form.sort_order} onChange={e => setForm({ ...form, sort_order: Number(e.target.value) })} /></div>
+              <div><Label>Urutan</Label><Input type="number" value={form.sort_order} onChange={e => setForm({ ...form, sort_order: isNaN(Number(e.target.value)) ? 0 : Number(e.target.value) })} /></div>
               <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={v => setForm({ ...form, is_active: v })} /><Label>Aktif</Label></div>
               <Button className="w-full" onClick={handleSave}>Simpan</Button>
             </div>

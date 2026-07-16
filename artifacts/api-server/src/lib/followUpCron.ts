@@ -10,7 +10,7 @@
  */
 
 import { db, leads, leadFollowUps, eq, and, lte } from "@workspace/db";
-import { waNotifications } from "./notifications/waNotifications";
+import { sendWhatsApp } from "@workspace/whatsapp";
 
 const TARGET_UTC_HOUR = 1; // 01:00 UTC = 08:00 WIB
 const HOUR_MS = 60 * 60 * 1_000;
@@ -65,7 +65,8 @@ export async function sendFollowUpReminders(): Promise<void> {
       // to the assignee (or lead itself for self-serve future feature)
       try {
         if (fu.assignedTo && fu.leadPhone) {
-          await waNotifications.customMessage?.(fu.assignedTo, {
+          await sendWhatsApp({
+            to: fu.assignedTo,
             message:
               `📌 *Follow-up Reminder*\n\n` +
               `Lead: *${fu.leadName ?? "-"}*\n` +

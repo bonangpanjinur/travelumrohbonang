@@ -8,8 +8,8 @@ import { Label } from "@/shared/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { toast } from "sonner";
 import { Upload, Trash2, Image as ImageIcon, Loader2 } from "lucide-react";
-import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { safeFormatDate } from "@/lib/utils";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 
 type Departure = { id: string; departure_date: string; package_id: string; packages?: { title: string } };
@@ -106,7 +106,7 @@ const AdminDepartureGallery = () => {
             <SelectContent>
               {departures.map((d) => (
                 <SelectItem key={d.id} value={d.id}>
-                  {d.packages?.title || "Paket"} — {format(new Date(d.departure_date), "dd MMM yyyy", { locale: localeId })}
+                  {d.packages?.title || "Paket"} — {safeFormatDate(d.departure_date, "dd MMM yyyy", { locale: localeId })}
                 </SelectItem>
               ))}
             </SelectContent>
