@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -37,6 +37,30 @@ interface Itinerary {
   days: ItineraryDay[];
 }
 
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+/** Build a query string from an object, omitting undefined/null values. */
+function qs(params: Record<string, string | number | boolean | undefined>) {
+  const parts = Object.entries(params)
+    .filter(([, v]) => v !== undefined && v !== null && v !== "")
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
+  return parts.length ? "?" + parts.join("&") : "";
+}
+
+/**
+ * Map the flat `package_departures` row returned by GET /api/admin/departures
+ * into the shape this page expects: { id, departure_date, package: { title } }
+ */
+function mapApiDeparture(d: any): Departure {
+  return {
+    id: d.id,
+    departure_date: d.departure_date ?? d.departureDate ?? "",
+    package: d.package ?? (d.packageTitle ? { title: d.packageTitle } : null),
+  };
+}
+
+// ─── component ───────────────────────────────────────────────────────────────
+
 const AdminItineraries = () => {
   const [itineraries, setItineraries] = useState<Itinerary[]>([]);
   const [departures, setDepartures] = useState<Departure[]>([]);
@@ -67,112 +91,106 @@ const AdminItineraries = () => {
     fetchData();
   }, []);
 
+  // ── fetch ─────────────────────────────────────────────────────────────────
+
   const fetchData = async () => {
-    const [itinerariesRes, departuresRes] = await Promise.all([
-      supabase
-        .from("itineraries")
-        .select(`
-          *,
-          departure:package_departures(id, departure_date, package:packages(title)),
-          days:itinerary_days(*)
-        `)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("package_departures")
-        .select("id, departure_date, package:packages(title)")
-        .eq("status", "active")
-        .order("departure_date", { ascending: true }),
-    ]);
+    try {
+      const [itinerariesRes, departuresRes] = await Promise.all([
+        // Go through our backend REST proxy so SERVICE_ROLE_KEY bypasses RLS
+        apiFetch<any[]>(
+          "/rest/v1/itineraries" +
+            qs({ select: "*,departure:package_departures(id,departure_date,package:packages(title)),days:itinerary_days(*)", order: "created_at.desc" }),
+        ),
+        // Use our admin departures API — returns properly shaped snake_case data
+        apiFetch<{ data: any[] }>("/api/admin/departures" + qs({ status: "active" })),
+      ]);
 
-    const itinerariesData = (itinerariesRes.data || []).map((it: any) => ({
-      ...it,
-      days: (it.days || []).sort((a: ItineraryDay, b: ItineraryDay) => a.day_number - b.day_number),
-    }));
+      const rawItineraries: any[] = Array.isArray(itinerariesRes) ? itinerariesRes : [];
+      const rawDepartures: any[] = departuresRes?.data ?? [];
 
-    setItineraries(itinerariesData);
-    setDepartures((departuresRes.data as unknown as Departure[]) || []);
+      const itinerariesData: Itinerary[] = rawItineraries.map((it: any) => ({
+        ...it,
+        days: (it.days || []).sort((a: ItineraryDay, b: ItineraryDay) => a.day_number - b.day_number),
+      }));
+
+      setItineraries(itinerariesData);
+      setDepartures(rawDepartures.map(mapApiDeparture));
+    } catch (err: any) {
+      console.error("[itineraries] fetchData error:", err);
+      toast({ title: "Gagal memuat data", description: err?.message, variant: "destructive" });
+    }
     setLoading(false);
   };
 
+  // ── itinerary CRUD ────────────────────────────────────────────────────────
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (editing) {
-      const { error } = await supabase
-        .from("itineraries")
-        .update({
-          departure_id: form.departure_id,
-          title: form.title || null,
-          notes: form.notes || null,
-        })
-        .eq("id", editing.id);
-
-      if (error) {
-        toast({ title: "Gagal mengupdate", description: error.message, variant: "destructive" });
-      } else {
+    try {
+      if (editing) {
+        await apiFetch(`/rest/v1/itineraries${qs({ id: `eq.${editing.id}` })}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            departure_id: form.departure_id,
+            title: form.title || null,
+            notes: form.notes || null,
+          }),
+        });
         toast({ title: "Itinerary diupdate!" });
-        fetchData();
-        setIsOpen(false);
-        resetForm();
-      }
-    } else {
-      const { error } = await supabase.from("itineraries").insert({
-        departure_id: form.departure_id,
-        title: form.title || null,
-        notes: form.notes || null,
-      });
-
-      if (error) {
-        toast({ title: "Gagal membuat itinerary", description: error.message, variant: "destructive" });
       } else {
+        await apiFetch("/rest/v1/itineraries", {
+          method: "POST",
+          body: JSON.stringify({
+            departure_id: form.departure_id,
+            title: form.title || null,
+            notes: form.notes || null,
+          }),
+        });
         toast({ title: "Itinerary ditambahkan!" });
-        fetchData();
-        setIsOpen(false);
-        resetForm();
       }
+      fetchData();
+      setIsOpen(false);
+      resetForm();
+    } catch (err: any) {
+      toast({ title: "Gagal menyimpan itinerary", description: err?.message, variant: "destructive" });
     }
   };
+
+  // ── day CRUD ──────────────────────────────────────────────────────────────
 
   const handleDaySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedItinerary) return;
-
-    if (editingDay) {
-      const { error } = await supabase
-        .from("itinerary_days")
-        .update({
-          day_number: dayForm.day_number,
-          title: dayForm.title || null,
-          description: dayForm.description || null,
-          image_url: dayForm.image_url || null,
-        })
-        .eq("id", editingDay.id);
-
-      if (error) {
-        toast({ title: "Gagal mengupdate", description: error.message, variant: "destructive" });
-      } else {
+    try {
+      if (editingDay) {
+        await apiFetch(`/rest/v1/itinerary_days${qs({ id: `eq.${editingDay.id}` })}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            day_number: dayForm.day_number,
+            title: dayForm.title || null,
+            description: dayForm.description || null,
+            image_url: dayForm.image_url || null,
+          }),
+        });
         toast({ title: "Hari diupdate!" });
-        fetchData();
-        setIsDayOpen(false);
-        resetDayForm();
-      }
-    } else {
-      const { error } = await supabase.from("itinerary_days").insert({
-        itinerary_id: selectedItinerary.id,
-        day_number: dayForm.day_number,
-        title: dayForm.title || null,
-        description: dayForm.description || null,
-        image_url: dayForm.image_url || null,
-      });
-
-      if (error) {
-        toast({ title: "Gagal menambahkan hari", description: error.message, variant: "destructive" });
       } else {
+        await apiFetch("/rest/v1/itinerary_days", {
+          method: "POST",
+          body: JSON.stringify({
+            itinerary_id: selectedItinerary.id,
+            day_number: dayForm.day_number,
+            title: dayForm.title || null,
+            description: dayForm.description || null,
+            image_url: dayForm.image_url || null,
+          }),
+        });
         toast({ title: "Hari ditambahkan!" });
-        fetchData();
-        setIsDayOpen(false);
-        resetDayForm();
       }
+      fetchData();
+      setIsDayOpen(false);
+      resetDayForm();
+    } catch (err: any) {
+      toast({ title: "Gagal menyimpan hari", description: err?.message, variant: "destructive" });
     }
   };
 
@@ -197,35 +215,30 @@ const AdminItineraries = () => {
     setIsDayOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     setDeleteTargetId(id);
     setDeleteType("itinerary");
   };
 
-  const handleDeleteDay = async (id: string) => {
+  const handleDeleteDay = (id: string) => {
     setDeleteTargetId(id);
     setDeleteType("day");
   };
 
   const executeDelete = async () => {
     if (!deleteTargetId) return;
-    if (deleteType === "itinerary") {
-      const { error } = await supabase.from("itineraries").delete().eq("id", deleteTargetId);
-      if (error) {
-        toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
-      } else {
+    try {
+      if (deleteType === "itinerary") {
+        await apiFetch(`/rest/v1/itineraries${qs({ id: `eq.${deleteTargetId}` })}`, { method: "DELETE" });
         toast({ title: "Itinerary dihapus" });
-        fetchData();
         if (selectedItinerary?.id === deleteTargetId) setSelectedItinerary(null);
-      }
-    } else {
-      const { error } = await supabase.from("itinerary_days").delete().eq("id", deleteTargetId);
-      if (error) {
-        toast({ title: "Gagal menghapus", description: error.message, variant: "destructive" });
       } else {
+        await apiFetch(`/rest/v1/itinerary_days${qs({ id: `eq.${deleteTargetId}` })}`, { method: "DELETE" });
         toast({ title: "Hari dihapus" });
-        fetchData();
       }
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Gagal menghapus", description: err?.message, variant: "destructive" });
     }
     setDeleteTargetId(null);
   };
@@ -251,9 +264,17 @@ const AdminItineraries = () => {
     setIsDayOpen(true);
   };
 
+  // ── render ────────────────────────────────────────────────────────────────
+
   return (
     <div>
-      <DeleteAlertDialog open={!!deleteTargetId} onOpenChange={() => setDeleteTargetId(null)} onConfirm={() => { executeDelete(); }} title="Hapus data ini?" />
+      <DeleteAlertDialog
+        open={!!deleteTargetId}
+        onOpenChange={() => setDeleteTargetId(null)}
+        onConfirm={executeDelete}
+        title="Hapus data ini?"
+      />
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold">Itinerary Builder</h1>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
@@ -269,14 +290,23 @@ const AdminItineraries = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label>Keberangkatan *</Label>
-                <Select value={form.departure_id} onValueChange={(val) => setForm({ ...form, departure_id: val })}>
+                <Select
+                  value={form.departure_id}
+                  onValueChange={(val) => setForm({ ...form, departure_id: val })}
+                >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Pilih keberangkatan" />
                   </SelectTrigger>
                   <SelectContent>
+                    {departures.length === 0 && (
+                      <SelectItem value="__none__" disabled>
+                        Belum ada keberangkatan aktif
+                      </SelectItem>
+                    )}
                     {departures.map((dep) => (
                       <SelectItem key={dep.id} value={dep.id}>
-                        {dep.package?.title} - {safeFormatDate(dep.departure_date, "d MMM yyyy", { locale: localeId })}
+                        {dep.package?.title ?? "—"} &mdash;{" "}
+                        {safeFormatDate(dep.departure_date, "d MMM yyyy", { locale: localeId })}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -364,78 +394,77 @@ const AdminItineraries = () => {
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold" />
         </div>
       ) : itineraries.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">Belum ada itinerary</div>
       ) : (
         <div className="space-y-6">
-          {itineraries.map((it) => {
-            // Refresh selected if data changed
-            const currentData = selectedItinerary?.id === it.id ? it : null;
-
-            return (
-              <Card key={it.id} className="overflow-hidden">
-                <CardHeader className="bg-muted/50 flex-row items-center justify-between space-y-0">
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <MapPin className="w-5 h-5 text-gold" />
-                      {it.title || "Itinerary"}
-                    </CardTitle>
-                    <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
-                      <Calendar className="w-4 h-4" />
-                      {it.departure?.package?.title} -{" "}
-                      {safeFormatDate(it.departure?.departure_date, "d MMM yyyy", { locale: localeId })}
-                    </div>
+          {itineraries.map((it) => (
+            <Card key={it.id} className="overflow-hidden">
+              <CardHeader className="bg-muted/50 flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-gold" />
+                    {it.title || "Itinerary"}
+                  </CardTitle>
+                  <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                    <Calendar className="w-4 h-4" />
+                    {it.departure?.package?.title ?? "—"} &mdash;{" "}
+                    {safeFormatDate(it.departure?.departure_date, "d MMM yyyy", { locale: localeId })}
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => openAddDay(it)}>
-                      <Plus className="w-4 h-4 mr-1" /> Tambah Hari
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(it)}>
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(it.id)}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => openAddDay(it)}>
+                    <Plus className="w-4 h-4 mr-1" /> Tambah Hari
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleEdit(it)}>
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(it.id)}>
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {it.days.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Belum ada jadwal hari. Klik "Tambah Hari" untuk memulai.
                   </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  {it.days.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Belum ada jadwal hari. Klik "Tambah Hari" untuk memulai.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {it.days.map((day) => (
-                        <div
-                          key={day.id}
-                          className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/30 transition-colors"
-                        >
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <GripVertical className="w-4 h-4" />
-                            <span className="w-16 font-bold text-gold">Hari {day.day_number}</span>
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-semibold">{day.title || "-"}</div>
-                            <p className="text-sm text-muted-foreground line-clamp-2">{day.description}</p>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => { setSelectedItinerary(it); handleEditDay(day); }}>
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteDay(day.id)}>
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
+                ) : (
+                  <div className="space-y-3">
+                    {it.days.map((day) => (
+                      <div
+                        key={day.id}
+                        className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <GripVertical className="w-4 h-4" />
+                          <span className="w-16 font-bold text-gold">Hari {day.day_number}</span>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+                        <div className="flex-1">
+                          <div className="font-semibold">{day.title || "-"}</div>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{day.description}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => { setSelectedItinerary(it); handleEditDay(day); }}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteDay(day.id)}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
     </div>
