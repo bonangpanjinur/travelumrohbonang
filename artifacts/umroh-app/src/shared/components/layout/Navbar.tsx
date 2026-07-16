@@ -5,7 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useLanguage } from "@/shared/i18n/LanguageContext";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import {
   DropdownMenu,
@@ -67,22 +67,15 @@ const Navbar = () => {
   useEffect(() => {
     const fetchNavItems = async () => {
       try {
-        const { data } = await supabase
-          .from("navigation_items")
-          .select("*")
-          .eq("is_active", true)
-          .order("sort_order");
-
-        if (data) {
-          const items = data as NavItem[];
+        const result = await apiFetch<{ data: NavItem[] }>("/api/cms/navigation-items");
+        if (result?.data) {
+          const items = result.data;
           const parentItems = items.filter(item => !item.parent_id);
           const childItems = items.filter(item => item.parent_id);
-          
           const hierarchy = parentItems.map(parent => ({
             ...parent,
-            children: childItems.filter(child => child.parent_id === parent.id)
+            children: childItems.filter(child => child.parent_id === parent.id),
           }));
-          
           setNavItems(hierarchy);
         }
       } catch (err) {
@@ -92,15 +85,10 @@ const Navbar = () => {
 
     const fetchBranding = async () => {
       try {
-        const { data } = await supabase
-          .from("site_settings")
-          .select("value")
-          .eq("key", "branding")
-          .eq("category", "general")
-          .maybeSingle();
-
-        if (data?.value && typeof data.value === 'object') {
-          setBranding({ ...defaultBranding, ...(data.value as object) });
+        const result = await apiFetch<{ data: Array<{ key: string; value: unknown }> }>("/api/cms/site-settings");
+        const brandingSetting = result?.data?.find((s) => s.key === "branding");
+        if (brandingSetting?.value && typeof brandingSetting.value === "object") {
+          setBranding({ ...defaultBranding, ...(brandingSetting.value as object) });
         }
       } catch (err) {
         console.error("Error fetching branding:", err);
@@ -109,11 +97,8 @@ const Navbar = () => {
 
     const fetchDynamicPages = async () => {
       try {
-        const { data } = await supabase
-          .from("pages")
-          .select("title, slug")
-          .eq("is_active", true);
-        if (data) setDynamicPages(data as {title: string, slug: string}[]);
+        const result = await apiFetch<{ data: { title: string; slug: string }[] }>("/api/cms/pages");
+        if (result?.data) setDynamicPages(result.data);
       } catch (err) {
         console.error("Error fetching dynamic pages:", err);
       }
@@ -132,19 +117,15 @@ const Navbar = () => {
       }
 
       try {
-        const { data } = await supabase
-          .from("profiles")
-          .select("name, avatar_url")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (data) {
-          setUserProfile({ ...data, avatar_url: data.avatar_url ?? "" });
+        const result = await apiFetch<{ name: string; avatar_url: string } | null>(`/api/profile/${user.id}`).catch(() => null);
+        if (result) {
+          setUserProfile({ name: result.name ?? "", avatar_url: result.avatar_url ?? "" });
         } else {
           setUserProfile({ name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "", avatar_url: "" });
         }
       } catch (err) {
         console.error("Error fetching profile:", err);
+        setUserProfile({ name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "", avatar_url: "" });
       }
     };
 

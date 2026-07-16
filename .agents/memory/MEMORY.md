@@ -6,3 +6,5 @@
 - [F-05 Cicilan implementation](f05-cicilan-implementation.md) — full installment schedule feature: DB schema, backend service, cron, routes, webhooks, frontend hook+component. Schema already pushed to DB.
 - [Orval zod client requires zod v4](orval-zod-v4-runtime.md) — Orval's zod client target emits v4-only syntax; pinning the catalog to zod v3 compiles fine but crashes at runtime.
 - [artifact.toml service paths must list every root prefix](artifact-toml-service-paths.md) — a ported Express backend mounting multiple root prefixes (/api, /rest/v1, /storage/v1) needs all of them in the service's `paths`, or those requests silently hit the wrong artifact.
+- [Missing DB tables after import](missing-db-tables-after-import.md) — run `cd lib/db && pnpm drizzle-kit push` to create all schema tables after cloning; site_settings etc. don't auto-create.
+- [CMS data via apiFetch](cms-apifetch-pattern.md) — Navbar, Footer, AdminLayout must use apiFetch("/api/cms/...") not supabase client; REST shim HEAD count queries are unreliable so dashboard stats use GET /api/admin/analytics/dashboard-stats.

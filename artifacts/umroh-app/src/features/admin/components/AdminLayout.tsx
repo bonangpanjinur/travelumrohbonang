@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import AdminSidebar from "./AdminSidebar";
 import AdminHeader from "./AdminHeader";
 import AdminBreadcrumb from "./AdminBreadcrumb";
@@ -32,19 +32,10 @@ const AdminLayout = () => {
   useEffect(() => {
     const fetchBranding = async () => {
       try {
-        const { data } = await supabase
-          .from("site_settings")
-          .select("value")
-          .eq("key", "branding")
-          .eq("category", "general")
-          .maybeSingle();
-
-        if (
-          data?.value &&
-          typeof data.value === "object" &&
-          !Array.isArray(data.value)
-        ) {
-          setBranding({ ...defaultBranding, ...(data.value as object) });
+        const result = await apiFetch<{ data: Array<{ key: string; value: unknown }> }>("/api/cms/site-settings");
+        const brandingSetting = result?.data?.find((s) => s.key === "branding");
+        if (brandingSetting?.value && typeof brandingSetting.value === "object" && !Array.isArray(brandingSetting.value)) {
+          setBranding({ ...defaultBranding, ...(brandingSetting.value as object) });
         }
       } catch (error) {
         console.error("Error fetching branding:", error);

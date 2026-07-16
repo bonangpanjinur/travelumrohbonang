@@ -61,7 +61,9 @@ const AdminSidebar = ({
   // Accordion: only one group (real or virtual) is open at a time. Defaults to whichever
   // group holds the active route, falling back to "Utama".
   const initialOpenGroup = useMemo(() => {
-    const activeGroup = menuGroups.find((group) => group.items.some((item) => location.pathname === item.href));
+    const activeGroup = menuGroups.find((group) =>
+      group.items.some((item) => location.pathname === item.href || location.pathname.startsWith(item.href + "/"))
+    );
     return activeGroup?.label ?? menuGroups.find((g) => g.labelKey === "menu.group.main")?.label ?? null;
   }, []); // only on mount
 
@@ -74,7 +76,9 @@ const AdminSidebar = ({
   // Auto-open (and thus auto-close every other group) whenever navigation lands on a route
   // elsewhere in the group, not just on first mount.
   useEffect(() => {
-    const activeGroup = menuGroups.find((group) => group.items.some((item) => item.href === location.pathname));
+    const activeGroup = menuGroups.find((group) =>
+      group.items.some((item) => location.pathname === item.href || location.pathname.startsWith(item.href + "/"))
+    );
     if (activeGroup) {
       setOpenGroup(activeGroup.label);
     }

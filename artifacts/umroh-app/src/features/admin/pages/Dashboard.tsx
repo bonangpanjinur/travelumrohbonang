@@ -10,9 +10,8 @@ import {
   UserCheck
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
 import { apiFetch } from "@/shared/lib/apiClient";
-import { format, subMonths, startOfMonth } from "date-fns";
+import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { toast } from "sonner";
@@ -33,8 +32,20 @@ interface MonthlyTrend {
   count: number;
 }
 
+interface DashboardStats {
+  totalBookings: number;
+  pendingPayments: number;
+  totalAgents: number;
+  activePackages: number;
+  totalPilgrims: number;
+  totalBranches: number;
+  totalMuthawifs: number;
+  totalRevenue: number;
+  monthlyTrend: MonthlyTrend[];
+}
+
 const AdminDashboard = () => {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Omit<DashboardStats, "monthlyTrend">>({
     totalBookings: 0,
     totalAgents: 0,
     pendingPayments: 0,
@@ -51,58 +62,16 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [
-          bookingsRes, agentsRes, paymentsRes, packagesRes,
-          pilgrimsRes, branchesRes, muthawifsRes,
-          revenueRes, trendRes, recentResult
-        ] = await Promise.all([
-          supabase.from('bookings').select('*', { count: 'exact', head: true }),
-          supabase.from('agents').select('*', { count: 'exact', head: true }).eq('is_active', true),
-          supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'waiting_payment'),
-          supabase.from('packages').select('*', { count: 'exact', head: true }).eq('is_active', true),
-          supabase.from('booking_pilgrims').select('*', { count: 'exact', head: true }),
-          supabase.from('branches').select('*', { count: 'exact', head: true }).eq('is_active', true),
-          supabase.from('muthawifs').select('*', { count: 'exact', head: true }),
-          supabase.from('bookings').select('total_price').eq('status', 'paid'),
-          supabase.from('bookings').select('created_at'),
-          // Use Express API instead of direct Supabase to avoid FK embed requirement.
-          // Direct query with profiles!bookings_user_id_profiles_fkey returns 400
-          // when the FK constraint is missing in the live DB (PGRST200).
-          apiFetch<{ data: RecentBooking[] }>('/api/admin/bookings?limit=5')
+        const [statsResult, recentResult] = await Promise.all([
+          apiFetch<DashboardStats>("/api/admin/analytics/dashboard-stats"),
+          apiFetch<{ data: RecentBooking[] }>("/api/admin/bookings?limit=5")
             .catch(() => ({ data: [] as RecentBooking[] })),
         ]);
 
-        const totalRevenue = (revenueRes.data || []).reduce((sum, b) => sum + (b.total_price || 0), 0);
-
-        // Calculate monthly trend (last 6 months)
-        const now = new Date();
-        const trends: MonthlyTrend[] = [];
-        for (let i = 5; i >= 0; i--) {
-          const monthDate = subMonths(now, i);
-          const monthStart = startOfMonth(monthDate);
-          const monthEnd = startOfMonth(subMonths(now, i - 1));
-          const count = (trendRes.data || []).filter(b => {
-            const d = new Date(b.created_at || "");
-            return d >= monthStart && d < monthEnd;
-          }).length;
-          trends.push({
-            month: format(monthDate, 'MMM yy', { locale: localeId }),
-            count,
-          });
-        }
-
-        setStats({
-          totalBookings: bookingsRes.count || 0,
-          totalAgents: agentsRes.count || 0,
-          pendingPayments: paymentsRes.count || 0,
-          activePackages: packagesRes.count || 0,
-          totalPilgrims: pilgrimsRes.count || 0,
-          totalBranches: branchesRes.count || 0,
-          totalMuthawifs: muthawifsRes.count || 0,
-          totalRevenue,
-        });
+        const { monthlyTrend: trend, ...counts } = statsResult;
+        setStats(counts);
+        setMonthlyTrend(trend ?? []);
         setRecentBookings(recentResult.data || []);
-        setMonthlyTrend(trends);
       } catch (error) {
         console.error("Error fetching stats:", error);
         toast.error("Gagal memuat statistik dashboard");

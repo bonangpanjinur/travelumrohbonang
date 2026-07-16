@@ -1,7 +1,7 @@
 import { MapPin, Phone, Mail, Instagram, Facebook, Youtube } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 
 interface BrandingSettings {
   logo_url: string;
@@ -17,6 +17,9 @@ interface ContactSettings {
   whatsapp: string;
   email: string;
   map_embed_url: string;
+  instagram?: string;
+  facebook?: string;
+  youtube?: string;
 }
 
 const defaultBranding: BrandingSettings = {
@@ -42,30 +45,25 @@ const Footer = () => {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      const { data } = await supabase
-        .from("site_settings")
-        .select("*")
-        .in("key", ["branding", "contact"]);
-
-      if (data) {
-        data.forEach((setting) => {
-          if (setting.key === "branding" && setting.value && typeof setting.value === 'object') {
+      try {
+        const result = await apiFetch<{ data: Array<{ key: string; value: unknown }> }>("/api/cms/site-settings");
+        (result?.data ?? []).forEach((setting) => {
+          if (setting.key === "branding" && setting.value && typeof setting.value === "object") {
             setBranding({ ...defaultBranding, ...(setting.value as object) });
           }
-          if (setting.key === "contact" && setting.value && typeof setting.value === 'object') {
+          if (setting.key === "contact" && setting.value && typeof setting.value === "object") {
             setContact({ ...defaultContact, ...(setting.value as object) });
           }
         });
+      } catch (err) {
+        console.error("Error fetching settings:", err);
       }
     };
 
     const fetchDynamicPages = async () => {
       try {
-        const { data } = await supabase
-          .from("pages")
-          .select("title, slug")
-          .eq("is_active", true);
-        if (data) setDynamicPages(data as {title: string, slug: string}[]);
+        const result = await apiFetch<{ data: { title: string; slug: string }[] }>("/api/cms/pages");
+        if (result?.data) setDynamicPages(result.data);
       } catch (err) {
         console.error("Error fetching dynamic pages:", err);
       }
@@ -113,11 +111,29 @@ const Footer = () => {
               Mitra terpercaya perjalanan ibadah umroh Anda dengan pelayanan terbaik dan pengalaman lebih dari 15 tahun.
             </p>
             <div className="flex gap-3 mt-6">
-              {[Instagram, Facebook, Youtube].map((Icon, i) => (
-                <a key={i} href="#" className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center hover:bg-gold/20 transition-colors">
-                  <Icon className="w-5 h-5 text-gold-light" />
+              {contact.instagram && (
+                <a href={contact.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center hover:bg-gold/20 transition-colors">
+                  <Instagram className="w-5 h-5 text-gold-light" />
                 </a>
-              ))}
+              )}
+              {contact.facebook && (
+                <a href={contact.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center hover:bg-gold/20 transition-colors">
+                  <Facebook className="w-5 h-5 text-gold-light" />
+                </a>
+              )}
+              {contact.youtube && (
+                <a href={contact.youtube} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center hover:bg-gold/20 transition-colors">
+                  <Youtube className="w-5 h-5 text-gold-light" />
+                </a>
+              )}
+              {/* Fallback: show icons with # if no social links configured */}
+              {!contact.instagram && !contact.facebook && !contact.youtube && (
+                [Instagram, Facebook, Youtube].map((Icon, i) => (
+                  <a key={i} href="#" className="w-10 h-10 rounded-lg bg-primary-foreground/10 flex items-center justify-center hover:bg-gold/20 transition-colors opacity-50 cursor-default">
+                    <Icon className="w-5 h-5 text-gold-light" />
+                  </a>
+                ))
+              )}
             </div>
           </div>
 

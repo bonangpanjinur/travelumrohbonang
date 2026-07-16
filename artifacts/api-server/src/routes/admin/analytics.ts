@@ -196,4 +196,70 @@ router.get("/summary", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/analytics/dashboard-stats
+ *
+ * All dashboard KPI counts in a single round-trip so the admin Dashboard
+ * page no longer needs 8 parallel supabase-js count queries (which relied on
+ * the shim's HEAD-request handling).
+ */
+router.get("/dashboard-stats", async (req, res) => {
+  try {
+    const [countsRow, revenueRow, trendRows] = await Promise.all([
+      db.execute(sql`
+        select
+          (select count(*)::int from bookings)                                           as total_bookings,
+          (select count(*)::int from bookings where status = 'waiting_payment')          as pending_payments,
+          (select count(*)::int from agents where is_active = true)                      as total_agents,
+          (select count(*)::int from packages where is_active = true)                    as active_packages,
+          (select count(*)::int from booking_pilgrims)                                   as total_pilgrims,
+          (select count(*)::int from branches where is_active = true)                    as total_branches,
+          (select count(*)::int from muthawifs)                                          as total_muthawifs
+      `),
+      db.execute(sql`
+        select coalesce(sum(total_price), 0)::bigint as total_revenue
+        from bookings
+        where status = 'paid'
+      `),
+      db.execute(sql`
+        select
+          to_char(d.month, 'Mon YY') as month,
+          coalesce(b.cnt, 0)::int    as count
+        from generate_series(
+          date_trunc('month', now()) - interval '5 months',
+          date_trunc('month', now()),
+          interval '1 month'
+        ) as d(month)
+        left join (
+          select date_trunc('month', created_at) as m, count(*) as cnt
+          from bookings
+          group by 1
+        ) b on b.m = d.month
+        order by d.month
+      `),
+    ]);
+
+    const c = (countsRow.rows[0] ?? {}) as Record<string, number>;
+    const r = (revenueRow.rows[0] ?? {}) as Record<string, number>;
+
+    res.json({
+      totalBookings: Number(c.total_bookings ?? 0),
+      pendingPayments: Number(c.pending_payments ?? 0),
+      totalAgents: Number(c.total_agents ?? 0),
+      activePackages: Number(c.active_packages ?? 0),
+      totalPilgrims: Number(c.total_pilgrims ?? 0),
+      totalBranches: Number(c.total_branches ?? 0),
+      totalMuthawifs: Number(c.total_muthawifs ?? 0),
+      totalRevenue: Number(r.total_revenue ?? 0),
+      monthlyTrend: (trendRows.rows as { month: string; count: number }[]).map((row) => ({
+        month: row.month,
+        count: Number(row.count ?? 0),
+      })),
+    });
+  } catch (err) {
+    console.error("[analytics/dashboard-stats]", err);
+    res.status(500).json({ error: "Failed to load dashboard stats" });
+  }
+});
+
 export default router;
