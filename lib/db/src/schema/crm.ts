@@ -16,6 +16,10 @@ export const leads = pgTable("leads", {
   assignedTo: text("assigned_to"),
   estimatedValue: integer("estimated_value"),
   expectedCloseDate: timestamp("expected_close_date", { withTimezone: true }),
+  // Repeat customer detection — true when phone/email matches an existing jemaah
+  isRepeatCustomer: boolean("is_repeat_customer").notNull().default(false),
+  // Staleness tracking — updated whenever a new interaction is logged
+  lastInteractionAt: timestamp("last_interaction_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_leads_status").on(t.status),

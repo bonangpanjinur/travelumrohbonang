@@ -1,14 +1,13 @@
 import { Router } from "express";
-import { db, leads, leadFollowUps, leadInteractions, eq, desc, asc, and, sql } from "@workspace/db";
+import {
+  db, leads, leadFollowUps, leadInteractions, bookingPilgrims,
+  eq, desc, asc, and, lte, gte, sql, inArray,
+} from "@workspace/db";
 
 const router = Router();
 
 // ─── Pipeline (Kanban) ───────────────────────────────────────────────────────
 
-/**
- * GET /api/admin/crm/pipeline
- * Returns leads grouped by status for Kanban board view
- */
 router.get("/pipeline", async (_req, res) => {
   try {
     const data = await db.select().from(leads).orderBy(asc(leads.createdAt));
@@ -23,11 +22,39 @@ router.get("/pipeline", async (_req, res) => {
   }
 });
 
-// ─── Follow-ups (joined) ──────────────────────────────────────────────────────
+// ─── Follow-ups (global, with filter) ────────────────────────────────────────
 
+/**
+ * GET /api/admin/crm/follow-ups
+ * Optional ?filter=today|overdue|pending|done
+ */
 router.get("/follow-ups", async (req, res) => {
   try {
-    const data = await db
+    const { filter } = req.query as { filter?: string };
+    const now = new Date();
+
+    // Build date boundaries
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    let whereClause;
+    if (filter === "overdue") {
+      whereClause = and(eq(leadFollowUps.isDone, false), lte(leadFollowUps.followUpDate, todayStart));
+    } else if (filter === "today") {
+      whereClause = and(
+        eq(leadFollowUps.isDone, false),
+        gte(leadFollowUps.followUpDate, todayStart),
+        lte(leadFollowUps.followUpDate, todayEnd),
+      );
+    } else if (filter === "pending") {
+      whereClause = eq(leadFollowUps.isDone, false);
+    } else if (filter === "done") {
+      whereClause = eq(leadFollowUps.isDone, true);
+    }
+
+    const query = db
       .select({
         id: leadFollowUps.id,
         leadId: leadFollowUps.leadId,
@@ -39,13 +66,67 @@ router.get("/follow-ups", async (req, res) => {
         createdAt: leadFollowUps.createdAt,
         leadName: leads.name,
         leadPhone: leads.phone,
+        leadStatus: leads.status,
       })
       .from(leadFollowUps)
-      .leftJoin(leads, eq(leadFollowUps.leadId, leads.id))
-      .orderBy(desc(leadFollowUps.followUpDate));
+      .leftJoin(leads, eq(leadFollowUps.leadId, leads.id));
+
+    const data = whereClause
+      ? await query.where(whereClause).orderBy(asc(leadFollowUps.followUpDate))
+      : await query.orderBy(asc(leadFollowUps.followUpDate));
+
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Gagal mengambil follow-ups" });
+  }
+});
+
+// ─── Repeat Customer Detection ────────────────────────────────────────────────
+
+/**
+ * GET /api/admin/crm/repeat-customers
+ * Cross-references leads.phone / leads.email against booking_pilgrims.
+ * Marks matched leads as isRepeatCustomer=true in the DB.
+ * Returns { detected, leads[] }.
+ */
+router.get("/repeat-customers", async (_req, res) => {
+  try {
+    const [allLeads, allPilgrims] = await Promise.all([
+      db.select().from(leads),
+      db.select({ phone: bookingPilgrims.phone, email: bookingPilgrims.email }).from(bookingPilgrims),
+    ]);
+
+    const pilgrimPhones = new Set(allPilgrims.map((p) => p.phone).filter(Boolean) as string[]);
+    const pilgrimEmails = new Set(allPilgrims.map((p) => p.email).filter(Boolean) as string[]);
+
+    const repeatLeads = allLeads.filter(
+      (l) =>
+        (l.phone && pilgrimPhones.has(l.phone)) ||
+        (l.email && pilgrimEmails.has(l.email)),
+    );
+
+    // Mark detected leads in DB (batch update)
+    if (repeatLeads.length > 0) {
+      const repeatIds = repeatLeads.map((l) => l.id);
+      await db
+        .update(leads)
+        .set({ isRepeatCustomer: true })
+        .where(inArray(leads.id, repeatIds));
+
+      // Also clear flag for leads no longer matching (phone/email changed)
+      const nonRepeatIds = allLeads.filter((l) => !repeatIds.includes(l.id)).map((l) => l.id);
+      if (nonRepeatIds.length > 0) {
+        await db
+          .update(leads)
+          .set({ isRepeatCustomer: false })
+          .where(inArray(leads.id, nonRepeatIds));
+      }
+    }
+
+    res.json({ detected: repeatLeads.length, leads: repeatLeads });
+  } catch (err) {
+    console.error("[crm] repeat-customers error:", err);
+    res.status(500).json({ error: "Gagal mendeteksi repeat customer" });
   }
 });
 
@@ -157,12 +238,22 @@ router.get("/leads/:leadId/interactions", async (req, res) => {
 router.post("/leads/:leadId/interactions", async (req, res) => {
   try {
     const id = crypto.randomUUID();
+    const now = new Date();
+
+    // Persist interaction
     const [data] = await db.insert(leadInteractions).values({
       ...req.body,
       id,
       leadId: req.params.leadId,
-      createdAt: new Date(),
+      createdAt: now,
     }).returning();
+
+    // Update lastInteractionAt on the parent lead (staleness tracking)
+    await db
+      .update(leads)
+      .set({ lastInteractionAt: now })
+      .where(eq(leads.id, req.params.leadId));
+
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Gagal tambah interaksi" });
@@ -178,7 +269,7 @@ router.delete("/interactions/:id", async (req, res) => {
   }
 });
 
-// ─── Follow-ups ───────────────────────────────────────────────────────────────
+// ─── Per-lead follow-ups ──────────────────────────────────────────────────────
 
 router.get("/leads/:leadId/follow-ups", async (req, res) => {
   try {
@@ -186,7 +277,7 @@ router.get("/leads/:leadId/follow-ups", async (req, res) => {
       .select()
       .from(leadFollowUps)
       .where(eq(leadFollowUps.leadId, req.params.leadId))
-      .orderBy(desc(leadFollowUps.createdAt));
+      .orderBy(asc(leadFollowUps.followUpDate));
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Gagal mengambil follow-ups" });
@@ -231,9 +322,12 @@ router.delete("/follow-ups/:id", async (req, res) => {
 
 router.get("/stats", async (_req, res) => {
   try {
-    const allLeads = await db.select().from(leads);
-    const allFollowUps = await db.select().from(leadFollowUps);
+    const [allLeads, allFollowUps] = await Promise.all([
+      db.select().from(leads),
+      db.select().from(leadFollowUps),
+    ]);
     const now = new Date();
+    const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
 
     const stats = {
       total: allLeads.length,
@@ -245,12 +339,18 @@ router.get("/stats", async (_req, res) => {
       ),
       pendingFollowUps: allFollowUps.filter((f) => !f.isDone).length,
       overdueFollowUps: allFollowUps.filter(
-        (f) => !f.isDone && f.followUpDate && new Date(f.followUpDate) < now,
+        (f) => !f.isDone && f.followUpDate && new Date(f.followUpDate) < todayStart,
       ).length,
+      todayFollowUps: allFollowUps.filter((f) => {
+        if (f.isDone || !f.followUpDate) return false;
+        const d = new Date(f.followUpDate);
+        return d >= todayStart && d <= now;
+      }).length,
       conversionRate:
         allLeads.length > 0
           ? Math.round((allLeads.filter((l) => l.status === "converted").length / allLeads.length) * 100)
           : 0,
+      repeatCustomers: allLeads.filter((l) => l.isRepeatCustomer).length,
     };
 
     res.json(stats);
