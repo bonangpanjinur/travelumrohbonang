@@ -11,15 +11,40 @@ const { Pool } = pg;
 // lets Replit dev point Drizzle at the real Supabase DB without touching the
 // runtime-managed `DATABASE_URL` var. In production (e.g. Vercel), `DATABASE_URL`
 // is set manually to the Supabase connection string, so this falls through unchanged.
-const connectionString =
+const rawConnection =
   process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || "";
 
-if (!connectionString) {
+if (!rawConnection) {
   console.warn(
     "[db] WARNING: neither SUPABASE_DATABASE_URL nor DATABASE_URL is set. Database queries will fail at runtime.",
   );
 }
 
+/**
+ * Strip libpq-specific query parameters that the pure-JS `pg` driver does not
+ * understand and that can conflict with the driver's own SSL handling:
+ *   - `sslmode`         → handled via the `ssl: { rejectUnauthorized: false }` Pool option
+ *   - `uselibpqcompat`  → libpq flag, meaningless / harmful for the Node.js pg driver
+ *   - `pgbouncer`       → a Supabase hint for libpq clients, not needed here
+ *
+ * Leaving these in the URL when `ssl: {...}` is also set in Pool options can
+ * cause a double-SSL negotiation failure, resulting in ECONNRESET / ETIMEDOUT.
+ */
+function normalizeConnectionString(url: string): string {
+  if (!url) return url;
+  try {
+    const u = new URL(url);
+    u.searchParams.delete("sslmode");
+    u.searchParams.delete("uselibpqcompat");
+    u.searchParams.delete("pgbouncer");
+    return u.toString();
+  } catch {
+    // Not a valid URL — return as-is and let pg handle the error
+    return url;
+  }
+}
+
+const connectionString = normalizeConnectionString(rawConnection);
 const isSupabase = /supabase\.(com|co)/.test(connectionString);
 
 export const pool = new Pool({
