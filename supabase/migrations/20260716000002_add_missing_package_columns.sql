@@ -1,4 +1,4 @@
--- Add columns that may be missing from packages table
+-- Add columns that may be missing from packages, bookings, and booking_pilgrims tables
 -- (safe to run multiple times — ADD COLUMN IF NOT EXISTS is idempotent)
 
 ALTER TABLE packages ADD COLUMN IF NOT EXISTS hotel_makkah_id   text;
@@ -29,8 +29,21 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
-DO $$ BEGIN
+DO $ BEGIN
   ALTER TABLE packages ADD CONSTRAINT packages_airport_id_airports_id_fk
     FOREIGN KEY (airport_id) REFERENCES airports(id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
+END $;
+
+-- ─── bookings: group booking columns (added by group_booking migration) ──────
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS is_group_booking boolean NOT NULL DEFAULT false;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS group_name       text;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pic_name         text;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pic_phone        text;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pic_email        text;
+
+-- ─── booking_pilgrims: optional detail columns ────────────────────────────────
+ALTER TABLE booking_pilgrims ADD COLUMN IF NOT EXISTS nationality     text;
+ALTER TABLE booking_pilgrims ADD COLUMN IF NOT EXISTS room_number     text;
+ALTER TABLE booking_pilgrims ADD COLUMN IF NOT EXISTS vaccine_status  text;
+ALTER TABLE booking_pilgrims ADD COLUMN IF NOT EXISTS room_type       text;

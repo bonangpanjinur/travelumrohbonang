@@ -32,80 +32,80 @@ router.get("/", async (req, res) => {
   try {
     const { status, userId, search, branchId, limit, offset } = req.query;
 
-    const conditions = [];
+    // Build WHERE conditions with Drizzle sql template (parameterised, injection-safe)
+    const conditions: ReturnType<typeof sql>[] = [];
 
     if (status && typeof status === "string" && status !== "all") {
-      conditions.push(eq(bookings.status, status));
+      conditions.push(sql`b.status = ${status}`);
     }
-
     if (userId && typeof userId === "string") {
-      conditions.push(eq(bookings.userId, userId));
+      conditions.push(sql`b.user_id = ${userId}`);
     }
-
     if (search && typeof search === "string") {
-      conditions.push(ilike(bookings.bookingCode, `%${search}%`));
+      conditions.push(sql`b.booking_code ILIKE ${"%" + search + "%"}`);
     }
-
     if (branchId && typeof branchId === "string") {
       if (branchId === "__none__") {
-        conditions.push(isNull(bookings.branchId));
+        conditions.push(sql`b.branch_id IS NULL`);
       } else if (branchId !== "__all__") {
-        conditions.push(eq(bookings.branchId, branchId));
+        conditions.push(sql`b.branch_id = ${branchId}`);
       }
     }
 
-    const baseQuery = db
-      .select({
-        id: bookings.id,
-        bookingCode: bookings.bookingCode,
-        userId: bookings.userId,
-        packageId: bookings.packageId,
-        departureId: bookings.departureId,
-        branchId: bookings.branchId,
-        status: bookings.status,
-        totalPrice: bookings.totalPrice,
-        currency: bookings.currency,
-        paymentScheme: bookings.paymentScheme,
-        notes: bookings.notes,
-        createdAt: bookings.createdAt,
-        picType: bookings.picType,
-        picId: bookings.picId,
-        isGroupBooking: bookings.isGroupBooking,
-        groupName: bookings.groupName,
-        picName: bookings.picName,
-        picPhone: bookings.picPhone,
-        picEmail: bookings.picEmail,
-        packageTitle: packages.title,
-        packageSlug: packages.slug,
-        departureDate: packageDepartures.departureDate,
-        userName: profiles.name,
-        userEmail: profiles.email,
-        branchName: branches.name,
-      })
-      .from(bookings)
-      .leftJoin(packages, eq(bookings.packageId, packages.id))
-      .leftJoin(
-        packageDepartures,
-        eq(bookings.departureId, packageDepartures.id),
-      )
-      .leftJoin(profiles, eq(bookings.userId, profiles.id))
-      .leftJoin(branches, eq(bookings.branchId, branches.id))
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
+    const whereClause = conditions.length > 0
+      ? sql`WHERE ${sql.join(conditions, sql` AND `)}`
+      : sql``;
 
-    // Run data query and count query in parallel for correct pagination totals
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-    const [data, countResult] = await Promise.all([
-      baseQuery
-        .orderBy(desc(bookings.createdAt))
-        .limit(Number(limit) || 100)
-        .offset(Number(offset) || 0),
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(bookings)
-        .where(whereClause),
+    // Raw SQL — avoids referencing columns that may not yet exist in the DB
+    // (e.g. is_group_booking / group_name added by a later migration).
+    // COALESCE guards against NULL where the schema has a default.
+    const [dataResult, countResult] = await Promise.all([
+      db.execute(sql`
+        SELECT
+          b.id,
+          b.booking_code        AS "bookingCode",
+          b.user_id             AS "userId",
+          b.package_id          AS "packageId",
+          b.departure_id        AS "departureId",
+          b.branch_id           AS "branchId",
+          b.status,
+          b.total_price         AS "totalPrice",
+          b.currency,
+          b.payment_scheme      AS "paymentScheme",
+          b.notes,
+          b.created_at          AS "createdAt",
+          b.pic_type            AS "picType",
+          b.pic_id              AS "picId",
+          COALESCE(b.is_group_booking, false) AS "isGroupBooking",
+          b.group_name          AS "groupName",
+          b.pic_name            AS "picName",
+          b.pic_phone           AS "picPhone",
+          b.pic_email           AS "picEmail",
+          pkg.title             AS "packageTitle",
+          pkg.slug              AS "packageSlug",
+          dep.departure_date    AS "departureDate",
+          prof.name             AS "userName",
+          prof.email            AS "userEmail",
+          br.name               AS "branchName"
+        FROM bookings b
+        LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
+        LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
+        LEFT JOIN profiles           prof ON prof.id = b.user_id
+        LEFT JOIN branches           br   ON br.id   = b.branch_id
+        ${whereClause}
+        ORDER BY b.created_at DESC
+        LIMIT ${Number(limit) || 100}
+        OFFSET ${Number(offset) || 0}
+      `),
+      db.execute(sql`
+        SELECT COUNT(*)::int AS count
+        FROM bookings b
+        ${whereClause}
+      `),
     ]);
 
-    const total = Number(countResult[0]?.count ?? 0);
+    const data = (dataResult as any).rows ?? dataResult;
+    const total = Number(((countResult as any).rows ?? countResult)[0]?.count ?? 0);
     res.json({ data, total });
   } catch (e) {
     sendAdminError(res, "GET /api/admin/bookings", e);

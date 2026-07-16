@@ -66,6 +66,7 @@ router.get("/", async (req, res) => {
 
     res.json({ data: departuresWithPrices, total: departuresWithPrices.length });
   } catch (err) {
+    console.error("[departures] GET / error:", err);
     res.status(500).json({ error: "Failed to fetch departures" });
   }
 });
@@ -208,8 +209,24 @@ router.get("/:id/manifest.pdf", async (req, res) => {
     const bookingIds = departureBookings.map((b) => b.id);
     const bookingCodeById = new Map(departureBookings.map((b) => [b.id, b.bookingCode]));
 
+    // Explicit column select — avoids enumerating columns that may not yet exist in DB
     const pilgrims = bookingIds.length
-      ? await db.select().from(bookingPilgrims).where(inArray(bookingPilgrims.bookingId, bookingIds))
+      ? await db
+          .select({
+            id: bookingPilgrims.id,
+            bookingId: bookingPilgrims.bookingId,
+            name: bookingPilgrims.name,
+            gender: bookingPilgrims.gender,
+            nik: bookingPilgrims.nik,
+            phone: bookingPilgrims.phone,
+            email: bookingPilgrims.email,
+            birthDate: bookingPilgrims.birthDate,
+            passportNumber: bookingPilgrims.passportNumber,
+            passportExpiry: bookingPilgrims.passportExpiry,
+            roomType: bookingPilgrims.roomType,
+          })
+          .from(bookingPilgrims)
+          .where(inArray(bookingPilgrims.bookingId, bookingIds))
       : [];
 
     const photoDocs = pilgrims.length
