@@ -11,6 +11,7 @@ import {
 import { format, parseISO, isValid } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { safeFormatDate } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   TrendingUp, TrendingDown, Users, Package, CreditCard,
   DollarSign, LayoutDashboard, RefreshCw, Calendar, ArrowRight, Minus
@@ -187,13 +188,18 @@ const AnalyticsDashboard = () => {
       setKpis(summary.kpis);
 
       setTrendData(
-        summary.trend.map((t) => ({
-          label: useMonthly
-            ? format(new Date(`${t.key}-01`), "MMM yy", { locale: localeId })
-            : format(new Date(t.key), "d MMM", { locale: localeId }),
-          bookings: t.bookings,
-          revenue: t.revenue,
-        }))
+        summary.trend.map((t) => {
+          let label = t.key;
+          try {
+            const d = useMonthly ? new Date(`${t.key}-01`) : new Date(t.key);
+            if (!isNaN(d.getTime())) {
+              label = format(d, useMonthly ? "MMM yy" : "d MMM", { locale: localeId });
+            }
+          } catch {
+            // keep raw key as label if date is invalid
+          }
+          return { label, bookings: t.bookings, revenue: t.revenue };
+        })
       );
 
       setPackageRevenue(summary.packageRevenue);
@@ -217,7 +223,9 @@ const AnalyticsDashboard = () => {
 
       setDepartures(summary.departures);
     } catch {
-      // Leave previous data in place; UI already shows "Belum ada data" for empty arrays.
+      // Leave previous data in place on network error.
+      // Show a toast so user knows the refresh failed.
+      toast.error("Gagal memuat data analitik");
     }
 
     setLastRefreshed(new Date());

@@ -190,7 +190,7 @@ const PaymentGatewaySettings = () => {
                   return (
                     <div key={f.key} className="space-y-1">
                       <Label htmlFor={fieldKey} className="text-xs">{f.label}</Label>
-                      <Select value={row.config?.[f.key] || f.options?.[0]?.value} onValueChange={(v) => updateField(p, f.key, v)}>
+                      <Select value={row.config?.[f.key] ?? f.options?.[0]?.value ?? ""} onValueChange={(v) => updateField(p, f.key, v)}>
                         <SelectTrigger id={fieldKey}><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {f.options?.map((o) => (

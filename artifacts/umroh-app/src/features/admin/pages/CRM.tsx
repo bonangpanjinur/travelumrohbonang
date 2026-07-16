@@ -111,10 +111,12 @@ const defaultLeadForm: LeadForm = {
   packageInterest: "", notes: "", tags: [], estimatedValue: "",
 };
 
-const defaultFollowUpForm = {
+/** Always compute relative to now so the date isn't stale from bundle-load time. */
+const makeDefaultFollowUpForm = () => ({
   leadId: "", followUpDate: addDays(new Date(), 1).toISOString().slice(0, 16),
   type: "call", notes: "",
-};
+});
+const defaultFollowUpForm = makeDefaultFollowUpForm();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -263,7 +265,10 @@ const AdminCRM = () => {
 
   const saveLeadMutation = useMutation({
     mutationFn: (data: LeadForm) => {
-      const payload = { ...data, estimatedValue: data.estimatedValue ? parseInt(data.estimatedValue.replace(/\D/g, "")) : null };
+      const parsedValue = data.estimatedValue
+        ? parseInt(data.estimatedValue.replace(/\D/g, ""), 10)
+        : null;
+      const payload = { ...data, estimatedValue: parsedValue !== null && !isNaN(parsedValue) ? parsedValue : null };
       return editLeadId
         ? apiFetch(`/api/admin/crm/leads/${editLeadId}`, { method: "PATCH", body: JSON.stringify(payload) })
         : apiFetch("/api/admin/crm/leads", { method: "POST", body: JSON.stringify(payload) });
@@ -302,7 +307,7 @@ const AdminCRM = () => {
       queryClient.invalidateQueries({ queryKey: ["crm_follow_ups"] });
       queryClient.invalidateQueries({ queryKey: ["crm_lead_followups", selectedLeadId] });
       toast.success("Follow-up dijadwalkan");
-      setFollowUpDialogOpen(false); setFollowUpForm(defaultFollowUpForm);
+      setFollowUpDialogOpen(false); setFollowUpForm(makeDefaultFollowUpForm());
     },
     onError: () => toast.error("Gagal menjadwalkan follow-up"),
   });
@@ -394,7 +399,7 @@ const AdminCRM = () => {
           </Button>
 
           {/* Schedule Follow-up */}
-          <Dialog open={followUpDialogOpen} onOpenChange={(o) => { setFollowUpDialogOpen(o); if (!o) setFollowUpForm(defaultFollowUpForm); }}>
+          <Dialog open={followUpDialogOpen} onOpenChange={(o) => { setFollowUpDialogOpen(o); if (!o) setFollowUpForm(makeDefaultFollowUpForm()); }}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
                 <Bell className="w-4 h-4 mr-1.5" /> Follow-up
@@ -693,7 +698,7 @@ const AdminCRM = () => {
                                   <History className="w-3.5 h-3.5" />
                                 </Button>
                                 <Button variant="ghost" size="icon" className="h-7 w-7" title="Follow-up"
-                                  onClick={() => { setFollowUpForm({ ...defaultFollowUpForm, leadId: l.id }); setFollowUpDialogOpen(true); }}>
+                                  onClick={() => { setFollowUpForm({ ...makeDefaultFollowUpForm(), leadId: l.id }); setFollowUpDialogOpen(true); }}>
                                   <Bell className="w-3.5 h-3.5" />
                                 </Button>
                                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditLead(l)}>
@@ -834,7 +839,7 @@ const AdminCRM = () => {
                   <div className="space-y-3">
                     <div className="flex justify-end">
                       <Button size="sm" variant="outline"
-                        onClick={() => { setFollowUpForm({ ...defaultFollowUpForm, leadId: selectedLead.id }); setFollowUpDialogOpen(true); }}>
+                        onClick={() => { setFollowUpForm({ ...makeDefaultFollowUpForm(), leadId: selectedLead.id }); setFollowUpDialogOpen(true); }}>
                         <Plus className="w-3.5 h-3.5 mr-1.5" /> Jadwalkan Follow-up
                       </Button>
                     </div>

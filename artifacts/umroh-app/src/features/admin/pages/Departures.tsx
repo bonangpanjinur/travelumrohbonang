@@ -129,7 +129,7 @@ const AdminDepartures = () => {
   const handleEdit = (dep: Departure) => {
     setEditing(dep);
     const priceMap = { quad: 0, triple: 0, double: 0 };
-    dep.prices.forEach((p) => {
+    (dep.prices ?? []).forEach((p) => {
       priceMap[p.room_type as keyof typeof priceMap] = p.price;
     });
 
