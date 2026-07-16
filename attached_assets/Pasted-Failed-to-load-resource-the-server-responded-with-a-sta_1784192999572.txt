@@ -1,0 +1,169 @@
+Failed to load resource: the server responded with a status of 404 ()
+index-DrePr57A.js:87 Error fetching dynamic pages: Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async I (index-DrePr57A.js:87:102275)
+I @ index-DrePr57A.js:87
+api/cms/navigation-items:1  Failed to load resource: the server responded with a status of 404 ()
+api/cms/site-settings:1  Failed to load resource: the server responded with a status of 404 ()
+index-DrePr57A.js:87 Error fetching navigation: Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async M (index-DrePr57A.js:87:101795)
+M @ index-DrePr57A.js:87
+index-DrePr57A.js:87 Error fetching branding: Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async D (index-DrePr57A.js:87:102067)
+D @ index-DrePr57A.js:87
+api/cms/pages:1  Failed to load resource: the server responded with a status of 404 ()
+index-DrePr57A.js:99 Error fetching dynamic pages: Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async u (index-DrePr57A.js:99:22771)
+u @ index-DrePr57A.js:99
+api/cms/site-settings:1  Failed to load resource: the server responded with a status of 404 ()
+index-DrePr57A.js:99 Error fetching settings: Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async c (index-DrePr57A.js:99:22478)
+c @ index-DrePr57A.js:99
+api/profile/b27ad804-636b-4994-aeab-071d83f6ac03:1  Failed to load resource: the server responded with a status of 404 ()
+api/cms/site-settings:1  Failed to load resource: the server responded with a status of 404 ()
+api/cms/pages:1  Failed to load resource: the server responded with a status of 404 ()
+api/cms/navigation-items:1  Failed to load resource: the server responded with a status of 404 ()
+index-DrePr57A.js:87 Error fetching branding: Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async D (index-DrePr57A.js:87:102067)
+D @ index-DrePr57A.js:87
+index-DrePr57A.js:87 Error fetching dynamic pages: Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async I (index-DrePr57A.js:87:102275)
+I @ index-DrePr57A.js:87
+index-DrePr57A.js:87 Error fetching navigation: Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async M (index-DrePr57A.js:87:101795)
+M @ index-DrePr57A.js:87
+api/loyalty/my:1  Failed to load resource: the server responded with a status of 404 ()
+index-DrePr57A.js:359 Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async index-DrePr57A.js:359:39587
+(anonymous) @ index-DrePr57A.js:359
+api/notifications?limit=5:1  Failed to load resource: the server responded with a status of 500 ()
+index-DrePr57A.js:359 Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async l (index-DrePr57A.js:359:35834)
+l @ index-DrePr57A.js:359
+api/profile/b27ad804-636b-4994-aeab-071d83f6ac03:1  Failed to load resource: the server responded with a status of 404 ()
+api/loyalty/my:1  Failed to load resource: the server responded with a status of 404 ()
+index-DrePr57A.js:359 Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async index-DrePr57A.js:359:39587
+(anonymous) @ index-DrePr57A.js:359
+api/notifications?limit=5:1  Failed to load resource: the server responded with a status of 500 ()
+index-DrePr57A.js:359 Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async l (index-DrePr57A.js:359:35834)
+l @ index-DrePr57A.js:359
+api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 404 ()
+api/admin/analytics/dashboard-stats:1  Failed to load resource: the server responded with a status of 404 ()
+api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 404 ()
+api/admin/bookings?limit=5:1  Failed to load resource: the server responded with a status of 404 ()
+index-DrePr57A.js:441 Error fetching stats: Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async Promise.all (index 0)
+    at async index-DrePr57A.js:441:31742
+(anonymous) @ index-DrePr57A.js:441
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+api/cms/site-settings:1  Failed to load resource: the server responded with a status of 404 ()
+index-DrePr57A.js:377 Error fetching branding: Error
+    at Fe (index-DrePr57A.js:39:78282)
+    at async index-DrePr57A.js:377:61306
+(anonymous) @ index-DrePr57A.js:377
+api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 404 ()
+api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 404 ()
+api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 404 ()
+api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 404 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 404 ()
+index-DrePr57A.js:39  GET https://travelumrohbonang.vercel.app/api/admin/menu-permissions/my 404 (Not Found)
+Fe @ index-DrePr57A.js:39
+await in Fe
+queryFn @ index-DrePr57A.js:377
+s @ index-DrePr57A.js:9
+y @ index-DrePr57A.js:9
+start @ index-DrePr57A.js:9
+fetch @ index-DrePr57A.js:9
+#f @ index-DrePr57A.js:9
+fetch @ index-DrePr57A.js:9
+refetch @ index-DrePr57A.js:9
+onFocus @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+batch @ index-DrePr57A.js:9
+onFocus @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+await in (anonymous)
+(anonymous) @ index-DrePr57A.js:9
+onFocus @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+e @ index-DrePr57A.js:9
+index-DrePr57A.js:377  HEAD https://yakjpqqobknrmhfmybhe.supabase.co/rest/v1/ net::ERR_ABORTED 401 (Unauthorized)
+$nt @ index-DrePr57A.js:377
+(anonymous) @ index-DrePr57A.js:377
+o @ index-DrePr57A.js:377
+index-DrePr57A.js:39  GET https://travelumrohbonang.vercel.app/api/admin/menu-permissions/my 404 (Not Found)
+Fe @ index-DrePr57A.js:39
+await in Fe
+queryFn @ index-DrePr57A.js:377
+s @ index-DrePr57A.js:9
+y @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+Promise.then
+(anonymous) @ index-DrePr57A.js:9
+Promise.catch
+y @ index-DrePr57A.js:9
+start @ index-DrePr57A.js:9
+fetch @ index-DrePr57A.js:9
+#f @ index-DrePr57A.js:9
+fetch @ index-DrePr57A.js:9
+refetch @ index-DrePr57A.js:9
+onFocus @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+batch @ index-DrePr57A.js:9
+onFocus @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+await in (anonymous)
+(anonymous) @ index-DrePr57A.js:9
+onFocus @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+e @ index-DrePr57A.js:9
+index-DrePr57A.js:39  GET https://travelumrohbonang.vercel.app/api/admin/menu-permissions/my 404 (Not Found)
+Fe @ index-DrePr57A.js:39
+await in Fe
+queryFn @ index-DrePr57A.js:377
+s @ index-DrePr57A.js:9
+y @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+Promise.then
+(anonymous) @ index-DrePr57A.js:9
+Promise.catch
+y @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+Promise.then
+(anonymous) @ index-DrePr57A.js:9
+Promise.catch
+y @ index-DrePr57A.js:9
+start @ index-DrePr57A.js:9
+fetch @ index-DrePr57A.js:9
+#f @ index-DrePr57A.js:9
+fetch @ index-DrePr57A.js:9
+refetch @ index-DrePr57A.js:9
+onFocus @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+batch @ index-DrePr57A.js:9
+onFocus @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+await in (anonymous)
+(anonymous) @ index-DrePr57A.js:9
+onFocus @ index-DrePr57A.js:9
+(anonymous) @ index-DrePr57A.js:9
+e @ index-DrePr57A.js:9
