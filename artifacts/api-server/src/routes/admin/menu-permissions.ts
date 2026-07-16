@@ -3,7 +3,6 @@ import { db } from "@workspace/db";
 import { roleMenuPermissions } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { logDiag } from "../../lib/tempDiagnosticLog"; // TEMP DIAG
 import { sendAdminError } from "../../lib/adminApiError";
 import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../../lib/supabaseEnv";
 
@@ -49,7 +48,7 @@ async function supabaseFetch(path: string, init: RequestInit = {}): Promise<Resp
  * Returns only the permissions for the current user's role.
  * Accessible by all admin roles (requireOperational in index.ts).
  */
-router.get("/my", (req, _res, next) => { logDiag("GET /menu-permissions/my:before-handler", req); next(); }, async (req, res) => { // TEMP DIAG
+router.get("/my", async (req, res) => {
   const role = req.user?.role as string | undefined;
   if (!role || !ADMIN_ROLES.has(role)) {
     res.json({ data: [] });

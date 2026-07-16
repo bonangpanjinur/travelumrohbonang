@@ -11,7 +11,6 @@ import { logger } from "./lib/logger";
 import { generalLimiter } from "./middlewares/rateLimiter";
 import { requestMetrics } from "./lib/requestMetrics";
 import { authMiddleware } from "./middlewares/authMiddleware";
-import { logDiag } from "./lib/tempDiagnosticLog"; // TEMP DIAG
 
 const app = express();
 
@@ -82,16 +81,9 @@ app.use(cors({ credentials: true, origin: corsOrigin }));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// TEMP DIAG: before/after requireAuth is handled inside authMiddleware's
-// role in the auth chain further down (admin/index.ts). This wraps
-// authMiddleware itself so we can see req state immediately before/after it.
-app.use((req, _res, next) => { logDiag("authMiddleware:before", req); next(); }); // TEMP DIAG
 app.use(authMiddleware);
-app.use((req, _res, next) => { logDiag("authMiddleware:after", req); next(); }); // TEMP DIAG
 
-app.use("/api", (req, _res, next) => { logDiag("generalLimiter:before", req); next(); }); // TEMP DIAG
 app.use("/api", generalLimiter);
-app.use("/api", (req, _res, next) => { logDiag("generalLimiter:after", req); next(); }); // TEMP DIAG
 
 // PostgREST-compatible proxy — serves Supabase JS client requests
 // Apply rate limiting to the REST proxy as well.

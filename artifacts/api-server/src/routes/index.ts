@@ -18,8 +18,8 @@ import wishlistsRouter from "./wishlists";
 import pilgrimTestimonialsRouter from "./pilgrim-testimonials";
 import paymentGatewayWebhooksRouter from "./payment-gateway-webhooks";
 import agentRouter from "./agent";
+import cronRouter from "./admin/cron";
 import { strictLimiter, writeLimiter } from "../middlewares/rateLimiter";
-import { logDiag } from "../lib/tempDiagnosticLog"; // TEMP DIAG
 
 const router = Router();
 
@@ -36,13 +36,7 @@ router.use("/cms", cmsRouter);
 router.use(miscRouter);
 
 // ── Admin (all sub-routes protected individually inside adminRouter) ──────────
-router.use(
-  "/admin",
-  (req, _res, next) => { logDiag("strictLimiter:before", req); next(); }, // TEMP DIAG
-  strictLimiter,
-  (req, _res, next) => { logDiag("strictLimiter:after", req); next(); }, // TEMP DIAG
-  adminRouter,
-);
+router.use("/admin", strictLimiter, adminRouter);
 
 // ── Authenticated user routes ─────────────────────────────────────────────────
 router.use("/bookings", strictLimiter);
@@ -84,5 +78,11 @@ router.use("/agent", strictLimiter, agentRouter);
 
 // Client-side logging (no auth required — best-effort; write-rate-limited at router level)
 router.use("/logs", writeLimiter, logsRouter);
+
+// ── Vercel Cron endpoints — NO session auth; CRON_SECRET header check only ────
+// Must stay outside the authenticated admin router so Vercel Cron scheduler
+// (which only sends Authorization: Bearer <CRON_SECRET>) is not rejected by
+// requireAuth middleware.
+router.use("/cron", cronRouter);
 
 export default router;

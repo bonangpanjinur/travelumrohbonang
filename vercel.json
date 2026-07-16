@@ -10,5 +10,19 @@
   },
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/document-reminder",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/follow-up",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/installment-reminder",
+      "schedule": "0 1 * * *"
+    }
   ]
 }

@@ -46,14 +46,11 @@ import adminReportsRouter from "./reports";
 import adminRoomAssignmentRouter from "./room-assignment";
 import adminSocialKitRouter from "./social-kit";
 import adminInstallmentsRouter from "./installments";
-import { logDiag } from "../../lib/tempDiagnosticLog"; // TEMP DIAG
 
 const router = Router();
 
 // Every admin route requires a valid authenticated session
-router.use((req, _res, next) => { logDiag("requireAuth:before", req); next(); }); // TEMP DIAG
 router.use(requireAuth);
-router.use((req, _res, next) => { logDiag("requireAuth:after", req); next(); }); // TEMP DIAG
 
 // ── Super-admin-only routes ─────────────────────────────────────────────────
 // Agents router contains role-management endpoints (POST/DELETE /roles)
@@ -62,13 +59,7 @@ router.use((req, _res, next) => { logDiag("requireAuth:after", req); next(); });
 router.use("/agents", requireAdmin, adminAgentsRouter);
 router.use("/integrations", requireSuperAdmin, adminIntegrationsRouter);
 // GET readable by all admin roles; PUT/DELETE restricted to super_admin inside the router
-router.use(
-  "/menu-permissions",
-  (req, _res, next) => { logDiag("requireOperational:before", req); next(); }, // TEMP DIAG
-  requireOperational,
-  (req, _res, next) => { logDiag("requireOperational:after", req); next(); }, // TEMP DIAG
-  adminMenuPermissionsRouter,
-);
+router.use("/menu-permissions", requireOperational, adminMenuPermissionsRouter);
 router.use("/analytics", requireFinance, adminAnalyticsRouter);
 router.use("/reports", requireFinance, adminReportsRouter);
 

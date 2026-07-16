@@ -209,8 +209,8 @@ router.post("/:id/extra-hotels", async (req, res) => {
         rows.map((r: any, i: number) => ({
           id: crypto.randomUUID(),
           packageId: req.params.id,
-          hotelId: r.hotel_id,
-          label: r.label,
+          hotelId: r.hotelId ?? r.hotel_id,
+          label: r.label ?? null,
           sortOrder: i,
         }))
       );

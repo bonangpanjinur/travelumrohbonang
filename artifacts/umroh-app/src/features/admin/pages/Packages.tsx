@@ -152,31 +152,40 @@ const AdminPackages = () => {
   }, []);
 
   const fetchOptions = async () => {
-    const [catRes, hotelRes, airlineRes, airportRes] = await Promise.all([
-      apiFetch<{ data: any[] }>("/api/admin/masterdata/categories"),
-      apiFetch<{ data: any[] }>("/api/admin/masterdata/hotels"),
-      apiFetch<{ data: any[] }>("/api/admin/masterdata/airlines"),
-      apiFetch<{ data: any[] }>("/api/admin/masterdata/airports"),
-    ]);
-    setCategories((catRes.data || []).map((c) => ({
-      id: c.id,
-      name: c.name,
-      show_extra_hotels: c.showExtraHotels,
-      is_active: c.isActive,
-    })));
-    setHotels((hotelRes.data || []).map((h) => ({
-      id: h.id,
-      name: h.name,
-      city: h.city,
-    })));
-    setAirlines((airlineRes.data || []).map((a) => ({ id: a.id, name: a.name })));
-    setAirports((airportRes.data || []).map((a) => ({ id: a.id, name: a.name, code: a.code })));
+    try {
+      const [catRes, hotelRes, airlineRes, airportRes] = await Promise.all([
+        apiFetch<{ data: any[] }>("/api/admin/masterdata/categories"),
+        apiFetch<{ data: any[] }>("/api/admin/masterdata/hotels"),
+        apiFetch<{ data: any[] }>("/api/admin/masterdata/airlines"),
+        apiFetch<{ data: any[] }>("/api/admin/masterdata/airports"),
+      ]);
+      setCategories((catRes.data || []).map((c) => ({
+        id: c.id,
+        name: c.name,
+        show_extra_hotels: c.showExtraHotels,
+        is_active: c.isActive,
+      })));
+      setHotels((hotelRes.data || []).map((h) => ({
+        id: h.id,
+        name: h.name,
+        city: h.city,
+      })));
+      setAirlines((airlineRes.data || []).map((a) => ({ id: a.id, name: a.name })));
+      setAirports((airportRes.data || []).map((a) => ({ id: a.id, name: a.name, code: a.code })));
+    } catch (error: any) {
+      toast({ title: "Gagal memuat data referensi", description: error.message, variant: "destructive" });
+    }
   };
 
   const fetchPackages = async () => {
-    const { data } = await apiFetch<{ data: any[] }>("/api/admin/packages");
-    setPackages((data || []).map(mapPackageFromApi));
-    setLoading(false);
+    try {
+      const { data } = await apiFetch<{ data: any[] }>("/api/admin/packages");
+      setPackages((data || []).map(mapPackageFromApi));
+    } catch (error: any) {
+      toast({ title: "Gagal memuat paket", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchExtraHotels = async (packageId: string) => {
@@ -212,10 +221,11 @@ const AdminPackages = () => {
       airlineId: form.airline_id || null,
       airportId: form.airport_id || null,
       imageUrl: form.image_url || null,
+      // Always include these so zero/default values are properly saved on update
+      minimumDp: form.minimum_dp,
+      dpDeadlineDays: form.dp_deadline_days,
+      fullDeadlineDays: form.full_deadline_days,
     };
-    if (form.minimum_dp !== 0) payload.minimumDp = form.minimum_dp;
-    if (form.dp_deadline_days !== 30) payload.dpDeadlineDays = form.dp_deadline_days;
-    if (form.full_deadline_days !== 7) payload.fullDeadlineDays = form.full_deadline_days;
     return payload;
   };
 
@@ -527,7 +537,7 @@ const AdminPackages = () => {
               </div>
               <div>
                 <Label>Durasi (hari)</Label>
-                <Input type="number" value={form.duration_days} onChange={(e) => setForm({ ...form, duration_days: parseInt(e.target.value) })} className="mt-1" />
+                <Input type="number" value={form.duration_days} onChange={(e) => { const v = parseInt(e.target.value); setForm({ ...form, duration_days: Number.isNaN(v) ? form.duration_days : v }); }} className="mt-1" />
               </div>
               <div>
                 <Label>Minimal DP (Rp)</Label>

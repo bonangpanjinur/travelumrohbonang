@@ -30,7 +30,9 @@ router.post("/", async (req, res) => {
 
 router.patch("/:id", async (req, res) => {
   try {
-    const [data] = await db.update(agents).set(req.body).where(eq(agents.id, req.params.id)).returning();
+    // Strip immutable fields to prevent accidental overwrite of PK / createdAt
+    const { id: _id, createdAt: _createdAt, ...updates } = req.body;
+    const [data] = await db.update(agents).set(updates).where(eq(agents.id, req.params.id)).returning();
     if (!data) return res.status(404).json({ error: "Agent not found" });
     res.json(data);
   } catch (err) {
@@ -161,7 +163,8 @@ router.post("/roles", requireSuperAdmin, async (req, res) => {
 
 router.delete("/roles/:id", requireSuperAdmin, async (req, res) => {
   try {
-    await db.delete(userRoles).where(eq(userRoles.id, req.params.id as string));
+    const [deleted] = await db.delete(userRoles).where(eq(userRoles.id, req.params.id as string)).returning();
+    if (!deleted) return res.status(404).json({ error: "User role not found" });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete user role" });

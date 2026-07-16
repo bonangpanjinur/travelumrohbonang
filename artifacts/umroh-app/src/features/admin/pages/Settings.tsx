@@ -394,12 +394,12 @@ const AdminSettings = () => {
     if (existing) {
       await supabase
         .from("site_settings")
-        .update({ value: value as Json, updated_at: new Date().toISOString() })
+        .update({ value: value as Json })
         .eq("id", existing.id);
     } else {
       await supabase
         .from("site_settings")
-        .insert({ key, category, value: value as Json });
+        .insert({ id: crypto.randomUUID(), key, category, value: value as Json });
     }
 
     toast({ title: "Pengaturan disimpan!" });
