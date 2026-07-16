@@ -14,7 +14,7 @@ const AdminBranding = ({ branding, isMobile = false }: AdminBrandingProps) => {
   const textSize = isMobile ? "text-lg" : "text-xl";
 
   return (
-    <Link to="/" className="flex items-center gap-2">
+    <Link to="/admin/dashboard" className="flex items-center gap-2">
       {showLogo && (
         branding.logo_url ? (
           <img 
@@ -25,7 +25,7 @@ const AdminBranding = ({ branding, isMobile = false }: AdminBrandingProps) => {
         ) : (
           <div className={`${logoSize} rounded-full gradient-gold flex items-center justify-center`}>
             <span className={`font-display font-bold ${isMobile ? "text-sm" : "text-lg"} text-primary`}>
-              {branding.company_name.charAt(0)}
+              {(branding.company_name ?? "A").charAt(0) || "A"}
             </span>
           </div>
         )

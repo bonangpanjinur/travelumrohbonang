@@ -39,7 +39,11 @@ const AdminLayout = () => {
           .eq("category", "general")
           .maybeSingle();
 
-        if (data?.value && typeof data.value === 'object') {
+        if (
+          data?.value &&
+          typeof data.value === "object" &&
+          !Array.isArray(data.value)
+        ) {
           setBranding({ ...defaultBranding, ...(data.value as object) });
         }
       } catch (error) {
@@ -50,8 +54,13 @@ const AdminLayout = () => {
   }, []);
 
   const handleLogout = async () => {
-    await signOut();
-    navigate("/");
+    try {
+      await signOut();
+    } catch (err) {
+      console.error("[AdminLayout] signOut error:", err);
+    } finally {
+      navigate("/");
+    }
   };
 
   return (

@@ -1,9 +1,22 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+
+/** Safely format a date string; returns "-" if null/invalid. */
+function safeDistanceToNow(dateStr: string | null | undefined): string {
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "-";
+  try {
+    return formatDistanceToNow(d, { addSuffix: true, locale: localeId });
+  } catch {
+    return "-";
+  }
+}
 
 export type AdminNotifType = "booking" | "payment";
 
@@ -76,6 +89,7 @@ function applyReadState(items: AdminNotif[], readIds: Set<string>): AdminNotif[]
 }
 
 export function useAdminNotifications() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<AdminNotif[]>([]);
   const [loading, setLoading] = useState(true);
   const readIdsRef = useRef<Set<string>>(getReadIds());
@@ -89,25 +103,22 @@ export function useAdminNotifications() {
     if (toastedRef.current.has(notif.id)) return;
     toastedRef.current.add(notif.id);
 
-    const ago = formatDistanceToNow(new Date(notif.created_at), {
-      addSuffix: true,
-      locale: localeId,
-    });
+    const ago = safeDistanceToNow(notif.created_at);
 
     if (notif.type === "booking") {
       toast.success(notif.title, {
         description: `${notif.message} · ${ago}`,
         duration: 6000,
-        action: { label: "Lihat", onClick: () => window.location.assign(notif.link) },
+        action: { label: "Lihat", onClick: () => navigate(notif.link) },
       });
     } else {
       toast.warning(notif.title, {
         description: `${notif.message} · ${ago}`,
         duration: 8000,
-        action: { label: "Verifikasi", onClick: () => window.location.assign(notif.link) },
+        action: { label: "Verifikasi", onClick: () => navigate(notif.link) },
       });
     }
-  }, []);
+  }, [navigate]);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -152,8 +163,9 @@ export function useAdminNotifications() {
       );
       const paymentNotifs: AdminNotif[] = paymentsWithCode.map(buildPaymentNotif);
 
+      const toMs = (s: string) => { const t = new Date(s).getTime(); return isNaN(t) ? 0 : t; };
       const all = [...bookingNotifs, ...paymentNotifs].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        (a, b) => toMs(b.created_at) - toMs(a.created_at)
       );
 
       setNotifications(applyReadState(all, readIdsRef.current));

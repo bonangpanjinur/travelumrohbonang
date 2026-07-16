@@ -49,10 +49,12 @@ const NotifRow = ({ notif, onClick }: NotifRowProps) => (
       </div>
       <p className="text-xs text-muted-foreground mt-0.5 truncate">{notif.message}</p>
       <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-        {formatDistanceToNow(new Date(notif.created_at), {
-          addSuffix: true,
-          locale: localeId,
-        })}
+        {(() => {
+          const d = new Date(notif.created_at);
+          return isNaN(d.getTime())
+            ? "-"
+            : formatDistanceToNow(d, { addSuffix: true, locale: localeId });
+        })()}
       </p>
     </div>
     <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground flex-shrink-0 mt-0.5 transition-colors" />
