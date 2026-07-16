@@ -47,7 +47,12 @@ router.get("/", async (req, res) => {
     const departureIds = data.map((dep: any) => dep.id);
     const allPrices = departureIds.length
       ? await db
-          .select()
+          .select({
+            id: departurePrices.id,
+            departureId: departurePrices.departureId,
+            roomType: departurePrices.roomType,
+            price: departurePrices.price,
+          })
           .from(departurePrices)
           .where(inArray(departurePrices.departureId, departureIds))
       : [];
@@ -59,9 +64,22 @@ router.get("/", async (req, res) => {
       pricesByDeparture.set(price.departureId, list);
     }
 
+    // Shape the response to match the snake_case + nested format the frontend expects.
     const departuresWithPrices = data.map((dep: any) => ({
-      ...dep,
-      prices: pricesByDeparture.get(dep.id) ?? [],
+      id: dep.id,
+      package_id: dep.packageId,
+      departure_date: dep.departureDate,
+      return_date: dep.returnDate ?? null,
+      quota: dep.quota,
+      remaining_quota: dep.remainingQuota,
+      status: dep.status,
+      muthawif_id: dep.muthawifId ?? null,
+      package: dep.packageTitle ? { id: dep.packageId, title: dep.packageTitle } : null,
+      prices: (pricesByDeparture.get(dep.id) ?? []).map((p) => ({
+        id: p.id,
+        room_type: p.roomType,
+        price: p.price,
+      })),
     }));
 
     res.json({ data: departuresWithPrices, total: departuresWithPrices.length });
