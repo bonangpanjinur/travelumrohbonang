@@ -117,9 +117,10 @@ router.get("/:id/manifest-data", async (req, res) => {
         ),
       );
 
-    const bookingIds = departureBookings.map((b) => b.id);
-    const bookingInfoById = new Map(
-      departureBookings.map((b) => [b.id, b]),
+    type BookingInfo = (typeof departureBookings)[number];
+    const bookingIds = departureBookings.map((b: BookingInfo) => b.id);
+    const bookingInfoById = new Map<string, BookingInfo>(
+      departureBookings.map((b: BookingInfo) => [b.id, b]),
     );
 
     const pilgrims = bookingIds.length

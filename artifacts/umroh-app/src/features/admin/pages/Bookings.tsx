@@ -75,6 +75,11 @@ const AdminBookings = () => {
         departure: b.departureDate ? { departure_date: b.departureDate } : null,
         profile: b.userName || b.userEmail ? { name: b.userName, email: b.userEmail } : null,
         branch: b.branchName ? { name: b.branchName } : null,
+        // Group booking fields
+        is_group_booking: b.isGroupBooking ?? false,
+        group_name: b.groupName ?? null,
+        pic_name: b.picName ?? null,
+        pic_phone: b.picPhone ?? null,
       }));
       setBookings(mapped);
       setTotalCount(res.total || 0);
