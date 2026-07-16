@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, packages, packageDepartures, departurePrices, packageHotels, eq, asc, inArray } from "@workspace/db";
+import { db, sql, packages, packageDepartures, departurePrices, packageHotels, eq, asc, inArray } from "@workspace/db";
 import { sendAdminError } from "../../lib/adminApiError";
 import {
   PackageSchema,
@@ -14,11 +14,38 @@ import { validate } from "../../middlewares/validate";
 
 const router = Router();
 
+/**
+ * GET /api/admin/packages
+ *
+ * Uses raw SQL (same pattern as dashboard-stats) to avoid Drizzle enumerating
+ * every schema column — some columns (hotel_makkah_id, required_doc_types, etc.)
+ * may not exist in older DB instances, causing "column does not exist" 500 errors.
+ * Only selects the columns required by PackageSchema / the frontend.
+ */
 router.get("/", async (_req, res) => {
   try {
-    const data = await db.select().from(packages).orderBy(asc(packages.createdAt));
+    const result = await db.execute(sql`
+      SELECT
+        id,
+        title,
+        slug,
+        description,
+        image_url          AS "imageUrl",
+        duration_days      AS "durationDays",
+        package_type       AS "packageType",
+        category_id        AS "categoryId",
+        is_active          AS "isActive",
+        COALESCE(minimum_dp, 0)        AS "minimumDp",
+        COALESCE(dp_deadline_days, 30) AS "dpDeadlineDays",
+        COALESCE(full_deadline_days, 7) AS "fullDeadlineDays",
+        created_at         AS "createdAt"
+      FROM packages
+      ORDER BY created_at ASC NULLS LAST
+    `);
+    const data = result.rows as any[];
     res.json(PackageListResponse.parse({ data, total: data.length }));
-  } catch {
+  } catch (err) {
+    console.error("[packages] GET / error:", err);
     res.status(500).json({ error: "Failed to fetch packages" });
   }
 });
