@@ -61,8 +61,8 @@ router.get("/summary", async (req, res) => {
         select
           (select count(*)::int from curr_bookings) as curr_bookings,
           (select count(*)::int from prev_bookings) as prev_bookings,
-          (select coalesce(sum(amount),0)::bigint from payments where status = 'paid' and booking_id in (select id from curr_bookings)) as curr_revenue,
-          (select coalesce(sum(amount),0)::bigint from payments where status = 'paid' and booking_id in (select id from prev_bookings)) as prev_revenue,
+          (select coalesce(sum(amount),0)::bigint from payments where status = 'verified' and booking_id in (select id from curr_bookings)) as curr_revenue,
+          (select coalesce(sum(amount),0)::bigint from payments where status = 'verified' and booking_id in (select id from prev_bookings)) as prev_revenue,
           (select count(*)::int from booking_pilgrims where booking_id in (select id from curr_bookings)) as curr_pilgrims,
           (select count(*)::int from booking_pilgrims where booking_id in (select id from prev_bookings)) as prev_pilgrims
       `),
@@ -83,7 +83,7 @@ router.get("/summary", async (req, res) => {
             left join (
               select date_trunc('month', coalesce(paid_at, created_at)) as bucket, sum(amount) as rev
               from payments
-              where status = 'paid' and created_at between ${start} and ${end}
+              where status = 'verified' and created_at between ${start} and ${end}
               group by 1
             ) p on p.bucket = d.bucket
             order by d.bucket
@@ -103,7 +103,7 @@ router.get("/summary", async (req, res) => {
             left join (
               select date_trunc('day', coalesce(paid_at, created_at)) as bucket, sum(amount) as rev
               from payments
-              where status = 'paid' and created_at between ${start} and ${end}
+              where status = 'verified' and created_at between ${start} and ${end}
               group by 1
             ) p on p.bucket = d.bucket
             order by d.bucket
@@ -116,7 +116,7 @@ router.get("/summary", async (req, res) => {
           coalesce(sum(pay.amount), 0)::bigint as revenue
         from bookings b
         left join packages pk on pk.id = b.package_id
-        left join payments pay on pay.booking_id = b.id and pay.status = 'paid'
+        left join payments pay on pay.booking_id = b.id and pay.status = 'verified'
         where b.created_at between ${start} and ${end} and b.status is distinct from 'cancelled'
         group by coalesce(pk.title, 'Tanpa Paket')
         order by revenue desc

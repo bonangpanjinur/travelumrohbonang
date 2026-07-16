@@ -68,5 +68,12 @@ export async function apiFetch<T = unknown>(
   // Handle empty body (some DELETE/PATCH routes return 200 with no content)
   const text = await res.text();
   if (!text) return undefined as T;
-  return JSON.parse(text) as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    // Server returned non-JSON (e.g. HTML error page from proxy/CDN)
+    const err = new Error(`Server returned non-JSON response (${res.status}): ${text.slice(0, 200)}`) as Error & { status?: number };
+    err.status = res.status;
+    throw err;
+  }
 }

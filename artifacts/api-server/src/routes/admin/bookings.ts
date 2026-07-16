@@ -14,6 +14,7 @@ import {
   ilike,
   isNull,
   desc,
+  sql,
 } from "@workspace/db";
 import {
   BookingListResponse,
@@ -91,12 +92,21 @@ router.get("/", async (req, res) => {
       .leftJoin(branches, eq(bookings.branchId, branches.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 
-    const data = await baseQuery
-      .orderBy(desc(bookings.createdAt))
-      .limit(Number(limit) || 100)
-      .offset(Number(offset) || 0);
+    // Run data query and count query in parallel for correct pagination totals
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const [data, countResult] = await Promise.all([
+      baseQuery
+        .orderBy(desc(bookings.createdAt))
+        .limit(Number(limit) || 100)
+        .offset(Number(offset) || 0),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(bookings)
+        .where(whereClause),
+    ]);
 
-    res.json({ data, total: data.length }); // Simplified for internal use, but ideally we'd get a real count
+    const total = Number(countResult[0]?.count ?? 0);
+    res.json({ data, total });
   } catch (e) {
     sendAdminError(res, "GET /api/admin/bookings", e);
   }

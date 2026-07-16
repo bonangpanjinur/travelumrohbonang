@@ -1,6 +1,13 @@
 {
   "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/umroh-app run build",
   "outputDirectory": "artifacts/umroh-app/dist/public",
+  "functions": {
+    "api/[...all].js": {
+      "includeFiles": "artifacts/api-server/dist/**",
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
