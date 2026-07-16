@@ -14,7 +14,6 @@ import { id as idLocale } from "date-fns/locale";
 import AdminPagination from "@/features/admin/components/AdminPagination";
 import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
 import { apiFetch } from "@/shared/lib/apiClient";
-import { supabase } from "@/shared/integrations/supabase/client";
 
 interface Pilgrim {
   id: string;
@@ -89,9 +88,9 @@ const AdminPilgrims = () => {
 
   const fetchBookings = useCallback(async () => {
     try {
-      const data = await apiFetch<any[]>("/api/admin/bookings");
+      const result = await apiFetch<{ data: any[] }>("/api/admin/bookings?limit=200");
       setBookings(
-        (data || []).map((b: any) => ({
+        (result?.data || []).map((b: any) => ({
           id: b.id,
           booking_code: b.bookingCode,
           package_title: b.packageTitle || "-",

@@ -70,6 +70,39 @@ router.post("/send-reminders", async (_req, res) => {
   }
 });
 
+// ── PATCH /:id — mark a single installment (e.g. "paid") ─────────────────────
+router.patch("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, paidAt } = req.body as { status?: string; paidAt?: string };
+
+    if (!status) {
+      return res.status(400).json({ error: "status is required" });
+    }
+
+    const now = new Date();
+    const [updated] = await db
+      .update(installmentSchedules)
+      .set({
+        status,
+        ...(status === "paid"
+          ? { paidAt: paidAt ? new Date(paidAt) : now }
+          : { paidAt: null }),
+      })
+      .where(eq(installmentSchedules.id, id))
+      .returning();
+
+    if (!updated) {
+      return res.status(404).json({ error: "Installment not found" });
+    }
+
+    res.json(updated);
+  } catch (err) {
+    console.error("[admin/installments] patch:", err);
+    res.status(500).json({ error: "Failed to update installment" });
+  }
+});
+
 // ── GET / — all installments with optional filters ───────────────────────────
 router.get("/", async (req, res) => {
   try {

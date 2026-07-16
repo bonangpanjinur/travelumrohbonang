@@ -8,6 +8,7 @@ import {
   financialTransactions,
   eq,
   and,
+  or,
   inArray,
   isNull,
   asc,
@@ -27,19 +28,28 @@ router.get("/all", async (_req, res) => {
 router.get("/package/:packageId", async (req, res) => {
   try {
     const { departureId } = req.query;
-    let conditions = eq(packageCosts.packageId, req.params.packageId);
-    
-    // If departureId filter is provided, get costs for that departure OR costs applicable to all departures (null departureId)
-    // Actually, usually admin wants either just the package-level ones or everything.
-    // Based on frontend logic: q = supabase.from("package_costs").select("*").eq("package_id", pid);
-    // if (filterDeparture !== "__all__") q = q.or(`departure_id.eq.${filterDeparture},departure_id.is.null`);
+
+    // When a specific departure is selected: show costs for that departure OR
+    // package-level costs (departure_id IS NULL) so admins see both shared
+    // and departure-specific line items in one view.
+    // When no departure filter ("__all__" or absent): show all costs for the package.
+    const whereClause =
+      departureId && departureId !== "__all__"
+        ? and(
+            eq(packageCosts.packageId, req.params.packageId),
+            or(
+              eq(packageCosts.departureId, departureId as string),
+              isNull(packageCosts.departureId),
+            ),
+          )
+        : eq(packageCosts.packageId, req.params.packageId);
 
     const data = await db
       .select()
       .from(packageCosts)
-      .where(conditions)
+      .where(whereClause)
       .orderBy(asc(packageCosts.sortOrder), asc(packageCosts.createdAt));
-    
+
     res.json({ data });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch package costs" });

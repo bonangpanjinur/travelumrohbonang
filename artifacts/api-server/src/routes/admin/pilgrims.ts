@@ -10,7 +10,7 @@ import {
   eq,
   and,
   or,
-  like,
+  ilike,
   desc,
 } from "@workspace/db";
 
@@ -79,12 +79,12 @@ router.get("/", async (req: any, res) => {
       const s = `%${search}%`;
       query = query.where(
         or(
-          like(bookingPilgrims.name, s),
-          like(bookingPilgrims.nik, s),
-          like(bookingPilgrims.passportNumber, s),
-          like(bookingPilgrims.phone, s),
-          like(bookingPilgrims.email, s),
-          like(bookings.bookingCode, s)
+          ilike(bookingPilgrims.name, s),
+          ilike(bookingPilgrims.nik, s),
+          ilike(bookingPilgrims.passportNumber, s),
+          ilike(bookingPilgrims.phone, s),
+          ilike(bookingPilgrims.email, s),
+          ilike(bookings.bookingCode, s)
         )
       ) as any;
     }
@@ -103,7 +103,7 @@ router.post("/", async (req: any, res) => {
         if (!values.bookingId || !values.name) {
           return res.status(400).json({ error: "bookingId and name are required" });
         }
-        const id = Math.random().toString(36).substring(2, 15);
+        const id = crypto.randomUUID();
         const [inserted] = await db.insert(bookingPilgrims).values({
             id,
             ...values,

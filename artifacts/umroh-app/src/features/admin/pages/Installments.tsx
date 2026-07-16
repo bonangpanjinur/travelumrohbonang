@@ -1,26 +1,29 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { apiFetch } from "@/shared/lib/apiClient";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Input } from "@/shared/components/ui/input";
 import { toast } from "sonner";
-import { Search, Calendar, CheckCircle2, Clock, AlertTriangle, DollarSign } from "lucide-react";
+import { Search, Calendar, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
 
 interface InstallmentRow {
   id: string;
-  booking_id: string;
-  installment_number: number;
-  amount: number;
-  due_date: string;
+  bookingId: string;
+  installmentNumber: number;
+  amount: string | number;
+  dueDate: string;
   status: string;
-  paid_at: string | null;
-  notes: string | null;
-  booking?: { booking_code: string; profile?: { name: string } };
+  paidAt: string | null;
+  bookingCode: string | null;
+  packageName: string | null;
+  jamaahName: string | null;
+  jamaahEmail: string | null;
+  jamaahPhone: string | null;
 }
 
 const statusBadge: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -41,44 +44,43 @@ const AdminInstallments = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    let query = supabase
-      .from("installment_schedules")
-      .select(`*, booking:bookings(booking_code, profile:profiles!bookings_user_id_profiles_fkey(name))`)
-      .order("due_date", { ascending: true });
-
-    if (filter !== "all") {
-      query = query.eq("status", filter);
+    try {
+      const params = new URLSearchParams();
+      if (filter !== "all") params.set("status", filter);
+      const result = await apiFetch<{ data: InstallmentRow[]; total: number }>(
+        `/api/admin/installments${params.toString() ? `?${params}` : ""}`
+      );
+      setData(result?.data || []);
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal memuat data cicilan");
+    } finally {
+      setLoading(false);
     }
-
-    const { data: result } = await query;
-    setData((result as unknown as InstallmentRow[]) || []);
-    setLoading(false);
   };
 
   const markAsPaid = async (id: string) => {
-    const { error } = await supabase
-      .from("installment_schedules")
-      .update({ status: "paid", paid_at: new Date().toISOString() })
-      .eq("id", id);
-
-    if (error) {
-      toast.error("Gagal update status");
-    } else {
+    try {
+      await apiFetch(`/api/admin/installments/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "paid" }),
+      });
       toast.success("Cicilan ditandai lunas");
       fetchData();
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal update status cicilan");
     }
   };
 
   const filtered = data.filter((d) => {
     if (!search.trim()) return true;
-    const code = (d.booking as any)?.booking_code || "";
-    const name = (d.booking as any)?.profile?.name || "";
+    const code = d.bookingCode?.toLowerCase() ?? "";
+    const name = d.jamaahName?.toLowerCase() ?? "";
     const q = search.toLowerCase();
-    return code.toLowerCase().includes(q) || name.toLowerCase().includes(q);
+    return code.includes(q) || name.includes(q);
   });
 
   const totalPending = data.filter((d) => d.status === "pending").reduce((s, d) => s + Number(d.amount), 0);
-  const totalOverdue = data.filter((d) => d.status === "overdue").reduce((s, d) => s + Number(d.amount), 0);
+  const totalOverdue = data.filter((d) => d.status === "overdue" || (d.status === "pending" && new Date(d.dueDate) < new Date())).reduce((s, d) => s + Number(d.amount), 0);
   const totalPaid = data.filter((d) => d.status === "paid").reduce((s, d) => s + Number(d.amount), 0);
 
   const fmt = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(n);
@@ -147,7 +149,8 @@ const AdminInstallments = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Kode Booking</TableHead>
-                <TableHead>Nama</TableHead>
+                <TableHead>Nama Jamaah</TableHead>
+                <TableHead>Paket</TableHead>
                 <TableHead className="text-center">Termin</TableHead>
                 <TableHead className="text-right">Jumlah</TableHead>
                 <TableHead>Jatuh Tempo</TableHead>
@@ -157,24 +160,23 @@ const AdminInstallments = () => {
             </TableHeader>
             <TableBody>
               {filtered.map((row) => {
-                const badge = statusBadge[row.status] || statusBadge.pending;
-                const isOverdue = row.status === "pending" && new Date(row.due_date) < new Date();
+                const isOverdue = row.status === "pending" && new Date(row.dueDate) < new Date();
+                const badge = isOverdue ? statusBadge.overdue : (statusBadge[row.status] ?? statusBadge.pending);
                 return (
                   <TableRow key={row.id} className={isOverdue ? "bg-destructive/5" : ""}>
-                    <TableCell className="font-mono text-sm">{(row.booking as any)?.booking_code || "-"}</TableCell>
-                    <TableCell>{(row.booking as any)?.profile?.name || "-"}</TableCell>
-                    <TableCell className="text-center">#{row.installment_number}</TableCell>
-                    <TableCell className="text-right font-medium">{fmt(row.amount)}</TableCell>
+                    <TableCell className="font-mono text-sm">{row.bookingCode || "-"}</TableCell>
+                    <TableCell>{row.jamaahName || "-"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{row.packageName || "-"}</TableCell>
+                    <TableCell className="text-center">#{row.installmentNumber}</TableCell>
+                    <TableCell className="text-right font-medium">{fmt(Number(row.amount))}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                        {new Date(row.due_date).toLocaleDateString("id-ID")}
+                        {new Date(row.dueDate).toLocaleDateString("id-ID")}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={isOverdue ? "destructive" : badge.variant}>
-                        {isOverdue ? "Jatuh Tempo" : badge.label}
-                      </Badge>
+                      <Badge variant={badge.variant}>{badge.label}</Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       {row.status !== "paid" && (
