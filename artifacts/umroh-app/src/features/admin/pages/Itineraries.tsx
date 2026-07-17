@@ -94,31 +94,39 @@ const AdminItineraries = () => {
   // ── fetch ─────────────────────────────────────────────────────────────────
 
   const fetchData = async () => {
-    try {
-      const [itinerariesRes, departuresRes] = await Promise.all([
-        // Go through our backend REST proxy so SERVICE_ROLE_KEY bypasses RLS
-        apiFetch<any[]>(
-          "/rest/v1/itineraries" +
-            qs({ select: "*,departure:package_departures(id,departure_date,package:packages(title)),days:itinerary_days(*)", order: "created_at.desc" }),
-        ),
-        // Use our admin departures API — returns properly shaped snake_case data
-        apiFetch<{ data: any[] }>("/api/admin/departures" + qs({ status: "active" })),
-      ]);
+    // Fetch itineraries and departures independently so a failure in one
+    // (e.g. itineraries table missing in Supabase on prod) does not prevent
+    // the other from loading. This is the main reason the departure dropdown
+    // showed empty even when active departures existed.
+    const [itinerariesResult, departuresResult] = await Promise.allSettled([
+      // Go through our backend REST proxy so SERVICE_ROLE_KEY bypasses RLS
+      apiFetch<any[]>(
+        "/rest/v1/itineraries" +
+          qs({ select: "*,departure:package_departures(id,departure_date,package:packages(title)),days:itinerary_days(*)", order: "created_at.desc" }),
+      ),
+      // Use our admin departures API — returns properly shaped snake_case data
+      apiFetch<{ data: any[] }>("/api/admin/departures" + qs({ status: "active" })),
+    ]);
 
-      const rawItineraries: any[] = Array.isArray(itinerariesRes) ? itinerariesRes : [];
-      const rawDepartures: any[] = departuresRes?.data ?? [];
-
-      const itinerariesData: Itinerary[] = rawItineraries.map((it: any) => ({
+    if (itinerariesResult.status === "fulfilled") {
+      const rawItineraries: any[] = Array.isArray(itinerariesResult.value) ? itinerariesResult.value : [];
+      setItineraries(rawItineraries.map((it: any) => ({
         ...it,
         days: (it.days || []).sort((a: ItineraryDay, b: ItineraryDay) => a.day_number - b.day_number),
-      }));
-
-      setItineraries(itinerariesData);
-      setDepartures(rawDepartures.map(mapApiDeparture));
-    } catch (err: any) {
-      console.error("[itineraries] fetchData error:", err);
-      toast({ title: "Gagal memuat data", description: err?.message, variant: "destructive" });
+      })));
+    } else {
+      console.error("[itineraries] fetch error:", itinerariesResult.reason);
+      toast({ title: "Gagal memuat itinerary", description: itinerariesResult.reason?.message, variant: "destructive" });
     }
+
+    if (departuresResult.status === "fulfilled") {
+      const rawDepartures: any[] = departuresResult.value?.data ?? [];
+      setDepartures(rawDepartures.map(mapApiDeparture));
+    } else {
+      console.error("[itineraries] departures fetch error:", departuresResult.reason);
+      toast({ title: "Gagal memuat keberangkatan", description: departuresResult.reason?.message, variant: "destructive" });
+    }
+
     setLoading(false);
   };
 
