@@ -11,11 +11,15 @@
  */
 function getEnv(key: string, fallback?: string): string {
   const value = import.meta.env[key];
-  if (!value && !fallback) {
-    console.warn(`Environment variable ${key} is not defined`);
-    return '';
+  if (!value) {
+    // Only warn when no explicit fallback was provided — callers that pass ''
+    // or any other string have opted out of the warning (truly optional vars).
+    if (fallback === undefined) {
+      console.warn(`Environment variable ${key} is not defined`);
+    }
+    return fallback ?? '';
   }
-  return value || fallback || '';
+  return value;
 }
 
 /**
@@ -50,14 +54,16 @@ export const supabaseConfig = {
  * Turnstile Captcha Configuration
  */
 export const captchaConfig = {
-  siteKey: getEnv('VITE_TURNSTILE_SITE_KEY'),
+  // Optional — app auto-verifies (no CAPTCHA) when key is not set
+  siteKey: getEnv('VITE_TURNSTILE_SITE_KEY', ''),
 };
 
 /**
  * Sentry Configuration (optional)
  */
 export const sentryConfig = {
-  dsn: getEnv('VITE_SENTRY_DSN'),
+  // Optional — Sentry is disabled when DSN is not set
+  dsn: getEnv('VITE_SENTRY_DSN', ''),
   environment: getEnv('VITE_ENVIRONMENT', 'development'),
 };
 
