@@ -324,6 +324,9 @@ const FORWARD_FKS: Record<string, Record<string, string>> = {
   pilgrim_documents: { bookings: "booking_id", booking_pilgrims: "pilgrim_id" },
   tenant_site_packages: { packages: "package_id", tenant_sites: "tenant_site_id" },
   audit_logs: { profiles: "user_id" },
+  // itineraries.departure_id → package_departures
+  itineraries: { package_departures: "departure_id" },
+  itinerary_days: { itineraries: "itinerary_id" },
 };
 
 // Reverse FK: nested_table has FK col → main_table.id  (array result)
@@ -345,6 +348,8 @@ const REVERSE_FKS: Record<string, Record<string, string>> = {
   profiles: { bookings: "user_id", wishlists: "user_id" },
   tenant_sites: { tenant_site_packages: "tenant_site_id" },
   booking_pilgrims: { pilgrim_documents: "pilgrim_id" },
+  // itinerary_days belong to itineraries
+  itineraries: { itinerary_days: "itinerary_id" },
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────────

@@ -104,8 +104,12 @@ const AdminItineraries = () => {
         "/rest/v1/itineraries" +
           qs({ select: "*,departure:package_departures(id,departure_date,package:packages(title)),days:itinerary_days(*)", order: "created_at.desc" }),
       ),
-      // Use our admin departures API — returns properly shaped snake_case data
-      apiFetch<{ data: any[] }>("/api/admin/departures" + qs({ status: "active" })),
+      // Use the public REST shim for departures — works in both dev (local postgres)
+      // and production (Supabase HTTP forward) without needing DATABASE_URL or admin auth.
+      apiFetch<any[]>(
+        "/rest/v1/package_departures" +
+          qs({ status: "eq.active", select: "id,departure_date,package:packages(title)", order: "departure_date.asc" }),
+      ),
     ]);
 
     if (itinerariesResult.status === "fulfilled") {
@@ -116,11 +120,12 @@ const AdminItineraries = () => {
       })));
     } else {
       console.error("[itineraries] fetch error:", itinerariesResult.reason);
-      toast({ title: "Gagal memuat itinerary", description: itinerariesResult.reason?.message, variant: "destructive" });
+      // Itinerary table may not exist on Supabase yet — don't block the page
     }
 
     if (departuresResult.status === "fulfilled") {
-      const rawDepartures: any[] = departuresResult.value?.data ?? [];
+      // REST returns a plain array (not { data: [] })
+      const rawDepartures: any[] = Array.isArray(departuresResult.value) ? departuresResult.value : [];
       setDepartures(rawDepartures.map(mapApiDeparture));
     } else {
       console.error("[itineraries] departures fetch error:", departuresResult.reason);
