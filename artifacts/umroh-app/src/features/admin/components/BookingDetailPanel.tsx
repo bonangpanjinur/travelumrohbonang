@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Users, UserCheck, DollarSign, FileDown, Building2, UsersRound, PhoneCall } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -43,26 +43,25 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("branches").select("id, name").eq("is_active", true).order("name").then(({ data, error }) => {
-      if (error) {
-        toast.error("Gagal memuat daftar cabang");
-        return;
-      }
-      setBranches(data || []);
-    });
+    apiFetch<any[]>("/api/admin/branches")
+      .then((data) => setBranches((data || []).map((b: any) => ({ id: b.id, name: b.name }))))
+      .catch(() => toast.error("Gagal memuat daftar cabang"));
   }, []);
 
   const handleBranchChange = async (value: string) => {
     setSelectedBranchId(value);
     setSavingBranch(true);
-    const branchValue = value === "none" ? null : value;
-    const { error } = await supabase.from("bookings").update({ branch_id: branchValue }).eq("id", bookingId);
-    setSavingBranch(false);
-    if (error) {
-      toast.error("Gagal menyimpan cabang");
-    } else {
+    try {
+      await apiFetch(`/api/admin/bookings/${bookingId}/branch`, {
+        method: "PATCH",
+        body: JSON.stringify({ branchId: value === "none" ? null : value }),
+      });
       toast.success("Cabang berhasil diupdate");
       onBranchChange?.();
+    } catch {
+      toast.error("Gagal menyimpan cabang");
+    } finally {
+      setSavingBranch(false);
     }
   };
 
@@ -70,46 +69,33 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
     let active = true;
     const fetchDetails = async () => {
       setLoading(true);
-
-      // Fetch pilgrims
-      const { data: pilgrimsData, error: pilgrimsError } = await supabase
-        .from("booking_pilgrims")
-        .select("id, name, gender")
-        .eq("booking_id", bookingId);
-      if (!active) return;
-      if (pilgrimsError) toast.error("Gagal memuat data jemaah");
-      setPilgrims(pilgrimsData || []);
-
-      // Fetch commission rate
-      if (packageId && picType && picType !== "pusat") {
-        const { data: commData } = await supabase
-          .from("package_commissions")
-          .select("commission_amount")
-          .eq("package_id", packageId)
-          .eq("pic_type", picType)
-          .maybeSingle();
+      try {
+        // Booking detail includes pilgrims
+        const detail = await apiFetch<any>(`/api/admin/bookings/${bookingId}`);
         if (!active) return;
-        setCommissionRate(commData?.commission_amount || 0);
-      }
+        setPilgrims(detail.pilgrims || []);
 
-      // Fetch PIC name
-      if (picId && picType) {
-        if (picType === "agen") {
-          const { data } = await supabase.from("agents").select("name").eq("id", picId).maybeSingle();
-          if (!active) return;
-          setPicName(data?.name || "-");
-        } else if (picType === "cabang") {
-          const { data } = await supabase.from("branches").select("name").eq("id", picId).maybeSingle();
-          if (!active) return;
-          setPicName(data?.name || "-");
-        } else if (picType === "karyawan") {
-          const { data } = await supabase.from("profiles").select("name").eq("id", picId).maybeSingle();
-          if (!active) return;
-          setPicName(data?.name || "-");
+        // Commission rate via REST shim
+        if (packageId && picType && picType !== "pusat") {
+          apiFetch<any[]>(
+            `/rest/v1/package_commissions?package_id=eq.${packageId}&pic_type=eq.${picType}&select=commission_amount&limit=1`
+          ).then((rows) => {
+            if (active) setCommissionRate(Number(rows?.[0]?.commission_amount) || 0);
+          }).catch(() => {/* commission optional */});
         }
-      }
 
-      if (active) setLoading(false);
+        // PIC name via REST shim
+        if (picId && picType && picType !== "pusat") {
+          const table = picType === "agen" ? "agents" : picType === "cabang" ? "branches" : "profiles";
+          apiFetch<any[]>(`/rest/v1/${table}?id=eq.${picId}&select=name&limit=1`)
+            .then((rows) => { if (active) setPicName(rows?.[0]?.name || "-"); })
+            .catch(() => {/* name optional */});
+        }
+      } catch {
+        if (active) toast.error("Gagal memuat detail booking");
+      } finally {
+        if (active) setLoading(false);
+      }
     };
 
     fetchDetails();

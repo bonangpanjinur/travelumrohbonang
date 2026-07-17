@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -119,41 +119,39 @@ const AdminCreateBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
   useEffect(() => {
     if (!open) return;
     Promise.all([
-      supabase.from("packages").select("id, title").eq("is_active", true).order("title"),
-      supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
-      supabase.from("agents").select("id, name, referral_code").order("name"),
+      apiFetch<{ data: Package[]; total: number }>("/api/admin/packages"),
+      apiFetch<any[]>("/api/admin/branches"),
+      apiFetch<any[]>("/api/admin/agents"),
     ]).then(([pkgs, brs, ags]) => {
       setPackages(pkgs.data || []);
-      setBranches(brs.data || []);
-      setAgents((ags.data as any) || []);
-    });
+      setBranches((brs || []).map((b: any) => ({ id: b.id, name: b.name })));
+      setAgents((ags || []).map((a: any) => ({
+        id: a.id,
+        name: a.name,
+        referral_code: a.referralCode || a.referral_code || "",
+      })));
+    }).catch(() => {/* per-field errors surfaced at submit time */});
   }, [open]);
 
   useEffect(() => {
     if (!form.package_id) { setDepartures([]); return; }
-    supabase
-      .from("package_departures")
-      .select("id, departure_date, return_date, remaining_quota, quota, prices:departure_prices(room_type, price)")
-      .eq("package_id", form.package_id)
-      .eq("status", "active")
-      .gte("remaining_quota", 1)
-      .order("departure_date")
-      .then(({ data }) => {
-        setDepartures((data as any) || []);
-      });
+    apiFetch<{ data: any[]; total: number }>(
+      `/api/admin/packages/${form.package_id}/departures?status=active&minQuota=1`
+    )
+      .then(({ data }) => setDepartures(data || []))
+      .catch(() => setDepartures([]));
   }, [form.package_id]);
 
   useEffect(() => {
     if (profileSearch.length < 2) { setProfileResults([]); return; }
-    const t = setTimeout(async () => {
+    const t = setTimeout(() => {
       setProfileLoading(true);
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, name, email, phone")
-        .or(`name.ilike.%${profileSearch}%,email.ilike.%${profileSearch}%`)
-        .limit(8);
-      setProfileResults((data as any) || []);
-      setProfileLoading(false);
+      apiFetch<{ data: Profile[]; total: number }>(
+        `/api/admin/users?search=${encodeURIComponent(profileSearch)}`
+      )
+        .then(({ data }) => setProfileResults(data || []))
+        .catch(() => setProfileResults([]))
+        .finally(() => setProfileLoading(false));
     }, 300);
     return () => clearTimeout(t);
   }, [profileSearch]);
@@ -185,62 +183,30 @@ const AdminCreateBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
     if (!canSubmit) return;
     setSaving(true);
     try {
-      const { data: codeData, error: codeErr } = await supabase.rpc("generate_booking_code");
-      if (codeErr) throw codeErr;
-
-      const bookingPayload: any = {
-        booking_code: codeData,
-        package_id: form.package_id,
-        departure_id: form.departure_id,
-        total_price: totalPrice,
-        currency: "IDR",
-        status: "confirmed",
-        payment_scheme: form.payment_scheme,
-        notes: form.notes.trim() || null,
-        branch_id: form.branch_id || null,
-        agent_id: form.agent_id || null,
-        pic_type: "admin",
-      };
-
-      if (form.user_id) bookingPayload.user_id = form.user_id;
-
-      const { data: booking, error: bErr } = await supabase
-        .from("bookings")
-        .insert(bookingPayload)
-        .select()
-        .single();
-
-      if (bErr) throw bErr;
-
-      const { error: roomErr } = await supabase.from("booking_rooms").insert({
-        booking_id: booking.id,
-        room_type: form.room_type,
-        price: totalPrice,
-        quantity: 1,
-        subtotal: totalPrice,
+      // POST /api/admin/bookings handles code generation, booking + room + pilgrim insertion in one transaction
+      const booking = await apiFetch<any>("/api/admin/bookings", {
+        method: "POST",
+        body: JSON.stringify({
+          packageId: form.package_id,
+          departureId: form.departure_id,
+          totalPrice,
+          currency: "IDR",
+          paymentScheme: form.payment_scheme,
+          notes: form.notes.trim() || null,
+          branchId: form.branch_id || null,
+          agentId: form.agent_id || null,
+          userId: form.user_id || null,
+          customerName: form.customer_name,
+          customerEmail: form.customer_email || null,
+          roomType: form.room_type,
+        }),
       });
-      if (roomErr) throw roomErr;
-
-      if (form.customer_name && !form.user_id) {
-        const { error: pilgrimErr } = await supabase.from("booking_pilgrims").insert({
-          booking_id: booking.id,
-          name: form.customer_name,
-          gender: "male",
-          email: form.customer_email || null,
-        });
-        if (pilgrimErr) throw pilgrimErr;
-      }
-
       clearDraft();
-      toast({ title: `Booking ${codeData} berhasil dibuat!`, description: `Total: Rp ${totalPrice.toLocaleString("id-ID")}` });
+      toast({ title: `Booking ${booking.bookingCode} berhasil dibuat!`, description: `Total: Rp ${totalPrice.toLocaleString("id-ID")}` });
       onSuccess();
       handleClose(false);
     } catch (e: any) {
-      toast({
-        title: "Gagal membuat booking",
-        description: `${e.message} — mohon cek data booking secara manual, kemungkinan ada data yang tidak lengkap tersimpan.`,
-        variant: "destructive",
-      });
+      toast({ title: "Gagal membuat booking", description: e?.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }

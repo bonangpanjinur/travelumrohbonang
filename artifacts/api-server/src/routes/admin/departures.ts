@@ -13,6 +13,7 @@ import {
   pilgrimDocuments,
   eq,
   and,
+  gte,
   inArray,
 } from "@workspace/db";
 import { generateManifestPdf } from "../../lib/pdf/manifest";
@@ -40,8 +41,15 @@ router.get("/", async (req, res) => {
       .from(packageDepartures)
       .leftJoin(packages, eq(packageDepartures.packageId, packages.id));
 
-    const data = packageId
-      ? await baseQuery.where(eq(packageDepartures.packageId, packageId)).orderBy(packageDepartures.departureDate)
+    // Optional filters: status and minQuota (used by booking dialog)
+    const { status: statusFilter, minQuota } = req.query as Record<string, string | undefined>;
+    const conditions: ReturnType<typeof eq>[] = [];
+    if (packageId) conditions.push(eq(packageDepartures.packageId, packageId));
+    if (statusFilter) conditions.push(eq(packageDepartures.status, statusFilter as any));
+    if (minQuota) conditions.push(gte(packageDepartures.remainingQuota, Number(minQuota)));
+
+    const data = conditions.length
+      ? await baseQuery.where(and(...conditions)).orderBy(packageDepartures.departureDate)
       : await baseQuery.orderBy(packageDepartures.departureDate);
 
     const departureIds = data.map((dep: any) => dep.id);
@@ -78,7 +86,7 @@ router.get("/", async (req, res) => {
       prices: (pricesByDeparture.get(dep.id) ?? []).map((p) => ({
         id: p.id,
         room_type: p.roomType,
-        price: p.price,
+        price: Number(p.price),
       })),
     }));
 

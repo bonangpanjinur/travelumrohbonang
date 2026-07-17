@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, profiles, eq } from "@workspace/db";
+import { db, profiles, eq, or, ilike } from "@workspace/db";
 import {
   ProfileSchema,
   AdminUpdateUserRequest,
@@ -9,9 +9,16 @@ import { validate } from "../../middlewares/validate";
 
 const router = Router();
 
-router.get("/", async (_req, res) => {
+router.get("/", async (req, res) => {
   try {
-    const data = await db.select().from(profiles);
+    const { search } = req.query as { search?: string };
+    const data = search
+      ? await db
+          .select()
+          .from(profiles)
+          .where(or(ilike(profiles.name, `%${search}%`), ilike(profiles.email, `%${search}%`)))
+          .limit(8)
+      : await db.select().from(profiles).limit(200);
     res.json({ data, total: data.length });
   } catch {
     res.status(500).json({ error: "Failed to fetch users" });
