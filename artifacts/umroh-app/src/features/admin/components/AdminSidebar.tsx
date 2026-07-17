@@ -58,11 +58,19 @@ const AdminSidebar = ({
   const flatItems = useMemo(() => menuGroups.flatMap((g) => g.items), []);
   const recentHrefs = useSidebarRecent(location.pathname, allKnownHrefs);
 
+  // Returns true if pathname matches an item — exact match always, prefix match only when
+  // the item href has ≥2 path segments (prevents "/admin" from prefix-matching "/admin/*").
+  const matchesRoute = (itemHref: string, pathname: string) => {
+    if (pathname === itemHref) return true;
+    const segments = itemHref.split("/").filter(Boolean);
+    return segments.length >= 2 && pathname.startsWith(itemHref + "/");
+  };
+
   // Accordion: only one group (real or virtual) is open at a time. Defaults to whichever
   // group holds the active route, falling back to "Utama".
   const initialOpenGroup = useMemo(() => {
     const activeGroup = menuGroups.find((group) =>
-      group.items.some((item) => location.pathname === item.href || location.pathname.startsWith(item.href + "/"))
+      group.items.some((item) => matchesRoute(item.href, location.pathname))
     );
     return activeGroup?.label ?? menuGroups.find((g) => g.labelKey === "menu.group.main")?.label ?? null;
   }, []); // only on mount
@@ -77,7 +85,7 @@ const AdminSidebar = ({
   // elsewhere in the group, not just on first mount.
   useEffect(() => {
     const activeGroup = menuGroups.find((group) =>
-      group.items.some((item) => location.pathname === item.href || location.pathname.startsWith(item.href + "/"))
+      group.items.some((item) => matchesRoute(item.href, location.pathname))
     );
     if (activeGroup) {
       setOpenGroup(activeGroup.label);
