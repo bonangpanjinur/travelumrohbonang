@@ -75,6 +75,20 @@ export default defineConfig(async ({ command }) => {
       fs: {
         strict: true,
       },
+      proxy: {
+        '/api': {
+          target: 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/rest/v1': {
+          target: 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/storage/v1': {
+          target: 'http://localhost:8080',
+          changeOrigin: true,
+        },
+      },
     },
     preview: {
       port,
