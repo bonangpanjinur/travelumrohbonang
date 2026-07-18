@@ -4,7 +4,7 @@ import BookingFilters from "@/features/admin/components/BookingFilters";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw, CheckSquare2 } from "lucide-react";
+import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw, CheckSquare2, Filter } from "lucide-react";
 
 interface PackageOption { id: string; title: string; }
 import { exportToCsv } from "@/shared/lib/exportCsv";
@@ -40,6 +40,7 @@ const AdminBookings = () => {
   const [endDate, setEndDate] = useState("");
   const [apiError, setApiError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
 
   const handleBulkStatus = async (status: "confirmed" | "cancelled") => {
     if (selectedIds.length === 0) return;
@@ -84,26 +85,20 @@ const AdminBookings = () => {
     }).catch(() => { /* filter paket opsional */ });
   }, []);
 
-  // Filter berubah → reset ke halaman pertama dan fetch ulang (satu effect, satu API call)
+  // Filter berubah → reset ke halaman pertama dan fetch ulang.
+  // Halaman hanya di-fetch lewat handlePageChange — tidak ada page-effect
+  // terpisah agar tidak terjadi double-fetch saat halaman berganti.
   useEffect(() => {
     setPage(0);
     fetchBookings(0);
   }, [filter, search, branchFilter, packageFilter, startDate, endDate]);
 
-  // Halaman berubah oleh klik pagination → fetch halaman tersebut
-  useEffect(() => {
-    if (page > 0) fetchBookings(page);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
-
-  // pageOverride: gunakan ketika page state belum ter-update (e.g. langsung setelah setPage)
   const fetchBookings = async (pageOverride?: number) => {
     const currentPage = pageOverride ?? page;
     setLoading(true);
     setApiError(null);
     try {
       const offset = currentPage * PAGE_SIZE;
-      // Pastikan tanggal selalu dalam format ISO yyyy-mm-dd (HTML date input sudah ISO, tapi defensive)
       const isoStart = startDate ? new Date(startDate).toISOString().slice(0, 10) : "";
       const isoEnd = endDate ? new Date(endDate).toISOString().slice(0, 10) : "";
       let url = `/api/admin/bookings?status=${filter}&search=${encodeURIComponent(search.trim())}&branchId=${branchFilter}&packageId=${packageFilter}&limit=${PAGE_SIZE}&offset=${offset}`;
@@ -124,7 +119,6 @@ const AdminBookings = () => {
         departure: b.departureDate ? { departure_date: b.departureDate } : null,
         profile: b.userName || b.userEmail ? { name: b.userName, email: b.userEmail } : null,
         branch: b.branchName ? { name: b.branchName } : null,
-        // Group booking fields
         is_group_booking: b.isGroupBooking ?? false,
         group_name: b.groupName ?? null,
         pic_name: b.picName ?? null,
@@ -144,7 +138,6 @@ const AdminBookings = () => {
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  /** Ganti halaman tanpa double-fetch: set state DAN fetch sekaligus */
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
     fetchBookings(newPage);
@@ -155,10 +148,18 @@ const AdminBookings = () => {
   };
 
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-        <h1 className="text-2xl font-display font-bold">Booking</h1>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+    <div className="space-y-4">
+      {/* ── Baris 1: Judul + Aksi ─────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-display font-bold">Booking</h1>
+          {!loading && !apiError && (
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {totalCount > 0 ? `${totalCount} booking ditemukan` : "Belum ada data booking"}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
           <Button className="gradient-gold text-primary" onClick={() => setCreateOpen(true)}>
             <Plus className="w-4 h-4 mr-2" /> Tambah Booking
           </Button>
@@ -181,74 +182,149 @@ const AdminBookings = () => {
           }}>
             <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
           </Button>
-          <div className="flex items-center gap-2">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] text-muted-foreground px-1">Tgl Berangkat Dari</span>
+        </div>
+      </div>
+
+      {/* ── Baris 2: Pencarian + Status Filter + Toggle Filter Lanjutan ────── */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cari kode booking, nama, email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <BookingFilters filter={filter} onFilterChange={setFilter} />
+        <Button
+          variant={showFilters ? "default" : "outline"}
+          onClick={() => setShowFilters(!showFilters)}
+          className="shrink-0 gap-2"
+        >
+          <Filter className="w-4 h-4" />
+          Filter Lanjutan
+          {(branchFilter !== "__all__" || packageFilter !== "__all__" || startDate || endDate) && (
+            <span className="ml-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 leading-none">
+              {[branchFilter !== "__all__", packageFilter !== "__all__", !!startDate || !!endDate].filter(Boolean).length}
+            </span>
+          )}
+        </Button>
+        {hasActiveFilters && (
+          <Button variant="ghost" size="icon" onClick={resetFilters} title="Reset semua filter" className="shrink-0 text-muted-foreground hover:text-foreground">
+            <X className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
+
+      {/* ── Filter Lanjutan (collapsible) ──────────────────────────────────── */}
+      {showFilters && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-muted/40 border border-border rounded-lg">
+          {/* Cabang */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Cabang</label>
+            <Select value={branchFilter} onValueChange={setBranchFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Semua Cabang" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Semua Cabang</SelectItem>
+                <SelectItem value="__none__">Tanpa Cabang</SelectItem>
+                {branches.map((br) => (
+                  <SelectItem key={br.id} value={br.id}>{br.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Paket */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Paket</label>
+            <Select value={packageFilter} onValueChange={setPackageFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Semua Paket" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Semua Paket</SelectItem>
+                {packageOptions.map((pkg) => (
+                  <SelectItem key={pkg.id} value={pkg.id}>{pkg.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Tanggal Berangkat Dari */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Tgl Berangkat Dari</label>
+            <div className="relative">
               <Input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-36 text-sm"
               />
+              {startDate && (
+                <button
+                  onClick={() => setStartDate("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
-            <span className="text-muted-foreground text-sm mt-4">–</span>
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] text-muted-foreground px-1">Sampai</span>
+          </div>
+
+          {/* Tanggal Berangkat Sampai */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Tgl Berangkat Sampai</label>
+            <div className="relative">
               <Input
                 type="date"
                 value={endDate}
+                min={startDate || undefined}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-36 text-sm"
               />
+              {endDate && (
+                <button
+                  onClick={() => setEndDate("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
-            {(startDate || endDate) && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="mt-4 h-8 w-8 shrink-0"
-                title="Hapus filter tanggal"
-                onClick={() => { setStartDate(""); setEndDate(""); }}
-              >
-                <X className="w-4 h-4 text-muted-foreground" />
-              </Button>
-            )}
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cari kode, nama, email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 w-full sm:w-64"
-            />
-          </div>
-          <Select value={branchFilter} onValueChange={setBranchFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Semua Cabang" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">Semua Cabang</SelectItem>
-              <SelectItem value="__none__">Tanpa Cabang</SelectItem>
-              {branches.map((br) => (
-                <SelectItem key={br.id} value={br.id}>{br.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={packageFilter} onValueChange={setPackageFilter}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="Semua Paket" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">Semua Paket</SelectItem>
-              {packageOptions.map((pkg) => (
-                <SelectItem key={pkg.id} value={pkg.id}>{pkg.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <BookingFilters filter={filter} onFilterChange={setFilter} />
         </div>
-      </div>
+      )}
 
+      {/* ── Bulk Action Bar ─────────────────────────────────────────────────── */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+          <CheckSquare2 className="w-4 h-4 text-primary shrink-0" />
+          <span className="text-sm font-medium">{selectedIds.length} booking dipilih</span>
+          <div className="flex gap-2 ml-auto">
+            <button
+              onClick={() => handleBulkStatus("confirmed")}
+              className="px-3 py-1.5 text-xs font-medium rounded bg-green-600 text-white hover:bg-green-700 transition-colors"
+            >
+              Konfirmasi Semua
+            </button>
+            <button
+              onClick={() => handleBulkStatus("cancelled")}
+              className="px-3 py-1.5 text-xs font-medium rounded bg-destructive text-white hover:bg-destructive/90 transition-colors"
+            >
+              Batalkan Semua
+            </button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="px-3 py-1.5 text-xs font-medium rounded border hover:bg-muted transition-colors"
+            >
+              Batal Pilih
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Konten Utama ────────────────────────────────────────────────────── */}
       {loading ? (
         <div className="flex justify-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -279,33 +355,6 @@ const AdminBookings = () => {
         </div>
       ) : (
         <>
-          {/* BK-F02: Bulk action bar */}
-          {selectedIds.length > 0 && (
-            <div className="mb-3 flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-              <CheckSquare2 className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">{selectedIds.length} booking dipilih</span>
-              <div className="flex gap-2 ml-auto">
-                <button
-                  onClick={() => handleBulkStatus("confirmed")}
-                  className="px-3 py-1.5 text-xs font-medium rounded bg-green-600 text-white hover:bg-green-700 transition-colors"
-                >
-                  Konfirmasi Semua
-                </button>
-                <button
-                  onClick={() => handleBulkStatus("cancelled")}
-                  className="px-3 py-1.5 text-xs font-medium rounded bg-destructive text-white hover:bg-destructive/90 transition-colors"
-                >
-                  Batalkan Semua
-                </button>
-                <button
-                  onClick={() => setSelectedIds([])}
-                  className="px-3 py-1.5 text-xs font-medium rounded border hover:bg-muted transition-colors"
-                >
-                  Batal Pilih
-                </button>
-              </div>
-            </div>
-          )}
           <BookingTable
             bookings={bookings}
             expandedId={expandedId}
@@ -316,9 +365,9 @@ const AdminBookings = () => {
           />
 
           {totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-between">
+            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">
-                Menampilkan {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, totalCount)} dari {totalCount}
+                Menampilkan {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} dari {totalCount} booking
               </p>
               <Pagination>
                 <PaginationContent>

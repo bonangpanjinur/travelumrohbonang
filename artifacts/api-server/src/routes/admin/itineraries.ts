@@ -6,6 +6,7 @@ import {
   packageDepartures,
   packages,
   eq,
+  inArray,
   desc,
   asc,
 } from "@workspace/db";
@@ -42,7 +43,7 @@ router.get("/", async (_req, res) => {
         .where(
           itineraryIds.length === 1
             ? eq(itineraryDays.itineraryId, itineraryIds[0])
-            : (itineraryDays.itineraryId as any).inArray(itineraryIds)
+            : inArray(itineraryDays.itineraryId, itineraryIds)
         )
         .orderBy(asc(itineraryDays.dayNumber));
       for (const day of allDays) {

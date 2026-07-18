@@ -1,0 +1,210 @@
+[sentry] VITE_SENTRY_DSN not set — Sentry disabled.
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/cms/site-settings:1  Failed to load resource: the server responded with a status of 500 ()
+index-DSnoTX43.js:377 Error fetching branding: Error
+    at Oe (index-DSnoTX43.js:39:78282)
+    at async index-DSnoTX43.js:377:61540
+(anonymous) @ index-DSnoTX43.js:377
+/api/admin/pilgrims-db?limit=50&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/pilgrims-db?limit=50&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/packages:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/hotels:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/airlines:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/airports:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/categories:1  Failed to load resource: the server responded with a status of 500 ()
+/api/packages?active=true:1  Failed to load resource: the server responded with a status of 500 ()
+index-DSnoTX43.js:442 [Departures] fetchData error: Error
+    at Oe (index-DSnoTX43.js:39:78282)
+    at async Promise.all (index 1)
+    at async L (index-DSnoTX43.js:442:29331)
+L @ index-DSnoTX43.js:442
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/muthawifs:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/departures:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/departures:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/itineraries:1  Failed to load resource: the server responded with a status of 500 ()
+index-DSnoTX43.js:446 [itineraries] fetch error: Error
+    at Oe (index-DSnoTX43.js:39:78282)
+    at async Promise.allSettled (index 0)
+    at async le (index-DSnoTX43.js:446:43645)
+le @ index-DSnoTX43.js:446
+index-DSnoTX43.js:446 [itineraries] departures fetch error: Error
+    at Oe (index-DSnoTX43.js:39:78282)
+    at async Promise.allSettled (index 1)
+    at async le (index-DSnoTX43.js:446:43645)
+le @ index-DSnoTX43.js:446
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/packages:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/branches:1  Failed to load resource: the server responded with a status of 500 ()
+index-DSnoTX43.js:442 Gagal memuat daftar cabang: Error
+    at Oe (index-DSnoTX43.js:39:78282)
+(anonymous) @ index-DSnoTX43.js:442
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?status=all&search=&branchId=__all__&packageId=__all__&limit=20&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+index-DSnoTX43.js:442 Error
+    at Oe (index-DSnoTX43.js:39:78282)
+    at async ne (index-DSnoTX43.js:442:73565)
+ne @ index-DSnoTX43.js:442
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/itineraries:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/departures:1  Failed to load resource: the server responded with a status of 500 ()
+index-DSnoTX43.js:446 [itineraries] fetch error: Error
+    at Oe (index-DSnoTX43.js:39:78282)
+    at async Promise.allSettled (index 0)
+    at async le (index-DSnoTX43.js:446:43645)
+le @ index-DSnoTX43.js:446
+index-DSnoTX43.js:446 [itineraries] departures fetch error: Error
+    at Oe (index-DSnoTX43.js:39:78282)
+    at async Promise.allSettled (index 1)
+    at async le (index-DSnoTX43.js:446:43645)
+le @ index-DSnoTX43.js:446
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/packages?active=true:1  Failed to load resource: the server responded with a status of 500 ()
+index-DSnoTX43.js:442 [Departures] fetchData error: Error
+    at Oe (index-DSnoTX43.js:39:78282)
+    at async Promise.all (index 1)
+    at async L (index-DSnoTX43.js:442:29331)
+L @ index-DSnoTX43.js:442
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/departures:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/muthawifs:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/departures:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/itineraries:1  Failed to load resource: the server responded with a status of 500 ()
+index-DSnoTX43.js:446 [itineraries] fetch error: Error
+    at Oe (index-DSnoTX43.js:39:78282)
+    at async Promise.allSettled (index 0)
+    at async le (index-DSnoTX43.js:446:43645)
+le @ index-DSnoTX43.js:446
+index-DSnoTX43.js:446 [itineraries] departures fetch error: Error
+    at Oe (index-DSnoTX43.js:39:78282)
+    at async Promise.allSettled (index 1)
+    at async le (index-DSnoTX43.js:446:43645)
+le @ index-DSnoTX43.js:446
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/departures:1  Failed to load resource: the server responded with a status of 500 ()
+index-DSnoTX43.js:442 [Departures] fetchData error: Error
+    at Oe (index-DSnoTX43.js:39:78282)
+    at async Promise.all (index 0)
+    at async L (index-DSnoTX43.js:442:29331)
+L @ index-DSnoTX43.js:442
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/muthawifs:1  Failed to load resource: the server responded with a status of 500 ()
+/api/packages?active=true:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/hotels:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/airports:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/packages:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/airlines:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/categories:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/pilgrims-db?limit=50&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/pilgrims-db?limit=50&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/pilgrims:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/pilgrims-db?limit=50&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/equipment-report:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/equipment-report:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/equipment-report:1  Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/equipment-report:1  Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/equipment-report:1  Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/equipment-report:1  Failed to load resource: the server responded with a status of 500 ()
+index-DSnoTX43.js:39  GET https://www.vinstourtravel.com/api/admin/menu-permissions/my 500 (Internal Server Error)
+Oe @ index-DSnoTX43.js:39
+await in Oe
+queryFn @ index-DSnoTX43.js:377
+s @ index-DSnoTX43.js:9
+y @ index-DSnoTX43.js:9
+(anonymous) @ index-DSnoTX43.js:9
+index-DSnoTX43.js:39  GET https://www.vinstourtravel.com/api/admin/equipment-report 500 (Internal Server Error)
+Oe @ index-DSnoTX43.js:39
+await in Oe
+queryFn @ index-DSnoTX43.js:685
+s @ index-DSnoTX43.js:9
+y @ index-DSnoTX43.js:9
+(anonymous) @ index-DSnoTX43.js:9
+index-DSnoTX43.js:377  HEAD https://yakjpqqobknrmhfmybhe.supabase.co/rest/v1/ net::ERR_ABORTED 401 (Unauthorized)
+Iat @ index-DSnoTX43.js:377
+(anonymous) @ index-DSnoTX43.js:377
+(anonymous) @ index-DSnoTX43.js:377
+index-DSnoTX43.js:39  GET https://www.vinstourtravel.com/api/admin/menu-permissions/my 500 (Internal Server Error)
+Oe @ index-DSnoTX43.js:39
+await in Oe
+queryFn @ index-DSnoTX43.js:377
+s @ index-DSnoTX43.js:9
+y @ index-DSnoTX43.js:9
+(anonymous) @ index-DSnoTX43.js:9
+Promise.then
+(anonymous) @ index-DSnoTX43.js:9
+Promise.catch
+y @ index-DSnoTX43.js:9
+(anonymous) @ index-DSnoTX43.js:9
+index-DSnoTX43.js:39  GET https://www.vinstourtravel.com/api/admin/equipment-report 500 (Internal Server Error)
+Oe @ index-DSnoTX43.js:39
+await in Oe
+queryFn @ index-DSnoTX43.js:685
+s @ index-DSnoTX43.js:9
+y @ index-DSnoTX43.js:9
+(anonymous) @ index-DSnoTX43.js:9
+Promise.then
+(anonymous) @ index-DSnoTX43.js:9
+Promise.catch
+y @ index-DSnoTX43.js:9
+(anonymous) @ index-DSnoTX43.js:9
