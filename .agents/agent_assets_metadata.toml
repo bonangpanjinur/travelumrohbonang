@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Krl64dBitZsewGJ9MxOVK"
+uri = "file://docs/rencana-perbaikan-operasional.md"
+type = "text"
+title = "Rencana Perbaikan Menu Operasional"
