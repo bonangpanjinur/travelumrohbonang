@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download, Plus, Pencil, Loader2, Upload, AlertCircle, CheckCircle2, FileText, Trash2, ExternalLink } from "lucide-react";
+import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download, Plus, Pencil, Loader2, Upload, AlertCircle, CheckCircle2, FileText, Trash2, ExternalLink, Package } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import { Badge } from "@/shared/components/ui/badge";
 import { format } from "date-fns";
@@ -127,6 +127,10 @@ const AdminPilgrims = () => {
   const [docUploading, setDocUploading] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+
+  // JM-DB02: Equipment linked to this master pilgrim (across all bookings)
+  const [equipmentData, setEquipmentData] = useState<any[]>([]);
+  const [equipmentLoading, setEquipmentLoading] = useState(false);
 
   // CSV Import dialog
   const [importOpen, setImportOpen] = useState(false);
@@ -299,9 +303,22 @@ const AdminPilgrims = () => {
     }
   };
 
-  const showDetail = (pilgrim: Pilgrim) => {
+  const showDetail = async (pilgrim: Pilgrim) => {
     setSelectedPilgrim(pilgrim);
     setDetailOpen(true);
+    // JM-DB02: fetch equipment linked to this master pilgrim across all bookings
+    setEquipmentLoading(true);
+    setEquipmentData([]);
+    try {
+      const res = await apiFetch<{ data: any[] }>(
+        `/api/admin/pilgrim-equipment?masterPilgrimId=${pilgrim.id}`,
+      );
+      setEquipmentData(res?.data ?? []);
+    } catch {
+      setEquipmentData([]);
+    } finally {
+      setEquipmentLoading(false);
+    }
   };
 
   // ── P3-04: Dokumen Jemaah helpers ────────────────────────────────────────
@@ -970,6 +987,49 @@ const AdminPilgrims = () => {
                   </div>
                 </div>
               )}
+
+              {/* JM-DB02: Perlengkapan section */}
+              <div>
+                <h4 className="font-semibold text-sm text-muted-foreground mb-3 flex items-center gap-2">
+                  <Package className="w-4 h-4" /> PERLENGKAPAN
+                </h4>
+                {equipmentLoading ? (
+                  <div className="flex items-center gap-2 py-3 text-muted-foreground text-sm">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Memuat...
+                  </div>
+                ) : equipmentData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">Belum ada perlengkapan ditetapkan.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {equipmentData.map((item: any) => (
+                      <div key={item.id} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                        <div>
+                          <p className="font-medium">{item.equipmentName ?? "-"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.equipmentCategory ?? ""}{item.bookingCode ? ` · Booking ${item.bookingCode}` : ""}
+                            {item.size ? ` · Ukuran ${item.size}` : ""}
+                            {item.quantity && item.quantity > 1 ? ` · Qty ${item.quantity}` : ""}
+                          </p>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={
+                            item.status === "distributed"
+                              ? "bg-blue-100 text-blue-800 border-blue-300"
+                              : item.status === "returned"
+                              ? "bg-green-100 text-green-800 border-green-300"
+                              : "bg-yellow-100 text-yellow-800 border-yellow-300"
+                          }
+                        >
+                          {item.status === "distributed" ? "Terdistribusi"
+                            : item.status === "returned" ? "Dikembalikan"
+                            : "Pending"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="flex justify-end pt-2 border-t">
                 <Button variant="outline" size="sm" onClick={() => {

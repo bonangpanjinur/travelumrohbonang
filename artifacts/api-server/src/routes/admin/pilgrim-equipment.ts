@@ -8,20 +8,72 @@
  */
 import { Router } from "express";
 import {
-  db, pilgrimEquipment, equipment, bookingPilgrims,
-  eq, and, sql,
+  db, pilgrimEquipment, equipment, bookingPilgrims, bookings,
+  eq, and, sql, inArray,
 } from "@workspace/db";
 
 const router = Router();
 
 // GET /api/admin/pilgrim-equipment?bookingId=X
+// GET /api/admin/pilgrim-equipment?masterPilgrimId=X  ← JM-DB02: by master pilgrim
 router.get("/", async (req, res) => {
-  const { bookingId } = req.query as { bookingId?: string };
-  if (!bookingId) {
-    res.status(400).json({ error: "bookingId query param required" });
+  const { bookingId, masterPilgrimId } = req.query as {
+    bookingId?: string;
+    masterPilgrimId?: string;
+  };
+
+  if (!bookingId && !masterPilgrimId) {
+    res.status(400).json({ error: "bookingId or masterPilgrimId query param required" });
     return;
   }
+
   try {
+    // JM-DB02: When masterPilgrimId supplied, first resolve all booking_pilgrims rows
+    // for this master pilgrim (one master → many bookings → many booking_pilgrims rows),
+    // then fetch all equipment assigned to any of those booking_pilgrims.
+    if (masterPilgrimId) {
+      const bpRows = await db
+        .select({ id: bookingPilgrims.id })
+        .from(bookingPilgrims)
+        .where(eq(bookingPilgrims.pilgrimId, masterPilgrimId));
+
+      if (bpRows.length === 0) {
+        res.json({ data: [] });
+        return;
+      }
+
+      const bpIds = bpRows.map((r) => r.id);
+      const rows = await db
+        .select({
+          id: pilgrimEquipment.id,
+          pilgrimId: pilgrimEquipment.pilgrimId,
+          equipmentId: pilgrimEquipment.equipmentId,
+          bookingId: pilgrimEquipment.bookingId,
+          status: pilgrimEquipment.status,
+          size: pilgrimEquipment.size,
+          quantity: pilgrimEquipment.quantity,
+          distributedAt: pilgrimEquipment.distributedAt,
+          distributedBy: pilgrimEquipment.distributedBy,
+          returnedAt: pilgrimEquipment.returnedAt,
+          notes: pilgrimEquipment.notes,
+          createdAt: pilgrimEquipment.createdAt,
+          equipmentName: equipment.name,
+          equipmentCategory: equipment.category,
+          equipmentImageUrl: equipment.imageUrl,
+          pilgrimName: bookingPilgrims.name,
+          bookingCode: bookings.bookingCode,
+        })
+        .from(pilgrimEquipment)
+        .leftJoin(equipment, eq(pilgrimEquipment.equipmentId, equipment.id))
+        .leftJoin(bookingPilgrims, eq(pilgrimEquipment.pilgrimId, bookingPilgrims.id))
+        .leftJoin(bookings, eq(pilgrimEquipment.bookingId, bookings.id))
+        .where(inArray(pilgrimEquipment.pilgrimId, bpIds));
+
+      res.json({ data: rows });
+      return;
+    }
+
+    // Original path: filter by bookingId
     const rows = await db
       .select({
         id: pilgrimEquipment.id,
@@ -29,8 +81,11 @@ router.get("/", async (req, res) => {
         equipmentId: pilgrimEquipment.equipmentId,
         bookingId: pilgrimEquipment.bookingId,
         status: pilgrimEquipment.status,
+        size: pilgrimEquipment.size,
+        quantity: pilgrimEquipment.quantity,
         distributedAt: pilgrimEquipment.distributedAt,
         distributedBy: pilgrimEquipment.distributedBy,
+        returnedAt: pilgrimEquipment.returnedAt,
         notes: pilgrimEquipment.notes,
         createdAt: pilgrimEquipment.createdAt,
         equipmentName: equipment.name,
@@ -41,7 +96,7 @@ router.get("/", async (req, res) => {
       .from(pilgrimEquipment)
       .leftJoin(equipment, eq(pilgrimEquipment.equipmentId, equipment.id))
       .leftJoin(bookingPilgrims, eq(pilgrimEquipment.pilgrimId, bookingPilgrims.id))
-      .where(eq(pilgrimEquipment.bookingId, bookingId));
+      .where(eq(pilgrimEquipment.bookingId, bookingId!));
 
     res.json({ data: rows });
   } catch (e) {

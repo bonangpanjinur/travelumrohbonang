@@ -158,7 +158,7 @@ Fokus: fitur yang meningkatkan kualitas produk tapi tidak menghambat operasional
 | ✅ | BK-03 | Log/history perubahan status booking | 3 jam | `BookingDetailPanel.tsx` + `bookingStatusLogs` schema + `bookings.ts` |
 | ✅ | BK-F02 | Bulk action: konfirmasi/batalkan banyak booking | 4 jam | `BookingTable.tsx` (checkbox), `Bookings.tsx` (bulk bar), `PATCH /bulk-status` |
 | ✅ | JM-F02 | Notifikasi/flag paspor jemaah hampir expired | 4 jam | `Pilgrims.tsx` — badge merah/oranye di kolom NIK/Paspor |
-| ⏭ | JM-DB02 | Relasi jemaah ↔ perlengkapan (setelah Sprint 3) | - | Ditunda — `pilgrim_equipment` sudah punya FK ke `booking_pilgrims` |
+| ✅ | JM-DB02 | Relasi jemaah ↔ perlengkapan (setelah Sprint 3) | - | `GET /pilgrim-equipment?masterPilgrimId=X` + seksi PERLENGKAPAN di detail jemaah |
 | ✅ | MN-F02 | Status check-in jemaah di halaman Manifest | 3 jam | `Manifest.tsx` + LEFT JOIN `check_ins` di `manifest-data` |
 | ✅ | MN-DB01 | Snapshot manifest saat dicetak (tabel `manifests`) | 1 hari | Schema `manifests` dibuat, snapshot disimpan saat PDF di-download |
 | ✅ | MN-F01 | QR code verifikasi manifest | 1 hari | Sudah ada sejak Sprint sebelumnya — QR per-jemaah di PDF & halaman Manifest |
@@ -214,7 +214,7 @@ manifests (Snapshot)       ← DIBUAT di Sprint 4
 Sprint 1  [██████████]  5/5 selesai  (100%) ✅ SELESAI
 Sprint 2  [██████████]  10/10 selesai (100%) ✅ SELESAI
 Sprint 3  [██████████]  7/7 selesai  (100%) ✅ SELESAI
-Sprint 4  [████████░░]  13/15 selesai (87%) — 2 item ditunda (JM-DB02, PK-01)
+Sprint 4  [█████████░]  14/15 selesai (93%) — 1 item ditunda (PK-01)
 ```
 
 ---
