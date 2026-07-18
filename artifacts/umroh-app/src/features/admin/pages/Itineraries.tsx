@@ -1,4 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -51,6 +68,61 @@ function mapApiDeparture(d: any): Departure {
   };
 }
 
+// ─── SortableDayItem ─────────────────────────────────────────────────────────
+
+function SortableDayItem({
+  day,
+  onEdit,
+  onDelete,
+}: {
+  day: ItineraryDay;
+  onEdit: (d: ItineraryDay) => void;
+  onDelete: (id: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: day.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-start gap-4 p-4 border rounded-lg bg-background hover:bg-muted/30 transition-colors"
+    >
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing touch-none p-0.5 rounded hover:bg-muted"
+          aria-label="Seret untuk mengurutkan"
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+        <span className="w-16 font-bold text-gold">Hari {day.day_number}</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="font-semibold">{day.title || "-"}</div>
+        <p className="text-sm text-muted-foreground line-clamp-2">{day.description}</p>
+      </div>
+      <div className="flex gap-2 flex-shrink-0">
+        <Button variant="ghost" size="icon" onClick={() => onEdit(day)}>
+          <Pencil className="w-4 h-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => onDelete(day.id)}>
+          <Trash2 className="w-4 h-4 text-destructive" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── component ───────────────────────────────────────────────────────────────
 
 const AdminItineraries = () => {
@@ -65,6 +137,11 @@ const AdminItineraries = () => {
   const { toast } = useToast();
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleteType, setDeleteType] = useState<"itinerary" | "day">("itinerary");
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const [form, setForm] = useState({
     departure_id: "",
@@ -275,6 +352,43 @@ const AdminItineraries = () => {
     setIsDayOpen(true);
   };
 
+  // ── DnD reorder ───────────────────────────────────────────────────────────
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent, itinerary: Itinerary) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const oldIndex = itinerary.days.findIndex((d) => d.id === active.id);
+      const newIndex = itinerary.days.findIndex((d) => d.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      // Optimistic update: reorder locally and renumber
+      const reordered = arrayMove(itinerary.days, oldIndex, newIndex).map(
+        (day, idx) => ({ ...day, day_number: idx + 1 }),
+      );
+
+      setItineraries((prev) =>
+        prev.map((it) =>
+          it.id === itinerary.id ? { ...it, days: reordered } : it,
+        ),
+      );
+
+      try {
+        await apiFetch(`/api/admin/itineraries/${itinerary.id}/reorder-days`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            days: reordered.map((d) => ({ id: d.id, day_number: d.day_number })),
+          }),
+        });
+      } catch (err: any) {
+        toast({ title: "Gagal menyimpan urutan", description: err?.message, variant: "destructive" });
+        fetchData(); // rollback on failure
+      }
+    },
+    [toast],
+  );
+
   // ── render ────────────────────────────────────────────────────────────────
 
   return (
@@ -443,35 +557,27 @@ const AdminItineraries = () => {
                     Belum ada jadwal hari. Klik "Tambah Hari" untuk memulai.
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {it.days.map((day) => (
-                      <div
-                        key={day.id}
-                        className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/30 transition-colors"
-                      >
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <GripVertical className="w-4 h-4" />
-                          <span className="w-16 font-bold text-gold">Hari {day.day_number}</span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-semibold">{day.title || "-"}</div>
-                          <p className="text-sm text-muted-foreground line-clamp-2">{day.description}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => { setSelectedItinerary(it); handleEditDay(day); }}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteDay(day.id)}>
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(e) => handleDragEnd(e, it)}
+                  >
+                    <SortableContext
+                      items={it.days.map((d) => d.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-3">
+                        {it.days.map((day) => (
+                          <SortableDayItem
+                            key={day.id}
+                            day={day}
+                            onEdit={(d) => { setSelectedItinerary(it); handleEditDay(d); }}
+                            onDelete={handleDeleteDay}
+                          />
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </SortableContext>
+                  </DndContext>
                 )}
               </CardContent>
             </Card>

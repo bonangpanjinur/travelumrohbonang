@@ -110,6 +110,17 @@ const AdminDepartures = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validasi tanggal pulang harus setelah tanggal berangkat
+    if (form.return_date && form.departure_date &&
+      new Date(form.return_date) <= new Date(form.departure_date)) {
+      toast({
+        title: "Tanggal pulang tidak valid",
+        description: "Tanggal pulang harus setelah tanggal berangkat.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       if (editing) {
         await apiFetch(`/api/admin/departures/${editing.id}`, {
@@ -233,6 +244,7 @@ const AdminDepartures = () => {
                   <Input
                     type="date"
                     value={form.return_date}
+                    min={form.departure_date || undefined}
                     onChange={(e) => setForm({ ...form, return_date: e.target.value })}
                     className="mt-1"
                   />

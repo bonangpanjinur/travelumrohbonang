@@ -135,6 +135,31 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
+// ── PATCH /api/admin/itineraries/:id/reorder-days ───────────────────────────
+// Body: { days: [{ id: string, day_number: number }] }
+router.patch("/:id/reorder-days", async (req, res) => {
+  try {
+    const { days } = req.body ?? {};
+    if (!Array.isArray(days) || days.length === 0) {
+      return res.status(400).json({ error: "days harus berupa array" });
+    }
+    // Update day_number for each day in a transaction
+    await db.transaction(async (tx) => {
+      for (const { id, day_number } of days) {
+        if (!id || day_number == null) continue;
+        await tx
+          .update(itineraryDays)
+          .set({ dayNumber: Number(day_number) })
+          .where(eq(itineraryDays.id, id));
+      }
+    });
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error("[admin/itineraries] PATCH /:id/reorder-days", err.message);
+    res.status(500).json({ error: "Gagal menyimpan urutan hari", detail: err.message });
+  }
+});
+
 // ── DELETE /api/admin/itineraries/:id ───────────────────────────────────────
 // Days cascade-deleted by DB (onDelete: "cascade")
 router.delete("/:id", async (req, res) => {

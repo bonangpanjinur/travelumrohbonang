@@ -319,6 +319,11 @@ router.post("/", async (req, res) => {
     if (!resolvedPackageId)   return res.status(400).json({ error: "package_id diperlukan" });
     if (!resolvedDepDate)     return res.status(400).json({ error: "departure_date diperlukan" });
 
+    // Validasi: tanggal pulang harus setelah tanggal berangkat
+    if (resolvedRetDate && new Date(resolvedRetDate) <= new Date(resolvedDepDate)) {
+      return res.status(400).json({ error: "Tanggal pulang harus setelah tanggal berangkat" });
+    }
+
     const id = crypto.randomUUID();
 
     // Wrap in transaction so departure + prices are always consistent.
@@ -380,6 +385,25 @@ router.patch("/:id", async (req, res) => {
     if (muthawif_id  !== undefined) updates.muthawifId     = muthawif_id  || null;
     else if (_mId    !== undefined) updates.muthawifId     = _mId         || null;
     if (rest.quota !== undefined)   updates.quota          = Number(rest.quota);
+
+    // Validasi tanggal: jika keduanya ada dalam update, cek langsung.
+    // Jika hanya satu yang diupdate, ambil nilai yang ada dari DB.
+    const newRetDate = updates.returnDate as string | null | undefined;
+    const newDepDate = updates.departureDate as string | undefined;
+    if (newRetDate) {
+      let effectiveDepDate = newDepDate;
+      if (!effectiveDepDate) {
+        const [existing] = await db
+          .select({ departureDate: packageDepartures.departureDate })
+          .from(packageDepartures)
+          .where(eq(packageDepartures.id, req.params.id))
+          .limit(1);
+        effectiveDepDate = existing?.departureDate ?? undefined;
+      }
+      if (effectiveDepDate && new Date(newRetDate) <= new Date(effectiveDepDate)) {
+        return res.status(400).json({ error: "Tanggal pulang harus setelah tanggal berangkat" });
+      }
+    }
 
     // Wrap in transaction so departure + prices stay consistent.
     const updated = await db.transaction(async (tx) => {

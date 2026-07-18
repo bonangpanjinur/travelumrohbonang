@@ -277,3 +277,60 @@
     background-color: hsl(var(--primary-foreground) / 0.3);
   }
 }
+
+/* ── Print styles ───────────────────────────────────────────────────────────
+   Hides admin chrome (sidebar, topbar, buttons) so hanya tabel manifest
+   yang tercetak. Kelas Tailwind print:hidden tetap bekerja normal.
+   ─────────────────────────────────────────────────────────────────────────── */
+@media print {
+  @page {
+    margin: 1.5cm;
+    size: A4 landscape;
+  }
+
+  /* Sembunyikan navigasi dan chrome admin */
+  aside,
+  header,
+  nav,
+  [data-sidebar],
+  [role="navigation"],
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Pastikan konten utama mengisi halaman penuh */
+  body,
+  #root,
+  main {
+    display: block !important;
+    width: 100% !important;
+    background: white !important;
+    color: black !important;
+    font-size: 11px !important;
+  }
+
+  /* Tabel manifest: jangan potong baris di tengah halaman */
+  tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  /* Elemen yang hanya muncul saat cetak */
+  .print\:block {
+    display: block !important;
+  }
+
+  .print\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  /* Pastikan QR code tidak terpotong */
+  td, th {
+    border: 1px solid #ddd !important;
+    padding: 4px 6px !important;
+  }
+}
