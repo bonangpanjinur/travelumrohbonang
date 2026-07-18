@@ -30,7 +30,7 @@ const router = Router();
 
 router.get("/export.xlsx", async (req, res) => {
   try {
-    const { status, search, branchId, startDate, endDate } = req.query;
+    const { status, search, branchId, packageId: exportPackageId, startDate, endDate } = req.query;
 
     const conditions: ReturnType<typeof sql>[] = [];
     if (status && typeof status === "string" && status !== "all") conditions.push(sql`b.status = ${status}`);
@@ -38,6 +38,9 @@ router.get("/export.xlsx", async (req, res) => {
     if (branchId && typeof branchId === "string" && branchId !== "__all__") {
       if (branchId === "__none__") conditions.push(sql`b.branch_id IS NULL`);
       else conditions.push(sql`b.branch_id = ${branchId}`);
+    }
+    if (exportPackageId && typeof exportPackageId === "string" && exportPackageId !== "__all__") {
+      conditions.push(sql`b.package_id = ${exportPackageId}`);
     }
     if (startDate && typeof startDate === "string") conditions.push(sql`dep.departure_date >= ${startDate}`);
     if (endDate && typeof endDate === "string") conditions.push(sql`dep.departure_date <= ${endDate}`);
@@ -88,7 +91,7 @@ router.get("/export.xlsx", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const { status, userId, search, branchId, limit, offset, startDate, endDate } = req.query;
+    const { status, userId, search, branchId, packageId, limit, offset, startDate, endDate } = req.query;
 
     // Build WHERE conditions with Drizzle sql template (parameterised, injection-safe)
     const conditions: ReturnType<typeof sql>[] = [];
@@ -114,6 +117,9 @@ router.get("/", async (req, res) => {
       } else if (branchId !== "__all__") {
         conditions.push(sql`b.branch_id = ${branchId}`);
       }
+    }
+    if (packageId && typeof packageId === "string" && packageId !== "__all__") {
+      conditions.push(sql`b.package_id = ${packageId}`);
     }
     if (startDate && typeof startDate === "string") {
       conditions.push(sql`dep.departure_date >= ${startDate}`);

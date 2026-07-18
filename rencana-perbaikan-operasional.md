@@ -88,12 +88,12 @@ Fokus: perbaikan tampilan dan alur kerja admin yang sering digunakan setiap hari
 | ✅ | KB-F01 | Tombol clone/duplikat keberangkatan | 2 jam | `Departures.tsx` + `departures.ts` |
 | ✅ | PL-01 | Pagination + search halaman Perlengkapan | 1 jam | `Equipment.tsx` |
 | 🔄 | KB-01 | Tipe kamar tidak hardcode (sudah tambah "single", belum dari DB) | 3 jam | `Departures.tsx`, schema |
-| ❌ | BK-F01 | Filter Booking by status & paket | 3 jam | `Bookings.tsx`, `bookings.ts` |
-| ❌ | BK-F03 | Tampilkan daftar jemaah di detail Booking | 3 jam | `Bookings.tsx` |
-| ❌ | IT-01 | Upload gambar hari Itinerary (bukan hanya URL) | 2 jam | `Itineraries.tsx` |
-| ❌ | MN-01 | Pagination Manifest server-side (saat ini semua di-load sekaligus) | 3 jam | `Manifest.tsx`, `departures.ts` |
-| ❌ | MN-02 | Tombol Print/Export manifest lebih menonjol + pilihan format | 1 jam | `Manifest.tsx` |
-| ❌ | PL-02 | Upload gambar perlengkapan (bukan hanya URL) | 2 jam | `Equipment.tsx` |
+| ✅ | BK-F01 | Filter Booking by status & paket | 3 jam | `Bookings.tsx`, `bookings.ts` |
+| ✅ | BK-F03 | Tampilkan daftar jemaah di detail Booking | 3 jam | `BookingDetailPanel.tsx` |
+| ✅ | IT-01 | Upload gambar hari Itinerary (bukan hanya URL) | 2 jam | `Itineraries.tsx`, `uploads.ts` |
+| ✅ | MN-01 | Pagination Manifest server-side (saat ini semua di-load sekaligus) | 3 jam | `Manifest.tsx`, `departures.ts` |
+| ✅ | MN-02 | Tombol Print/Export manifest lebih menonjol + pilihan format | 1 jam | `Manifest.tsx` |
+| ✅ | PL-02 | Upload gambar perlengkapan (bukan hanya URL) | 2 jam | `Equipment.tsx`, `uploads.ts` |
 
 **Detail item belum selesai:**
 
@@ -101,21 +101,17 @@ Fokus: perbaikan tampilan dan alur kerja admin yang sering digunakan setiap hari
 Array `ROOM_TYPES` di frontend sudah ditambah `"single"`, tapi daftar tipe kamar masih hardcode di kode. Seharusnya bisa dikonfigurasi dari DB atau dari konfigurasi paket.  
 **Fix**: Tambahkan field `allowedRoomTypes: text[]` di tabel `packages` atau `package_departures`, ambil dari API.
 
-**❌ BK-F01 — Filter Booking by Status & Paket**  
-Saat ini filter hanya bisa by tanggal dan cabang. Admin tidak bisa melihat "semua booking pending" atau "semua booking untuk Paket Gold".  
-**Fix**: Tambahkan dropdown filter `status` (pending/confirmed/cancelled/completed) dan `packageId` di UI + query parameter di backend.
+**✅ BK-F01 — Filter Booking by Status & Paket**  
+Dropdown `packageId` ditambahkan di frontend `Bookings.tsx` + query param `packageId` di backend `admin/bookings.ts`. Filter paket berlaku juga untuk export Excel.
 
-**❌ BK-F03 — Detail Booking Tidak Tampilkan Jemaah**  
-Harus buka menu Jemaah secara terpisah untuk melihat siapa yang ada di satu booking.  
-**Fix**: Tambahkan tab atau section "Daftar Jemaah" di halaman detail/modal booking.
+**✅ BK-F03 — Detail Booking Tampilkan Jemaah**  
+Sudah diimplementasi di `BookingDetailPanel.tsx` — section "Daftar Jemaah" muncul saat klik Detail pada setiap baris booking.
 
-**❌ IT-01 — Upload Gambar Hari Itinerary**  
-Form tambah/edit hari hanya punya text field untuk URL gambar.  
-**Fix**: Gunakan komponen upload file yang sama dengan foto paket.
+**✅ IT-01 — Upload Gambar Hari Itinerary**  
+Endpoint baru `POST /api/admin/uploads/image` (`uploads.ts`). Form hari itinerary kini punya tombol "Pilih Gambar" + preview + fallback URL manual.
 
-**❌ MN-01 — Pagination Manifest Server-Side**  
-Untuk keberangkatan 100+ jemaah, semua data di-load sekaligus ke browser. Sangat lambat.  
-**Fix**: Tambahkan `limit`/`offset` di endpoint `GET /api/admin/departures/:id/manifest-data`.
+**✅ MN-01 — Pagination Manifest Server-Side**  
+Endpoint `GET /api/admin/departures/:id/manifest-data` kini terima `limit`, `offset`, `search` — query JOIN langsung ke DB, tidak load semua data. Frontend `Manifest.tsx` refactored ke server-side pagination dengan debounced search.
 
 ---
 
@@ -245,7 +241,7 @@ manifests (Snapshot)       ← DIBUAT di Sprint 4
 
 ```
 Sprint 1  [██████████]  5/5 selesai  (100%) ✅ SELESAI
-Sprint 2  [███░░░░░░░]  3/10 selesai (30%)
+Sprint 2  [██████████]  10/10 selesai (100%) ✅ SELESAI
 Sprint 3  [░░░░░░░░░░]  0/7 selesai  (0%)
 Sprint 4  [░░░░░░░░░░]  0/15 selesai (0%)
 ```

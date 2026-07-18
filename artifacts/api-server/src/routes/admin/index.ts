@@ -48,6 +48,7 @@ import adminSocialKitRouter from "./social-kit";
 import adminInstallmentsRouter from "./installments";
 import adminItinerariesRouter from "./itineraries";
 import adminPilgrimDocumentsRouter from "./pilgrim-documents";
+import adminUploadsRouter from "./uploads";
 
 const router = Router();
 
@@ -119,5 +120,8 @@ router.use("/itineraries", requireStaff, adminItinerariesRouter);
 
 // ── P3-04: Admin document management (no ownership check, admin only) ─────────
 router.use("/pilgrim-documents", requireStaff, adminPilgrimDocumentsRouter);
+
+// ── IT-01 / PL-02: General image uploads (itinerary days, equipment, etc.) ───
+router.use("/uploads", requireStaff, adminUploadsRouter);
 
 export default router;

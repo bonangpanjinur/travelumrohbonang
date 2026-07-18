@@ -106,6 +106,10 @@ router.get("/", async (req, res) => {
 router.get("/:id/manifest-data", async (req, res) => {
   try {
     const departureId = req.params.id as string;
+    const { search, limit: limitParam, offset: offsetParam } = req.query as Record<string, string | undefined>;
+    const limit = Math.min(Number(limitParam) || 50, 200);
+    const offset = Number(offsetParam) || 0;
+    const searchTerm = search?.trim() || "";
 
     const [departure] = await db
       .select({
@@ -128,52 +132,60 @@ router.get("/:id/manifest-data", async (req, res) => {
       return;
     }
 
-    const departureBookings = await db
-      .select({
-        id: bookings.id,
-        bookingCode: bookings.bookingCode,
-        isGroupBooking: bookings.isGroupBooking,
-        groupName: bookings.groupName,
-        picName: bookings.picName,
-      })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.departureId, departureId),
-          inArray(bookings.status, ["paid", "confirmed", "processing", "completed"]),
-        ),
-      );
+    // Use raw SQL join so we can filter + paginate in one query
+    const searchFilter = searchTerm
+      ? sql`AND (
+          bp.name ILIKE ${"%" + searchTerm + "%"}
+          OR bp.passport_number ILIKE ${"%" + searchTerm + "%"}
+          OR b.booking_code ILIKE ${"%" + searchTerm + "%"}
+          OR b.group_name ILIKE ${"%" + searchTerm + "%"}
+        )`
+      : sql``;
 
-    type BookingInfo = (typeof departureBookings)[number];
-    const bookingIds = departureBookings.map((b: BookingInfo) => b.id);
-    const bookingInfoById = new Map<string, BookingInfo>(
-      departureBookings.map((b: BookingInfo) => [b.id, b]),
-    );
+    const [dataResult, countResult] = await Promise.all([
+      db.execute(sql`
+        SELECT
+          bp.id,
+          bp.booking_id   AS "bookingId",
+          bp.name,
+          bp.gender,
+          bp.phone,
+          bp.email,
+          bp.nik,
+          bp.birth_date   AS "birthDate",
+          bp.nationality,
+          bp.passport_number AS "passportNumber",
+          bp.passport_expiry AS "passportExpiry",
+          bp.room_type    AS "roomType",
+          bp.room_number  AS "roomNumber",
+          b.booking_code  AS "bookingCode",
+          COALESCE(b.is_group_booking, false) AS "isGroupBooking",
+          b.group_name    AS "groupName",
+          b.pic_name      AS "picName"
+        FROM booking_pilgrims bp
+        JOIN bookings b ON b.id = bp.booking_id
+        WHERE b.departure_id = ${departureId}
+          AND b.status IN ('paid','confirmed','processing','completed')
+          ${searchFilter}
+        ORDER BY bp.name
+        LIMIT ${limit} OFFSET ${offset}
+      `),
+      db.execute(sql`
+        SELECT COUNT(*)::int AS count
+        FROM booking_pilgrims bp
+        JOIN bookings b ON b.id = bp.booking_id
+        WHERE b.departure_id = ${departureId}
+          AND b.status IN ('paid','confirmed','processing','completed')
+          ${searchFilter}
+      `),
+    ]);
 
-    const pilgrims = bookingIds.length
-      ? await db
-          .select({
-            id: bookingPilgrims.id,
-            bookingId: bookingPilgrims.bookingId,
-            name: bookingPilgrims.name,
-            gender: bookingPilgrims.gender,
-            phone: bookingPilgrims.phone,
-            email: bookingPilgrims.email,
-            nik: bookingPilgrims.nik,
-            birthDate: bookingPilgrims.birthDate,
-            nationality: bookingPilgrims.nationality,
-            passportNumber: bookingPilgrims.passportNumber,
-            passportExpiry: bookingPilgrims.passportExpiry,
-            roomType: bookingPilgrims.roomType,
-            roomNumber: bookingPilgrims.roomNumber,
-          })
-          .from(bookingPilgrims)
-          .where(inArray(bookingPilgrims.bookingId, bookingIds))
-      : [];
+    const pilgrimRows = (dataResult as any).rows ?? dataResult;
+    const total = Number(((countResult as any).rows ?? countResult)[0]?.count ?? 0);
+    const pilgrimIds = pilgrimRows.map((p: any) => p.id);
 
-    // Fetch document status (paspor, visa, vaksin) for all pilgrims in one query
+    // Fetch document status (paspor, visa, vaksin) for this page of pilgrims
     const DOC_TYPES = ["paspor", "visa", "vaksin"];
-    const pilgrimIds = pilgrims.map((p) => p.id);
     const docRows = pilgrimIds.length
       ? await db
           .select({
@@ -190,44 +202,40 @@ router.get("/:id/manifest-data", async (req, res) => {
           )
       : [];
 
-    // Map: pilgrimId → { paspor, visa, vaksin } status
     const docStatusMap: Record<string, Record<string, string>> = {};
     for (const doc of docRows) {
       if (!docStatusMap[doc.pilgrimId]) docStatusMap[doc.pilgrimId] = {};
       docStatusMap[doc.pilgrimId][doc.documentType] = doc.status;
     }
 
-    const rows = pilgrims.map((p) => {
-      const bk = bookingInfoById.get(p.bookingId ?? "");
-      return {
-        id: p.id,
-        bookingCode: bk?.bookingCode ?? "-",
-        isGroupBooking: bk?.isGroupBooking ?? false,
-        groupName: bk?.groupName ?? null,
-        picName: bk?.picName ?? null,
-        name: p.name,
-        gender: p.gender,
-        phone: p.phone,
-        email: p.email,
-        nik: p.nik,
-        birthDate: p.birthDate,
-        nationality: p.nationality,
-        passportNumber: p.passportNumber,
-        passportExpiry: p.passportExpiry,
-        roomType: p.roomType,
-        roomNumber: p.roomNumber,
-        docStatus: {
-          paspor: docStatusMap[p.id]?.paspor ?? null,
-          visa:   docStatusMap[p.id]?.visa   ?? null,
-          vaksin: docStatusMap[p.id]?.vaksin  ?? null,
-        },
-      };
-    });
+    const rows = pilgrimRows.map((p: any) => ({
+      id: p.id,
+      bookingCode: p.bookingCode ?? "-",
+      isGroupBooking: p.isGroupBooking ?? false,
+      groupName: p.groupName ?? null,
+      picName: p.picName ?? null,
+      name: p.name,
+      gender: p.gender,
+      phone: p.phone,
+      email: p.email,
+      nik: p.nik,
+      birthDate: p.birthDate,
+      nationality: p.nationality,
+      passportNumber: p.passportNumber,
+      passportExpiry: p.passportExpiry,
+      roomType: p.roomType,
+      roomNumber: p.roomNumber,
+      docStatus: {
+        paspor: docStatusMap[p.id]?.paspor ?? null,
+        visa:   docStatusMap[p.id]?.visa   ?? null,
+        vaksin: docStatusMap[p.id]?.vaksin  ?? null,
+      },
+    }));
 
     res.json({
       departure,
       pilgrims: rows,
-      total: rows.length,
+      total,
     });
   } catch (err) {
     console.error("[departures] manifest-data error:", err);

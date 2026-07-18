@@ -5,6 +5,8 @@ import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw } from "lucide-react";
+
+interface PackageOption { id: string; title: string; }
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import AdminCreateBookingDialog from "@/features/admin/components/AdminCreateBookingDialog";
 import {
@@ -27,7 +29,9 @@ const AdminBookings = () => {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState("__all__");
+  const [packageFilter, setPackageFilter] = useState("__all__");
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [packageOptions, setPackageOptions] = useState<PackageOption[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
@@ -37,12 +41,13 @@ const AdminBookings = () => {
   const [apiError, setApiError] = useState<string | null>(null);
 
   const hasActiveFilters =
-    filter !== "all" || search !== "" || branchFilter !== "__all__" || startDate !== "" || endDate !== "";
+    filter !== "all" || search !== "" || branchFilter !== "__all__" || packageFilter !== "__all__" || startDate !== "" || endDate !== "";
 
   const resetFilters = () => {
     setFilter("all");
     setSearch("");
     setBranchFilter("__all__");
+    setPackageFilter("__all__");
     setStartDate("");
     setEndDate("");
   };
@@ -58,13 +63,16 @@ const AdminBookings = () => {
           variant: "destructive",
         });
     });
+    apiFetch<{ data: PackageOption[] }>("/api/admin/packages").then((res) => {
+      setPackageOptions((res.data || []).map((p: any) => ({ id: p.id, title: p.title })));
+    }).catch(() => { /* filter paket opsional */ });
   }, []);
 
   // Filter berubah → reset ke halaman pertama dan fetch ulang (satu effect, satu API call)
   useEffect(() => {
     setPage(0);
     fetchBookings(0);
-  }, [filter, search, branchFilter, startDate, endDate]);
+  }, [filter, search, branchFilter, packageFilter, startDate, endDate]);
 
   // Halaman berubah oleh klik pagination → fetch halaman tersebut
   useEffect(() => {
@@ -82,7 +90,7 @@ const AdminBookings = () => {
       // Pastikan tanggal selalu dalam format ISO yyyy-mm-dd (HTML date input sudah ISO, tapi defensive)
       const isoStart = startDate ? new Date(startDate).toISOString().slice(0, 10) : "";
       const isoEnd = endDate ? new Date(endDate).toISOString().slice(0, 10) : "";
-      let url = `/api/admin/bookings?status=${filter}&search=${encodeURIComponent(search.trim())}&branchId=${branchFilter}&limit=${PAGE_SIZE}&offset=${offset}`;
+      let url = `/api/admin/bookings?status=${filter}&search=${encodeURIComponent(search.trim())}&branchId=${branchFilter}&packageId=${packageFilter}&limit=${PAGE_SIZE}&offset=${offset}`;
       if (isoStart) url += `&startDate=${isoStart}`;
       if (isoEnd) url += `&endDate=${isoEnd}`;
       const res = await apiFetch<{ data: any[]; total: number }>(url);
@@ -150,7 +158,7 @@ const AdminBookings = () => {
             <Download className="w-4 h-4 mr-2" /> Export CSV
           </Button>
           <Button variant="outline" onClick={() => {
-            const params = new URLSearchParams({ status: filter, search: search.trim(), branchId: branchFilter });
+            const params = new URLSearchParams({ status: filter, search: search.trim(), branchId: branchFilter, packageId: packageFilter });
             if (startDate) params.set("startDate", startDate);
             if (endDate) params.set("endDate", endDate);
             window.open(`/api/admin/bookings/export.xlsx?${params}`, "_blank");
@@ -207,6 +215,17 @@ const AdminBookings = () => {
               <SelectItem value="__none__">Tanpa Cabang</SelectItem>
               {branches.map((br) => (
                 <SelectItem key={br.id} value={br.id}>{br.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={packageFilter} onValueChange={setPackageFilter}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Semua Paket" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Semua Paket</SelectItem>
+              {packageOptions.map((pkg) => (
+                <SelectItem key={pkg.id} value={pkg.id}>{pkg.title}</SelectItem>
               ))}
             </SelectContent>
           </Select>

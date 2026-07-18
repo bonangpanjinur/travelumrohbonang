@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -25,7 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Pencil, Trash2, GripVertical, Calendar, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, Calendar, MapPin, Upload, Loader2, X } from "lucide-react";
 import { id as localeId } from "date-fns/locale";
 import { safeFormatDate } from "@/lib/utils";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
@@ -137,6 +137,8 @@ const AdminItineraries = () => {
   const { toast } = useToast();
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleteType, setDeleteType] = useState<"itinerary" | "day">("itinerary");
+  const [uploadingImg, setUploadingImg] = useState(false);
+  const imgInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -339,6 +341,26 @@ const AdminItineraries = () => {
   const resetDayForm = () => {
     setEditingDay(null);
     setDayForm({ day_number: 1, title: "", description: "", image_url: "" });
+    if (imgInputRef.current) imgInputRef.current.value = "";
+  };
+
+  const handleImageUpload = async (file: File) => {
+    setUploadingImg(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await apiFetch<{ url: string }>("/api/admin/uploads/image", {
+        method: "POST",
+        body: fd,
+      });
+      setDayForm((prev) => ({ ...prev, image_url: res.url }));
+      toast({ title: "Gambar berhasil diupload" });
+    } catch (err: any) {
+      toast({ title: "Gagal upload gambar", description: err?.message, variant: "destructive" });
+    } finally {
+      setUploadingImg(false);
+      if (imgInputRef.current) imgInputRef.current.value = "";
+    }
   };
 
   const openAddDay = (it: Itinerary) => {
@@ -501,13 +523,44 @@ const AdminItineraries = () => {
               />
             </div>
             <div>
-              <Label>URL Gambar (opsional)</Label>
-              <Input
-                value={dayForm.image_url}
-                onChange={(e) => setDayForm({ ...dayForm, image_url: e.target.value })}
-                placeholder="https://..."
-                className="mt-1"
+              <Label>Gambar Hari (opsional)</Label>
+              <input
+                ref={imgInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); }}
               />
+              <div className="mt-1 space-y-2">
+                <div className="flex gap-2 items-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploadingImg}
+                    onClick={() => imgInputRef.current?.click()}
+                  >
+                    {uploadingImg
+                      ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      : <Upload className="w-4 h-4 mr-1" />}
+                    {uploadingImg ? "Mengupload..." : "Pilih Gambar"}
+                  </Button>
+                  {dayForm.image_url && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setDayForm({ ...dayForm, image_url: "" })}>
+                      <X className="w-4 h-4" /> Hapus
+                    </Button>
+                  )}
+                </div>
+                <Input
+                  value={dayForm.image_url}
+                  onChange={(e) => setDayForm({ ...dayForm, image_url: e.target.value })}
+                  placeholder="Atau tempel URL gambar langsung..."
+                  className="text-sm"
+                />
+                {dayForm.image_url && (
+                  <img src={dayForm.image_url} alt="Preview" className="rounded-lg object-cover h-28 w-full border" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                )}
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setIsDayOpen(false)}>Batal</Button>

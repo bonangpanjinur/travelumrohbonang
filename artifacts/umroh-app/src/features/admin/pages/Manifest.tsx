@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -97,7 +97,17 @@ const MANIFEST_PAGE_SIZE = 50;
 const AdminManifest = () => {
   const [selectedDep, setSelectedDep] = useState<string>("");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(0);
+
+  // Debounce search — tunggu 400ms setelah user berhenti mengetik
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Reset halaman ketika filter atau keberangkatan berubah
+  useEffect(() => { setPage(0); }, [selectedDep, debouncedSearch]);
 
   // Fetch all departures for the dropdown
   const { data: departuresRes, isLoading: loadingDeps } = useQuery({
@@ -107,39 +117,31 @@ const AdminManifest = () => {
     select: (r) => r.data,
   });
 
-  // Fetch manifest data when a departure is selected
-  const { data: manifest, isLoading: loadingManifest } = useQuery({
-    queryKey: ["admin-manifest-data", selectedDep],
-    queryFn: () =>
-      apiFetch<ManifestData>(`/api/admin/departures/${selectedDep}/manifest-data`),
+  // Fetch manifest data — server-side pagination + search (MN-01)
+  const { data: manifest, isLoading: loadingManifest, isFetching } = useQuery({
+    queryKey: ["admin-manifest-data", selectedDep, debouncedSearch, page],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        limit: String(MANIFEST_PAGE_SIZE),
+        offset: String(page * MANIFEST_PAGE_SIZE),
+      });
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      return apiFetch<ManifestData>(
+        `/api/admin/departures/${selectedDep}/manifest-data?${params}`
+      );
+    },
     enabled: !!selectedDep,
+    placeholderData: (prev) => prev, // keep previous page while fetching next
   });
 
   const departures = departuresRes ?? [];
   const pilgrims = manifest?.pilgrims ?? [];
   const departure = manifest?.departure;
+  const total = manifest?.total ?? 0;
+  const totalPages = Math.ceil(total / MANIFEST_PAGE_SIZE);
 
-  // Filter by search
-  const filtered = pilgrims.filter((p) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      p.name.toLowerCase().includes(q) ||
-      (p.passportNumber ?? "").toLowerCase().includes(q) ||
-      p.bookingCode.toLowerCase().includes(q) ||
-      (p.groupName ?? "").toLowerCase().includes(q)
-    );
-  });
-
-  // Pagination (BUG-09) — reset ke halaman 0 saat filter atau keberangkatan berubah
-  const totalPages = Math.ceil(filtered.length / MANIFEST_PAGE_SIZE);
-  const pagedRows = filtered.slice(page * MANIFEST_PAGE_SIZE, (page + 1) * MANIFEST_PAGE_SIZE);
-
-  const groupCount = pilgrims.filter((p) => p.isGroupBooking).length;
-
-  // Reset halaman ketika filter atau keberangkatan berubah (BUG-09)
   const handleDepChange = (v: string) => { setSelectedDep(v); setSearch(""); setPage(0); };
-  const handleSearchChange = (v: string) => { setSearch(v); setPage(0); };
+  const handleSearchChange = (v: string) => { setSearch(v); };
 
   const handlePrint = () => window.print();
 
@@ -149,8 +151,8 @@ const AdminManifest = () => {
       "No. Paspor", "Exp. Paspor", "No. HP", "Tipe Kamar", "No. Kamar",
       "Rombongan", "NIK",
     ];
-    const rows = filtered.map((p, i) => [
-      String(i + 1),
+    const rows = pilgrims.map((p, i) => [
+      String(page * MANIFEST_PAGE_SIZE + i + 1),
       p.bookingCode,
       p.name,
       genderLabel(p.gender),
@@ -172,7 +174,7 @@ const AdminManifest = () => {
 
   return (
     <div>
-      {/* Header */}
+      {/* Header — MN-02: tombol export lebih menonjol */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 print:hidden">
         <div>
           <h1 className="text-2xl font-bold">Manifest Keberangkatan</h1>
@@ -180,24 +182,23 @@ const AdminManifest = () => {
             Format standar maskapai — ekspor CSV atau PDF
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {selectedDep && pilgrims.length > 0 && (
-            <>
-              <Button variant="outline" onClick={handleExportCsv}>
-                <Download className="h-4 w-4 mr-2" /> Export CSV
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => window.open(`/api/admin/departures/${selectedDep}/manifest.pdf`, "_blank")}
-              >
-                <FileText className="h-4 w-4 mr-2" /> Download PDF
-              </Button>
-              <Button onClick={handlePrint}>
-                <Printer className="h-4 w-4 mr-2" /> Cetak
-              </Button>
-            </>
-          )}
-        </div>
+        {selectedDep && total > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={handleExportCsv}>
+              <Download className="h-4 w-4 mr-2" /> Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open(`/api/admin/departures/${selectedDep}/manifest.pdf`, "_blank")}
+            >
+              <FileText className="h-4 w-4 mr-2" /> Download PDF
+            </Button>
+            <Button size="sm" onClick={handlePrint} className="gradient-gold text-primary">
+              <Printer className="h-4 w-4 mr-2" /> Cetak Manifest
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Departure selector */}
@@ -251,17 +252,17 @@ const AdminManifest = () => {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                <Users className="h-4 w-4" /> Jemaah Terdaftar
+                <Users className="h-4 w-4" /> Total Jemaah
               </div>
-              <p className="font-semibold">{manifest?.total ?? 0} / {departure.quota}</p>
+              <p className="font-semibold">{total} / {departure.quota}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                <UsersRound className="h-4 w-4" /> Jemaah Grup
+                <UsersRound className="h-4 w-4" /> Halaman
               </div>
-              <p className="font-semibold">{groupCount}</p>
+              <p className="font-semibold">{totalPages > 0 ? `${page + 1} / ${totalPages}` : "-"}</p>
             </CardContent>
           </Card>
         </div>
@@ -276,13 +277,13 @@ const AdminManifest = () => {
           <p className="text-sm">
             Tgl Berangkat: {departure.departureDate ? format(new Date(departure.departureDate), "dd MMMM yyyy", { locale: localeId }) : "-"} &nbsp;|&nbsp;
             Tgl Kembali: {departure.returnDate ? format(new Date(departure.returnDate), "dd MMMM yyyy", { locale: localeId }) : "-"} &nbsp;|&nbsp;
-            Total: {manifest?.total ?? 0} Jemaah
+            Total: {total} Jemaah
           </p>
         </div>
       )}
 
-      {/* Search */}
-      {selectedDep && pilgrims.length > 0 && (
+      {/* Search (server-side — MN-01) */}
+      {selectedDep && (
         <div className="relative mb-4 print:hidden">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -291,6 +292,9 @@ const AdminManifest = () => {
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
           />
+          {isFetching && !loadingManifest && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          )}
         </div>
       )}
 
@@ -304,9 +308,9 @@ const AdminManifest = () => {
           <Plane className="h-12 w-12 mx-auto mb-3 opacity-30" />
           <p className="font-medium">Pilih keberangkatan untuk melihat manifest.</p>
         </div>
-      ) : filtered.length === 0 ? (
+      ) : pilgrims.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
-          {pilgrims.length === 0
+          {total === 0 && !debouncedSearch
             ? "Belum ada jemaah terdaftar untuk keberangkatan ini (hanya booking berstatus paid/confirmed/processing/completed)."
             : "Tidak ada jemaah sesuai pencarian."}
         </div>
@@ -333,7 +337,7 @@ const AdminManifest = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pagedRows.map((row, i) => {
+              {pilgrims.map((row, i) => {
                 const origin = typeof window !== "undefined" ? window.location.origin : "";
                 const qrPayload = JSON.stringify({
                   v: 1,
@@ -344,7 +348,7 @@ const AdminManifest = () => {
                   pp: row.passportNumber ?? null,
                   url: `${origin}/manifest/checkin?pid=${row.id}&dep=${selectedDep}`,
                 });
-                // Nomor urut global (bukan per halaman) untuk konsistensi cetak
+                // Nomor urut global (bukan per halaman)
                 const globalIndex = page * MANIFEST_PAGE_SIZE + i + 1;
                 return (
                   <TableRow key={row.id}>
@@ -407,13 +411,13 @@ const AdminManifest = () => {
         </div>
       )}
 
-      {/* Pagination (BUG-09) */}
-      {filtered.length > MANIFEST_PAGE_SIZE && (
+      {/* Server-side Pagination (MN-01) */}
+      {totalPages > 1 && (
         <div className="print:hidden">
           <AdminPagination
             page={page}
             totalPages={totalPages}
-            totalCount={filtered.length}
+            totalCount={total}
             pageSize={MANIFEST_PAGE_SIZE}
             onPageChange={setPage}
           />
@@ -421,11 +425,10 @@ const AdminManifest = () => {
       )}
 
       {/* Footer count */}
-      {filtered.length > 0 && (
+      {total > 0 && (
         <p className="text-sm text-muted-foreground mt-3 print:hidden">
-          Menampilkan {pagedRows.length} dari {filtered.length} jemaah
-          {search && ` (difilter oleh "${search}")`}
-          {filtered.length < pilgrims.length && ` — ${pilgrims.length} total`}
+          Menampilkan {page * MANIFEST_PAGE_SIZE + 1}–{Math.min((page + 1) * MANIFEST_PAGE_SIZE, total)} dari {total} jemaah
+          {debouncedSearch && ` (difilter oleh "${debouncedSearch}")`}
         </p>
       )}
     </div>
