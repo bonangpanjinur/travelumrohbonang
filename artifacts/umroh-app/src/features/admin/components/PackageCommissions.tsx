@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Button } from "@/shared/components/ui/button";
@@ -25,76 +25,44 @@ const PIC_TYPES = [
 
 const PackageCommissions = ({ packageId, packageTitle }: PackageCommissionsProps) => {
   const [commissions, setCommissions] = useState<Commission>({ cabang: 0, agen: 0, karyawan: 0 });
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data, error } = await supabase
-        .from("package_commissions")
-        .select("pic_type, commission_amount")
-        .eq("package_id", packageId);
-
-      if (error) {
-        console.error("Error fetching commissions:", error);
-        return;
-      }
-
-      if (data) {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const { data } = await apiFetch<{ data: Array<{ label: string; commissionAmount: string }> }>(
+          `/api/admin/packages/${packageId}/commissions`
+        );
         const map: Commission = { cabang: 0, agen: 0, karyawan: 0 };
-        data.forEach((d: any) => {
-          const type = d.pic_type.toLowerCase();
-          if (type in map) {
-            map[type as keyof Commission] = d.commission_amount;
-          }
+        data.forEach((d) => {
+          const key = d.label?.toLowerCase() as keyof Commission;
+          if (key in map) map[key] = parseFloat(d.commissionAmount) || 0;
         });
         setCommissions(map);
+      } catch (err: any) {
+        console.error("[PackageCommissions] fetch error:", err);
+        toast({ title: "Gagal memuat data komisi", description: err.message, variant: "destructive" });
+      } finally {
+        setLoading(false);
       }
     };
-    fetch();
+    load();
   }, [packageId]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Upsert all 3 types concurrently
-      for (const { key } of PIC_TYPES) {
-        // Cek apakah data sudah ada
-        const { data: existing } = await supabase
-          .from("package_commissions")
-          .select("id")
-          .eq("package_id", packageId)
-          .eq("pic_type", key)
-          .maybeSingle();
-
-        if (existing) {
-          // Update jika ada
-          const { error } = await supabase
-            .from("package_commissions")
-            .update({ commission_amount: commissions[key] })
-            .eq("id", existing.id);
-          if (error) throw error;
-        } else {
-          // Insert jika tidak ada
-          const { error } = await supabase
-            .from("package_commissions")
-            .insert({ 
-              package_id: packageId, 
-              pic_type: key, 
-              commission_amount: commissions[key] 
-            });
-          if (error) throw error;
-        }
-      }
-
-      toast({ title: "Komisi disimpan!" });
-    } catch (error: any) {
-      console.error("Error saving commissions:", error);
-      toast({ 
-        title: "Gagal menyimpan komisi", 
-        description: error.message, 
-        variant: "destructive" 
+      await apiFetch(`/api/admin/packages/${packageId}/commissions`, {
+        method: "PUT",
+        body: JSON.stringify(commissions),
       });
+      toast({ title: "Komisi disimpan!" });
+    } catch (err: any) {
+      console.error("[PackageCommissions] save error:", err);
+      toast({ title: "Gagal menyimpan komisi", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -106,22 +74,26 @@ const PackageCommissions = ({ packageId, packageTitle }: PackageCommissionsProps
         <DollarSign className="w-4 h-4 text-gold" />
         <span className="font-semibold text-sm">Komisi per Jemaah — {packageTitle}</span>
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        {PIC_TYPES.map(({ key, label }) => (
-          <div key={key}>
-            <Label className="text-xs">{label}</Label>
-            <Input
-              type="number"
-              value={commissions[key]}
-              onChange={(e) => setCommissions({ ...commissions, [key]: parseInt(e.target.value) || 0 })}
-              className="mt-1"
-              placeholder="0"
-            />
-          </div>
-        ))}
-      </div>
+      {loading ? (
+        <p className="text-xs text-muted-foreground">Memuat...</p>
+      ) : (
+        <div className="grid grid-cols-3 gap-3">
+          {PIC_TYPES.map(({ key, label }) => (
+            <div key={key}>
+              <Label className="text-xs">{label}</Label>
+              <Input
+                type="number"
+                value={commissions[key]}
+                onChange={(e) => setCommissions({ ...commissions, [key]: parseInt(e.target.value) || 0 })}
+                className="mt-1"
+                placeholder="0"
+              />
+            </div>
+          ))}
+        </div>
+      )}
       <div className="flex justify-end">
-        <Button size="sm" onClick={handleSave} disabled={saving} className="gradient-gold text-primary">
+        <Button size="sm" onClick={handleSave} disabled={saving || loading} className="gradient-gold text-primary">
           {saving ? "Menyimpan..." : "Simpan Komisi"}
         </Button>
       </div>

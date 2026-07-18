@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, sql, packages, packageDepartures, departurePrices, packageHotels, eq, asc, inArray } from "@workspace/db";
+import { db, sql, packages, packageDepartures, departurePrices, packageHotels, packageCommissions, eq, asc, inArray } from "@workspace/db";
 import { sendAdminError } from "../../lib/adminApiError";
 import {
   PackageSchema,
@@ -245,6 +245,67 @@ router.post("/:id/extra-hotels", async (req, res) => {
     res.json({ message: "Extra hotels updated" });
   } catch {
     res.status(500).json({ error: "Failed to update extra hotels" });
+  }
+});
+
+// ── Commissions ──────────────────────────────────────────────────────────────
+
+/** GET /api/admin/packages/:id/commissions */
+router.get("/:id/commissions", async (req, res) => {
+  try {
+    const data = await db
+      .select()
+      .from(packageCommissions)
+      .where(eq(packageCommissions.packageId, req.params.id))
+      .orderBy(asc(packageCommissions.createdAt));
+    res.json({ data });
+  } catch {
+    res.status(500).json({ error: "Failed to fetch commissions" });
+  }
+});
+
+/**
+ * PUT /api/admin/packages/:id/commissions
+ * Body: { cabang: number, agen: number, karyawan: number }
+ * Upserts ketiga baris komisi berdasarkan label.
+ */
+router.put("/:id/commissions", async (req, res) => {
+  try {
+    const packageId = req.params.id as string;
+    const body = req.body as Record<string, number>;
+    const PIC_TYPES = ["cabang", "agen", "karyawan"] as const;
+
+    await db.transaction(async (tx) => {
+      for (const picType of PIC_TYPES) {
+        const amount = Number(body[picType] ?? 0);
+        const [existing] = await tx
+          .select({ id: packageCommissions.id })
+          .from(packageCommissions)
+          .where(eq(packageCommissions.packageId, packageId))
+          // label column stores the pic type key
+          .where(eq(packageCommissions.label, picType))
+          .limit(1);
+
+        if (existing) {
+          await tx
+            .update(packageCommissions)
+            .set({ commissionAmount: String(amount) })
+            .where(eq(packageCommissions.id, existing.id));
+        } else {
+          await tx.insert(packageCommissions).values({
+            id: crypto.randomUUID(),
+            packageId,
+            label: picType,
+            commissionAmount: String(amount),
+          });
+        }
+      }
+    });
+
+    res.json({ message: "Commissions updated" });
+  } catch (err) {
+    console.error("[packages] PUT /:id/commissions:", err);
+    res.status(500).json({ error: "Failed to update commissions" });
   }
 });
 

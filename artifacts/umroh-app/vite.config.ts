@@ -79,14 +79,32 @@ export default defineConfig(async ({ command }) => {
         '/api': {
           target: 'http://localhost:8080',
           changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on('error', (_err, _req, res) => {
+              (res as any).writeHead(503, { 'Content-Type': 'application/json' });
+              (res as any).end(JSON.stringify({ error: 'API server tidak tersedia', detail: 'Pastikan workflow api-server berjalan.' }));
+            });
+          },
         },
         '/rest/v1': {
           target: 'http://localhost:8080',
           changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on('error', (_err, _req, res) => {
+              (res as any).writeHead(503, { 'Content-Type': 'application/json' });
+              (res as any).end(JSON.stringify({ error: 'API server tidak tersedia', detail: 'REST proxy tidak bisa dijangkau. Pastikan workflow api-server berjalan.' }));
+            });
+          },
         },
         '/storage/v1': {
           target: 'http://localhost:8080',
           changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on('error', (_err, _req, res) => {
+              (res as any).writeHead(503, { 'Content-Type': 'application/json' });
+              (res as any).end(JSON.stringify({ error: 'Storage server tidak tersedia' }));
+            });
+          },
         },
       },
     },

@@ -45,3 +45,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
     },
   },
 });
+
+// Di development (Replit), matikan Supabase Realtime agar tidak ada
+// WebSocket retry loop ke supabase.co yang menyebabkan noise di console
+// dan overhead jaringan. Semua data di dev sudah lewat REST proxy lokal.
+if (import.meta.env.DEV) {
+  supabase.realtime.disconnect();
+}
