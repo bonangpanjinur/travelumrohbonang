@@ -46,18 +46,24 @@ const AdminBookings = () => {
     });
   }, []);
 
+  // Filter berubah → reset ke halaman pertama dan fetch ulang (satu effect, satu API call)
   useEffect(() => {
     setPage(0);
+    fetchBookings(0);
   }, [filter, search, branchFilter]);
 
+  // Halaman berubah oleh klik pagination → fetch halaman tersebut
   useEffect(() => {
-    fetchBookings();
-  }, [filter, search, page, branchFilter]);
+    if (page > 0) fetchBookings(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
-  const fetchBookings = async () => {
+  // pageOverride: gunakan ketika page state belum ter-update (e.g. langsung setelah setPage)
+  const fetchBookings = async (pageOverride?: number) => {
+    const currentPage = pageOverride ?? page;
     setLoading(true);
     try {
-      const offset = page * PAGE_SIZE;
+      const offset = currentPage * PAGE_SIZE;
       const res = await apiFetch<{ data: any[]; total: number }>(
         `/api/admin/bookings?status=${filter}&search=${search.trim()}&branchId=${branchFilter}&limit=${PAGE_SIZE}&offset=${offset}`
       );
@@ -96,6 +102,12 @@ const AdminBookings = () => {
   };
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  /** Ganti halaman tanpa double-fetch: set state DAN fetch sekaligus */
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    fetchBookings(newPage);
+  };
 
   const handleToggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
@@ -171,7 +183,7 @@ const AdminBookings = () => {
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
-                      onClick={() => setPage(Math.max(0, page - 1))}
+                      onClick={() => handlePageChange(Math.max(0, page - 1))}
                       className={page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                     />
                   </PaginationItem>
@@ -190,7 +202,7 @@ const AdminBookings = () => {
                       <PaginationItem key={pageNum}>
                         <PaginationLink
                           isActive={pageNum === page}
-                          onClick={() => setPage(pageNum)}
+                          onClick={() => handlePageChange(pageNum)}
                           className="cursor-pointer"
                         >
                           {pageNum + 1}
@@ -200,7 +212,7 @@ const AdminBookings = () => {
                   })}
                   <PaginationItem>
                     <PaginationNext
-                      onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                      onClick={() => handlePageChange(Math.min(totalPages - 1, page + 1))}
                       className={page >= totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                     />
                   </PaginationItem>

@@ -282,9 +282,39 @@ router.patch(
   async (req, res) => {
     try {
       const id = req.params.id as string;
-      const { status, notes } = req.body as AdminUpdateBookingStatusInput;
+      const { status: newStatus, notes } = req.body as AdminUpdateBookingStatusInput;
 
-      const updateData: Record<string, any> = { status };
+      // ── State-machine validation ───────────────────────────────────────────
+      // Prevent illegal transitions (e.g. cancelled → completed).
+      const VALID_TRANSITIONS: Record<string, string[]> = {
+        pending:   ["confirmed", "cancelled"],
+        confirmed: ["completed", "cancelled"],
+        completed: [],   // terminal — tidak bisa balik
+        cancelled: [],   // terminal — tidak bisa balik
+      };
+
+      const [current] = await db
+        .select({ status: bookings.status })
+        .from(bookings)
+        .where(eq(bookings.id, id))
+        .limit(1);
+
+      if (!current) {
+        res.status(404).json({ error: "Booking not found" });
+        return;
+      }
+
+      const allowed = VALID_TRANSITIONS[current.status] ?? [];
+      if (current.status !== newStatus && !allowed.includes(newStatus)) {
+        res.status(400).json({
+          error: "Transisi status tidak valid",
+          detail: `Status '${current.status}' tidak bisa diubah ke '${newStatus}'. Transisi yang diizinkan: ${allowed.length ? allowed.join(", ") : "tidak ada (status final)"}`,
+        });
+        return;
+      }
+      // ──────────────────────────────────────────────────────────────────────
+
+      const updateData: Record<string, any> = { status: newStatus };
       if (notes !== undefined) updateData.notes = notes;
 
       const [updated] = await db

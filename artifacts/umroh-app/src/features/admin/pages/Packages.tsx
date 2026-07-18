@@ -209,6 +209,8 @@ const AdminPackages = () => {
 
   const buildPayload = () => {
     // API (Zod/Drizzle) expects camelCase field names.
+    // extraHotels disertakan langsung agar backend bisa menyimpannya
+    // dalam satu transaksi yang sama dengan data paket utama.
     const payload: Record<string, unknown> = {
       title: form.title,
       slug: form.slug || (form.title ?? "").toLowerCase().replace(/\s+/g, "-"),
@@ -225,21 +227,14 @@ const AdminPackages = () => {
       minimumDp: form.minimum_dp,
       dpDeadlineDays: form.dp_deadline_days,
       fullDeadlineDays: form.full_deadline_days,
+      // Extra hotels disertakan dalam payload utama untuk atomic save
+      extraHotels: extraHotels.map((eh, i) => ({
+        hotelId: eh.hotel_id,
+        label: eh.label || null,
+        sortOrder: i,
+      })),
     };
     return payload;
-  };
-
-  const saveExtraHotels = async (packageId: string) => {
-    await apiFetch(`/api/admin/packages/${packageId}/extra-hotels`, {
-      method: "POST",
-      body: JSON.stringify({
-        hotels: extraHotels.map((eh, i) => ({
-          hotelId: eh.hotel_id,
-          label: eh.label || null,
-          sortOrder: i,
-        })),
-      }),
-    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -252,29 +247,16 @@ const AdminPackages = () => {
           method: "PATCH",
           body: JSON.stringify(payload),
         });
-        // Extra hotels saved separately; failure shows warning but doesn't roll back the main save
-        try {
-          await saveExtraHotels(editing.id);
-        } catch {
-          toast({ title: "Paket diupdate, tapi hotel tambahan gagal disimpan", variant: "destructive" });
-        }
         clearDraft();
         toast({ title: "Paket diupdate!" });
         fetchPackages();
         setIsOpen(false);
         resetForm();
       } else {
-        const data = await apiFetch<any>("/api/admin/packages", {
+        await apiFetch<any>("/api/admin/packages", {
           method: "POST",
           body: JSON.stringify(payload),
         });
-        if (data?.id) {
-          try {
-            await saveExtraHotels(data.id);
-          } catch {
-            toast({ title: "Paket ditambahkan, tapi hotel tambahan gagal disimpan", variant: "destructive" });
-          }
-        }
         clearDraft();
         toast({ title: "Paket ditambahkan!" });
         fetchPackages();

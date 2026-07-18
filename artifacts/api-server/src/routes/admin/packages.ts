@@ -52,29 +52,46 @@ router.get("/", async (_req, res) => {
 
 router.post("/", validate(AdminCreatePackageRequest), async (req, res) => {
   try {
-    const body = req.body as AdminCreatePackageInput;
+    const body = req.body as AdminCreatePackageInput & { extraHotels?: Array<{ hotelId: string; label?: string }> };
+    const packageId = crypto.randomUUID();
 
-    const [created] = await db
-      .insert(packages)
-      .values({
-        id: crypto.randomUUID(),
-        title: body.title,
-        slug: body.slug,
-        description: body.description ?? null,
-        imageUrl: body.imageUrl ?? null,
-        durationDays: body.durationDays ?? null,
-        packageType: body.packageType ?? null,
-        categoryId: body.categoryId ?? null,
-        hotelMakkahId: (body as any).hotelMakkahId ?? null,
-        hotelMadinahId: (body as any).hotelMadinahId ?? null,
-        airlineId: (body as any).airlineId ?? null,
-        airportId: (body as any).airportId ?? null,
-        minimumDp: body.minimumDp ?? null,
-        dpDeadlineDays: body.dpDeadlineDays ?? null,
-        fullDeadlineDays: body.fullDeadlineDays ?? null,
-        isActive: body.isActive,
-      })
-      .returning();
+    const created = await db.transaction(async (tx) => {
+      const [pkg] = await tx
+        .insert(packages)
+        .values({
+          id: packageId,
+          title: body.title,
+          slug: body.slug,
+          description: body.description ?? null,
+          imageUrl: body.imageUrl ?? null,
+          durationDays: body.durationDays ?? null,
+          packageType: body.packageType ?? null,
+          categoryId: body.categoryId ?? null,
+          hotelMakkahId: (body as any).hotelMakkahId ?? null,
+          hotelMadinahId: (body as any).hotelMadinahId ?? null,
+          airlineId: (body as any).airlineId ?? null,
+          airportId: (body as any).airportId ?? null,
+          minimumDp: body.minimumDp ?? null,
+          dpDeadlineDays: body.dpDeadlineDays ?? null,
+          fullDeadlineDays: body.fullDeadlineDays ?? null,
+          isActive: body.isActive,
+        })
+        .returning();
+
+      if (body.extraHotels?.length) {
+        await tx.insert(packageHotels).values(
+          body.extraHotels.map((eh, i) => ({
+            id: crypto.randomUUID(),
+            packageId,
+            hotelId: eh.hotelId,
+            label: eh.label ?? null,
+            sortOrder: i,
+          }))
+        );
+      }
+
+      return pkg;
+    });
 
     res.status(201).json(PackageSchema.parse(created));
   } catch (err) {
@@ -168,19 +185,42 @@ router.get("/:id", async (req, res) => {
 router.patch("/:id", validate(AdminUpdatePackageRequest), async (req, res) => {
   try {
     const id = req.params.id as string;
-    const updates = req.body as AdminUpdatePackageInput;
+    const updates = req.body as AdminUpdatePackageInput & { extraHotels?: Array<{ hotelId: string; label?: string }> };
 
-    const [updated] = await db
-      .update(packages)
-      .set({
-        ...updates,
-        hotelMakkahId: (updates as any).hotelMakkahId,
-        hotelMadinahId: (updates as any).hotelMadinahId,
-        airlineId: (updates as any).airlineId,
-        airportId: (updates as any).airportId,
-      } as any)
-      .where(eq(packages.id, id))
-      .returning();
+    const updated = await db.transaction(async (tx) => {
+      const [pkg] = await tx
+        .update(packages)
+        .set({
+          ...updates,
+          hotelMakkahId: (updates as any).hotelMakkahId,
+          hotelMadinahId: (updates as any).hotelMadinahId,
+          airlineId: (updates as any).airlineId,
+          airportId: (updates as any).airportId,
+          extraHotels: undefined, // strip non-column field
+        } as any)
+        .where(eq(packages.id, id))
+        .returning();
+
+      if (!pkg) return null;
+
+      // Sync extra hotels atomically if provided in the request body
+      if (Array.isArray(updates.extraHotels)) {
+        await tx.delete(packageHotels).where(eq(packageHotels.packageId, id));
+        if (updates.extraHotels.length > 0) {
+          await tx.insert(packageHotels).values(
+            updates.extraHotels.map((eh, i) => ({
+              id: crypto.randomUUID(),
+              packageId: id,
+              hotelId: eh.hotelId,
+              label: eh.label ?? null,
+              sortOrder: i,
+            }))
+          );
+        }
+      }
+
+      return pkg;
+    });
 
     if (!updated) {
       res.status(404).json({ error: "Package not found" });

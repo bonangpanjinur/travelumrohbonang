@@ -273,9 +273,9 @@ Tambahkan search/autocomplete untuk pemilihan booking, bukan load semua sekaligu
 | BUG-02 | Paket (Komisi) | 🔴 Critical | 401/400 Unauthorized | ✅ Diperbaiki (migrasi ke apiFetch + endpoint baru) |
 | BUG-02b | Paket (Komisi) | 🔴 Critical | ID mismatch (slug vs UUID) | ✅ Diperbaiki (endpoint pakai UUID langsung) |
 | BUG-03 | Seluruh admin | 🔴 Critical | WebSocket retry loop | ✅ Diperbaiki (realtime.disconnect() di dev) |
-| BUG-04 | Booking | 🟠 Medium | Race condition double-fetch | Belum diperbaiki |
-| BUG-05 | Paket | 🟠 Medium | Inkonsistensi data (extra hotels) | Belum diperbaiki |
-| BUG-06 | Booking Backend | 🟠 Medium | Status transition tidak tervalidasi | Belum diperbaiki |
+| BUG-04 | Booking | 🟠 Medium | Race condition double-fetch | ✅ Diperbaiki (satu effect + handlePageChange) |
+| BUG-05 | Paket | 🟠 Medium | Inkonsistensi data (extra hotels) | ✅ Diperbaiki (atomic transaction POST & PATCH) |
+| BUG-06 | Booking Backend | 🟠 Medium | Status transition tidak tervalidasi | ✅ Diperbaiki (state machine VALID_TRANSITIONS) |
 | BUG-07 | Itinerary | 🟠 Medium | Upload gambar tidak ada | Belum diperbaiki |
 | BUG-08 | Jemaah | 🟡 Low | Validasi form tidak lengkap | Belum diperbaiki |
 | BUG-09 | Manifest | 🟡 Low | Tidak ada paginasi | Belum diperbaiki |
