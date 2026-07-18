@@ -50,13 +50,40 @@ function logDiag(
   });
 }
 
-// When DATABASE_URL is not a real Postgres URL (e.g. Vercel without DATABASE_URL set),
-// fall back to forwarding requests to Supabase's REST API (PostgREST) directly.
+// When DATABASE_URL is not a real externally-reachable Postgres URL, fall back
+// to forwarding requests to Supabase's REST API (PostgREST) directly.
 // This avoids connection timeouts that would cause Vercel serverless functions to 500.
+//
+// Also detects Replit-internal hosts (e.g. "helium") that are only reachable
+// inside the Replit container — connecting to them from Vercel/production causes
+// a 5-second timeout on every query, which manifests as a blanket 500 on all routes.
+//
+// Priority mirrors lib/db/src/index.ts: SUPABASE_DATABASE_URL > DATABASE_URL.
+function _isLocalOnlyDbHost(url: string): boolean {
+  if (!url) return false;
+  try {
+    const host = new URL(url).hostname;
+    // "helium" = Replit internal Postgres — not reachable from Vercel or any external host
+    return (
+      host === "helium" ||
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host.endsWith(".internal") ||
+      host.endsWith(".replit.internal")
+    );
+  } catch {
+    return false; // unparseable URL — let the pool try and fail with a clear error
+  }
+}
+
+const _effectiveDbUrl =
+  process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || "";
+
 const USE_SUPABASE_HTTP =
-  !process.env.DATABASE_URL ||
-  process.env.DATABASE_URL.includes("localhost/placeholder") ||
-  process.env.DATABASE_URL === "postgres://localhost/placeholder";
+  !_effectiveDbUrl ||
+  _effectiveDbUrl.includes("localhost/placeholder") ||
+  _effectiveDbUrl === "postgres://localhost/placeholder" ||
+  _isLocalOnlyDbHost(_effectiveDbUrl);
 
 async function supabaseForward(
   req: Request,
