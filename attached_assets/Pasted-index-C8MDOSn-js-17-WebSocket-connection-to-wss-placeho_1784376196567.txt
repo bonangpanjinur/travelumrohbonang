@@ -1,0 +1,600 @@
+index-C8MDOSn_.js:17 WebSocket connection to 'wss://placeholder.supabase.co/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlha2pwcXFvYmtucm1oZm15YmhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3Mjc5MDEsImV4cCI6MjA5OTMwMzkwMX0.9IUDxJNkf3_y3NuSQ_gzIkHYtRtN_ywFOUpYnt0332I&vsn=2.0.0' failed: 
+transportConnect @ index-C8MDOSn_.js:17
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/currencies?select=*&is_active=eq.true&order=is_default.desc%2Ccode.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=key%2Cvalue&category=eq.appearance&key=in.%28template%29:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/tenant_sites?select=*&subdomain=eq.travelvins&is_active=eq.true:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/currencies?select=*&is_active=eq.true&order=is_default.desc%2Ccode.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=key%2Cvalue&category=eq.appearance&key=in.%28template%29:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/tenant_sites?select=*&subdomain=eq.travelvins&is_active=eq.true:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/currencies?select=*&is_active=eq.true&order=is_default.desc%2Ccode.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=key%2Cvalue&category=eq.appearance&key=in.%28template%29:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/tenant_sites?select=*&subdomain=eq.travelvins&is_active=eq.true:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/currencies?select=*&is_active=eq.true&order=is_default.desc%2Ccode.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=key%2Cvalue&category=eq.appearance&key=in.%28template%29:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/tenant_sites?select=*&subdomain=eq.travelvins&is_active=eq.true:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/tenant_sites?select=*&custom_domain=eq.travelvins.vercel.app&is_active=eq.true:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/tenant_sites?select=*&custom_domain=eq.travelvins.vercel.app&is_active=eq.true:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/tenant_sites?select=*&custom_domain=eq.travelvins.vercel.app&is_active=eq.true:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/tenant_sites?select=*&custom_domain=eq.travelvins.vercel.app&is_active=eq.true:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/branches?select=id%2Cname%2Cslug%2Caddress%2Cphone%2Cemail%2Ccity%2Cregion%2Cpostal_code%2Ccountry%2Clatitude%2Clongitude%2Copening_hours%2Cimage_url%2Cmap_url%2Cdescription&is_active=eq.true&order=name.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2F:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.hero:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/packages?select=id%2Ctitle%2Cslug%2Cimage_url%2Cduration_days%2Cpackage_type%2Ccategory%3Apackage_categories%21packages_category_id_fkey%28id%2Cname%29%2Chotel_makkah%3Ahotels%21packages_hotel_makkah_id_fkey%28star%2Cname%29%2Cairline%3Aairlines%21packages_airline_id_fkey%28id%2Cname%29%2Cairport%3Aairports%21packages_airport_id_fkey%28id%2Cname%2Ccity%29%2Cdepartures%3Apackage_departures%28id%2Cdeparture_date%2Cremaining_quota%2Cprices%3Adeparture_prices%28price%2Croom_type%29%29&is_active=eq.true&order=created_at.desc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/blog_posts?select=id%2Ctitle%2Cslug%2Cexcerpt%2Cimage_url%2Ccategory%2Cauthor%2Cpublished_at%2Ccreated_at&is_published=eq.true&order=published_at.desc&limit=3:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/testimonials?select=*&is_active=eq.true&order=sort_order.asc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/gallery?select=id%2Ctitle%2Cimage_url%2Ccategory&is_active=eq.true&order=sort_order.asc&limit=5:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+/api/cms/site-settings:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:87 Error fetching branding: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async L (index-C8MDOSn_.js:87:102054)
+L @ index-C8MDOSn_.js:87
+/api/cms/pages:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:87 Error fetching dynamic pages: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async D (index-C8MDOSn_.js:87:102262)
+D @ index-C8MDOSn_.js:87
+/api/cms/navigation-items:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:87 Error fetching navigation: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async O (index-C8MDOSn_.js:87:101784)
+O @ index-C8MDOSn_.js:87
+/api/cms/floating-buttons:1  Failed to load resource: the server responded with a status of 500 ()
+/api/cms/site-settings:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:99 Error fetching settings: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async c (index-C8MDOSn_.js:99:22478)
+c @ index-C8MDOSn_.js:99
+/api/cms/pages:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:99 Error fetching dynamic pages: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async u (index-C8MDOSn_.js:99:22771)
+u @ index-C8MDOSn_.js:99
+placeholder.supabase.co/rest/v1/branches?select=id%2Cname%2Cslug%2Caddress%2Cphone%2Cemail%2Ccity%2Cregion%2Cpostal_code%2Ccountry%2Clatitude%2Clongitude%2Copening_hours%2Cimage_url%2Cmap_url%2Cdescription&is_active=eq.true&order=name.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/packages?select=id%2Ctitle%2Cslug%2Cimage_url%2Cduration_days%2Cpackage_type%2Ccategory%3Apackage_categories%21packages_category_id_fkey%28id%2Cname%29%2Chotel_makkah%3Ahotels%21packages_hotel_makkah_id_fkey%28star%2Cname%29%2Cairline%3Aairlines%21packages_airline_id_fkey%28id%2Cname%29%2Cairport%3Aairports%21packages_airport_id_fkey%28id%2Cname%2Ccity%29%2Cdepartures%3Apackage_departures%28id%2Cdeparture_date%2Cremaining_quota%2Cprices%3Adeparture_prices%28price%2Croom_type%29%29&is_active=eq.true&order=created_at.desc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2F:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.hero:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/blog_posts?select=id%2Ctitle%2Cslug%2Cexcerpt%2Cimage_url%2Ccategory%2Cauthor%2Cpublished_at%2Ccreated_at&is_published=eq.true&order=published_at.desc&limit=3:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/gallery?select=id%2Ctitle%2Cimage_url%2Ccategory&is_active=eq.true&order=sort_order.asc&limit=5:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/testimonials?select=*&is_active=eq.true&order=sort_order.asc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+index-C8MDOSn_.js:17 WebSocket connection to 'wss://placeholder.supabase.co/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlha2pwcXFvYmtucm1oZm15YmhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3Mjc5MDEsImV4cCI6MjA5OTMwMzkwMX0.9IUDxJNkf3_y3NuSQ_gzIkHYtRtN_ywFOUpYnt0332I&vsn=2.0.0' failed: 
+transportConnect @ index-C8MDOSn_.js:17
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/packages?select=id%2Ctitle%2Cslug%2Cimage_url%2Cduration_days%2Cpackage_type%2Ccategory%3Apackage_categories%21packages_category_id_fkey%28id%2Cname%29%2Chotel_makkah%3Ahotels%21packages_hotel_makkah_id_fkey%28star%2Cname%29%2Cairline%3Aairlines%21packages_airline_id_fkey%28id%2Cname%29%2Cairport%3Aairports%21packages_airport_id_fkey%28id%2Cname%2Ccity%29%2Cdepartures%3Apackage_departures%28id%2Cdeparture_date%2Cremaining_quota%2Cprices%3Adeparture_prices%28price%2Croom_type%29%29&is_active=eq.true&order=created_at.desc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/branches?select=id%2Cname%2Cslug%2Caddress%2Cphone%2Cemail%2Ccity%2Cregion%2Cpostal_code%2Ccountry%2Clatitude%2Clongitude%2Copening_hours%2Cimage_url%2Cmap_url%2Cdescription&is_active=eq.true&order=name.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2F:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.hero:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/blog_posts?select=id%2Ctitle%2Cslug%2Cexcerpt%2Cimage_url%2Ccategory%2Cauthor%2Cpublished_at%2Ccreated_at&is_published=eq.true&order=published_at.desc&limit=3:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/gallery?select=id%2Ctitle%2Cimage_url%2Ccategory&is_active=eq.true&order=sort_order.asc&limit=5:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/testimonials?select=*&is_active=eq.true&order=sort_order.asc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fauth:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+index-C8MDOSn_.js:17 WebSocket connection to 'wss://placeholder.supabase.co/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlha2pwcXFvYmtucm1oZm15YmhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3Mjc5MDEsImV4cCI6MjA5OTMwMzkwMX0.9IUDxJNkf3_y3NuSQ_gzIkHYtRtN_ywFOUpYnt0332I&vsn=2.0.0' failed: 
+transportConnect @ index-C8MDOSn_.js:17
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fauth:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/packages?select=id%2Ctitle%2Cslug%2Cimage_url%2Cduration_days%2Cpackage_type%2Ccategory%3Apackage_categories%21packages_category_id_fkey%28id%2Cname%29%2Chotel_makkah%3Ahotels%21packages_hotel_makkah_id_fkey%28star%2Cname%29%2Cairline%3Aairlines%21packages_airline_id_fkey%28id%2Cname%29%2Cairport%3Aairports%21packages_airport_id_fkey%28id%2Cname%2Ccity%29%2Cdepartures%3Apackage_departures%28id%2Cdeparture_date%2Cremaining_quota%2Cprices%3Adeparture_prices%28price%2Croom_type%29%29&is_active=eq.true&order=created_at.desc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/branches?select=id%2Cname%2Cslug%2Caddress%2Cphone%2Cemail%2Ccity%2Cregion%2Cpostal_code%2Ccountry%2Clatitude%2Clongitude%2Copening_hours%2Cimage_url%2Cmap_url%2Cdescription&is_active=eq.true&order=name.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2F:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/gallery?select=id%2Ctitle%2Cimage_url%2Ccategory&is_active=eq.true&order=sort_order.asc&limit=5:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/blog_posts?select=id%2Ctitle%2Cslug%2Cexcerpt%2Cimage_url%2Ccategory%2Cauthor%2Cpublished_at%2Ccreated_at&is_published=eq.true&order=published_at.desc&limit=3:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.hero:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/testimonials?select=*&is_active=eq.true&order=sort_order.asc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.background_pattern:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fauth:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.background_pattern:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/auth/v1/token?grant_type=password:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+index-C8MDOSn_.js:23 TypeError: Failed to fetch
+    at index-C8MDOSn_.js:23:2974
+    at qDe (index-C8MDOSn_.js:23:9746)
+    at sr (index-C8MDOSn_.js:23:9542)
+    at I8e.signInWithPassword (index-C8MDOSn_.js:38:20930)
+    at y (index-C8MDOSn_.js:190:11271)
+    at eK (index-C8MDOSn_.js:8:118930)
+    at index-C8MDOSn_.js:8:124258
+    at kc (index-C8MDOSn_.js:8:9071)
+    at KO (index-C8MDOSn_.js:8:120198)
+    at sP (index-C8MDOSn_.js:9:26961)
+qDe @ index-C8MDOSn_.js:23
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.background_pattern:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2F:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/branches?select=id%2Cname%2Cslug%2Caddress%2Cphone%2Cemail%2Ccity%2Cregion%2Cpostal_code%2Ccountry%2Clatitude%2Clongitude%2Copening_hours%2Cimage_url%2Cmap_url%2Cdescription&is_active=eq.true&order=name.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/packages?select=id%2Ctitle%2Cslug%2Cimage_url%2Cduration_days%2Cpackage_type%2Ccategory%3Apackage_categories%21packages_category_id_fkey%28id%2Cname%29%2Chotel_makkah%3Ahotels%21packages_hotel_makkah_id_fkey%28star%2Cname%29%2Cairline%3Aairlines%21packages_airline_id_fkey%28id%2Cname%29%2Cairport%3Aairports%21packages_airport_id_fkey%28id%2Cname%2Ccity%29%2Cdepartures%3Apackage_departures%28id%2Cdeparture_date%2Cremaining_quota%2Cprices%3Adeparture_prices%28price%2Croom_type%29%29&is_active=eq.true&order=created_at.desc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.hero:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/testimonials?select=*&is_active=eq.true&order=sort_order.asc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/blog_posts?select=id%2Ctitle%2Cslug%2Cexcerpt%2Cimage_url%2Ccategory%2Cauthor%2Cpublished_at%2Ccreated_at&is_published=eq.true&order=published_at.desc&limit=3:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/gallery?select=id%2Ctitle%2Cimage_url%2Ccategory&is_active=eq.true&order=sort_order.asc&limit=5:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+index-C8MDOSn_.js:17 WebSocket connection to 'wss://placeholder.supabase.co/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlha2pwcXFvYmtucm1oZm15YmhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3Mjc5MDEsImV4cCI6MjA5OTMwMzkwMX0.9IUDxJNkf3_y3NuSQ_gzIkHYtRtN_ywFOUpYnt0332I&vsn=2.0.0' failed: 
+transportConnect @ index-C8MDOSn_.js:17
+/api/cms/navigation-items:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:87 Error fetching navigation: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async O (index-C8MDOSn_.js:87:101784)
+O @ index-C8MDOSn_.js:87
+/api/cms/site-settings:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:87 Error fetching branding: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async L (index-C8MDOSn_.js:87:102054)
+L @ index-C8MDOSn_.js:87
+/api/cms/pages:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:87 Error fetching dynamic pages: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async D (index-C8MDOSn_.js:87:102262)
+D @ index-C8MDOSn_.js:87
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2F:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/branches?select=id%2Cname%2Cslug%2Caddress%2Cphone%2Cemail%2Ccity%2Cregion%2Cpostal_code%2Ccountry%2Clatitude%2Clongitude%2Copening_hours%2Cimage_url%2Cmap_url%2Cdescription&is_active=eq.true&order=name.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/testimonials?select=*&is_active=eq.true&order=sort_order.asc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.hero:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/packages?select=id%2Ctitle%2Cslug%2Cimage_url%2Cduration_days%2Cpackage_type%2Ccategory%3Apackage_categories%21packages_category_id_fkey%28id%2Cname%29%2Chotel_makkah%3Ahotels%21packages_hotel_makkah_id_fkey%28star%2Cname%29%2Cairline%3Aairlines%21packages_airline_id_fkey%28id%2Cname%29%2Cairport%3Aairports%21packages_airport_id_fkey%28id%2Cname%2Ccity%29%2Cdepartures%3Apackage_departures%28id%2Cdeparture_date%2Cremaining_quota%2Cprices%3Adeparture_prices%28price%2Croom_type%29%29&is_active=eq.true&order=created_at.desc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/blog_posts?select=id%2Ctitle%2Cslug%2Cexcerpt%2Cimage_url%2Ccategory%2Cauthor%2Cpublished_at%2Ccreated_at&is_published=eq.true&order=published_at.desc&limit=3:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/gallery?select=id%2Ctitle%2Cimage_url%2Ccategory&is_active=eq.true&order=sort_order.asc&limit=5:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fauth:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+/api/cms/pages:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:99 Error fetching dynamic pages: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async u (index-C8MDOSn_.js:99:22771)
+u @ index-C8MDOSn_.js:99
+/api/cms/site-settings:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:99 Error fetching settings: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async c (index-C8MDOSn_.js:99:22478)
+c @ index-C8MDOSn_.js:99
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2F:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/branches?select=id%2Cname%2Cslug%2Caddress%2Cphone%2Cemail%2Ccity%2Cregion%2Cpostal_code%2Ccountry%2Clatitude%2Clongitude%2Copening_hours%2Cimage_url%2Cmap_url%2Cdescription&is_active=eq.true&order=name.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/testimonials?select=*&is_active=eq.true&order=sort_order.asc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.hero:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/blog_posts?select=id%2Ctitle%2Cslug%2Cexcerpt%2Cimage_url%2Ccategory%2Cauthor%2Cpublished_at%2Ccreated_at&is_published=eq.true&order=published_at.desc&limit=3:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/packages?select=id%2Ctitle%2Cslug%2Cimage_url%2Cduration_days%2Cpackage_type%2Ccategory%3Apackage_categories%21packages_category_id_fkey%28id%2Cname%29%2Chotel_makkah%3Ahotels%21packages_hotel_makkah_id_fkey%28star%2Cname%29%2Cairline%3Aairlines%21packages_airline_id_fkey%28id%2Cname%29%2Cairport%3Aairports%21packages_airport_id_fkey%28id%2Cname%2Ccity%29%2Cdepartures%3Apackage_departures%28id%2Cdeparture_date%2Cremaining_quota%2Cprices%3Adeparture_prices%28price%2Croom_type%29%29&is_active=eq.true&order=created_at.desc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/gallery?select=id%2Ctitle%2Cimage_url%2Ccategory&is_active=eq.true&order=sort_order.asc&limit=5:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.background_pattern:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fblog:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/blog_posts?select=*&is_published=eq.true&order=published_at.desc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+/api/cms/navigation-items:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:87 Error fetching navigation: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async O (index-C8MDOSn_.js:87:101784)
+O @ index-C8MDOSn_.js:87
+/api/cms/site-settings:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:87 Error fetching branding: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async L (index-C8MDOSn_.js:87:102054)
+L @ index-C8MDOSn_.js:87
+/api/cms/pages:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:87 Error fetching dynamic pages: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async D (index-C8MDOSn_.js:87:102262)
+D @ index-C8MDOSn_.js:87
+/api/cms/pages:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:99 Error fetching dynamic pages: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async u (index-C8MDOSn_.js:99:22771)
+u @ index-C8MDOSn_.js:99
+/api/cms/site-settings:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:99 Error fetching settings: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async c (index-C8MDOSn_.js:99:22478)
+c @ index-C8MDOSn_.js:99
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fblog:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/blog_posts?select=*&is_published=eq.true&order=published_at.desc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/branches?select=id%2Cname%2Cslug%2Caddress%2Cphone%2Cemail%2Ccity%2Cregion%2Cpostal_code%2Ccountry%2Clatitude%2Clongitude%2Copening_hours%2Cimage_url%2Cmap_url%2Cdescription&is_active=eq.true&order=name.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2F:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.hero:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/packages?select=id%2Ctitle%2Cslug%2Cimage_url%2Cduration_days%2Cpackage_type%2Ccategory%3Apackage_categories%21packages_category_id_fkey%28id%2Cname%29%2Chotel_makkah%3Ahotels%21packages_hotel_makkah_id_fkey%28star%2Cname%29%2Cairline%3Aairlines%21packages_airline_id_fkey%28id%2Cname%29%2Cairport%3Aairports%21packages_airport_id_fkey%28id%2Cname%2Ccity%29%2Cdepartures%3Apackage_departures%28id%2Cdeparture_date%2Cremaining_quota%2Cprices%3Adeparture_prices%28price%2Croom_type%29%29&is_active=eq.true&order=created_at.desc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/testimonials?select=*&is_active=eq.true&order=sort_order.asc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/gallery?select=id%2Ctitle%2Cimage_url%2Ccategory&is_active=eq.true&order=sort_order.asc&limit=5:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/blog_posts?select=id%2Ctitle%2Cslug%2Cexcerpt%2Cimage_url%2Ccategory%2Cauthor%2Cpublished_at%2Ccreated_at&is_published=eq.true&order=published_at.desc&limit=3:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+/api/cms/navigation-items:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:87 Error fetching navigation: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async O (index-C8MDOSn_.js:87:101784)
+O @ index-C8MDOSn_.js:87
+/api/cms/site-settings:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:87 Error fetching branding: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async L (index-C8MDOSn_.js:87:102054)
+L @ index-C8MDOSn_.js:87
+/api/cms/pages:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:87 Error fetching dynamic pages: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async D (index-C8MDOSn_.js:87:102262)
+D @ index-C8MDOSn_.js:87
+/api/cms/site-settings:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:99 Error fetching settings: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async c (index-C8MDOSn_.js:99:22478)
+c @ index-C8MDOSn_.js:99
+/api/cms/pages:1  Failed to load resource: the server responded with a status of 500 ()
+index-C8MDOSn_.js:99 Error fetching dynamic pages: Error
+    at Pe (index-C8MDOSn_.js:39:78912)
+    at async u (index-C8MDOSn_.js:99:22771)
+u @ index-C8MDOSn_.js:99
+placeholder.supabase.co/rest/v1/branches?select=id%2Cname%2Cslug%2Caddress%2Cphone%2Cemail%2Ccity%2Cregion%2Cpostal_code%2Ccountry%2Clatitude%2Clongitude%2Copening_hours%2Cimage_url%2Cmap_url%2Cdescription&is_active=eq.true&order=name.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2F:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.hero:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/packages?select=id%2Ctitle%2Cslug%2Cimage_url%2Cduration_days%2Cpackage_type%2Ccategory%3Apackage_categories%21packages_category_id_fkey%28id%2Cname%29%2Chotel_makkah%3Ahotels%21packages_hotel_makkah_id_fkey%28star%2Cname%29%2Cairline%3Aairlines%21packages_airline_id_fkey%28id%2Cname%29%2Cairport%3Aairports%21packages_airport_id_fkey%28id%2Cname%2Ccity%29%2Cdepartures%3Apackage_departures%28id%2Cdeparture_date%2Cremaining_quota%2Cprices%3Adeparture_prices%28price%2Croom_type%29%29&is_active=eq.true&order=created_at.desc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/blog_posts?select=id%2Ctitle%2Cslug%2Cexcerpt%2Cimage_url%2Ccategory%2Cauthor%2Cpublished_at%2Ccreated_at&is_published=eq.true&order=published_at.desc&limit=3:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/testimonials?select=*&is_active=eq.true&order=sort_order.asc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/gallery?select=id%2Ctitle%2Cimage_url%2Ccategory&is_active=eq.true&order=sort_order.asc&limit=5:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2F:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/branches?select=id%2Cname%2Cslug%2Caddress%2Cphone%2Cemail%2Ccity%2Cregion%2Cpostal_code%2Ccountry%2Clatitude%2Clongitude%2Copening_hours%2Cimage_url%2Cmap_url%2Cdescription&is_active=eq.true&order=name.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/testimonials?select=*&is_active=eq.true&order=sort_order.asc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.hero:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/packages?select=id%2Ctitle%2Cslug%2Cimage_url%2Cduration_days%2Cpackage_type%2Ccategory%3Apackage_categories%21packages_category_id_fkey%28id%2Cname%29%2Chotel_makkah%3Ahotels%21packages_hotel_makkah_id_fkey%28star%2Cname%29%2Cairline%3Aairlines%21packages_airline_id_fkey%28id%2Cname%29%2Cairport%3Aairports%21packages_airport_id_fkey%28id%2Cname%2Ccity%29%2Cdepartures%3Apackage_departures%28id%2Cdeparture_date%2Cremaining_quota%2Cprices%3Adeparture_prices%28price%2Croom_type%29%29&is_active=eq.true&order=created_at.desc&limit=6:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/blog_posts?select=id%2Ctitle%2Cslug%2Cexcerpt%2Cimage_url%2Ccategory%2Cauthor%2Cpublished_at%2Ccreated_at&is_published=eq.true&order=published_at.desc&limit=3:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/gallery?select=id%2Ctitle%2Cimage_url%2Ccategory&is_active=eq.true&order=sort_order.asc&limit=5:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.background_pattern:1  Failed to load resource: net::ERR_NAME_NOT_RESOLVED
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fblog net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/blog_posts?select=*&is_published=eq.true&order=published_at.desc net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+then @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.background_pattern net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/branches?select=id%2Cname%2Cslug%2Caddress%2Cphone%2Cemail%2Ccity%2Cregion%2Cpostal_code%2Ccountry%2Clatitude%2Clongitude%2Copening_hours%2Cimage_url%2Cmap_url%2Cdescription&is_active=eq.true&order=name.asc net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2F net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.hero net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/packages?select=id%2Ctitle%2Cslug%2Cimage_url%2Cduration_days%2Cpackage_type%2Ccategory%3Apackage_categories%21packages_category_id_fkey%28id%2Cname%29%2Chotel_makkah%3Ahotels%21packages_hotel_makkah_id_fkey%28star%2Cname%29%2Cairline%3Aairlines%21packages_airline_id_fkey%28id%2Cname%29%2Cairport%3Aairports%21packages_airport_id_fkey%28id%2Cname%2Ccity%29%2Cdepartures%3Apackage_departures%28id%2Cdeparture_date%2Cremaining_quota%2Cprices%3Adeparture_prices%28price%2Croom_type%29%29&is_active=eq.true&order=created_at.desc&limit=6 net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/blog_posts?select=id%2Ctitle%2Cslug%2Cexcerpt%2Cimage_url%2Ccategory%2Cauthor%2Cpublished_at%2Ccreated_at&is_published=eq.true&order=published_at.desc&limit=3 net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/testimonials?select=*&is_active=eq.true&order=sort_order.asc&limit=6 net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/gallery?select=id%2Ctitle%2Cimage_url%2Ccategory&is_active=eq.true&order=sort_order.asc&limit=5 net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+await in (anonymous)
+then @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.background_pattern net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:17 WebSocket connection to 'wss://placeholder.supabase.co/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlha2pwcXFvYmtucm1oZm15YmhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3Mjc5MDEsImV4cCI6MjA5OTMwMzkwMX0.9IUDxJNkf3_y3NuSQ_gzIkHYtRtN_ywFOUpYnt0332I&vsn=2.0.0' failed: 
+transportConnect @ index-C8MDOSn_.js:17
+connect @ index-C8MDOSn_.js:17
+connect @ index-C8MDOSn_.js:17
+connect @ index-C8MDOSn_.js:22
+_reconnectAuth @ index-C8MDOSn_.js:22
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+await in (anonymous)
+then @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2Fblog net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/blog_posts?select=*&is_published=eq.true&order=published_at.desc net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:363 Error fetching blog posts: {message: 'TypeError: Failed to fetch', details: 'TypeError: Failed to fetch\n    at fetch (https://t…vins.vercel.app/assets/index-C8MDOSn_.js:363:7897', hint: '', code: ''}
+(anonymous) @ index-C8MDOSn_.js:363
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/seo_overrides?select=title%2Cdescription%2Cog_image%2Ccanonical_override%2Cnoindex%2Ckeywords&path=eq.%2F net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/branches?select=id%2Cname%2Cslug%2Caddress%2Cphone%2Cemail%2Ccity%2Cregion%2Cpostal_code%2Ccountry%2Clatitude%2Clongitude%2Copening_hours%2Cimage_url%2Cmap_url%2Cdescription&is_active=eq.true&order=name.asc net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.seo net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.hero net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.branding&category=eq.general net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/packages?select=id%2Ctitle%2Cslug%2Cimage_url%2Cduration_days%2Cpackage_type%2Ccategory%3Apackage_categories%21packages_category_id_fkey%28id%2Cname%29%2Chotel_makkah%3Ahotels%21packages_hotel_makkah_id_fkey%28star%2Cname%29%2Cairline%3Aairlines%21packages_airline_id_fkey%28id%2Cname%29%2Cairport%3Aairports%21packages_airport_id_fkey%28id%2Cname%2Ccity%29%2Cdepartures%3Apackage_departures%28id%2Cdeparture_date%2Cremaining_quota%2Cprices%3Adeparture_prices%28price%2Croom_type%29%29&is_active=eq.true&order=created_at.desc&limit=6 net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/blog_posts?select=id%2Ctitle%2Cslug%2Cexcerpt%2Cimage_url%2Ccategory%2Cauthor%2Cpublished_at%2Ccreated_at&is_published=eq.true&order=published_at.desc&limit=3 net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/testimonials?select=*&is_active=eq.true&order=sort_order.asc&limit=6 net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/gallery?select=id%2Ctitle%2Cimage_url%2Ccategory&is_active=eq.true&order=sort_order.asc&limit=5 net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.background_pattern net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+then @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.background_pattern net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+await in (anonymous)
+then @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.background_pattern net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+await in (anonymous)
+then @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.background_pattern net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+await in (anonymous)
+then @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+then @ index-C8MDOSn_.js:11
+setTimeout
+setTimeout @ index-C8MDOSn_.js:9
+setTimeout @ index-C8MDOSn_.js:9
+(anonymous) @ index-C8MDOSn_.js:9
+GPe @ index-C8MDOSn_.js:9
+(anonymous) @ index-C8MDOSn_.js:9
+Promise.catch
+y @ index-C8MDOSn_.js:9
+(anonymous) @ index-C8MDOSn_.js:9
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+await in (anonymous)
+then @ index-C8MDOSn_.js:11
+setTimeout
+setTimeout @ index-C8MDOSn_.js:9
+setTimeout @ index-C8MDOSn_.js:9
+(anonymous) @ index-C8MDOSn_.js:9
+GPe @ index-C8MDOSn_.js:9
+(anonymous) @ index-C8MDOSn_.js:9
+Promise.catch
+y @ index-C8MDOSn_.js:9
+(anonymous) @ index-C8MDOSn_.js:9
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/site_settings?select=value&key=eq.background_pattern net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+await in (anonymous)
+then @ index-C8MDOSn_.js:11
+index-C8MDOSn_.js:39  GET https://placeholder.supabase.co/rest/v1/faqs?select=*&is_active=eq.true&order=sort_order.asc net::ERR_NAME_NOT_RESOLVED
+fetch @ index-C8MDOSn_.js:39
+await in fetch
+(anonymous) @ index-C8MDOSn_.js:39
+(anonymous) @ index-C8MDOSn_.js:39
+await in (anonymous)
+(anonymous) @ index-C8MDOSn_.js:11
+await in (anonymous)
+then @ index-C8MDOSn_.js:11
+setTimeout
+setTimeout @ index-C8MDOSn_.js:9
+setTimeout @ index-C8MDOSn_.js:9
+(anonymous) @ index-C8MDOSn_.js:9
+GPe @ index-C8MDOSn_.js:9
+(anonymous) @ index-C8MDOSn_.js:9
+Promise.catch
+y @ index-C8MDOSn_.js:9
+(anonymous) @ index-C8MDOSn_.js:9
+index-C8MDOSn_.js:17 WebSocket connection to 'wss://place
