@@ -270,6 +270,7 @@ const AdminDepartures = () => {
                     <SelectContent>
                       <SelectItem value="active">Aktif</SelectItem>
                       <SelectItem value="closed">Ditutup</SelectItem>
+                      <SelectItem value="penuh">Penuh</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -371,11 +372,18 @@ const AdminDepartures = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      dep.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                    }`}>
-                      {dep.status === "active" ? "Aktif" : "Ditutup"}
-                    </span>
+                    {(() => {
+                      const eff = dep.remaining_quota === 0 || dep.status === "penuh" ? "penuh" : dep.status;
+                      return (
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          eff === "active" ? "bg-green-100 text-green-800"
+                          : eff === "penuh" ? "bg-red-100 text-red-800"
+                          : "bg-gray-100 text-gray-800"
+                        }`}>
+                          {eff === "active" ? "Aktif" : eff === "penuh" ? "Penuh" : "Ditutup"}
+                        </span>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download, Plus, Pencil, Loader2, Upload, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download, Plus, Pencil, Loader2, Upload, AlertCircle, CheckCircle2, FileText, Trash2, ExternalLink } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import { Badge } from "@/shared/components/ui/badge";
 import { format } from "date-fns";
@@ -118,6 +118,13 @@ const AdminPilgrims = () => {
   // Form dialog
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // ── Dokumen Jemaah (P3-04) ───────────────────────────────────────────────
+  const [docDialogOpen, setDocDialogOpen] = useState(false);
+  const [docPilgrim, setDocPilgrim] = useState<Pilgrim | null>(null);
+  const [pilgrimDocs, setPilgrimDocs] = useState<any[]>([]);
+  const [docLoading, setDocLoading] = useState(false);
+  const [docUploading, setDocUploading] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
@@ -297,6 +304,82 @@ const AdminPilgrims = () => {
     setDetailOpen(true);
   };
 
+  // ── P3-04: Dokumen Jemaah helpers ────────────────────────────────────────
+  const openDocDialog = async (pilgrim: Pilgrim) => {
+    setDocPilgrim(pilgrim);
+    setDocDialogOpen(true);
+    setDocLoading(true);
+    try {
+      const res = await apiFetch<{ data: any[] }>(`/api/admin/pilgrim-documents?pilgrimId=${pilgrim.id}`);
+      setPilgrimDocs(res.data || []);
+    } catch {
+      toast({ title: "Gagal memuat dokumen", variant: "destructive" });
+    } finally {
+      setDocLoading(false);
+    }
+  };
+
+  const uploadDocFile = async (file: File, pilgrimId: string, docType: string): Promise<string> => {
+    const ext = file.name.split(".").pop() || "bin";
+    const filename = `${pilgrimId}-${docType}-${Date.now()}.${ext}`;
+    const apiBase = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+    const res = await fetch(`${apiBase}/object/pilgrim-docs/${filename}`, {
+      method: "PUT",
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("Upload file gagal");
+    return `${apiBase}/object/public/pilgrim-docs/${filename}`;
+  };
+
+  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>, docType: string) => {
+    const file = e.target.files?.[0];
+    if (!file || !docPilgrim) return;
+    setDocUploading(docType);
+    try {
+      const fileUrl = await uploadDocFile(file, docPilgrim.id, docType);
+      await apiFetch("/api/admin/pilgrim-documents", {
+        method: "PUT",
+        body: JSON.stringify({ pilgrimId: docPilgrim.id, bookingId: docPilgrim.bookingId || null, documentType: docType, fileUrl, status: "submitted" }),
+      });
+      toast({ title: `Dokumen ${docType} berhasil diupload` });
+      const res = await apiFetch<{ data: any[] }>(`/api/admin/pilgrim-documents?pilgrimId=${docPilgrim.id}`);
+      setPilgrimDocs(res.data || []);
+    } catch (err: any) {
+      toast({ title: "Gagal upload dokumen", description: err.message, variant: "destructive" });
+    } finally {
+      setDocUploading(null);
+      e.target.value = "";
+    }
+  };
+
+  const handleDocVerify = async (docId: string) => {
+    try {
+      const doc = pilgrimDocs.find((d: any) => d.id === docId);
+      if (!doc || !docPilgrim) return;
+      await apiFetch("/api/admin/pilgrim-documents", {
+        method: "PUT",
+        body: JSON.stringify({ pilgrimId: docPilgrim.id, documentType: doc.documentType, fileUrl: doc.fileUrl, status: "verified" }),
+      });
+      toast({ title: "Dokumen diverifikasi" });
+      const res = await apiFetch<{ data: any[] }>(`/api/admin/pilgrim-documents?pilgrimId=${docPilgrim.id}`);
+      setPilgrimDocs(res.data || []);
+    } catch (err: any) {
+      toast({ title: "Gagal verifikasi", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleDocDelete = async (docId: string) => {
+    try {
+      await apiFetch(`/api/admin/pilgrim-documents/${docId}`, { method: "DELETE" });
+      toast({ title: "Dokumen dihapus" });
+      setPilgrimDocs((prev) => prev.filter((d: any) => d.id !== docId));
+    } catch (err: any) {
+      toast({ title: "Gagal menghapus dokumen", description: err.message, variant: "destructive" });
+    }
+  };
+
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case "confirmed": return "bg-success/10 text-success border-success/20";
@@ -472,6 +555,9 @@ const AdminPilgrims = () => {
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => showDetail(pilgrim)} title="Detail">
                             <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => openDocDialog(pilgrim)} title="Kelola Dokumen">
+                            <FileText className="w-4 h-4 text-blue-500" />
                           </Button>
                         </div>
                       </TableCell>
@@ -876,6 +962,78 @@ const AdminPilgrims = () => {
                   <Pencil className="w-4 h-4 mr-2" /> Edit Jemaah
                 </Button>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dokumen Dialog (P3-04) ── */}
+      <Dialog open={docDialogOpen} onOpenChange={(o) => { setDocDialogOpen(o); if (!o) { setDocPilgrim(null); setPilgrimDocs([]); } }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Dokumen — {docPilgrim?.name}</DialogTitle>
+          </DialogHeader>
+          {docLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {["paspor", "ktp", "foto", "visa", "vaksin"].map((docType) => {
+                const doc = pilgrimDocs.find((d: any) => d.documentType === docType);
+                const isUp = docUploading === docType;
+                return (
+                  <div key={docType} className="flex items-center justify-between p-3 border border-border rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium capitalize text-sm">{docType}</p>
+                      {doc ? (
+                        <span className={`text-xs px-2 py-0.5 rounded-full inline-block mt-0.5 ${
+                          doc.status === "verified" ? "bg-green-100 text-green-700"
+                          : doc.status === "submitted" ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-600"
+                        }`}>
+                          {doc.status === "verified" ? "✓ Terverifikasi" : doc.status === "submitted" ? "Diserahkan" : doc.status}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Belum ada dokumen</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 ml-3">
+                      {doc?.fileUrl && (
+                        <>
+                          <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="ghost" size="icon" type="button" title="Lihat file">
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </Button>
+                          </a>
+                          {doc.status !== "verified" && (
+                            <Button variant="ghost" size="icon" type="button" title="Verifikasi" onClick={() => handleDocVerify(doc.id)}>
+                              <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" type="button" title="Hapus" onClick={() => handleDocDelete(doc.id)}>
+                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                          </Button>
+                        </>
+                      )}
+                      <div className="relative">
+                        <Button variant="outline" size="sm" type="button" disabled={isUp} className="text-xs h-7 px-2">
+                          {isUp ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Upload className="w-3 h-3 mr-1" />}
+                          {doc ? "Ganti" : "Upload"}
+                        </Button>
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.pdf"
+                          onChange={(e) => handleDocUpload(e, docType)}
+                          disabled={isUp}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-xs text-muted-foreground pt-1">Format: JPG, PNG, PDF. Maksimal 15MB.</p>
             </div>
           )}
         </DialogContent>

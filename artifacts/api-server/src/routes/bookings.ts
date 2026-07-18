@@ -15,6 +15,7 @@ import {
   and,
   desc,
   asc,
+  sql,
 } from "@workspace/db";
 import { emailNotifications } from "../lib/notifications/emailNotifications";
 import { waNotifications } from "../lib/notifications/waNotifications";
@@ -303,26 +304,26 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
       return;
     }
     const userId = req.user.id;
-    const bookingCode = generateBookingCode();
-    const bookingId = crypto.randomUUID();
 
-    // Optional loyalty point redemption — discount applied before insert.
-    let finalPrice = totalPrice;
-    if (redeemPoints) {
-      try {
-        const { discount } = await redeemLoyaltyPointsForBooking(
-          userId,
-          redeemPoints,
-          bookingId,
-        );
-        finalPrice = Math.max(0, totalPrice - discount);
-      } catch (err) {
-        res.status(400).json({
-          error: err instanceof Error ? err.message : "Gagal menukar poin",
-        });
+    // P3-10: Validasi kapasitas keberangkatan sebelum booking dibuat
+    if (departureId) {
+      const [dep] = await db
+        .select({ remainingQuota: packageDepartures.remainingQuota, status: packageDepartures.status })
+        .from(packageDepartures)
+        .where(eq(packageDepartures.id, departureId))
+        .limit(1);
+      if (!dep) {
+        res.status(404).json({ error: "Keberangkatan tidak ditemukan" });
+        return;
+      }
+      if (dep.remainingQuota <= 0 || dep.status === "penuh") {
+        res.status(409).json({ error: "Maaf, kapasitas keberangkatan ini sudah penuh. Silakan pilih jadwal lain." });
         return;
       }
     }
+
+    const bookingCode = generateBookingCode();
+    const bookingId = crypto.randomUUID();
 
     const {
       isGroupBooking,
@@ -332,30 +333,69 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
       picEmail: groupPicEmail,
     } = req.body as CreateBookingInput;
 
-    const [created] = await db
-      .insert(bookings)
-      .values({
-        id: bookingId,
-        bookingCode,
-        userId,
-        packageId,
-        departureId,
-        totalPrice: finalPrice,
-        currency,
-        paymentScheme: paymentScheme ?? null,
-        notes: notes ?? null,
-        status: "draft",
-        picType: picType ?? null,
-        picId: picId ?? null,
-        agentId: agentId ?? null,
-        isGroupBooking: isGroupBooking ?? false,
-        groupName: groupName ?? null,
-        picName: groupPicName ?? null,
-        picPhone: groupPicPhone ?? null,
-        picEmail: groupPicEmail ?? null,
-        createdAt: new Date(),
-      })
-      .returning();
+    // P3-10: All writes — quota decrement, loyalty redemption, booking insert —
+    // happen in ONE atomic transaction so they all succeed or all roll back.
+    // The quota UPDATE uses WHERE remaining_quota > 0 to prevent last-seat races.
+    const created = await db.transaction(async (tx) => {
+      if (departureId) {
+        const decremented = await tx.execute(sql`
+          UPDATE package_departures
+          SET
+            remaining_quota = remaining_quota - 1,
+            status = CASE WHEN remaining_quota - 1 <= 0 THEN 'penuh' ELSE status END
+          WHERE id = ${departureId} AND remaining_quota > 0
+          RETURNING id
+        `);
+        const updatedRows = (decremented as any).rows ?? decremented;
+        if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+          const err = new Error(
+            "Maaf, kapasitas keberangkatan ini sudah penuh. Silakan pilih jadwal lain.",
+          );
+          (err as any).code = "CAPACITY_FULL";
+          throw err;
+        }
+      }
+
+      // Loyalty point redemption inside the same tx — rolled back automatically
+      // if the subsequent booking insert fails (no dangling deductions).
+      let finalPrice = totalPrice;
+      if (redeemPoints) {
+        try {
+          const { discount } = await redeemLoyaltyPointsForBooking(userId, redeemPoints, bookingId, tx);
+          finalPrice = Math.max(0, totalPrice - discount);
+        } catch (err: any) {
+          const wrapped = new Error(err instanceof Error ? err.message : "Gagal menukar poin");
+          (wrapped as any).code = "REDEMPTION_FAIL";
+          throw wrapped;
+        }
+      }
+
+      const [row] = await tx
+        .insert(bookings)
+        .values({
+          id: bookingId,
+          bookingCode,
+          userId,
+          packageId,
+          departureId,
+          totalPrice: finalPrice,
+          currency,
+          paymentScheme: paymentScheme ?? null,
+          notes: notes ?? null,
+          status: "draft",
+          picType: picType ?? null,
+          picId: picId ?? null,
+          agentId: agentId ?? null,
+          isGroupBooking: isGroupBooking ?? false,
+          groupName: groupName ?? null,
+          picName: groupPicName ?? null,
+          picPhone: groupPicPhone ?? null,
+          picEmail: groupPicEmail ?? null,
+          createdAt: new Date(),
+        })
+        .returning();
+      return row;
+    });
 
     res.status(201).json(BookingSchema.parse(created));
 
@@ -366,7 +406,15 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
     if (requiresInstallmentSchedule(paymentScheme)) {
       void generateInstallmentSchedule(created.id, packageId);
     }
-  } catch {
+  } catch (err: any) {
+    if (err?.code === "CAPACITY_FULL") {
+      res.status(409).json({ error: err.message });
+      return;
+    }
+    if (err?.code === "REDEMPTION_FAIL") {
+      res.status(400).json({ error: err.message });
+      return;
+    }
     res.status(500).json({ error: "Failed to create booking" });
   }
 });

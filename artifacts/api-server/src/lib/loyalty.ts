@@ -84,17 +84,21 @@ export async function awardLoyaltyPointsForBooking(
  * Redeem points for a discount on a new booking. Deducts the points from
  * the user's balance and records a negative ledger entry. Returns the
  * discount amount in IDR. Throws on insufficient balance / invalid amount.
+ *
+ * Pass an existing Drizzle `tx` to participate in an outer transaction so
+ * that point deduction is rolled back automatically if booking creation fails.
  */
 export async function redeemLoyaltyPointsForBooking(
   userId: string,
   points: number,
   bookingId: string,
+  existingTx?: any,
 ): Promise<{ discount: number }> {
   if (!Number.isInteger(points) || points < MIN_REDEEM_POINTS) {
     throw new Error(`Minimum penukaran adalah ${MIN_REDEEM_POINTS} poin`);
   }
 
-  return await db.transaction(async (tx) => {
+  const run = async (tx: any): Promise<{ discount: number }> => {
     const [balance] = await tx
       .select()
       .from(loyaltyBalances)
@@ -119,5 +123,7 @@ export async function redeemLoyaltyPointsForBooking(
     });
 
     return { discount: points * IDR_PER_POINT };
-  });
+  };
+
+  return existingTx ? run(existingTx) : db.transaction(run);
 }

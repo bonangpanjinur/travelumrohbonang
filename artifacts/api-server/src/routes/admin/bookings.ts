@@ -28,9 +28,67 @@ import { awardLoyaltyPointsForBooking } from "../../lib/loyalty";
 
 const router = Router();
 
+router.get("/export.xlsx", async (req, res) => {
+  try {
+    const { status, search, branchId, startDate, endDate } = req.query;
+
+    const conditions: ReturnType<typeof sql>[] = [];
+    if (status && typeof status === "string" && status !== "all") conditions.push(sql`b.status = ${status}`);
+    if (search && typeof search === "string") conditions.push(sql`b.booking_code ILIKE ${"%" + search + "%"}`);
+    if (branchId && typeof branchId === "string" && branchId !== "__all__") {
+      if (branchId === "__none__") conditions.push(sql`b.branch_id IS NULL`);
+      else conditions.push(sql`b.branch_id = ${branchId}`);
+    }
+    if (startDate && typeof startDate === "string") conditions.push(sql`dep.departure_date >= ${startDate}`);
+    if (endDate && typeof endDate === "string") conditions.push(sql`dep.departure_date <= ${endDate}`);
+
+    const whereClause = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
+
+    const dataResult = await db.execute(sql`
+      SELECT
+        b.booking_code AS "Kode Booking",
+        prof.name      AS "Nama Jamaah",
+        prof.email     AS "Email",
+        prof.phone     AS "Telepon",
+        pkg.title      AS "Paket",
+        dep.departure_date AS "Tgl Berangkat",
+        br.name        AS "Cabang",
+        b.status       AS "Status",
+        b.total_price  AS "Total Harga",
+        b.payment_scheme AS "Skema",
+        b.created_at   AS "Dibuat"
+      FROM bookings b
+      LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
+      LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
+      LEFT JOIN profiles           prof ON prof.id = b.user_id
+      LEFT JOIN branches           br   ON br.id   = b.branch_id
+      ${whereClause}
+      ORDER BY b.created_at DESC
+      LIMIT 5000
+    `);
+
+    const rows = (dataResult as any).rows ?? dataResult;
+    const ExcelJSMod = await import("exceljs");
+    const ExcelJSCtor = (ExcelJSMod as any).default ?? ExcelJSMod;
+    const wb = new ExcelJSCtor.Workbook();
+    const ws = wb.addWorksheet("Booking");
+    if (rows.length > 0) {
+      ws.columns = Object.keys(rows[0]).map((k) => ({ header: k, key: k, width: 22 }));
+      ws.getRow(1).font = { bold: true };
+      rows.forEach((r: any) => ws.addRow(r));
+    }
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="bookings-export.xlsx"`);
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (e) {
+    sendAdminError(res, "GET /api/admin/bookings/export.xlsx", e);
+  }
+});
+
 router.get("/", async (req, res) => {
   try {
-    const { status, userId, search, branchId, limit, offset } = req.query;
+    const { status, userId, search, branchId, limit, offset, startDate, endDate } = req.query;
 
     // Build WHERE conditions with Drizzle sql template (parameterised, injection-safe)
     const conditions: ReturnType<typeof sql>[] = [];
@@ -50,6 +108,12 @@ router.get("/", async (req, res) => {
       } else if (branchId !== "__all__") {
         conditions.push(sql`b.branch_id = ${branchId}`);
       }
+    }
+    if (startDate && typeof startDate === "string") {
+      conditions.push(sql`dep.departure_date >= ${startDate}`);
+    }
+    if (endDate && typeof endDate === "string") {
+      conditions.push(sql`dep.departure_date <= ${endDate}`);
     }
 
     const whereClause = conditions.length > 0
@@ -100,6 +164,7 @@ router.get("/", async (req, res) => {
       db.execute(sql`
         SELECT COUNT(*)::int AS count
         FROM bookings b
+        LEFT JOIN package_departures dep ON dep.id = b.departure_id
         ${whereClause}
       `),
     ]);

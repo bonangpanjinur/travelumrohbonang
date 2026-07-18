@@ -47,6 +47,7 @@ import adminRoomAssignmentRouter from "./room-assignment";
 import adminSocialKitRouter from "./social-kit";
 import adminInstallmentsRouter from "./installments";
 import adminItinerariesRouter from "./itineraries";
+import adminPilgrimDocumentsRouter from "./pilgrim-documents";
 
 const router = Router();
 
@@ -115,5 +116,8 @@ router.use("/installments", requireOperational, adminInstallmentsRouter);
 
 // ── Itineraries (sprint-1: moved from /rest/v1 to proper admin route) ────────
 router.use("/itineraries", requireStaff, adminItinerariesRouter);
+
+// ── P3-04: Admin document management (no ownership check, admin only) ─────────
+router.use("/pilgrim-documents", requireStaff, adminPilgrimDocumentsRouter);
 
 export default router;

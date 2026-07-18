@@ -182,6 +182,27 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+/**
+ * PATCH /api/admin/packages/bulk-status  (P3-07)
+ * Body: { ids: string[], isActive: boolean }
+ * Bulk-activate or bulk-deactivate packages.
+ */
+router.patch("/bulk-status", async (req, res) => {
+  try {
+    const { ids, isActive } = req.body as { ids: string[]; isActive: boolean };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(422).json({ error: "ids harus berupa array dan tidak boleh kosong" });
+    }
+    if (typeof isActive !== "boolean") {
+      return res.status(422).json({ error: "isActive harus boolean" });
+    }
+    await db.update(packages).set({ isActive }).where(inArray(packages.id, ids));
+    return res.json({ updated: ids.length });
+  } catch (err) {
+    return sendAdminError(res, "PATCH /api/admin/packages/bulk-status", err);
+  }
+});
+
 router.patch("/:id", validate(AdminUpdatePackageRequest), async (req, res) => {
   try {
     const id = req.params.id as string;
@@ -346,6 +367,77 @@ router.put("/:id/commissions", async (req, res) => {
   } catch (err) {
     console.error("[packages] PUT /:id/commissions:", err);
     res.status(500).json({ error: "Failed to update commissions" });
+  }
+});
+
+/**
+ * POST /api/admin/packages/:id/clone  (P3-08)
+ * Duplikat paket beserta extra-hotels-nya. Slug dan title diberi suffix " (Kopi)".
+ */
+router.post("/:id/clone", async (req, res) => {
+  try {
+    const sourceId = req.params.id as string;
+
+    const cloneQueryResult = await db.execute(sql`
+      SELECT
+        title, slug, description, image_url, duration_days, package_type,
+        category_id, hotel_makkah_id, hotel_madinah_id, airline_id, airport_id,
+        minimum_dp, dp_deadline_days, full_deadline_days, required_doc_types
+      FROM packages WHERE id = ${sourceId}
+    `);
+    const cloneRows = (cloneQueryResult as any).rows ?? cloneQueryResult;
+    const src = cloneRows[0] as any;
+
+    if (!src) return res.status(404).json({ error: "Package not found" });
+    const newId = crypto.randomUUID();
+    const newTitle = `${src.title} (Kopi)`;
+    const baseSlug = `${(src.slug || "paket")}-kopi`;
+    // Ensure slug uniqueness by appending a short random suffix
+    const newSlug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
+
+    const extras = await db
+      .select()
+      .from(packageHotels)
+      .where(eq(packageHotels.packageId, sourceId))
+      .orderBy(asc(packageHotels.sortOrder));
+
+    await db.transaction(async (tx) => {
+      await tx.insert(packages).values({
+        id: newId,
+        title: newTitle,
+        slug: newSlug,
+        description: src.description ?? null,
+        imageUrl: src.image_url ?? null,
+        durationDays: src.duration_days ?? null,
+        packageType: src.package_type ?? null,
+        categoryId: src.category_id ?? null,
+        hotelMakkahId: src.hotel_makkah_id ?? null,
+        hotelMadinahId: src.hotel_madinah_id ?? null,
+        airlineId: src.airline_id ?? null,
+        airportId: src.airport_id ?? null,
+        minimumDp: src.minimum_dp ?? null,
+        dpDeadlineDays: src.dp_deadline_days ?? null,
+        fullDeadlineDays: src.full_deadline_days ?? null,
+        requiredDocTypes: src.required_doc_types ?? null,
+        isActive: false, // kopi dimulai sebagai nonaktif
+      });
+
+      if (extras.length > 0) {
+        await tx.insert(packageHotels).values(
+          extras.map((eh, i) => ({
+            id: crypto.randomUUID(),
+            packageId: newId,
+            hotelId: eh.hotelId,
+            label: eh.label ?? null,
+            sortOrder: i,
+          }))
+        );
+      }
+    });
+
+    res.status(201).json({ id: newId, title: newTitle, slug: newSlug });
+  } catch (err) {
+    return sendAdminError(res, "POST /api/admin/packages/:id/clone", err);
   }
 });
 

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Hotel, X, Search, Download, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Hotel, X, Search, Download, ExternalLink, Copy } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import { Link } from "react-router-dom";
 import PackageCommissions from "@/features/admin/components/PackageCommissions";
@@ -108,6 +108,7 @@ const AdminPackages = () => {
   const [search, setSearch] = useState("");
   const { toast } = useToast();
   const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const filteredPackages = packages.filter((p) =>
     (p.title ?? "").toLowerCase().includes(search.toLowerCase()) ||
@@ -309,6 +310,43 @@ const AdminPackages = () => {
     setExtraHotels([]);
     setForm(EMPTY_FORM);
     clearDraft();
+  };
+
+  // ── P3-07: Bulk Status ─────────────────────────────────────────────────────
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
+  const toggleSelectAll = () => {
+    setSelectedIds(selectedIds.length === paginatedItems.length && paginatedItems.length > 0
+      ? [] : paginatedItems.map((p) => p.id));
+  };
+  const handleBulkStatus = async (isActive: boolean) => {
+    if (selectedIds.length === 0) return;
+    try {
+      await apiFetch("/api/admin/packages/bulk-status", {
+        method: "PATCH",
+        body: JSON.stringify({ ids: selectedIds, isActive }),
+      });
+      toast({ title: `${selectedIds.length} paket ${isActive ? "diaktifkan" : "dinonaktifkan"}` });
+      setSelectedIds([]);
+      fetchPackages();
+    } catch (err: any) {
+      toast({ title: "Gagal mengubah status", description: err.message, variant: "destructive" });
+    }
+  };
+
+  // ── P3-08: Clone ───────────────────────────────────────────────────────────
+  const handleClone = async (pkg: Package) => {
+    try {
+      const res = await apiFetch<{ id: string; title: string; slug: string }>(
+        `/api/admin/packages/${pkg.id}/clone`,
+        { method: "POST" }
+      );
+      toast({ title: `Paket "${res.title}" berhasil diduplikat` });
+      fetchPackages();
+    } catch (err: any) {
+      toast({ title: "Gagal menduplikat paket", description: err.message, variant: "destructive" });
+    }
   };
 
   const addExtraHotel = () => {
@@ -612,6 +650,16 @@ const AdminPackages = () => {
         </div>
       </div>
 
+      {/* P3-07: Bulk action bar */}
+      {selectedIds.length > 0 && (
+        <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-xl">
+          <span className="text-sm font-medium text-primary">{selectedIds.length} paket dipilih</span>
+          <Button size="sm" variant="outline" onClick={() => handleBulkStatus(true)}>Aktifkan</Button>
+          <Button size="sm" variant="outline" onClick={() => handleBulkStatus(false)}>Nonaktifkan</Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Batal Pilih</Button>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
@@ -624,6 +672,15 @@ const AdminPackages = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.length === paginatedItems.length && paginatedItems.length > 0}
+                    onChange={toggleSelectAll}
+                    className="rounded border-border"
+                    title="Pilih semua"
+                  />
+                </TableHead>
                 <TableHead>Nama Paket</TableHead>
                 <TableHead>Tipe</TableHead>
                 <TableHead>Durasi</TableHead>
@@ -635,6 +692,14 @@ const AdminPackages = () => {
               {paginatedItems.map((pkg) => (
                 <React.Fragment key={pkg.id}>
                   <TableRow>
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(pkg.id)}
+                        onChange={() => toggleSelect(pkg.id)}
+                        className="rounded border-border"
+                      />
+                    </TableCell>
                     <TableCell className="font-semibold">{pkg.title}</TableCell>
                     <TableCell>{pkg.package_type || "-"}</TableCell>
                     <TableCell>{pkg.duration_days} hari</TableCell>
@@ -651,6 +716,9 @@ const AdminPackages = () => {
                         <Link to={`/paket/${pkg.slug}`} target="_blank">
                           <Button variant="ghost" size="icon"><Eye className="w-4 h-4" /></Button>
                         </Link>
+                        <Button variant="ghost" size="icon" title="Duplikat Paket" onClick={() => handleClone(pkg)}>
+                          <Copy className="w-4 h-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(pkg)}>
                           <Pencil className="w-4 h-4" />
                         </Button>

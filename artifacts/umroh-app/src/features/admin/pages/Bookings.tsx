@@ -4,7 +4,7 @@ import BookingFilters from "@/features/admin/components/BookingFilters";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Search, Download, Plus } from "lucide-react";
+import { Search, Download, Plus, FileSpreadsheet } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import AdminCreateBookingDialog from "@/features/admin/components/AdminCreateBookingDialog";
 import {
@@ -32,6 +32,8 @@ const AdminBookings = () => {
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   useEffect(() => {
     apiFetch<any[]>("/api/admin/branches").then((data) => {
@@ -50,7 +52,7 @@ const AdminBookings = () => {
   useEffect(() => {
     setPage(0);
     fetchBookings(0);
-  }, [filter, search, branchFilter]);
+  }, [filter, search, branchFilter, startDate, endDate]);
 
   // Halaman berubah oleh klik pagination → fetch halaman tersebut
   useEffect(() => {
@@ -64,9 +66,10 @@ const AdminBookings = () => {
     setLoading(true);
     try {
       const offset = currentPage * PAGE_SIZE;
-      const res = await apiFetch<{ data: any[]; total: number }>(
-        `/api/admin/bookings?status=${filter}&search=${search.trim()}&branchId=${branchFilter}&limit=${PAGE_SIZE}&offset=${offset}`
-      );
+      let url = `/api/admin/bookings?status=${filter}&search=${search.trim()}&branchId=${branchFilter}&limit=${PAGE_SIZE}&offset=${offset}`;
+      if (startDate) url += `&startDate=${startDate}`;
+      if (endDate) url += `&endDate=${endDate}`;
+      const res = await apiFetch<{ data: any[]; total: number }>(url);
       const mapped: Booking[] = (res.data || []).map((b) => ({
         id: b.id,
         booking_code: b.bookingCode,
@@ -132,6 +135,32 @@ const AdminBookings = () => {
           }}>
             <Download className="w-4 h-4 mr-2" /> Export CSV
           </Button>
+          <Button variant="outline" onClick={() => {
+            const params = new URLSearchParams({ status: filter, search: search.trim(), branchId: branchFilter });
+            if (startDate) params.set("startDate", startDate);
+            if (endDate) params.set("endDate", endDate);
+            const apiBase = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+            window.open(`${apiBase}/api/admin/bookings/export.xlsx?${params}`, "_blank");
+          }}>
+            <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
+          </Button>
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-36 text-sm"
+              title="Tanggal berangkat dari"
+            />
+            <span className="text-muted-foreground text-sm">–</span>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-36 text-sm"
+              title="Tanggal berangkat sampai"
+            />
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
