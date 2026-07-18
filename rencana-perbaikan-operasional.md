@@ -1,7 +1,15 @@
 # Rencana Perbaikan Menu Operasional — UmrohPlus
 
 > Tanggal analisis: 18 Juli 2026  
-> Berdasarkan: inspeksi kode frontend (`artifacts/umroh-app`), backend (`artifacts/api-server`), dan schema DB (`lib/db/src/schema`)
+> Berdasarkan: inspeksi kode frontend (`artifacts/umroh-app`), backend (`artifacts/api-server`), dan schema DB (`lib/db/src/schema`)  
+> Status terakhir diperbarui: 18 Juli 2026
+
+---
+
+## Legend Status
+- ✅ **SELESAI** — sudah diimplementasi dan berjalan
+- 🔄 **SEBAGIAN** — implementasi parsial, perlu dilengkapi
+- ❌ **BELUM** — belum dikerjakan
 
 ---
 
@@ -23,45 +31,42 @@
 
 ### 🔴 Bug & Masalah UI
 
-**BK-01 — Halaman Booking Kosong (Tampilan)**  
+**❌ BK-01 — Halaman Booking Kosong (Tampilan)**  
 - Halaman menampilkan "Belum ada booking" meski data sudah ada di DB  
 - Root cause: Filter tanggal (`date_from`/`date_to`) dikirim ke API tapi format `mm/dd/yyyy` dari date-input browser tidak di-parse dengan benar di backend  
 - File: `artifacts/umroh-app/src/features/admin/pages/Bookings.tsx`, `artifacts/api-server/src/routes/admin/bookings.ts`  
 - **Fix**: Normalisasi format tanggal ke ISO 8601 (`yyyy-mm-dd`) sebelum dikirim ke API, atau hapus filter default agar semua booking tampil saat pertama buka
 
-**BK-02 — Export Excel Tidak Jalan di Semua Environment**  
-- Tombol "Export Excel" hardcode ke `/api/admin/bookings/export.xlsx`  
-- Jika `VITE_API_URL` tidak di-set, URL menjadi relative dan bisa menghit route yang salah  
-- File: `artifacts/umroh-app/src/features/admin/pages/Bookings.tsx`  
-- **Fix**: Gunakan `apiFetch`/`getApiUrl()` helper yang sudah ada, bukan URL hardcode
+**✅ BK-02 — Export Excel Tidak Jalan di Semua Environment**  
+- ~~Tombol "Export Excel" hardcode ke VITE_API_URL~~  
+- **Sudah diperbaiki**: Menggunakan relative URL `/api/admin/bookings/export.xlsx` via `window.open`
 
-**BK-03 — Tidak Ada Status History di UI**  
+**❌ BK-03 — Tidak Ada Status History di UI**  
 - Admin bisa ubah status booking (pending → confirmed → completed) tapi tidak ada log/history perubahan yang terlihat  
 - Membingungkan ketika ada dispute dengan agen atau jemaah  
 
 ### ⚠️ Fitur yang Kurang
 
-**BK-F01 — Tidak Ada Filter by Status & Paket**  
+**❌ BK-F01 — Tidak Ada Filter by Status & Paket**  
 - Filter hanya berdasarkan tanggal dan cabang, belum bisa filter by status (pending/confirmed/dll) atau by paket  
 
-**BK-F02 — Tidak Ada Bulk Action**  
+**❌ BK-F02 — Tidak Ada Bulk Action**  
 - Tidak bisa konfirmasi atau batalkan banyak booking sekaligus  
 
-**BK-F03 — Detail Booking Tidak Menampilkan Jemaah Terkait**  
-- Halaman detail booking tidak langsung menampilkan daftar jemaah yang terdaftar di booking tersebut (harus buka menu Jemaah secara terpisah)  
+**❌ BK-F03 — Detail Booking Tidak Menampilkan Jemaah Terkait**  
+- Halaman detail booking tidak langsung menampilkan daftar jemaah yang terdaftar di booking tersebut  
 
 ### 🔴 Relasi DB Bermasalah
 
-**BK-DB01 — userId, agentId, picId Tanpa Hard Foreign Key**  
+**❌ BK-DB01 — userId, agentId, picId Tanpa Hard Foreign Key**  
 - Field `userId`, `agentId`, `picId` di tabel `bookings` tidak memiliki constraint FK ke tabel users/agents  
 - Risiko: jika user/agen dihapus, booking menjadi orphaned (data corrupt)  
 - File: `lib/db/src/schema/bookings.ts`  
 - **Fix**: Tambahkan FK constraint dengan `ON DELETE SET NULL` atau `ON DELETE RESTRICT`
 
-**BK-DB02 — remainingQuota Tidak Sinkron Otomatis**  
+**❌ BK-DB02 — remainingQuota Tidak Sinkron Otomatis**  
 - Field `remainingQuota` di tabel `package_departures` adalah integer statis, tidak ada trigger DB atau constraint  
 - Jika ada bug di aplikasi, quota bisa desync dengan jumlah jemaah aktual  
-- File: `lib/db/src/schema/packages.ts`  
 - **Fix**: Tambahkan DB trigger atau computed column, atau validasi cross-check di backend saat booking dibuat/dibatalkan
 
 ---
@@ -70,42 +75,33 @@
 
 ### 🔴 Bug & Masalah UI
 
-**JM-01 — Upload Dokumen ke Path Hardcode**  
-- Upload dokumen jemaah mengarah ke `/object/pilgrim-docs/` (path Supabase Storage lama)  
-- Di environment non-Supabase atau saat storage tidak di-konfigurasi, upload pasti gagal tanpa error yang jelas  
-- File: `artifacts/umroh-app/src/features/admin/pages/Pilgrims.tsx`  
-- **Fix**: Gunakan object storage helper yang sudah ada di proyek (lihat skill `object-storage`), atau tampilkan error yang informatif jika storage tidak tersedia
+**✅ JM-01 — Upload Dokumen ke Path Hardcode**  
+- ~~Upload dokumen jemaah mengarah ke `/object/pilgrim-docs/` (path Supabase Storage lama)~~  
+- **Sudah diperbaiki**: Upload sekarang menggunakan `apiFetch("/api/admin/pilgrim-documents/upload", FormData)` ke endpoint backend baru yang menyimpan file lewat multer. Backend juga menyediakan `GET /api/admin/pilgrim-documents/files/:filename` untuk serve file.
 
-**JM-02 — Validasi Nomor HP Terlalu Ketat**  
+**❌ JM-02 — Validasi Nomor HP Terlalu Ketat**  
 - Regex validasi HP tidak menerima format internasional (+62, 08xx, 62xxx)  
-- Banyak jemaah dengan nomor HP format lama atau internasional tidak bisa didaftarkan  
-- File: `artifacts/umroh-app/src/features/admin/pages/Pilgrims.tsx`  
 - **Fix**: Ganti regex ke format yang lebih permissive: `^(\+?62|0)[0-9]{8,13}$`
 
-**JM-03 — Data Jemaah Terduplikasi Per Booking**  
-- Tidak ada tabel `pilgrims` master; semua data (NIK, paspor, dll) disimpan ulang di `booking_pilgrims` setiap kali jemaah yang sama booking paket baru  
-- Tidak bisa melacak riwayat perjalanan satu jemaah  
+**❌ JM-03 — Data Jemaah Terduplikasi Per Booking**  
+- Tidak ada tabel `pilgrims` master; semua data disimpan ulang di `booking_pilgrims` setiap booking baru  
 
 ### 🔴 Fitur yang Kurang
 
-**JM-F01 — Tidak Ada Master Database Jemaah**  
+**❌ JM-F01 — Tidak Ada Master Database Jemaah**  
 - Tidak ada halaman "Database Jemaah" yang menampilkan semua jemaah unik beserta riwayat booking mereka  
-- Ini fitur kritis untuk travel agent yang ingin melayani pelanggan returning  
 
-**JM-F02 — Tidak Ada Tracking Dokumen Expired**  
+**❌ JM-F02 — Tidak Ada Tracking Dokumen Expired**  
 - Tidak ada notifikasi atau flag ketika paspor jemaah hampir expired (< 6 bulan dari tanggal keberangkatan)  
-- Risiko: jemaah tidak bisa berangkat karena paspor expired  
 
 ### 🔴 Relasi DB Bermasalah
 
-**JM-DB01 — Tidak Ada Tabel Master Pilgrims**  
+**❌ JM-DB01 — Tidak Ada Tabel Master Pilgrims**  
 - Semua data jemaah ada di `booking_pilgrims` yang terikat ke satu booking  
-- Implikasi: tidak bisa cross-reference jemaah antar booking, tidak bisa cek duplicate NIK/paspor  
 - **Fix**: Buat tabel `pilgrims` master dengan kolom: `id, nik, passportNumber, name, birthDate, nationality, phone, email, createdAt`; ubah `booking_pilgrims` menjadi relasi ke `pilgrims.id`
 
-**JM-DB02 — Tidak Ada Relasi Jemaah ↔ Perlengkapan**  
-- Tidak ada cara untuk mencatat perlengkapan (koper, baju ihram, dll) yang sudah diterima oleh jemaah tertentu  
-- Lihat juga bagian Perlengkapan di bawah  
+**❌ JM-DB02 — Tidak Ada Relasi Jemaah ↔ Perlengkapan**  
+- Tidak ada cara untuk mencatat perlengkapan yang sudah diterima oleh jemaah tertentu  
 
 ---
 
@@ -113,30 +109,29 @@
 
 ### 🔴 Bug & Masalah UI
 
-**KB-01 — Tipe Kamar Hardcode**  
-- Tipe kamar (quad, triple, double) di-hardcode di frontend dan tidak bisa dikonfigurasi  
-- Paket haji/plus sering punya tipe kamar berbeda (single, quint, dll)  
-- File: `artifacts/umroh-app/src/features/admin/pages/Departures.tsx`  
-- **Fix**: Ambil tipe kamar dari konfigurasi paket atau buat field konfigurasi di `package_departures`
+**🔄 KB-01 — Tipe Kamar Hardcode**  
+- Tipe kamar (quad, triple, double) di-hardcode di frontend  
+- **Sebagian diperbaiki**: Tipe `"single"` sudah ditambahkan ke array `ROOM_TYPES` di Departures.tsx  
+- **Sisa**: Belum bisa dikonfigurasi dari DB/paket; masih hardcode array di frontend
 
-**KB-02 — UI Keberangkatan Perlu Redesign**  
-- Tampilan list keberangkatan padat dan sulit dibaca (tidak ada status badge, info quota kurang menonjol)  
-- Tidak ada visual yang membedakan keberangkatan "penuh", "hampir penuh", dan "tersedia"  
-- **Fix**: Tambahkan color-coded status badge (`penuh`=merah, `hampir penuh`=kuning, `tersedia`=hijau), tampilkan progress bar quota (terisi/total)
+**✅ KB-02 — UI Keberangkatan Perlu Redesign**  
+- **Sudah diperbaiki**: 
+  - Progress bar quota (terisi/total + persentase + warna dinamis)  
+  - Badge status 4-tier: 🟢 Tersedia / 🟡 Hampir Penuh (≤20% sisa) / 🔴 Penuh / ⚫ Ditutup  
+  - Teks sisa kursi di bawah progress bar
 
-**KB-03 — Manifest PDF Bergantung VITE_API_URL**  
-- Generasi PDF manifest dari halaman Keberangkatan menggunakan `VITE_API_URL` yang mungkin tidak di-set  
-- File: `artifacts/umroh-app/src/features/admin/pages/Departures.tsx`  
-- **Fix**: Gunakan helper `getApiUrl()` atau relative URL
+**✅ KB-03 — Manifest PDF Bergantung VITE_API_URL**  
+- ~~Generasi PDF manifest menggunakan `VITE_API_URL` yang mungkin tidak di-set~~  
+- **Sudah diperbaiki**: Menggunakan relative URL `/api/admin/departures/${id}/manifest.pdf`
 
 ### ⚠️ Fitur yang Kurang
 
-**KB-F01 — Tidak Bisa Salin/Clone Keberangkatan**  
-- Setiap keberangkatan baru harus diisi dari awal meski serupa dengan yang sudah ada  
-- Backend sudah ada `POST /:id/clone` tapi tidak ada tombolnya di UI  
-- **Fix**: Tambahkan tombol "Duplikat" di list/detail keberangkatan
+**✅ KB-F01 — Tidak Bisa Salin/Clone Keberangkatan**  
+- **Sudah diperbaiki**:  
+  - Backend: `POST /api/admin/departures/:id/clone` — duplikat departure + semua harga, quota di-reset ke penuh  
+  - Frontend: Tombol duplikat (ikon Copy) ditambahkan di setiap row keberangkatan
 
-**KB-F02 — Tidak Ada Notifikasi Quota Penuh**  
+**❌ KB-F02 — Tidak Ada Notifikasi Quota Penuh**  
 - Tidak ada alert ke admin ketika quota keberangkatan hampir penuh atau penuh  
 
 ---
@@ -145,32 +140,26 @@
 
 ### ⚠️ Bug & Masalah UI
 
-**IT-01 — Upload Gambar Hari Tidak Ada**  
+**❌ IT-01 — Upload Gambar Hari Tidak Ada**  
 - Form tambah/edit hari itinerary hanya menyediakan input URL gambar (text field), bukan upload file  
-- Admin harus upload gambar ke tempat lain dulu, lalu paste URL-nya — tidak user-friendly  
-- File: `artifacts/umroh-app/src/features/admin/pages/Itineraries.tsx`  
-- **Fix**: Tambahkan komponen file upload yang menggunakan object storage (sama seperti upload foto paket)
+- **Fix**: Tambahkan komponen file upload yang menggunakan object storage
 
-**IT-02 — Mapping Data API Inconsistent**  
-- Komponen melakukan manual mapping shape data dari API (camelCase ↔ snake_case) di beberapa tempat berbeda  
-- Rawan error jika API berubah  
-- **Fix**: Gunakan satu shared type/transformer dari `@workspace/api-server` atau buat adapter di hooks
+**❌ IT-02 — Mapping Data API Inconsistent**  
+- Komponen melakukan manual mapping shape data dari API (camelCase ↔ snake_case) di beberapa tempat  
+- **Fix**: Gunakan satu shared type/transformer atau buat adapter di hooks
 
 ### ⚠️ Fitur yang Kurang
 
-**IT-F01 — Itinerary Harus Dibuat Per Keberangkatan (Tidak Bisa Template)**  
+**❌ IT-F01 — Itinerary Harus Dibuat Per Keberangkatan (Tidak Bisa Template)**  
 - Tidak ada itinerary "template" level paket; setiap keberangkatan harus buat itinerary sendiri  
-- Travel agent yang punya 10 keberangkatan untuk paket yang sama harus copy manual 10x  
-- **Fix**: Tambahkan konsep "itinerary template" di level paket yang bisa di-apply ke keberangkatan baru
 
-**IT-F02 — Tidak Ada Preview Mode**  
+**❌ IT-F02 — Tidak Ada Preview Mode**  
 - Tidak ada cara melihat tampilan itinerary sebagaimana yang akan dilihat jemaah (public view)  
 
 ### ⚠️ Relasi DB
 
-**IT-DB01 — Itinerary Hanya Terhubung ke Keberangkatan, Bukan ke Paket**  
+**❌ IT-DB01 — Itinerary Hanya Terhubung ke Keberangkatan, Bukan ke Paket**  
 - Tabel `itineraries` punya FK ke `package_departures.id`, bukan ke `packages.id`  
-- Untuk paket dengan banyak keberangkatan, itinerary yang sama harus direplikasi  
 - **Fix (jangka panjang)**: Tambahkan kolom opsional `packageId` di `itineraries` untuk template level paket
 
 ---
@@ -179,30 +168,26 @@
 
 ### ⚠️ Bug & Masalah UI
 
-**MN-01 — Pagination Client-Side Saja**  
+**❌ MN-01 — Pagination Client-Side Saja**  
 - Manifest dengan ratusan jemaah di-load semua sekaligus ke browser, baru dipaginasi di frontend  
-- Bisa sangat lambat untuk keberangkatan besar (100+ jemaah)  
-- File: `artifacts/umroh-app/src/features/admin/pages/Manifest.tsx`  
 - **Fix**: Implementasikan server-side pagination di endpoint `/api/admin/departures/:id/manifest-data`
 
-**MN-02 — Tidak Ada Tombol Print/Export yang Jelas**  
+**❌ MN-02 — Tidak Ada Tombol Print/Export yang Jelas**  
 - Tombol cetak manifest tidak menonjol di UI; tidak ada pilihan format (PDF, Excel)  
 
 ### ⚠️ Fitur yang Kurang
 
-**MN-F01 — Tidak Ada Tanda Tangan/Verifikasi Digital**  
-- Manifest bisa dicetak tapi tidak ada fitur e-signature atau QR code verifikasi untuk validasi dokumen resmi  
+**❌ MN-F01 — Tidak Ada Tanda Tangan/Verifikasi Digital**  
+- Tidak ada fitur e-signature atau QR code verifikasi untuk validasi dokumen resmi  
 
-**MN-F02 — Tidak Ada Status Check-in di Manifest**  
+**❌ MN-F02 — Tidak Ada Status Check-in di Manifest**  
 - Tabel `check_ins` ada di DB tapi data check-in tidak ditampilkan di halaman Manifest  
-- Admin tidak bisa melihat langsung siapa yang sudah check-in dan siapa yang belum  
 
 ### 🔴 Relasi DB
 
-**MN-DB01 — Tidak Ada Tabel Manifests Dedicated**  
-- Manifest di-generate on-the-fly dari join `booking_pilgrims` + `check_ins` + `bookings`  
-- Tidak ada snapshots manifest yang tersimpan; jika data booking berubah setelah keberangkatan, manifest historis tidak bisa direcover  
-- **Fix**: Buat tabel `manifests` dengan kolom: `id, departureId, generatedAt, generatedBy, snapshotData (jsonb)` untuk menyimpan snapshot saat manifest dicetak
+**❌ MN-DB01 — Tidak Ada Tabel Manifests Dedicated**  
+- Manifest di-generate on-the-fly; tidak ada snapshot yang tersimpan  
+- **Fix**: Buat tabel `manifests` dengan kolom: `id, departureId, generatedAt, generatedBy, snapshotData (jsonb)`
 
 ---
 
@@ -210,59 +195,52 @@
 
 ### ⚠️ Bug & Masalah UI
 
-**PK-01 — camelCase vs snake_case Mapping Manual**  
-- Komponen melakukan mapping manual antara format API (camelCase) dan state lokal (snake_case)  
-- Rawan bug dan sudah ada bug tersembunyi di beberapa field  
+**❌ PK-01 — camelCase vs snake_case Mapping Manual**  
+- Komponen melakukan mapping manual antara format API dan state lokal  
 - **Fix**: Standardisasi satu format (camelCase) di seluruh API dan frontend
 
-**PK-02 — "Extra Hotels" Hardcode ke Kategori Plus/Haji**  
+**❌ PK-02 — "Extra Hotels" Hardcode ke Kategori Plus/Haji**  
 - Logika tampil/sembunyikan field "Extra Hotels" hardcode ke nama kategori tertentu  
-- Jika admin membuat kategori baru dengan nama berbeda, field ini tidak muncul  
-- File: `artifacts/umroh-app/src/features/admin/pages/Packages.tsx`  
-- **Fix**: Tambahkan field `allowExtraHotels: boolean` di `package_categories` DB, jadikan basis kondisi
+- **Fix**: Tambahkan field `allowExtraHotels: boolean` di `package_categories` DB
 
 ### ⚠️ Fitur yang Kurang
 
-**PK-F01 — Tidak Ada Preview Halaman Publik dari Admin**  
-- Admin tidak bisa preview tampilan paket sebagaimana yang dilihat calon jemaah tanpa buka tab terpisah  
+**❌ PK-F01 — Tidak Ada Preview Halaman Publik dari Admin**  
+- Admin tidak bisa preview tampilan paket sebagaimana yang dilihat calon jemaah  
 
 ---
 
-## 7. PERLENGKAPAN (KRITIS)
+## 7. PERLENGKAPAN
 
 ### ⚠️ Bug & Masalah UI
 
-**PL-01 — Tidak Ada Pagination**  
-- List perlengkapan tidak berpaginasi; jika item banyak akan penuh semua  
-- File: `artifacts/umroh-app/src/features/admin/pages/Equipment.tsx`  
-- **Fix**: Tambahkan `AdminPagination` yang sudah ada di komponen lain
+**✅ PL-01 — Tidak Ada Pagination**  
+- **Sudah diperbaiki**: Menggunakan `useAdminPagination` + `AdminPagination`, 20 item per halaman  
+- Bonus: Ditambahkan search input (filter nama + kategori), kolom Deskripsi, dan empty state icon
 
-**PL-02 — Tidak Ada Upload Gambar**  
-- Sama seperti Itinerary, hanya ada input URL, bukan file upload  
+**❌ PL-02 — Tidak Ada Upload Gambar**  
+- Hanya ada input URL, bukan file upload  
 - **Fix**: Gunakan komponen upload yang sama dengan Paket Umroh
 
 ### 🔴 Fitur yang Kurang (KRITIS)
 
-**PL-F01 — Tidak Ada Penugasan Perlengkapan ke Jemaah/Booking [KRITIS]**  
-- Perlengkapan hanya sebagai "master data" katalog, tapi tidak bisa di-assign ke jemaah atau booking  
-- Admin tidak bisa mencatat "Jemaah A sudah terima koper", "Jemaah B belum terima baju ihram"  
-- **Fix**: Buat tabel `booking_equipment` atau `pilgrim_equipment` + UI assignment di halaman Jemaah atau Booking
+**❌ PL-F01 — Tidak Ada Penugasan Perlengkapan ke Jemaah/Booking [KRITIS]**  
+- Perlengkapan hanya sebagai "master data" katalog, tidak bisa di-assign ke jemaah atau booking  
+- **Fix**: Buat tabel `booking_equipment`/`pilgrim_equipment` + UI assignment di halaman Jemaah atau Booking
 
-**PL-F02 — Tidak Ada Manajemen Stok**  
+**❌ PL-F02 — Tidak Ada Manajemen Stok**  
 - Tidak ada kolom `stock` atau `availableStock` di tabel `equipment`  
-- Tidak bisa tahu berapa item tersedia vs sudah didistribusikan  
-- **Fix**: Tambahkan `totalStock, distributedCount` di tabel `equipment`, update otomatis saat assignment
+- **Fix**: Tambahkan `totalStock, distributedCount` di tabel `equipment`
 
-**PL-F03 — Tidak Ada Laporan Distribusi**  
-- Tidak ada halaman atau export yang menampilkan ringkasan: paket X → berapa perlengkapan sudah dibagikan, berapa belum  
+**❌ PL-F03 — Tidak Ada Laporan Distribusi**  
+- Tidak ada halaman atau export yang menampilkan ringkasan distribusi perlengkapan  
 
 ### 🔴 Relasi DB Bermasalah (KRITIS)
 
-**PL-DB01 — Tidak Ada Tabel Penghubung Perlengkapan ↔ Booking/Jemaah**  
-- Tabel `equipment` di `masterdata.ts` berdiri sendiri tanpa relasi apapun ke `bookings` atau `booking_pilgrims`  
+**❌ PL-DB01 — Tidak Ada Tabel Penghubung Perlengkapan ↔ Booking/Jemaah**  
+- Tabel `equipment` berdiri sendiri tanpa relasi apapun ke `bookings` atau `booking_pilgrims`  
 - **Fix Schema yang Dibutuhkan**:
 ```sql
--- Tabel baru yang perlu dibuat
 CREATE TABLE pilgrim_equipment (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   pilgrim_id  UUID NOT NULL REFERENCES booking_pilgrims(id) ON DELETE CASCADE,
@@ -278,48 +256,64 @@ CREATE TABLE pilgrim_equipment (
 
 ---
 
-## Prioritas Pengerjaan
+## Ringkasan Status Pengerjaan
 
-### 🔴 Prioritas 1 — Bug Kritis (Harus Diperbaiki Segera)
+### ✅ Sudah Selesai (7 item)
+
+| ID | Judul |
+|----|-------|
+| BK-02 | Export Excel — URL diperbaiki ke relative path |
+| JM-01 | Upload dokumen — endpoint backend baru + apiFetch |
+| KB-02 | Redesign UI Keberangkatan — progress bar, badge 4-tier |
+| KB-03 | Manifest PDF — URL diperbaiki ke relative path |
+| KB-F01 | Clone keberangkatan — tombol UI + endpoint `POST /:id/clone` |
+| PL-01 | Pagination + search perlengkapan |
+| KB-01 | *(sebagian)* Tipe kamar — ditambah "single" ke ROOM_TYPES |
+
+### ❌ Belum Dikerjakan — Prioritas 1 (Bug Kritis)
 
 | ID | Judul | Estimasi |
 |----|-------|----------|
-| BK-01 | Halaman Booking kosong karena format tanggal salah | 2 jam |
-| BK-02 | Export Excel tidak jalan | 1 jam |
-| JM-01 | Upload dokumen ke path hardcode | 2 jam |
-| JM-02 | Validasi HP terlalu ketat | 30 menit |
-| KB-03 | Manifest PDF bergantung VITE_API_URL | 1 jam |
+| BK-01 | Halaman Booking kosong karena format tanggal | 2 jam |
+| JM-02 | Validasi nomor HP terlalu ketat | 30 menit |
 
-### ⚠️ Prioritas 2 — Perbaikan UI & UX Penting
+### ❌ Belum Dikerjakan — Prioritas 2 (UI & UX)
 
 | ID | Judul | Estimasi |
 |----|-------|----------|
-| KB-02 | Redesign UI Keberangkatan (badge status, progress quota) | 4 jam |
-| KB-01 | Tipe kamar tidak hardcode | 3 jam |
+| KB-01 | Tipe kamar dari konfigurasi DB (bukan hardcode) | 3 jam |
 | IT-01 | Upload gambar hari itinerary | 2 jam |
 | MN-01 | Pagination manifest server-side | 3 jam |
-| PL-01 | Pagination perlengkapan | 1 jam |
-| BK-03 | Tampilkan jemaah di detail booking | 3 jam |
+| BK-F03 | Tampilkan jemaah di detail booking | 3 jam |
+| MN-02 | Tombol print/export manifest | 1 jam |
+| PL-02 | Upload gambar perlengkapan | 2 jam |
 
-### 🔴 Prioritas 3 — Fitur Kritis yang Hilang
+### ❌ Belum Dikerjakan — Prioritas 3 (Fitur Kritis)
 
 | ID | Judul | Estimasi |
 |----|-------|----------|
 | PL-F01 | Assignment perlengkapan ke jemaah + tabel DB baru | 1 hari |
 | JM-F01 | Master database jemaah + riwayat booking | 1 hari |
-| BK-DB01 | Tambah FK constraint userId/agentId di bookings | 2 jam |
-| BK-DB02 | Sinkronisasi remainingQuota dengan trigger/validator | 3 jam |
-| PL-DB01 | Buat tabel pilgrim_equipment + Drizzle schema | 4 jam |
+| BK-DB01 | FK constraint userId/agentId di bookings | 2 jam |
+| BK-DB02 | Sinkronisasi remainingQuota (trigger/validator) | 3 jam |
+| PL-DB01 | Buat tabel `pilgrim_equipment` + Drizzle schema | 4 jam |
+| JM-DB01 | Buat tabel master `pilgrims` | 1 hari |
 
-### ⚠️ Prioritas 4 — Fitur Tambahan (Nice to Have)
+### ❌ Belum Dikerjakan — Prioritas 4 (Nice to Have)
 
 | ID | Judul | Estimasi |
 |----|-------|----------|
 | JM-F02 | Notifikasi paspor hampir expired | 4 jam |
 | MN-DB01 | Snapshot manifest saat cetak | 1 hari |
 | IT-F01 | Template itinerary level paket | 1 hari |
-| KB-F01 | Tombol clone keberangkatan | 2 jam |
+| KB-F02 | Notifikasi quota hampir penuh | 4 jam |
 | PK-01 | Standarisasi camelCase seluruh API-frontend | 1 hari |
+| BK-03 | Status history perubahan booking | 3 jam |
+| MN-F02 | Status check-in di manifest | 3 jam |
+| IT-F02 | Preview mode itinerary | 2 jam |
+| MN-F01 | QR code verifikasi manifest | 1 hari |
+| PK-02 | Extra Hotels tidak hardcode ke nama kategori | 2 jam |
+| PK-F01 | Preview halaman publik dari admin | 2 jam |
 
 ---
 
@@ -338,6 +332,7 @@ packages (Paket Umroh)
          └── manifest (TIDAK ADA TABEL)    ← generate on-the-fly
 
 equipment (Perlengkapan)                   ← BERDIRI SENDIRI, tidak terhubung ke apapun
+pilgrim_documents                          ← Upload via /api/admin/pilgrim-documents/upload (✅ fixed)
 ```
 
 ### Yang Perlu Ditambahkan:
@@ -356,4 +351,4 @@ manifests (Snapshot)      ← PERLU DIBUAT
 
 ---
 
-*File ini dibuat otomatis dari hasil analisis kode. Update setelah setiap perbaikan selesai.*
+*File ini dibuat otomatis dari hasil analisis kode. Update terakhir: 18 Juli 2026.*
