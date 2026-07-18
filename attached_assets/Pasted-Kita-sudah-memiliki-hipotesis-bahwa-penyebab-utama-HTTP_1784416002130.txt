@@ -1,0 +1,243 @@
+Kita sudah memiliki hipotesis bahwa penyebab utama HTTP 500 di Vercel adalah penggunaan DATABASE_URL yang mengarah ke host "helium" (Replit PostgreSQL), sehingga seluruh route yang menggunakan Drizzle/pg.Pool gagal di Vercel.
+
+Saya TIDAK ingin implementasi.
+
+Saya TIDAK ingin perubahan kode.
+
+Saya TIDAK ingin refactor.
+
+Saya hanya ingin pembuktian berdasarkan source code dan runtime.
+
+======================================================
+TUGAS
+======================================================
+
+Buktikan secara pasti dari mana nilai DATABASE_URL berasal.
+
+Jangan membuat asumsi.
+
+======================================================
+INVESTIGASI 1
+======================================================
+
+Cari seluruh lokasi di project yang membaca atau memodifikasi:
+
+DATABASE_URL
+
+SUPABASE_DATABASE_URL
+
+SUPABASE_URL
+
+SUPABASE_SERVICE_ROLE_KEY
+
+SUPABASE_ANON_KEY
+
+VITE_SUPABASE_URL
+
+VITE_SUPABASE_ANON_KEY
+
+Untuk setiap lokasi tampilkan:
+
+- file
+- nomor baris
+- fungsi
+- tujuan penggunaan
+
+======================================================
+INVESTIGASI 2
+======================================================
+
+Jawab pertanyaan ini dengan bukti source code.
+
+Apakah aplikasi PERNAH mengubah nilai process.env.DATABASE_URL?
+
+Misalnya:
+
+process.env.DATABASE_URL = ...
+
+atau
+
+dotenv.config(...)
+
+atau
+
+loadEnv(...)
+
+atau helper lain.
+
+Jika YA:
+
+tunjukkan file dan nomor baris.
+
+Jika TIDAK:
+
+katakan dengan tegas bahwa DATABASE_URL hanya berasal dari environment platform.
+
+======================================================
+INVESTIGASI 3
+======================================================
+
+Jelaskan urutan prioritas pembacaan ENV.
+
+Contoh:
+
+SUPABASE_DATABASE_URL
+
+↓
+
+DATABASE_URL
+
+↓
+
+fallback
+
+↓
+
+placeholder
+
+Saya ingin tahu urutan persis berdasarkan source code.
+
+======================================================
+INVESTIGASI 4
+======================================================
+
+Buat call flow lengkap untuk endpoint berikut:
+
+GET /api/admin/bookings
+
+GET /api/admin/packages
+
+GET /api/admin/menu-permissions/my
+
+Untuk masing-masing endpoint tunjukkan:
+
+Request
+
+↓
+
+Middleware
+
+↓
+
+Auth
+
+↓
+
+Repository
+
+↓
+
+Drizzle / Supabase REST
+
+↓
+
+Pool
+
+↓
+
+Database
+
+↓
+
+Response
+
+Jika flow berbeda, jelaskan mengapa.
+
+======================================================
+INVESTIGASI 5
+======================================================
+
+Cari seluruh route yang:
+
+SELALU menggunakan pg.Pool / Drizzle.
+
+dan seluruh route yang:
+
+BISA menggunakan Supabase REST.
+
+Buat tabel seperti berikut:
+
+Route | PostgreSQL | Supabase REST | Fallback
+
+======================================================
+INVESTIGASI 6
+======================================================
+
+Jawab pertanyaan ini.
+
+Misalkan di Vercel terdapat ENV berikut:
+
+DATABASE_URL = PostgreSQL Supabase Production
+
+SUPABASE_URL = Production
+
+SUPABASE_SERVICE_ROLE_KEY = Production
+
+SUPABASE_ANON_KEY = Production
+
+Apakah seluruh endpoint akan berjalan?
+
+Jika TIDAK,
+
+jelaskan endpoint mana yang tetap gagal dan alasannya.
+
+======================================================
+INVESTIGASI 7
+======================================================
+
+Saya ingin bukti runtime.
+
+Tambahkan logging diagnostik SEMENTARA (jangan commit).
+
+Saat server startup tampilkan:
+
+DATABASE_URL host =
+DATABASE_URL source =
+SUPABASE_DATABASE_URL host =
+USE_SUPABASE_HTTP =
+NODE_ENV =
+VERCEL =
+REPL_ID =
+REPLIT_DEV_DOMAIN =
+
+JANGAN tampilkan isi secret.
+
+Hanya host dan status.
+
+Contoh:
+
+DATABASE_URL host = db.xxxxx.supabase.co
+
+atau
+
+DATABASE_URL host = helium
+
+======================================================
+OUTPUT
+======================================================
+
+Saya TIDAK ingin perbaikan.
+
+Saya hanya ingin laporan markdown yang berisi:
+
+1. Root Cause yang sudah dipastikan.
+
+2. Root Cause yang masih hipotesis.
+
+3. Bukti source code.
+
+4. Bukti runtime.
+
+5. Daftar route yang pasti gagal di Vercel.
+
+6. Daftar route yang aman di Vercel.
+
+7. Daftar perubahan minimal yang nantinya perlu dilakukan.
+
+Jangan mengubah business logic.
+
+Jangan refactor.
+
+Jangan commit.
+
+Jangan memperbaiki apa pun sampai saya memberikan persetujuan.
