@@ -44,8 +44,8 @@ const FloatingButtons = ({ fallbackWhatsapp }: Props = {}) => {
     queryKey: ["floating-buttons-cms"],
     queryFn: async () => {
       try {
-        const data = await apiFetch<FloatingButton[]>("/api/cms/floating-buttons");
-        return data ?? [];
+        const result = await apiFetch<{ data: FloatingButton[] }>("/api/cms/floating-buttons");
+        return Array.isArray(result) ? result : (result?.data ?? []);
       } catch {
         return [] as FloatingButton[];
       }

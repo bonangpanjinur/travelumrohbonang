@@ -1,0 +1,52 @@
+index-DIwoBE1T.js:8 TypeError: r.filter is not a function
+    at x_ (index-DIwoBE1T.js:99:28016)
+    at Ec (index-DIwoBE1T.js:8:34328)
+    at O4 (index-DIwoBE1T.js:8:63169)
+    at oq (index-DIwoBE1T.js:8:73884)
+    at Rq (index-DIwoBE1T.js:8:108214)
+    at SNe (index-DIwoBE1T.js:8:107260)
+    at tO (index-DIwoBE1T.js:8:107086)
+    at Eq (index-DIwoBE1T.js:8:104146)
+    at Wq (index-DIwoBE1T.js:8:115930)
+    at Dw (index-DIwoBE1T.js:8:114487)
+
+index-DIwoBE1T.js:696 [ErrorBoundary] Uncaught render error: TypeError: r.filter is not a function
+    at x_ (index-DIwoBE1T.js:99:28016)
+    at Ec (index-DIwoBE1T.js:8:34328)
+    at O4 (index-DIwoBE1T.js:8:63169)
+    at oq (index-DIwoBE1T.js:8:73884)
+    at Rq (index-DIwoBE1T.js:8:108214)
+    at SNe (index-DIwoBE1T.js:8:107260)
+    at tO (index-DIwoBE1T.js:8:107086)
+    at Eq (index-DIwoBE1T.js:8:104146)
+    at Wq (index-DIwoBE1T.js:8:115930)
+    at Dw (index-DIwoBE1T.js:8:114487)
+ 
+    at x_ (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:99:27841)
+    at div (<anonymous>)
+    at Bqe (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:99:36946)
+    at kPe (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:11:4269)
+    at IPe (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:11:8961)
+    at KEt (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:696:68715)
+    at HEt (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:696:66029)
+    at RPe (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:11:8071)
+    at iMe (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:11:18338)
+    at u (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:9:36903)
+    at zce (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:9:205422)
+    at jHe (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:87:78084)
+    at oDe (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:39:72674)
+    at aDe (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:39:71592)
+    at rDe (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:39:70702)
+    at eDe (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:39:57468)
+    at NOe (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:9:245250)
+    at Oue (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:11:34188)
+    at GEt (<anonymous>)
+    at Dnt (https://www.vinstourtravel.com/assets/index-DIwoBE1T.js:377:52100)
+
+﻿
+
+Press ctrl i to turn on code suggestions. Press ctrl x to disable code suggestions.
+ctrl
+i
+ to turn on code suggestions. Don't show again
+
