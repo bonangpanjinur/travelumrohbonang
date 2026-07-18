@@ -100,7 +100,13 @@ router.get("/", async (req, res) => {
       conditions.push(sql`b.user_id = ${userId}`);
     }
     if (search && typeof search === "string") {
-      conditions.push(sql`b.booking_code ILIKE ${"%" + search + "%"}`);
+      const term = "%" + search + "%";
+      conditions.push(sql`(
+        b.booking_code ILIKE ${term}
+        OR prof.name  ILIKE ${term}
+        OR prof.email ILIKE ${term}
+        OR b.pic_name ILIKE ${term}
+      )`);
     }
     if (branchId && typeof branchId === "string") {
       if (branchId === "__none__") {
@@ -164,7 +170,8 @@ router.get("/", async (req, res) => {
       db.execute(sql`
         SELECT COUNT(*)::int AS count
         FROM bookings b
-        LEFT JOIN package_departures dep ON dep.id = b.departure_id
+        LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
+        LEFT JOIN profiles           prof ON prof.id = b.user_id
         ${whereClause}
       `),
     ]);

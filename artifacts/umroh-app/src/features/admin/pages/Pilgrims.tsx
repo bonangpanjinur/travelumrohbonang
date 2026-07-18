@@ -253,12 +253,12 @@ const AdminPilgrims = () => {
       });
       return;
     }
-    // Terima format: 08xx, +62xx, 628xx; strip spasi & tanda pisah sebelum validasi
-    const rawPhone = form.phone.trim().replace(/[\s\-().]/g, "");
-    if (rawPhone && !/^(\+62|62|0)\d{8,13}$/.test(rawPhone)) {
+    // Strip semua karakter non-digit kecuali + di awal, lalu validasi format Indonesia
+    const rawPhone = form.phone.trim().replace(/[^+\d]/g, "").replace(/(?!^\+)\+/g, "");
+    if (rawPhone && !/^(\+?62|0)\d{7,12}$/.test(rawPhone)) {
       toast({
         title: "Nomor telepon tidak valid",
-        description: "Gunakan format Indonesia, contoh: 0812-3456-7890 atau +6281234567890",
+        description: "Gunakan format: 08xx-xxxx-xxxx, +628xx, atau 628xx (7–12 digit setelah kode negara)",
         variant: "destructive",
       });
       return;

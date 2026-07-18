@@ -4,7 +4,7 @@ import BookingFilters from "@/features/admin/components/BookingFilters";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Search, Download, Plus, FileSpreadsheet } from "lucide-react";
+import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import AdminCreateBookingDialog from "@/features/admin/components/AdminCreateBookingDialog";
 import {
@@ -34,6 +34,18 @@ const AdminBookings = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const hasActiveFilters =
+    filter !== "all" || search !== "" || branchFilter !== "__all__" || startDate !== "" || endDate !== "";
+
+  const resetFilters = () => {
+    setFilter("all");
+    setSearch("");
+    setBranchFilter("__all__");
+    setStartDate("");
+    setEndDate("");
+  };
 
   useEffect(() => {
     apiFetch<any[]>("/api/admin/branches").then((data) => {
@@ -64,11 +76,15 @@ const AdminBookings = () => {
   const fetchBookings = async (pageOverride?: number) => {
     const currentPage = pageOverride ?? page;
     setLoading(true);
+    setApiError(null);
     try {
       const offset = currentPage * PAGE_SIZE;
-      let url = `/api/admin/bookings?status=${filter}&search=${search.trim()}&branchId=${branchFilter}&limit=${PAGE_SIZE}&offset=${offset}`;
-      if (startDate) url += `&startDate=${startDate}`;
-      if (endDate) url += `&endDate=${endDate}`;
+      // Pastikan tanggal selalu dalam format ISO yyyy-mm-dd (HTML date input sudah ISO, tapi defensive)
+      const isoStart = startDate ? new Date(startDate).toISOString().slice(0, 10) : "";
+      const isoEnd = endDate ? new Date(endDate).toISOString().slice(0, 10) : "";
+      let url = `/api/admin/bookings?status=${filter}&search=${encodeURIComponent(search.trim())}&branchId=${branchFilter}&limit=${PAGE_SIZE}&offset=${offset}`;
+      if (isoStart) url += `&startDate=${isoStart}`;
+      if (isoEnd) url += `&endDate=${isoEnd}`;
       const res = await apiFetch<{ data: any[]; total: number }>(url);
       const mapped: Booking[] = (res.data || []).map((b) => ({
         id: b.id,
@@ -94,11 +110,9 @@ const AdminBookings = () => {
       setTotalCount(res.total || 0);
     } catch (e: any) {
       console.error(e);
-      toast({
-        title: "Gagal memuat booking",
-        description: e?.message || "Terjadi kesalahan saat memuat data. Coba muat ulang halaman.",
-        variant: "destructive",
-      });
+      setApiError(e?.message || "Terjadi kesalahan saat memuat data booking.");
+      setBookings([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
@@ -144,26 +158,41 @@ const AdminBookings = () => {
             <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
           </Button>
           <div className="flex items-center gap-2">
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-36 text-sm"
-              title="Tanggal berangkat dari"
-            />
-            <span className="text-muted-foreground text-sm">–</span>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-36 text-sm"
-              title="Tanggal berangkat sampai"
-            />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground px-1">Tgl Berangkat Dari</span>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-36 text-sm"
+              />
+            </div>
+            <span className="text-muted-foreground text-sm mt-4">–</span>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground px-1">Sampai</span>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-36 text-sm"
+              />
+            </div>
+            {(startDate || endDate) && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="mt-4 h-8 w-8 shrink-0"
+                title="Hapus filter tanggal"
+                onClick={() => { setStartDate(""); setEndDate(""); }}
+              >
+                <X className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            )}
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Cari kode booking..."
+              placeholder="Cari kode, nama, email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 w-full sm:w-64"
@@ -189,9 +218,29 @@ const AdminBookings = () => {
         <div className="flex justify-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
+      ) : apiError ? (
+        <div className="text-center py-16 space-y-4">
+          <AlertCircle className="w-12 h-12 mx-auto text-destructive/60" />
+          <div>
+            <p className="font-medium text-destructive">Gagal memuat data booking</p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">{apiError}</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => fetchBookings(0)}>
+            <RefreshCw className="w-4 h-4 mr-2" /> Coba Lagi
+          </Button>
+        </div>
       ) : bookings.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          {search ? `Tidak ditemukan booking dengan kode "${search}"` : "Belum ada booking"}
+        <div className="text-center py-16 space-y-3">
+          <p className="text-muted-foreground">
+            {hasActiveFilters
+              ? "Tidak ada booking yang cocok dengan filter yang dipilih."
+              : "Belum ada data booking."}
+          </p>
+          {hasActiveFilters && (
+            <Button variant="outline" size="sm" onClick={resetFilters}>
+              <X className="w-4 h-4 mr-2" /> Reset Filter
+            </Button>
+          )}
         </div>
       ) : (
         <>

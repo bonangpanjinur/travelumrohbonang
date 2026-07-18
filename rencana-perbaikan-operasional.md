@@ -24,18 +24,57 @@ Fokus: perbaiki bug yang membuat fitur inti tidak bisa digunakan sama sekali.
 | ✅ | BK-02 | Export Excel tidak jalan (URL hardcode) | 1 jam | `Bookings.tsx` |
 | ✅ | KB-03 | Manifest PDF bergantung `VITE_API_URL` | 1 jam | `Departures.tsx` |
 | ✅ | JM-01 | Upload dokumen ke path Supabase hardcode | 2 jam | `Pilgrims.tsx` + backend baru |
-| ❌ | BK-01 | Halaman Booking kosong (format tanggal salah) | 2 jam | `Bookings.tsx`, `bookings.ts` |
-| ❌ | JM-02 | Validasi nomor HP terlalu ketat | 30 mnt | `Pilgrims.tsx` |
+| ✅ | BK-01 | Halaman Booking kosong & search sempit | 2 jam | `Bookings.tsx`, `bookings.ts` |
+| ✅ | JM-02 | Validasi nomor HP terlalu ketat | 30 mnt | `Pilgrims.tsx` |
 
 **Detail item belum selesai:**
 
-**❌ BK-01 — Halaman Booking Kosong**  
-Filter tanggal (`date_from`/`date_to`) dikirim dalam format `mm/dd/yyyy` dari browser yang tidak di-parse dengan benar di backend. Akibatnya seluruh data tidak tampil.  
-**Fix**: Normalisasi ke ISO 8601 (`yyyy-mm-dd`) sebelum dikirim, atau hapus filter default agar semua booking tampil saat halaman pertama dibuka.
+**✅ BK-01 — Halaman Booking Kosong**  
+Masalah sesungguhnya ada 3 lapis: (1) ketika API error, UI salah menampilkan "Belum ada booking" bukan pesan error; (2) search hanya cari `booking_code`, bukan nama/email; (3) tidak ada tombol reset filter.  
+**Yang sudah diperbaiki**:
+- Tambah `apiError` state — saat API gagal muncul panel error merah dengan tombol "Coba Lagi" (bukan pesan kosong yang menyesatkan)
+- Backend search diperluas: `booking_code OR prof.name OR prof.email OR pic_name`
+- Tambah tombol ✕ reset tanggal di header, tombol "Reset Filter" di empty state saat filter aktif
+- Tanggal dinormalisasi ke ISO sebelum dikirim ke API (defensive measure)
+- Label tanggal diperjelas: "Tgl Berangkat Dari" & "Sampai"
+- Search placeholder diperbarui: "Cari kode, nama, email..."
 
-**❌ JM-02 — Validasi Nomor HP Terlalu Ketat**  
-Regex tidak menerima format internasional (+62, 08xx, 628xx).  
-**Fix**: Ganti regex ke `^(\+?62|0)[0-9]{8,13}$`
+**✅ JM-02 — Validasi Nomor HP Terlalu Ketat**  
+**Yang sudah diperbaiki**:
+- Strip karakter diperluas dari `[\s\-().]` → `[^+\d]` (semua non-digit/non-plus dihapus, termasuk `/`, `:`, dll)
+- Regex diperbarui ke `^(\+?62|0)\d{7,12}# Rencana Perbaikan Menu Operasional — UmrohPlus
+
+> Tanggal analisis: 18 Juli 2026  
+> Berdasarkan: inspeksi kode frontend (`artifacts/umroh-app`), backend (`artifacts/api-server`), dan schema DB (`lib/db/src/schema`)
+
+---
+
+## Legend Status
+
+| Ikon | Arti |
+|------|------|
+| ✅ | Selesai diimplementasi |
+| 🔄 | Sebagian selesai |
+| ❌ | Belum dikerjakan |
+
+---
+
+## Sprint 1 — Bug Kritis & Quick Wins
+**Target: 1–2 hari kerja**  
+Fokus: perbaiki bug yang membuat fitur inti tidak bisa digunakan sama sekali.
+
+| Status | ID | Judul | Estimasi | File Utama |
+|--------|----|-------|----------|------------|
+| ✅ | BK-02 | Export Excel tidak jalan (URL hardcode) | 1 jam | `Bookings.tsx` |
+| ✅ | KB-03 | Manifest PDF bergantung `VITE_API_URL` | 1 jam | `Departures.tsx` |
+| ✅ | JM-01 | Upload dokumen ke path Supabase hardcode | 2 jam | `Pilgrims.tsx` + backend baru |
+| ✅ | BK-01 | Halaman Booking kosong & search sempit | 2 jam | `Bookings.tsx`, `bookings.ts` |
+| ✅ | JM-02 | Validasi nomor HP terlalu ketat | 30 mnt | `Pilgrims.tsx` |
+
+**Detail item belum selesai:**
+
+ — lebih permissif, menerima nomor pendek daerah
+- Pesan error diperbarui dengan contoh format yang lebih lengkap
 
 ---
 
@@ -205,7 +244,7 @@ manifests (Snapshot)       ← DIBUAT di Sprint 4
 ## Progress Overview
 
 ```
-Sprint 1  [████████░░]  3/5 selesai  (60%)
+Sprint 1  [██████████]  5/5 selesai  (100%) ✅ SELESAI
 Sprint 2  [███░░░░░░░]  3/10 selesai (30%)
 Sprint 3  [░░░░░░░░░░]  0/7 selesai  (0%)
 Sprint 4  [░░░░░░░░░░]  0/15 selesai (0%)
