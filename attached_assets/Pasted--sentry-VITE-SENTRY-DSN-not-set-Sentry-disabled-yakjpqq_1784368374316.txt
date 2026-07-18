@@ -1,0 +1,102 @@
+[sentry] VITE_SENTRY_DSN not set — Sentry disabled.
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/cms/site-settings:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/equipment-report:1  Failed to load resource: the server responded with a status of 500 ()
+index-Bfr4pVLc.js:377 Error fetching branding: Error
+    at Pe (index-Bfr4pVLc.js:39:78970)
+    at async index-Bfr4pVLc.js:377:61606
+(anonymous) @ index-Bfr4pVLc.js:377
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/equipment-report:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/equipment-report:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/pilgrims/check-ins:1  Failed to load resource: the server responded with a status of 500 ()
+index-Bfr4pVLc.js:705 Error
+    at Pe (index-Bfr4pVLc.js:39:78970)
+    at async u (index-Bfr4pVLc.js:705:48319)
+u @ index-Bfr4pVLc.js:705
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/room-assignment/departures:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/room-assignment/departures:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/content/manasik-materials:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/pilgrims/check-ins:1  Failed to load resource: the server responded with a status of 500 ()
+index-Bfr4pVLc.js:705 Error
+    at Pe (index-Bfr4pVLc.js:39:78970)
+    at async u (index-Bfr4pVLc.js:705:48319)
+u @ index-Bfr4pVLc.js:705
+/api/admin/menu-permissions/my:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/pilgrims-db?limit=50&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/pilgrims-db?limit=50&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/pilgrims:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/branches:1  Failed to load resource: the server responded with a status of 500 ()
+index-Bfr4pVLc.js:442 Gagal memuat daftar cabang: Error
+    at Pe (index-Bfr4pVLc.js:39:78970)
+(anonymous) @ index-Bfr4pVLc.js:442
+/api/admin/packages:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?status=all&search=&branchId=__all__&packageId=__all__&limit=20&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+index-Bfr4pVLc.js:442 Error
+    at Pe (index-Bfr4pVLc.js:39:78970)
+    at async K (index-Bfr4pVLc.js:442:73551)
+K @ index-Bfr4pVLc.js:442
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/itineraries:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/departures:1  Failed to load resource: the server responded with a status of 500 ()
+index-Bfr4pVLc.js:446 [itineraries] fetch error: Error
+    at Pe (index-Bfr4pVLc.js:39:78970)
+    at async Promise.allSettled (index 0)
+    at async le (index-Bfr4pVLc.js:446:43645)
+le @ index-Bfr4pVLc.js:446
+index-Bfr4pVLc.js:446 [itineraries] departures fetch error: Error
+    at Pe (index-Bfr4pVLc.js:39:78970)
+    at async Promise.allSettled (index 1)
+    at async le (index-Bfr4pVLc.js:446:43645)
+le @ index-Bfr4pVLc.js:446
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/departures:1  Failed to load resource: the server responded with a status of 500 ()
+index-Bfr4pVLc.js:442 [Departures] fetchData error: Error
+    at Pe (index-Bfr4pVLc.js:39:78970)
+    at async Promise.all (index 0)
+    at async L (index-Bfr4pVLc.js:442:29331)
+L @ index-Bfr4pVLc.js:442
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/muthawifs:1  Failed to load resource: the server responded with a status of 500 ()
+/api/packages?active=true:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/airlines:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/categories:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/airports:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/packages:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/masterdata/hotels:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+index-Bfr4pVLc.js:377  HEAD https://yakjpqqobknrmhfmybhe.supabase.co/rest/v1/ net::ERR_ABORTED 401 (Unauthorized)
+Iat @ index-Bfr4pVLc.js:377
+(anonymous) @ index-Bfr4pVLc.js:377
+(anonymous) @ index-Bfr4pVLc.js:377
