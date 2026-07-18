@@ -1,0 +1,138 @@
+Saya membutuhkan investigasi menyeluruh terhadap repository ini.
+
+## KONDISI
+
+Repository ini sebelumnya dapat di-deploy ke Vercel dan berjalan normal.
+
+Setelah beberapa perubahan dilakukan di Replit, setiap deploy ke Vercel mengalami masalah.
+
+Frontend berhasil di-load, tetapi seluruh endpoint backend gagal.
+
+Console Browser menunjukkan:
+
+- GET /api/admin/menu-permissions/my -> 500
+- GET /api/admin/bookings -> 500
+- GET /api/admin/packages -> 500
+- GET /api/admin/masterdata/* -> 500
+- GET /api/cms/site-settings -> 500
+
+Selain itu terdapat:
+
+Supabase REST -> 401 Unauthorized
+
+Saya TIDAK ingin kamu berasumsi.
+Saya ingin investigasi berdasarkan source code repository.
+
+====================================================
+
+TUGAS
+
+Cari akar penyebab sebenarnya.
+
+Lakukan audit terhadap:
+
+1. Seluruh proses pembacaan Environment Variables.
+
+2. Seluruh inisialisasi Supabase.
+
+3. Seluruh middleware Auth.
+
+4. Seluruh helper ENV.
+
+5. Startup Express.
+
+6. Semua endpoint /api/admin/*.
+
+====================================================
+
+SECARA KHUSUS PERIKSA
+
+- Apakah process.env dibaca dengan benar.
+
+- Apakah ada ENV yang berubah nama.
+
+- Apakah ada fallback ke ENV Replit.
+
+- Apakah ada penggunaan:
+  REPL_ID
+  REPLIT_DB_URL
+  REPLIT_DEV_DOMAIN
+  REPL_OWNER
+  atau ENV Replit lainnya.
+
+- Apakah createClient() menggunakan ENV yang benar.
+
+- Apakah SERVICE_ROLE_KEY pernah menjadi undefined.
+
+- Apakah DATABASE_URL pernah menjadi undefined.
+
+- Apakah SUPABASE_URL pernah menjadi undefined.
+
+- Apakah backend menggunakan anon key ketika seharusnya menggunakan service role key.
+
+====================================================
+
+JANGAN HANYA MEMBACA SOURCE.
+
+Tambahkan logging sementara pada startup server untuk mencetak (tanpa membocorkan secret):
+
+✓ apakah ENV ditemukan
+✓ panjang string key (misal 215 karakter)
+✓ apakah URL valid
+✓ apakah createClient berhasil
+✓ apakah koneksi ke Supabase berhasil
+
+Contoh output yang saya inginkan:
+
+[ENV]
+SUPABASE_URL ............. OK
+SUPABASE_ANON_KEY ........ OK (208 chars)
+SUPABASE_SERVICE_ROLE_KEY  OK (221 chars)
+DATABASE_URL ............. OK
+
+atau
+
+SUPABASE_SERVICE_ROLE_KEY  MISSING
+
+====================================================
+
+Kemudian lakukan test berikut:
+
+1. Jalankan backend.
+
+2. Simulasikan request:
+
+GET /api/admin/menu-permissions/my
+
+3. Tangkap stack trace lengkap.
+
+4. Temukan file, baris, dan penyebab 500.
+
+====================================================
+
+OUTPUT YANG SAYA INGINKAN
+
+Jangan langsung memperbaiki.
+
+Buat laporan markdown berisi:
+
+# Ringkasan
+
+# Root Cause
+
+# Bukti
+
+# File yang bermasalah
+
+# Mengapa berjalan di Replit tetapi gagal di Vercel
+
+# Apakah ada dependency terhadap runtime Replit
+
+# Daftar perubahan yang diperlukan agar repository berjalan identik di:
+- localhost
+- Replit
+- Vercel
+
+Berikan confidence (High / Medium / Low) pada setiap kesimpulan.
+
+Jangan mengubah business logic atau UI sebelum saya menyetujui hasil investigasi.
