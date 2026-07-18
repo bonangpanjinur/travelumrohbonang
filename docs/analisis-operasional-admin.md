@@ -269,10 +269,10 @@ Tambahkan search/autocomplete untuk pemilihan booking, bukan load semua sekaligu
 
 | ID | Modul | Severity | Kategori | Status |
 |---|---|---|---|---|
-| BUG-01 | Itinerary | 🔴 Critical | Data tidak termuat | Belum diperbaiki |
-| BUG-02 | Paket (Komisi) | 🔴 Critical | 401/400 Unauthorized | Belum diperbaiki |
-| BUG-02b | Paket (Komisi) | 🔴 Critical | ID mismatch (slug vs UUID) | Belum diperbaiki |
-| BUG-03 | Seluruh admin | 🔴 Critical | WebSocket retry loop | Belum diperbaiki |
+| BUG-01 | Itinerary | 🔴 Critical | Data tidak termuat | ✅ Diperbaiki (proxy error handler + Supabase dikonfigurasi) |
+| BUG-02 | Paket (Komisi) | 🔴 Critical | 401/400 Unauthorized | ✅ Diperbaiki (migrasi ke apiFetch + endpoint baru) |
+| BUG-02b | Paket (Komisi) | 🔴 Critical | ID mismatch (slug vs UUID) | ✅ Diperbaiki (endpoint pakai UUID langsung) |
+| BUG-03 | Seluruh admin | 🔴 Critical | WebSocket retry loop | ✅ Diperbaiki (realtime.disconnect() di dev) |
 | BUG-04 | Booking | 🟠 Medium | Race condition double-fetch | Belum diperbaiki |
 | BUG-05 | Paket | 🟠 Medium | Inkonsistensi data (extra hotels) | Belum diperbaiki |
 | BUG-06 | Booking Backend | 🟠 Medium | Status transition tidak tervalidasi | Belum diperbaiki |
