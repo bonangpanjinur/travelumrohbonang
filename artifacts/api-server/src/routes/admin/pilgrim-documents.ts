@@ -5,8 +5,55 @@
  */
 import { Router } from "express";
 import { db, pilgrimDocuments, eq, and } from "@workspace/db";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
+
+// Upload file ke folder lokal /tmp/pilgrim-docs (fallback jika storage tidak dikonfigurasi)
+const uploadDir = path.join(process.cwd(), "uploads", "pilgrim-docs");
+fs.mkdirSync(uploadDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || ".bin";
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    cb(null, allowed.includes(file.mimetype));
+  },
+});
 
 const router = Router();
+
+/**
+ * POST /api/admin/pilgrim-documents/upload
+ * Multipart upload: menerima file dan menyimpan ke disk lokal.
+ * Returns { url } — URL relatif yang bisa diakses lewat /api/admin/pilgrim-documents/files/:filename
+ */
+router.post("/upload", upload.single("file"), async (req: any, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "File tidak diterima atau format tidak didukung (JPG/PNG/PDF)" });
+    const url = `/api/admin/pilgrim-documents/files/${req.file.filename}`;
+    return res.json({ url, filename: req.file.filename, size: req.file.size });
+  } catch (err) {
+    console.error("[pilgrim-documents] upload error:", err);
+    return res.status(500).json({ error: "Gagal upload file" });
+  }
+});
+
+/** GET /api/admin/pilgrim-documents/files/:filename — Sajikan file yang sudah diupload */
+router.get("/files/:filename", (req: any, res) => {
+  const filePath = path.join(uploadDir, req.params.filename);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File tidak ditemukan" });
+  res.sendFile(filePath);
+});
 
 /** GET /api/admin/pilgrim-documents?pilgrimId=:id */
 router.get("/", async (req: any, res) => {

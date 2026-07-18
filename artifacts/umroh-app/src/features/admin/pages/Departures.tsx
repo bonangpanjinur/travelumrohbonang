@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search, Images, FileDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search, Images, FileDown, Copy } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import AdminPagination from "@/features/admin/components/AdminPagination";
@@ -46,7 +46,19 @@ interface DeparturePrice {
   price: number;
 }
 
-const ROOM_TYPES = ["quad", "triple", "double"];
+const ROOM_TYPES = ["quad", "triple", "double", "single"];
+
+// Hitung persentase kuota terisi
+const quotaPercent = (remaining: number, total: number) =>
+  total > 0 ? Math.round(((total - remaining) / total) * 100) : 0;
+
+// Warna progress bar berdasarkan ketersediaan
+const quotaBarColor = (remaining: number, total: number) => {
+  if (remaining === 0 || total === 0) return "bg-red-500";
+  const pct = ((total - remaining) / total) * 100;
+  if (pct >= 80) return "bg-orange-400";
+  return "bg-green-500";
+};
 
 const safeFormatDate = (value: string | null | undefined, pattern: string) => {
   if (!value) return "-";
@@ -356,9 +368,23 @@ const AdminDepartures = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-muted-foreground" />
-                      {dep.remaining_quota}/{dep.quota}
+                    <div className="space-y-1.5 min-w-[110px]">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Users className="w-3.5 h-3.5" />
+                          {dep.quota - dep.remaining_quota}/{dep.quota}
+                        </span>
+                        <span className="font-medium">{quotaPercent(dep.remaining_quota, dep.quota)}%</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${quotaBarColor(dep.remaining_quota, dep.quota)}`}
+                          style={{ width: `${quotaPercent(dep.remaining_quota, dep.quota)}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {dep.remaining_quota > 0 ? `Sisa ${dep.remaining_quota} kursi` : "Penuh"}
+                      </p>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -373,14 +399,26 @@ const AdminDepartures = () => {
                   </TableCell>
                   <TableCell>
                     {(() => {
-                      const eff = dep.remaining_quota === 0 || dep.status === "penuh" ? "penuh" : dep.status;
+                      const isFull = dep.remaining_quota === 0 || dep.status === "penuh";
+                      const isAlmostFull = !isFull && dep.quota > 0 && (dep.remaining_quota / dep.quota) <= 0.2;
+                      if (isFull) return (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">
+                          🔴 Penuh
+                        </span>
+                      );
+                      if (isAlmostFull) return (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700 border border-orange-200">
+                          🟡 Hampir Penuh
+                        </span>
+                      );
+                      if (dep.status === "active") return (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+                          🟢 Tersedia
+                        </span>
+                      );
                       return (
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          eff === "active" ? "bg-green-100 text-green-800"
-                          : eff === "penuh" ? "bg-red-100 text-red-800"
-                          : "bg-gray-100 text-gray-800"
-                        }`}>
-                          {eff === "active" ? "Aktif" : eff === "penuh" ? "Penuh" : "Ditutup"}
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                          ⚫ Ditutup
                         </span>
                       );
                     })()}
@@ -393,10 +431,25 @@ const AdminDepartures = () => {
                       <Button
                         variant="ghost"
                         size="icon"
+                        title="Duplikat Keberangkatan"
+                        onClick={async () => {
+                          try {
+                            await apiFetch(`/api/admin/departures/${dep.id}/clone`, { method: "POST" });
+                            toast({ title: "Keberangkatan berhasil diduplikat" });
+                            fetchData();
+                          } catch (err: any) {
+                            toast({ title: "Gagal menduplikat", description: err?.message, variant: "destructive" });
+                          }
+                        }}
+                      >
+                        <Copy className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         title="Manifest Jemaah (PDF)"
                         onClick={() => {
-                          const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
-                          window.open(`${API_BASE}/api/admin/departures/${dep.id}/manifest.pdf`, "_blank");
+                          window.open(`/api/admin/departures/${dep.id}/manifest.pdf`, "_blank");
                         }}
                       >
                         <FileDown className="w-4 h-4 text-muted-foreground" />

@@ -139,8 +139,7 @@ const AdminBookings = () => {
             const params = new URLSearchParams({ status: filter, search: search.trim(), branchId: branchFilter });
             if (startDate) params.set("startDate", startDate);
             if (endDate) params.set("endDate", endDate);
-            const apiBase = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
-            window.open(`${apiBase}/api/admin/bookings/export.xlsx?${params}`, "_blank");
+            window.open(`/api/admin/bookings/export.xlsx?${params}`, "_blank");
           }}>
             <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
           </Button>

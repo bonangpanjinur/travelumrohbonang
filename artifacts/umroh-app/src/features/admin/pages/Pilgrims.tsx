@@ -322,15 +322,16 @@ const AdminPilgrims = () => {
   const uploadDocFile = async (file: File, pilgrimId: string, docType: string): Promise<string> => {
     const ext = file.name.split(".").pop() || "bin";
     const filename = `${pilgrimId}-${docType}-${Date.now()}.${ext}`;
-    const apiBase = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
-    const res = await fetch(`${apiBase}/object/pilgrim-docs/${filename}`, {
-      method: "PUT",
-      headers: { "Content-Type": file.type || "application/octet-stream" },
-      body: file,
-      credentials: "include",
+    // Gunakan FormData dan upload lewat API server (bukan hardcode Supabase Storage)
+    const formData = new FormData();
+    formData.append("file", file, filename);
+    formData.append("pilgrimId", pilgrimId);
+    formData.append("docType", docType);
+    const result = await apiFetch<{ url: string }>("/api/admin/pilgrim-documents/upload", {
+      method: "POST",
+      body: formData,
     });
-    if (!res.ok) throw new Error("Upload file gagal");
-    return `${apiBase}/object/public/pilgrim-docs/${filename}`;
+    return result.url;
   };
 
   const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>, docType: string) => {

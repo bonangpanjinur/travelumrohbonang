@@ -484,6 +484,58 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
+/** POST /api/admin/departures/:id/clone — duplikat keberangkatan beserta harganya */
+router.post("/:id/clone", async (req, res) => {
+  try {
+    const [original] = await db
+      .select()
+      .from(packageDepartures)
+      .where(eq(packageDepartures.id, req.params.id))
+      .limit(1);
+    if (!original) return res.status(404).json({ error: "Departure not found" });
+
+    const originalPrices = await db
+      .select()
+      .from(departurePrices)
+      .where(eq(departurePrices.departureId, req.params.id));
+
+    const newId = crypto.randomUUID();
+
+    const cloned = await db.transaction(async (tx) => {
+      const [dep] = await tx
+        .insert(packageDepartures)
+        .values({
+          id: newId,
+          packageId: original.packageId,
+          departureDate: original.departureDate,
+          returnDate: original.returnDate,
+          quota: original.quota,
+          remainingQuota: original.quota, // reset ke penuh
+          status: "active",
+          muthawifId: original.muthawifId,
+        })
+        .returning();
+
+      if (originalPrices.length > 0) {
+        await tx.insert(departurePrices).values(
+          originalPrices.map((p) => ({
+            id: crypto.randomUUID(),
+            departureId: newId,
+            roomType: p.roomType,
+            price: p.price,
+          }))
+        );
+      }
+      return dep;
+    });
+
+    res.status(201).json(cloned);
+  } catch (err) {
+    console.error("[departures] clone failed:", err);
+    res.status(500).json({ error: "Failed to clone departure" });
+  }
+});
+
 router.delete("/:id", async (req, res) => {
   try {
     await db.delete(departurePrices).where(eq(departurePrices.departureId, req.params.id));
