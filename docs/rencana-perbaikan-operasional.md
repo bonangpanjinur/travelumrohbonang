@@ -22,8 +22,8 @@ Analisis terhadap 6 sub-menu di bawah menu **Operasional** menemukan:
 | Sprint | Status | Tanggal |
 |--------|--------|---------|
 | Sprint 1 — Bug Kritikal P1 | ✅ **SELESAI** | 18 Juli 2026 |
-| Sprint 2 — Fitur Setengah Jadi P2 | 🔲 Belum dimulai | — |
-| Sprint 3 — Fitur Baru P3 (export & dokumen) | 🔲 Belum dimulai | — |
+| Sprint 2 — Fitur Setengah Jadi P2 | ✅ **SELESAI** | 18 Juli 2026 |
+| Sprint 3 — Fitur Baru P3 (export & dokumen) | ✅ **SELESAI** | 18 Juli 2026 |
 | Sprint 4 — Fitur Tambahan P3 | 🔲 Belum dimulai | — |
 
 ---

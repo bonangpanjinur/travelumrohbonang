@@ -171,6 +171,32 @@ router.get("/:id/manifest-data", async (req, res) => {
           .where(inArray(bookingPilgrims.bookingId, bookingIds))
       : [];
 
+    // Fetch document status (paspor, visa, vaksin) for all pilgrims in one query
+    const DOC_TYPES = ["paspor", "visa", "vaksin"];
+    const pilgrimIds = pilgrims.map((p) => p.id);
+    const docRows = pilgrimIds.length
+      ? await db
+          .select({
+            pilgrimId: pilgrimDocuments.pilgrimId,
+            documentType: pilgrimDocuments.documentType,
+            status: pilgrimDocuments.status,
+          })
+          .from(pilgrimDocuments)
+          .where(
+            and(
+              inArray(pilgrimDocuments.pilgrimId, pilgrimIds),
+              inArray(pilgrimDocuments.documentType, DOC_TYPES),
+            ),
+          )
+      : [];
+
+    // Map: pilgrimId → { paspor, visa, vaksin } status
+    const docStatusMap: Record<string, Record<string, string>> = {};
+    for (const doc of docRows) {
+      if (!docStatusMap[doc.pilgrimId]) docStatusMap[doc.pilgrimId] = {};
+      docStatusMap[doc.pilgrimId][doc.documentType] = doc.status;
+    }
+
     const rows = pilgrims.map((p) => {
       const bk = bookingInfoById.get(p.bookingId ?? "");
       return {
@@ -190,6 +216,11 @@ router.get("/:id/manifest-data", async (req, res) => {
         passportExpiry: p.passportExpiry,
         roomType: p.roomType,
         roomNumber: p.roomNumber,
+        docStatus: {
+          paspor: docStatusMap[p.id]?.paspor ?? null,
+          visa:   docStatusMap[p.id]?.visa   ?? null,
+          vaksin: docStatusMap[p.id]?.vaksin  ?? null,
+        },
       };
     });
 

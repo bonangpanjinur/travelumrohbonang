@@ -47,6 +47,11 @@ interface ManifestPilgrim {
   passportExpiry: string | null;
   roomType: string | null;
   roomNumber: string | null;
+  docStatus?: {
+    paspor: string | null;
+    visa: string | null;
+    vaksin: string | null;
+  };
 }
 
 interface ManifestData {
@@ -67,6 +72,23 @@ const fmtDate = (d: string | null) => {
   if (!d) return "-";
   try { return format(new Date(d), "dd/MM/yyyy"); } catch { return d; }
 };
+
+const DOC_STATUS_LABELS: Record<string, { label: string; className: string }> = {
+  pending:   { label: "Pending",   className: "bg-yellow-100 text-yellow-800 border-yellow-300" },
+  submitted: { label: "Upload",    className: "bg-blue-100 text-blue-800 border-blue-300" },
+  verified:  { label: "Verified",  className: "bg-green-100 text-green-800 border-green-300" },
+  rejected:  { label: "Rejected",  className: "bg-red-100 text-red-800 border-red-300" },
+};
+
+function DocStatusBadge({ status }: { status: string | null | undefined }) {
+  if (!status) return <span className="text-muted-foreground text-xs">-</span>;
+  const cfg = DOC_STATUS_LABELS[status] ?? { label: status, className: "bg-muted text-muted-foreground" };
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${cfg.className}`}>
+      {cfg.label}
+    </span>
+  );
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -304,6 +326,9 @@ const AdminManifest = () => {
                 <TableHead>No. HP</TableHead>
                 <TableHead>Kamar</TableHead>
                 <TableHead>No. Kamar</TableHead>
+                <TableHead className="text-center">Paspor</TableHead>
+                <TableHead className="text-center">Visa</TableHead>
+                <TableHead className="text-center">Vaksin</TableHead>
                 <TableHead className="text-center print:hidden">QR</TableHead>
               </TableRow>
             </TableHeader>
@@ -357,6 +382,15 @@ const AdminManifest = () => {
                       )}
                     </TableCell>
                     <TableCell className="text-sm font-mono">{row.roomNumber ?? "-"}</TableCell>
+                    <TableCell className="text-center">
+                      <DocStatusBadge status={row.docStatus?.paspor} />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <DocStatusBadge status={row.docStatus?.visa} />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <DocStatusBadge status={row.docStatus?.vaksin} />
+                    </TableCell>
                     <TableCell className="text-center print:hidden">
                       <div className="inline-flex flex-col items-center gap-1">
                         <QRCodeSVG value={qrPayload} size={64} level="M" includeMargin={false} />

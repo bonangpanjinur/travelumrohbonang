@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import Papa from "papaparse";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -6,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download, Plus, Pencil, Loader2 } from "lucide-react";
+import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download, Plus, Pencil, Loader2, Upload, AlertCircle, CheckCircle2 } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import { Badge } from "@/shared/components/ui/badge";
 import { format } from "date-fns";
@@ -14,6 +15,55 @@ import { id as idLocale } from "date-fns/locale";
 import AdminPagination from "@/features/admin/components/AdminPagination";
 import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
 import { apiFetch } from "@/shared/lib/apiClient";
+
+// ── CSV Import helpers ────────────────────────────────────────────────────────
+
+const CSV_TEMPLATE_HEADERS = [
+  "nama", "nik", "jenis_kelamin", "tanggal_lahir",
+  "telepon", "email", "no_paspor", "masa_berlaku_paspor",
+];
+
+const CSV_TEMPLATE_EXAMPLE = [
+  "Siti Rahayu", "3201234567890001", "female", "1980-05-15",
+  "08123456789", "siti@email.com", "A1234567", "2029-12-31",
+];
+
+function downloadCsvTemplate() {
+  const rows = [CSV_TEMPLATE_HEADERS, CSV_TEMPLATE_EXAMPLE];
+  const csv = rows.map((r) => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "template-import-jemaah.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+interface CsvRow {
+  nama: string;
+  nik?: string;
+  jenis_kelamin?: string;
+  tanggal_lahir?: string;
+  telepon?: string;
+  email?: string;
+  no_paspor?: string;
+  masa_berlaku_paspor?: string;
+  [key: string]: string | undefined;
+}
+
+function mapCsvRowToPayload(row: CsvRow) {
+  return {
+    name:           row["nama"]?.trim() ?? "",
+    nik:            row["nik"]?.trim() || null,
+    gender:         row["jenis_kelamin"]?.trim() || null,
+    birthDate:      row["tanggal_lahir"]?.trim() || null,
+    phone:          row["telepon"]?.trim() || null,
+    email:          row["email"]?.trim() || null,
+    passportNumber: row["no_paspor"]?.trim() || null,
+    passportExpiry: row["masa_berlaku_paspor"]?.trim() || null,
+  };
+}
 
 interface Pilgrim {
   id: string;
@@ -70,6 +120,14 @@ const AdminPilgrims = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+
+  // CSV Import dialog
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRows, setImportRows] = useState<CsvRow[]>([]);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [importDone, setImportDone] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Booking options for dropdown (search-as-you-type — BUG-10)
   const [bookings, setBookings] = useState<BookingOption[]>([]);
@@ -251,6 +309,57 @@ const AdminPilgrims = () => {
   const field = (key: keyof FormState, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  // ── CSV Import handlers ───────────────────────────────────────────────────
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportErrors([]);
+    setImportDone(null);
+
+    Papa.parse<CsvRow>(file, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (h) => h.trim().toLowerCase().replace(/\s+/g, "_"),
+      complete: (result) => {
+        const rows = result.data as CsvRow[];
+        const errs: string[] = [];
+        rows.forEach((row, idx) => {
+          if (!row["nama"]?.trim()) errs.push(`Baris ${idx + 2}: kolom 'nama' kosong`);
+        });
+        setImportRows(rows);
+        setImportErrors(errs);
+      },
+      error: (err) => setImportErrors([`Gagal membaca file: ${err.message}`]),
+    });
+  };
+
+  const handleImportSubmit = async () => {
+    if (importErrors.length > 0 || importRows.length === 0) return;
+    setImporting(true);
+    try {
+      const payload = importRows.map(mapCsvRowToPayload);
+      const result = await apiFetch<{ inserted: number }>("/api/admin/pilgrims/bulk", {
+        method: "POST",
+        body: JSON.stringify({ pilgrims: payload }),
+      });
+      setImportDone(result.inserted);
+      toast({ title: `Berhasil import ${result.inserted} jemaah` });
+      fetchPilgrims();
+    } catch (err: any) {
+      toast({ title: "Import gagal", description: err.message, variant: "destructive" });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const resetImport = () => {
+    setImportRows([]);
+    setImportErrors([]);
+    setImportDone(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
@@ -261,6 +370,9 @@ const AdminPilgrims = () => {
         <div className="flex flex-wrap gap-3 items-center">
           <Button onClick={openAdd}>
             <Plus className="w-4 h-4 mr-2" /> Tambah Jemaah
+          </Button>
+          <Button variant="outline" onClick={() => { resetImport(); setImportOpen(true); }}>
+            <Upload className="w-4 h-4 mr-2" /> Import CSV
           </Button>
           <Button variant="outline" onClick={() => {
             const headers = ["Nama", "Gender", "NIK", "No. Paspor", "Telepon", "Email", "Kode Booking", "Paket"];
@@ -372,6 +484,110 @@ const AdminPilgrims = () => {
           <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
         </>
       )}
+
+      {/* ── CSV Import Dialog ── */}
+      <Dialog open={importOpen} onOpenChange={(o) => { setImportOpen(o); if (!o) resetImport(); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Import Jemaah via CSV</DialogTitle>
+          </DialogHeader>
+
+          {importDone !== null ? (
+            <div className="flex flex-col items-center gap-4 py-8">
+              <CheckCircle2 className="w-16 h-16 text-green-500" />
+              <p className="text-lg font-semibold">Berhasil import {importDone} jemaah</p>
+              <Button onClick={() => setImportOpen(false)}>Tutup</Button>
+            </div>
+          ) : (
+            <div className="space-y-5 py-2">
+              {/* Instructions */}
+              <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2">
+                <p className="font-medium">Petunjuk import:</p>
+                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                  <li>Download template CSV di bawah ini</li>
+                  <li>Isi data jemaah (kolom <code className="text-xs bg-muted px-1 rounded">nama</code> wajib diisi)</li>
+                  <li>Upload file CSV yang sudah diisi</li>
+                  <li>Periksa preview, lalu klik "Import"</li>
+                </ol>
+                <Button variant="outline" size="sm" onClick={downloadCsvTemplate} className="mt-2">
+                  <Download className="w-3.5 h-3.5 mr-1.5" /> Download Template CSV
+                </Button>
+              </div>
+
+              {/* File Upload */}
+              <div>
+                <Label>Upload File CSV</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="mt-1 block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border file:border-border file:text-sm file:font-medium file:bg-background file:cursor-pointer hover:file:bg-muted cursor-pointer"
+                  onChange={handleFileChange}
+                />
+              </div>
+
+              {/* Errors */}
+              {importErrors.length > 0 && (
+                <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
+                  <div className="flex items-center gap-2 text-destructive font-medium text-sm">
+                    <AlertCircle className="w-4 h-4" /> {importErrors.length} error ditemukan
+                  </div>
+                  <ul className="text-xs text-destructive list-disc list-inside space-y-0.5">
+                    {importErrors.slice(0, 10).map((e, i) => <li key={i}>{e}</li>)}
+                    {importErrors.length > 10 && <li>... dan {importErrors.length - 10} error lainnya</li>}
+                  </ul>
+                </div>
+              )}
+
+              {/* Preview */}
+              {importRows.length > 0 && importErrors.length === 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-2">
+                    Preview ({importRows.length} baris)
+                    {importRows.length > 5 && <span className="text-muted-foreground"> — tampil 5 pertama</span>}
+                  </p>
+                  <div className="border rounded-lg overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nama</TableHead>
+                          <TableHead>NIK</TableHead>
+                          <TableHead>Gender</TableHead>
+                          <TableHead>Telepon</TableHead>
+                          <TableHead>No. Paspor</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {importRows.slice(0, 5).map((row, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-medium">{row["nama"] || "-"}</TableCell>
+                            <TableCell className="font-mono text-xs">{row["nik"] || "-"}</TableCell>
+                            <TableCell>{row["jenis_kelamin"] || "-"}</TableCell>
+                            <TableCell>{row["telepon"] || "-"}</TableCell>
+                            <TableCell className="font-mono text-xs">{row["no_paspor"] || "-"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-2 border-t">
+                <Button variant="outline" onClick={() => setImportOpen(false)} disabled={importing}>Batal</Button>
+                <Button
+                  onClick={handleImportSubmit}
+                  disabled={importing || importRows.length === 0 || importErrors.length > 0}
+                >
+                  {importing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Import {importRows.length > 0 ? `${importRows.length} Jemaah` : ""}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ── Form Dialog: Tambah / Edit Jemaah ── */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>

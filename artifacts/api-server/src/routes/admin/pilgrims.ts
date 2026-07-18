@@ -136,6 +136,47 @@ router.patch("/:id", async (req: any, res) => {
   }
 });
 
+// ── POST /bulk — import banyak jemaah sekaligus (maks 500) ──────────────────
+router.post("/bulk", async (req: any, res) => {
+  try {
+    const { pilgrims: rows } = req.body ?? {};
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: "Array 'pilgrims' wajib diisi" });
+    }
+    if (rows.length > 500) {
+      return res.status(400).json({ error: "Maksimal 500 jemaah per import" });
+    }
+
+    const errors: string[] = [];
+    const inserts: (typeof bookingPilgrims.$inferInsert)[] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const values = pickPilgrimFields(row);
+      if (!values.name || !(values.name as string).trim()) {
+        errors.push(`Baris ${i + 1}: kolom 'nama' wajib diisi`);
+        continue;
+      }
+      inserts.push({
+        id: crypto.randomUUID(),
+        ...values,
+        name: (values.name as string).trim(),
+        createdAt: new Date(),
+      } as typeof bookingPilgrims.$inferInsert);
+    }
+
+    if (errors.length > 0) {
+      return res.status(422).json({ error: "Validasi gagal", errors });
+    }
+
+    const inserted = await db.insert(bookingPilgrims).values(inserts).returning();
+    res.status(201).json({ inserted: inserted.length, pilgrims: inserted });
+  } catch (err: any) {
+    console.error("[pilgrims] POST /bulk", err.message);
+    res.status(500).json({ error: "Gagal import massal", detail: err.message });
+  }
+});
+
 // Check-ins
 router.get("/check-ins", async (req: any, res) => {
   try {
