@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/shared/lib/apiClient";
-import { Users, UserCheck, DollarSign, FileDown, Building2, UsersRound, PhoneCall } from "lucide-react";
+import { Users, UserCheck, DollarSign, FileDown, Building2, UsersRound, PhoneCall, History } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
@@ -42,6 +42,14 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
   const [selectedBranchId, setSelectedBranchId] = useState<string>(branchId || "none");
   const [savingBranch, setSavingBranch] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [statusLogs, setStatusLogs] = useState<Array<{
+    id: string;
+    fromStatus: string | null;
+    toStatus: string;
+    changedBy: string | null;
+    notes: string | null;
+    createdAt: string;
+  }>>([]);
 
   useEffect(() => {
     apiFetch<any[]>("/api/admin/branches")
@@ -72,9 +80,13 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
       setLoading(true);
       try {
         // Booking detail includes pilgrims
-        const detail = await apiFetch<any>(`/api/admin/bookings/${bookingId}`);
+        const [detail, logs] = await Promise.allSettled([
+          apiFetch<any>(`/api/admin/bookings/${bookingId}`),
+          apiFetch<any[]>(`/api/admin/bookings/${bookingId}/status-logs`),
+        ]);
         if (!active) return;
-        setPilgrims(detail.pilgrims || []);
+        if (detail.status === "fulfilled") setPilgrims(detail.value.pilgrims || []);
+        if (logs.status === "fulfilled") setStatusLogs(logs.value || []);
 
         // Commission rate via REST shim
         if (packageId && picType && picType !== "pusat") {
@@ -92,7 +104,8 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
             .then((rows) => { if (active) setPicName(rows?.[0]?.name || "-"); })
             .catch(() => {/* name optional */});
         }
-      } catch {
+      } catch (e) {
+        console.error("[BookingDetailPanel] fetch error", e);
         if (active) toast.error("Gagal memuat detail booking");
       } finally {
         if (active) setLoading(false);
@@ -254,6 +267,37 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
         </div>
       )}
       </div>
+
+      {/* BK-03: Riwayat Perubahan Status */}
+      {statusLogs.length > 0 && (
+        <div className="bg-muted/50 rounded-lg p-4">
+          <h4 className="font-semibold flex items-center gap-2 text-sm mb-3">
+            <History className="w-4 h-4 text-primary" /> Riwayat Status ({statusLogs.length})
+          </h4>
+          <ol className="relative border-l border-border ml-2 space-y-3">
+            {statusLogs.map((log) => (
+              <li key={log.id} className="ml-4">
+                <div className="absolute w-2 h-2 bg-primary rounded-full -left-1 top-1.5 border border-background" />
+                <div className="text-xs text-muted-foreground">
+                  {new Date(log.createdAt).toLocaleString("id-ID")} · {log.changedBy ?? "system"}
+                </div>
+                <div className="text-sm mt-0.5">
+                  {log.fromStatus ? (
+                    <span>
+                      <span className="font-mono bg-muted px-1 rounded">{log.fromStatus}</span>
+                      {" → "}
+                      <span className="font-mono bg-muted px-1 rounded font-semibold">{log.toStatus}</span>
+                    </span>
+                  ) : (
+                    <span className="font-mono bg-muted px-1 rounded font-semibold">{log.toStatus}</span>
+                  )}
+                  {log.notes && <span className="text-muted-foreground ml-2">({log.notes})</span>}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
     </div>
   );
 };

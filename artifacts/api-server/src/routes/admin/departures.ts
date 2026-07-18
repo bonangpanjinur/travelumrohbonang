@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   db,
+  manifests,
   packageDepartures,
   departurePrices,
   packages,
@@ -161,9 +162,12 @@ router.get("/:id/manifest-data", async (req, res) => {
           b.booking_code  AS "bookingCode",
           COALESCE(b.is_group_booking, false) AS "isGroupBooking",
           b.group_name    AS "groupName",
-          b.pic_name      AS "picName"
+          b.pic_name      AS "picName",
+          ci.checked_in_at AS "checkedInAt",
+          ci.location      AS "checkInLocation"
         FROM booking_pilgrims bp
         JOIN bookings b ON b.id = bp.booking_id
+        LEFT JOIN check_ins ci ON ci.pilgrim_id = bp.id AND ci.departure_id = ${departureId}
         WHERE b.departure_id = ${departureId}
           AND b.status IN ('paid','confirmed','processing','completed')
           ${searchFilter}
@@ -331,6 +335,20 @@ router.get("/:id/manifest.pdf", async (req, res) => {
       `inline; filename="manifest-${departure.departureDate}.pdf"`,
     );
     res.send(pdfBuffer);
+
+    // MN-DB01: Simpan snapshot manifest setelah PDF berhasil dikirim
+    db.insert(manifests).values({
+      id: crypto.randomUUID(),
+      departureId,
+      printedBy: (req as any).user?.id ?? "admin",
+      totalPilgrims: pilgrims.length,
+      format: "pdf",
+      snapshotJson: JSON.stringify({
+        packageTitle: departure.packageTitle,
+        departureDate: departure.departureDate,
+        pilgrimCount: pilgrims.length,
+      }),
+    }).catch((err: any) => console.error("[MN-DB01] Failed to save manifest snapshot:", err));
   } catch (err) {
     console.error("[departures] Failed to generate manifest PDF:", err);
     res.status(500).json({ error: "Failed to generate manifest PDF" });

@@ -1,6 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Eye, EyeOff, UsersRound } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -34,9 +35,21 @@ interface BookingTableProps {
   expandedId: string | null;
   onToggleExpand: (id: string) => void;
   onRefresh?: () => void;
+  // BK-F02: Bulk selection
+  selectedIds?: string[];
+  onSelectionChange?: (ids: string[]) => void;
 }
 
-const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: BookingTableProps) => {
+const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh, selectedIds = [], onSelectionChange }: BookingTableProps) => {
+  const allSelected = bookings.length > 0 && bookings.every(b => selectedIds.includes(b.id));
+  const toggleAll = () => {
+    if (!onSelectionChange) return;
+    onSelectionChange(allSelected ? [] : bookings.map(b => b.id));
+  };
+  const toggleOne = (id: string) => {
+    if (!onSelectionChange) return;
+    onSelectionChange(selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id]);
+  };
   const isMobile = useIsMobile();
 
   if (isMobile) {
@@ -99,6 +112,11 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
         <Table>
           <TableHeader>
             <TableRow>
+              {onSelectionChange && (
+                <TableHead className="w-10">
+                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Pilih semua" />
+                </TableHead>
+              )}
               <TableHead>Kode</TableHead>
               <TableHead>Nama</TableHead>
               <TableHead>Paket</TableHead>
@@ -113,6 +131,15 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
             {bookings.map((b) => (
               <>
                 <TableRow key={b.id} className={expandedId === b.id ? "border-b-0" : ""}>
+                  {onSelectionChange && (
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(b.id)}
+                        onCheckedChange={() => toggleOne(b.id)}
+                        aria-label={`Pilih ${b.booking_code}`}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="font-mono text-sm">
                     <div>{b.booking_code}</div>
                     {b.is_group_booking && (
@@ -153,7 +180,7 @@ const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh }: Booki
                 </TableRow>
                 {expandedId === b.id && (
                   <TableRow key={`${b.id}-detail`}>
-                    <TableCell colSpan={8} className="bg-muted/30 p-0">
+                    <TableCell colSpan={onSelectionChange ? 9 : 8} className="bg-muted/30 p-0">
                       <BookingDetailPanel
                         bookingId={b.id}
                         packageId={b.package_id}

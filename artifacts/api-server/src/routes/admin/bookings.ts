@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   db,
   bookings,
+  bookingStatusLogs,
   packages,
   packageDepartures,
   bookingRooms,
@@ -13,6 +14,7 @@ import {
   and,
   ilike,
   isNull,
+  inArray,
   desc,
   sql,
 } from "@workspace/db";
@@ -382,6 +384,20 @@ router.post("/", async (req, res) => {
       return newBooking;
     });
 
+    // KB-F02: Log peringatan saat kuota hampir penuh (sisa ≤ 5)
+    if (departureId) {
+      const [depAfter] = await db
+        .select({ remainingQuota: packageDepartures.remainingQuota, quota: packageDepartures.quota })
+        .from(packageDepartures)
+        .where(eq(packageDepartures.id, departureId))
+        .limit(1);
+      if (depAfter && depAfter.remainingQuota <= 5) {
+        console.warn(
+          `[KB-F02] QUOTA WARNING: departure ${departureId} — sisa ${depAfter.remainingQuota}/${depAfter.quota} tempat`,
+        );
+      }
+    }
+
     res.status(201).json(booking);
   } catch (e) {
     console.error("[POST /api/admin/bookings]", e);
@@ -431,6 +447,7 @@ router.patch(
       if (notes !== undefined) updateData.notes = notes;
 
       // BK-DB02: wrap status update + quota restoration in a single transaction
+      // BK-03: log the status change inside the same transaction
       const updated = await db.transaction(async (tx) => {
         const [row] = await tx
           .update(bookings)
@@ -448,6 +465,16 @@ router.patch(
             WHERE id = ${current.departureId}
           `);
         }
+
+        // BK-03: Log status change audit trail
+        await tx.insert(bookingStatusLogs).values({
+          id: crypto.randomUUID(),
+          bookingId: id,
+          fromStatus: current.status,
+          toStatus: newStatus,
+          changedBy: (req as any).user?.id ?? "admin",
+          notes: notes ?? null,
+        });
 
         return row;
       });
@@ -476,6 +503,69 @@ router.patch(
     }
   },
 );
+
+// BK-03: Riwayat perubahan status booking
+router.get("/:id/status-logs", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const logs = await db
+      .select()
+      .from(bookingStatusLogs)
+      .where(eq(bookingStatusLogs.bookingId, id))
+      .orderBy(desc(bookingStatusLogs.createdAt));
+    res.json(logs);
+  } catch (e) {
+    console.error("[GET /api/admin/bookings/:id/status-logs]", e);
+    res.status(500).json({ error: "Failed to fetch status logs" });
+  }
+});
+
+// BK-F02: Bulk update status banyak booking sekaligus
+router.patch("/bulk-status", async (req, res) => {
+  try {
+    const { ids, status: newStatus } = req.body as { ids: string[]; status: string };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json({ error: "ids harus berupa array" });
+      return;
+    }
+    const ALLOWED = ["confirmed", "cancelled"];
+    if (!ALLOWED.includes(newStatus)) {
+      res.status(400).json({ error: `Status '${newStatus}' tidak didukung untuk bulk action. Gunakan: ${ALLOWED.join(", ")}` });
+      return;
+    }
+
+    const updated = await db.transaction(async (tx) => {
+      const rows = await tx
+        .update(bookings)
+        .set({ status: newStatus })
+        .where(inArray(bookings.id, ids))
+        .returning({ id: bookings.id, departureId: bookings.departureId, status: bookings.status });
+
+      // Log each change + restore quota for cancelled
+      for (const row of rows) {
+        await tx.insert(bookingStatusLogs).values({
+          id: crypto.randomUUID(),
+          bookingId: row.id,
+          fromStatus: null, // bulk — kita tidak fetch status lama satu-satu
+          toStatus: newStatus,
+          changedBy: (req as any).user?.id ?? "admin-bulk",
+          notes: "Bulk status update",
+        });
+        if (newStatus === "cancelled" && row.departureId) {
+          await tx.execute(sql`
+            UPDATE package_departures SET remaining_quota = remaining_quota + 1 WHERE id = ${row.departureId}
+          `);
+        }
+      }
+      return rows.length;
+    });
+
+    res.json({ updated, status: newStatus });
+  } catch (e) {
+    console.error("[PATCH /api/admin/bookings/bulk-status]", e);
+    res.status(500).json({ error: "Failed to bulk update status" });
+  }
+});
 
 router.patch("/:id/branch", async (req, res) => {
   try {

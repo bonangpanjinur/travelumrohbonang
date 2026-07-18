@@ -102,6 +102,19 @@ export const checkIns = pgTable("check_ins", {
   index("idx_check_ins_booking_id").on(t.bookingId),
 ]);
 
+// BK-03: Audit trail setiap perubahan status booking
+export const bookingStatusLogs = pgTable("booking_status_logs", {
+  id: text("id").primaryKey(),
+  bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status").notNull(),
+  changedBy: text("changed_by"), // admin user id or "system"
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (t) => [
+  index("idx_booking_status_logs_booking_id").on(t.bookingId),
+]);
+
 export const bookingPayments = pgTable("booking_payments", {
   id: text("id").primaryKey(),
   bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),

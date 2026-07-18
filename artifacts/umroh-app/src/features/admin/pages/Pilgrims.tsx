@@ -525,9 +525,25 @@ const AdminPilgrims = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">
+                        <div className="text-sm space-y-0.5">
                           <p>NIK: {pilgrim.nik || "-"}</p>
                           <p>Paspor: {pilgrim.passportNumber || "-"}</p>
+                          {pilgrim.passportExpiry && (() => {
+                            const expiry = new Date(pilgrim.passportExpiry);
+                            const now = new Date();
+                            const daysLeft = Math.floor((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                            if (daysLeft < 0) return (
+                              <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-100 text-red-700 border border-red-300">
+                                ⚠ Paspor Expired
+                              </span>
+                            );
+                            if (daysLeft <= 90) return (
+                              <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-300">
+                                ⚠ Exp. {daysLeft}h lagi
+                              </span>
+                            );
+                            return null;
+                          })()}
                         </div>
                       </TableCell>
                       <TableCell>

@@ -4,7 +4,7 @@ import BookingFilters from "@/features/admin/components/BookingFilters";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw } from "lucide-react";
+import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw, CheckSquare2 } from "lucide-react";
 
 interface PackageOption { id: string; title: string; }
 import { exportToCsv } from "@/shared/lib/exportCsv";
@@ -39,6 +39,22 @@ const AdminBookings = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [apiError, setApiError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const handleBulkStatus = async (status: "confirmed" | "cancelled") => {
+    if (selectedIds.length === 0) return;
+    try {
+      const res = await apiFetch<{ updated: number }>("/api/admin/bookings/bulk-status", {
+        method: "PATCH",
+        body: JSON.stringify({ ids: selectedIds, status }),
+      });
+      toast({ title: `${res.updated} booking berhasil diupdate ke "${status}"` });
+      setSelectedIds([]);
+      fetchBookings(0);
+    } catch (err: any) {
+      toast({ title: "Gagal bulk action", description: err.message, variant: "destructive" });
+    }
+  };
 
   const hasActiveFilters =
     filter !== "all" || search !== "" || branchFilter !== "__all__" || packageFilter !== "__all__" || startDate !== "" || endDate !== "";
@@ -263,11 +279,40 @@ const AdminBookings = () => {
         </div>
       ) : (
         <>
+          {/* BK-F02: Bulk action bar */}
+          {selectedIds.length > 0 && (
+            <div className="mb-3 flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <CheckSquare2 className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">{selectedIds.length} booking dipilih</span>
+              <div className="flex gap-2 ml-auto">
+                <button
+                  onClick={() => handleBulkStatus("confirmed")}
+                  className="px-3 py-1.5 text-xs font-medium rounded bg-green-600 text-white hover:bg-green-700 transition-colors"
+                >
+                  Konfirmasi Semua
+                </button>
+                <button
+                  onClick={() => handleBulkStatus("cancelled")}
+                  className="px-3 py-1.5 text-xs font-medium rounded bg-destructive text-white hover:bg-destructive/90 transition-colors"
+                >
+                  Batalkan Semua
+                </button>
+                <button
+                  onClick={() => setSelectedIds([])}
+                  className="px-3 py-1.5 text-xs font-medium rounded border hover:bg-muted transition-colors"
+                >
+                  Batal Pilih
+                </button>
+              </div>
+            </div>
+          )}
           <BookingTable
             bookings={bookings}
             expandedId={expandedId}
             onToggleExpand={handleToggleExpand}
             onRefresh={fetchBookings}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
           />
 
           {totalPages > 1 && (

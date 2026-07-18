@@ -25,7 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Pencil, Trash2, GripVertical, Calendar, MapPin, Upload, Loader2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, Calendar, MapPin, Upload, Loader2, X, Eye, Copy } from "lucide-react";
 import { id as localeId } from "date-fns/locale";
 import { safeFormatDate } from "@/lib/utils";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
@@ -139,6 +139,12 @@ const AdminItineraries = () => {
   const [deleteType, setDeleteType] = useState<"itinerary" | "day">("itinerary");
   const [uploadingImg, setUploadingImg] = useState(false);
   const imgInputRef = useRef<HTMLInputElement>(null);
+  // IT-F02: Preview mode — set id of itinerary currently in preview
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  // IT-F01: Copy-to-departure
+  const [copySourceId, setCopySourceId] = useState<string | null>(null);
+  const [copyTargetDep, setCopyTargetDep] = useState<string>("");
+  const [copying, setCopying] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -338,6 +344,29 @@ const AdminItineraries = () => {
     setForm({ departure_id: "", title: "", notes: "" });
   };
 
+  // IT-F01: Copy-to-departure handler
+  const handleCopyItinerary = async () => {
+    if (!copySourceId || !copyTargetDep) {
+      toast({ title: "Pilih keberangkatan tujuan terlebih dahulu", variant: "destructive" });
+      return;
+    }
+    setCopying(true);
+    try {
+      const res = await apiFetch<{ id: string; departure_id: string; days_copied: number }>(
+        `/api/admin/itineraries/${copySourceId}/copy-to-departure`,
+        { method: "POST", body: JSON.stringify({ departure_id: copyTargetDep }) },
+      );
+      toast({ title: `Itinerary berhasil disalin! ${res.days_copied} hari disalin ke keberangkatan baru.` });
+      fetchData();
+      setCopySourceId(null);
+      setCopyTargetDep("");
+    } catch (err: any) {
+      toast({ title: "Gagal menyalin itinerary", description: err?.message, variant: "destructive" });
+    } finally {
+      setCopying(false);
+    }
+  };
+
   const resetDayForm = () => {
     setEditingDay(null);
     setDayForm({ day_number: 1, title: "", description: "", image_url: "" });
@@ -486,6 +515,48 @@ const AdminItineraries = () => {
         </Dialog>
       </div>
 
+      {/* IT-F01: Copy-to-departure dialog */}
+      <Dialog open={!!copySourceId} onOpenChange={(open) => { if (!open) { setCopySourceId(null); setCopyTargetDep(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Salin Itinerary ke Keberangkatan Lain</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Pilih keberangkatan tujuan. Semua hari dari itinerary ini akan disalin ke keberangkatan yang dipilih.
+            </p>
+            <div>
+              <Label>Keberangkatan Tujuan *</Label>
+              <Select value={copyTargetDep} onValueChange={setCopyTargetDep}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Pilih keberangkatan..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {departures.map((dep) => (
+                    <SelectItem key={dep.id} value={dep.id}>
+                      {dep.package?.title ?? "—"} — {safeFormatDate(dep.departure_date, "d MMM yyyy", { locale: localeId })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setCopySourceId(null); setCopyTargetDep(""); }}>
+                Batal
+              </Button>
+              <Button
+                onClick={handleCopyItinerary}
+                disabled={!copyTargetDep || copying}
+                className="gradient-gold text-primary"
+              >
+                {copying ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Copy className="w-4 h-4 mr-2" />}
+                {copying ? "Menyalin..." : "Salin Itinerary"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Day Form Dialog */}
       <Dialog open={isDayOpen} onOpenChange={(open) => { setIsDayOpen(open); if (!open) resetDayForm(); }}>
         <DialogContent>
@@ -592,7 +663,20 @@ const AdminItineraries = () => {
                     {safeFormatDate(it.departure?.departure_date, "d MMM yyyy", { locale: localeId })}
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  {/* IT-F02: Toggle preview mode */}
+                  <Button
+                    variant={previewId === it.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setPreviewId(previewId === it.id ? null : it.id)}
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    {previewId === it.id ? "Tutup Preview" : "Preview"}
+                  </Button>
+                  {/* IT-F01: Copy to another departure */}
+                  <Button variant="outline" size="sm" onClick={() => { setCopySourceId(it.id); setCopyTargetDep(""); }}>
+                    <Copy className="w-4 h-4 mr-1" /> Salin
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => openAddDay(it)}>
                     <Plus className="w-4 h-4 mr-1" /> Tambah Hari
                   </Button>
@@ -605,7 +689,27 @@ const AdminItineraries = () => {
                 </div>
               </CardHeader>
               <CardContent className="pt-4">
-                {it.days.length === 0 ? (
+                {/* IT-F02: Preview mode — read-only tampilan jemaah */}
+                {previewId === it.id ? (
+                  <div className="space-y-4">
+                    <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+                      Mode Preview — tampilan seperti yang dilihat jemaah
+                    </p>
+                    {it.days.length === 0 ? (
+                      <p className="text-center py-8 text-muted-foreground">Belum ada jadwal hari.</p>
+                    ) : (
+                      it.days.map((day) => (
+                        <div key={day.id} className="border rounded-lg p-4">
+                          <div className="font-bold text-gold mb-1">Hari {day.day_number} — {day.title || "—"}</div>
+                          {day.image_url && (
+                            <img src={day.image_url} alt={day.title ?? ""} className="rounded-lg h-32 object-cover w-full mb-2" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                          )}
+                          {day.description && <p className="text-sm text-muted-foreground whitespace-pre-line">{day.description}</p>}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ) : it.days.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     Belum ada jadwal hari. Klik "Tambah Hari" untuk memulai.
                   </div>

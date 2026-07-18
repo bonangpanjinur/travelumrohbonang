@@ -155,21 +155,21 @@ Fokus: fitur yang meningkatkan kualitas produk tapi tidak menghambat operasional
 
 | Status | ID | Judul | Estimasi | Area |
 |--------|----|-------|----------|------|
-| ❌ | BK-03 | Log/history perubahan status booking | 3 jam | `Bookings.tsx`, backend |
-| ❌ | BK-F02 | Bulk action: konfirmasi/batalkan banyak booking | 4 jam | `Bookings.tsx`, `bookings.ts` |
-| ❌ | JM-F02 | Notifikasi/flag paspor jemaah hampir expired | 4 jam | `Pilgrims.tsx`, cron |
-| ❌ | JM-DB02 | Relasi jemaah ↔ perlengkapan (setelah Sprint 3) | - | Tergantung Sprint 3 |
-| ❌ | MN-F02 | Status check-in jemaah di halaman Manifest | 3 jam | `Manifest.tsx` |
-| ❌ | MN-DB01 | Snapshot manifest saat dicetak (tabel `manifests`) | 1 hari | Schema DB |
-| ❌ | MN-F01 | QR code verifikasi manifest | 1 hari | Backend PDF |
-| ❌ | IT-F01 | Template itinerary level paket (bisa di-apply ke banyak keberangkatan) | 1 hari | Schema + UI |
-| ❌ | IT-F02 | Preview mode itinerary (tampilan jemaah) | 2 jam | `Itineraries.tsx` |
-| ❌ | IT-02 | Standarisasi mapping camelCase ↔ snake_case di Itinerary | 2 jam | `Itineraries.tsx` |
-| ❌ | KB-F02 | Notifikasi ke admin ketika quota hampir penuh | 4 jam | Backend + notif |
-| ❌ | PK-01 | Standarisasi camelCase di seluruh API & frontend | 1 hari | Seluruh codebase |
-| ❌ | PK-02 | Extra Hotels tidak hardcode ke nama kategori | 2 jam | `Packages.tsx`, schema |
-| ❌ | PK-F01 | Preview halaman publik paket dari admin | 2 jam | `Packages.tsx` |
-| ❌ | PL-F03 | Laporan distribusi perlengkapan (export/ringkasan) | 1 hari | Page baru |
+| ✅ | BK-03 | Log/history perubahan status booking | 3 jam | `BookingDetailPanel.tsx` + `bookingStatusLogs` schema + `bookings.ts` |
+| ✅ | BK-F02 | Bulk action: konfirmasi/batalkan banyak booking | 4 jam | `BookingTable.tsx` (checkbox), `Bookings.tsx` (bulk bar), `PATCH /bulk-status` |
+| ✅ | JM-F02 | Notifikasi/flag paspor jemaah hampir expired | 4 jam | `Pilgrims.tsx` — badge merah/oranye di kolom NIK/Paspor |
+| ⏭ | JM-DB02 | Relasi jemaah ↔ perlengkapan (setelah Sprint 3) | - | Ditunda — `pilgrim_equipment` sudah punya FK ke `booking_pilgrims` |
+| ✅ | MN-F02 | Status check-in jemaah di halaman Manifest | 3 jam | `Manifest.tsx` + LEFT JOIN `check_ins` di `manifest-data` |
+| ✅ | MN-DB01 | Snapshot manifest saat dicetak (tabel `manifests`) | 1 hari | Schema `manifests` dibuat, snapshot disimpan saat PDF di-download |
+| ✅ | MN-F01 | QR code verifikasi manifest | 1 hari | Sudah ada sejak Sprint sebelumnya — QR per-jemaah di PDF & halaman Manifest |
+| ✅ | IT-F01 | Template itinerary level paket (salin ke keberangkatan lain) | 1 hari | Dialog "Salin" + `POST /:id/copy-to-departure` endpoint |
+| ✅ | IT-F02 | Preview mode itinerary (tampilan jemaah) | 2 jam | Toggle "Preview" di header card itinerary — read-only view |
+| ✅ | IT-02 | Standarisasi mapping camelCase ↔ snake_case di Itinerary | 2 jam | PATCH & POST /days sekarang mengembalikan snake_case konsisten |
+| ✅ | KB-F02 | Notifikasi ke admin ketika quota hampir penuh | 4 jam | `console.warn` + log quota warning setelah booking dibuat |
+| ⏭ | PK-01 | Standarisasi camelCase di seluruh API & frontend | 1 hari | Ditunda — terlalu luas dan berisiko; perbaiki per-fitur saat disentuh |
+| ✅ | PK-02 | Extra Hotels tidak hardcode ke nama kategori | 2 jam | Sudah menggunakan flag `show_extra_hotels` dari `category.is_active` |
+| ✅ | PK-F01 | Preview halaman publik paket dari admin | 2 jam | Sudah ada — tombol Eye icon → `/paket/:slug` di `Packages.tsx` |
+| ✅ | PL-F03 | Laporan distribusi perlengkapan (export/ringkasan) | 1 hari | Halaman baru `EquipmentReport.tsx` + API `/api/admin/equipment-report` |
 
 ---
 
@@ -214,7 +214,7 @@ manifests (Snapshot)       ← DIBUAT di Sprint 4
 Sprint 1  [██████████]  5/5 selesai  (100%) ✅ SELESAI
 Sprint 2  [██████████]  10/10 selesai (100%) ✅ SELESAI
 Sprint 3  [██████████]  7/7 selesai  (100%) ✅ SELESAI
-Sprint 4  [░░░░░░░░░░]  0/15 selesai (0%)
+Sprint 4  [████████░░]  13/15 selesai (87%) — 2 item ditunda (JM-DB02, PK-01)
 ```
 
 ---

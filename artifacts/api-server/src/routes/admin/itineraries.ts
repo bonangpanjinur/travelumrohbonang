@@ -128,7 +128,15 @@ router.patch("/:id", async (req, res) => {
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Itinerary tidak ditemukan" });
-    res.json(updated);
+    // IT-02: kembalikan snake_case konsisten dengan GET /
+    res.json({
+      id: updated.id,
+      departure_id: updated.departureId,
+      title: updated.title,
+      notes: updated.notes,
+      is_active: updated.isActive,
+      created_at: updated.createdAt,
+    });
   } catch (err: any) {
     console.error("[admin/itineraries] PATCH /:id", err.message);
     res.status(500).json({ error: "Gagal mengupdate itinerary", detail: err.message });
@@ -196,7 +204,16 @@ router.post("/days", async (req, res) => {
         createdAt: new Date(),
       })
       .returning();
-    res.status(201).json(row);
+    // IT-02: kembalikan snake_case konsisten dengan GET /
+    res.status(201).json({
+      id: row.id,
+      itinerary_id: row.itineraryId,
+      day_number: row.dayNumber,
+      title: row.title,
+      description: row.description,
+      image_url: row.imageUrl,
+      created_at: row.createdAt,
+    });
   } catch (err: any) {
     console.error("[admin/itineraries] POST /days", err.message);
     res.status(500).json({ error: "Gagal menambah hari", detail: err.message });
@@ -225,7 +242,16 @@ router.patch("/days/:id", async (req, res) => {
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Hari tidak ditemukan" });
-    res.json(updated);
+    // IT-02: kembalikan snake_case konsisten
+    res.json({
+      id: updated.id,
+      itinerary_id: updated.itineraryId,
+      day_number: updated.dayNumber,
+      title: updated.title,
+      description: updated.description,
+      image_url: updated.imageUrl,
+      created_at: updated.createdAt,
+    });
   } catch (err: any) {
     console.error("[admin/itineraries] PATCH /days/:id", err.message);
     res.status(500).json({ error: "Gagal mengupdate hari", detail: err.message });
@@ -245,6 +271,66 @@ router.delete("/days/:id", async (req, res) => {
   } catch (err: any) {
     console.error("[admin/itineraries] DELETE /days/:id", err.message);
     res.status(500).json({ error: "Gagal menghapus hari", detail: err.message });
+  }
+});
+
+// IT-F01: Salin itinerary (beserta semua harinya) ke keberangkatan lain
+router.post("/:id/copy-to-departure", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { departure_id } = req.body ?? {};
+    if (!departure_id) return res.status(400).json({ error: "departure_id wajib diisi" });
+
+    // Load sumber itinerary + days
+    const [source] = await db.select().from(itineraries).where(eq(itineraries.id, id)).limit(1);
+    if (!source) return res.status(404).json({ error: "Itinerary tidak ditemukan" });
+
+    const sourceDays = await db
+      .select()
+      .from(itineraryDays)
+      .where(eq(itineraryDays.itineraryId, id))
+      .orderBy(asc(itineraryDays.dayNumber));
+
+    // Buat itinerary baru + copy semua hari dalam satu transaksi
+    const newItinerary = await db.transaction(async (tx) => {
+      const newId = crypto.randomUUID();
+      const [created] = await tx
+        .insert(itineraries)
+        .values({
+          id: newId,
+          departureId: departure_id,
+          title: source.title ?? null,
+          notes: source.notes ?? null,
+          isActive: true,
+          createdAt: new Date(),
+        })
+        .returning();
+
+      if (sourceDays.length > 0) {
+        await tx.insert(itineraryDays).values(
+          sourceDays.map((d) => ({
+            id: crypto.randomUUID(),
+            itineraryId: newId,
+            dayNumber: d.dayNumber,
+            title: d.title,
+            description: d.description,
+            imageUrl: d.imageUrl,
+            createdAt: new Date(),
+          })),
+        );
+      }
+      return created;
+    });
+
+    res.status(201).json({
+      id: newItinerary.id,
+      departure_id: newItinerary.departureId,
+      title: newItinerary.title,
+      days_copied: sourceDays.length,
+    });
+  } catch (err: any) {
+    console.error("[admin/itineraries] POST /:id/copy-to-departure", err.message);
+    res.status(500).json({ error: "Gagal menyalin itinerary", detail: err.message });
   }
 });
 

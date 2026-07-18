@@ -47,6 +47,9 @@ interface ManifestPilgrim {
   passportExpiry: string | null;
   roomType: string | null;
   roomNumber: string | null;
+  // MN-F02: Check-in status dari LEFT JOIN check_ins
+  checkedInAt?: string | null;
+  checkInLocation?: string | null;
   docStatus?: {
     paspor: string | null;
     visa: string | null;
@@ -333,6 +336,7 @@ const AdminManifest = () => {
                 <TableHead className="text-center">Paspor</TableHead>
                 <TableHead className="text-center">Visa</TableHead>
                 <TableHead className="text-center">Vaksin</TableHead>
+                <TableHead className="text-center">Check-in</TableHead>
                 <TableHead className="text-center print:hidden">QR</TableHead>
               </TableRow>
             </TableHeader>
@@ -394,6 +398,15 @@ const AdminManifest = () => {
                     </TableCell>
                     <TableCell className="text-center">
                       <DocStatusBadge status={row.docStatus?.vaksin} />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {row.checkedInAt ? (
+                        <Badge className="bg-green-100 text-green-800 border border-green-300 text-[10px] whitespace-nowrap">
+                          ✓ {new Date(row.checkedInAt).toLocaleDateString("id-ID")}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-center print:hidden">
                       <div className="inline-flex flex-col items-center gap-1">

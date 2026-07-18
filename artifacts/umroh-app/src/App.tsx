@@ -78,6 +78,7 @@ import AdminTenantSites from "./features/admin/pages/TenantSites";
 import AdminTemplateUpgrades from "./features/admin/pages/TemplateUpgrades";
 import AdminInstallments from "./features/admin/pages/Installments";
 import AdminManifest from "./features/admin/pages/Manifest";
+import AdminEquipmentReport from "./features/admin/pages/EquipmentReport";
 import AdminProofAccessLogs from "./features/admin/pages/PaymentProofAccessLogs";
 import AdminAgentWithdrawals from "./features/admin/pages/AgentWithdrawals";
 import AdminRefunds from "./features/admin/pages/Refunds";
@@ -194,6 +195,7 @@ const AppContent = () => {
           <Route path="hotels" element={<AdminHotels />} />
           <Route path="airlines" element={<AdminAirlines />} />
           <Route path="equipment" element={<AdminEquipment />} />
+          <Route path="equipment-report" element={<AdminEquipmentReport />} />
           <Route path="airports" element={<AdminAirports />} />
           <Route path="gallery" element={<AdminGallery />} />
           <Route path="testimonials" element={<AdminTestimonials />} />

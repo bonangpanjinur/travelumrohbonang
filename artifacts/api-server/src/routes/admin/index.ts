@@ -51,6 +51,7 @@ import adminPilgrimDocumentsRouter from "./pilgrim-documents";
 import adminUploadsRouter from "./uploads";
 import adminPilgrimEquipmentRouter from "./pilgrim-equipment";
 import adminPilgrimsDbRouter from "./pilgrims-db";
+import adminEquipmentReportRouter from "./equipment-report";
 
 const router = Router();
 
@@ -131,5 +132,8 @@ router.use("/pilgrim-equipment", requireStaff, adminPilgrimEquipmentRouter);
 
 // ── JM-F01 / Sprint-3: Master pilgrims database view ─────────────────────────
 router.use("/pilgrims-db", requireStaff, adminPilgrimsDbRouter);
+
+// ── PL-F03: Laporan distribusi perlengkapan ────────────────────────────────────
+router.use("/equipment-report", requireStaff, adminEquipmentReportRouter);
 
 export default router;
