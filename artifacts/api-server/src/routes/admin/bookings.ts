@@ -430,11 +430,27 @@ router.patch(
       const updateData: Record<string, any> = { status: newStatus };
       if (notes !== undefined) updateData.notes = notes;
 
-      const [updated] = await db
-        .update(bookings)
-        .set(updateData)
-        .where(eq(bookings.id, id))
-        .returning();
+      // BK-DB02: wrap status update + quota restoration in a single transaction
+      const updated = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .update(bookings)
+          .set(updateData)
+          .where(eq(bookings.id, id))
+          .returning();
+
+        if (!row) return null;
+
+        // Restore quota when booking transitions to cancelled
+        if (newStatus === "cancelled" && current.status !== "cancelled" && current.departureId) {
+          await tx.execute(sql`
+            UPDATE package_departures
+            SET remaining_quota = remaining_quota + 1
+            WHERE id = ${current.departureId}
+          `);
+        }
+
+        return row;
+      });
 
       if (!updated) {
         res.status(404).json({ error: "Booking not found" });
@@ -451,15 +467,6 @@ router.patch(
         ).catch((err) => {
           console.error("[loyalty] Failed to auto-award points:", err);
         });
-      }
-
-      // BK-DB02: restore quota when booking is cancelled
-      if (newStatus === "cancelled" && current.status !== "cancelled" && current.departureId) {
-        await db.execute(sql`
-          UPDATE package_departures
-          SET remaining_quota = remaining_quota + 1
-          WHERE id = ${current.departureId}
-        `);
       }
 
       res.json({ id: updated.id, status: updated.status, notes: updated.notes });

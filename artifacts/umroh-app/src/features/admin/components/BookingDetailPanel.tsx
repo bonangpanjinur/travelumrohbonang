@@ -245,10 +245,10 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
       </div>
 
       {/* Equipment assignment — PL-F01 */}
-      {booking && pilgrims.length > 0 && (
+      {bookingId && pilgrims.length > 0 && (
         <div className="bg-muted/50 rounded-lg p-4">
           <PilgrimEquipmentPanel
-            bookingId={booking.id}
+            bookingId={bookingId}
             pilgrims={pilgrims.map((p) => ({ id: p.id, name: p.name }))}
           />
         </div>

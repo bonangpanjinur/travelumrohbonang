@@ -136,10 +136,10 @@ Fokus: fitur-fitur yang secara bisnis kritis tetapi butuh perubahan schema datab
 **✅ BK-DB02 — remainingQuota Sinkron**  
 Dua perubahan di `admin/bookings.ts`:
 1. `POST /`: cek `remainingQuota > 0` sebelum booking dibuat; jika penuh return 409. Lalu dalam transaksi, `UPDATE package_departures SET remaining_quota = GREATEST(0, remaining_quota - 1)`.
-2. `PATCH /:id/status → cancelled`: `UPDATE package_departures SET remaining_quota = remaining_quota + 1`.
+2. `PATCH /:id/status → cancelled`: Status update + restorasi quota kini dibungkus dalam satu DB transaction (sebelumnya restorasi quota berada di luar transaksi, berisiko inkonsistensi jika proses gagal di tengah jalan).
 
 **✅ PL-DB01 + PL-F01 — Tabel pilgrim_equipment + UI Assignment**  
-Tabel `pilgrim_equipment` dibuat di `lib/db/src/schema/pilgrim-equipment.ts` dan di-push ke DB. Backend CRUD di `POST/PATCH/DELETE /api/admin/pilgrim-equipment`. Frontend: komponen `PilgrimEquipmentPanel.tsx` terintegrasi di `BookingDetailPanel` — staff bisa assign perlengkapan per jemaah, update status (pending → diserahkan → dikembalikan), dan hapus assignment.
+Tabel `pilgrim_equipment` dibuat di `lib/db/src/schema/pilgrim-equipment.ts` dan di-push ke DB. Backend CRUD di `POST/PATCH/DELETE /api/admin/pilgrim-equipment`. Frontend: komponen `PilgrimEquipmentPanel.tsx` terintegrasi di `BookingDetailPanel` — staff bisa assign perlengkapan per jemaah, update status (pending → diserahkan → dikembalikan), dan hapus assignment. Bug diperbaiki: kondisi render panel sebelumnya menggunakan variabel `booking` yang tidak ada di scope komponen; sekarang memakai prop `bookingId` langsung.
 
 **✅ PL-F02 — Manajemen Stok**  
 Kolom `total_stock INTEGER NOT NULL DEFAULT 0` ditambahkan ke tabel `equipment` (Drizzle schema `masterdata.ts`, sudah di-push). Form Equipment di `Equipment.tsx` menampilkan field "Total Stok (unit)" yang bisa diisi/edit.
