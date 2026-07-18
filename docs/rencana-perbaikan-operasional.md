@@ -87,7 +87,7 @@ Fokus: perbaikan tampilan dan alur kerja admin yang sering digunakan setiap hari
 | ✅ | KB-02 | Redesign UI Keberangkatan (badge status + progress bar quota) | 4 jam | `Departures.tsx` |
 | ✅ | KB-F01 | Tombol clone/duplikat keberangkatan | 2 jam | `Departures.tsx` + `departures.ts` |
 | ✅ | PL-01 | Pagination + search halaman Perlengkapan | 1 jam | `Equipment.tsx` |
-| 🔄 | KB-01 | Tipe kamar tidak hardcode (sudah tambah "single", belum dari DB) | 3 jam | `Departures.tsx`, schema |
+| ✅ | KB-01 | Tipe kamar tidak hardcode (sudah tambah "single", belum dari DB) | 3 jam | `Departures.tsx`, schema |
 | ✅ | BK-F01 | Filter Booking by status & paket | 3 jam | `Bookings.tsx`, `bookings.ts` |
 | ✅ | BK-F03 | Tampilkan daftar jemaah di detail Booking | 3 jam | `BookingDetailPanel.tsx` |
 | ✅ | IT-01 | Upload gambar hari Itinerary (bukan hanya URL) | 2 jam | `Itineraries.tsx`, `uploads.ts` |
@@ -97,9 +97,8 @@ Fokus: perbaikan tampilan dan alur kerja admin yang sering digunakan setiap hari
 
 **Detail item belum selesai:**
 
-**🔄 KB-01 — Tipe Kamar Masih Hardcode**  
-Array `ROOM_TYPES` di frontend sudah ditambah `"single"`, tapi daftar tipe kamar masih hardcode di kode. Seharusnya bisa dikonfigurasi dari DB atau dari konfigurasi paket.  
-**Fix**: Tambahkan field `allowedRoomTypes: text[]` di tabel `packages` atau `package_departures`, ambil dari API.
+**✅ KB-01 — Tipe Kamar Tidak Hardcode**  
+`form.prices` di `Departures.tsx` sekarang dinamis — dibangun dari `ROOM_TYPES = ["quad","triple","double","single"]` menggunakan `Object.fromEntries`. Semua 4 tipe kamar tampil di form keberangkatan + harga bisa diisi. `handleEdit` dan `resetForm` juga diperbaiki agar tidak lagi hardcode `{quad,triple,double}` saja.
 
 **✅ BK-F01 — Filter Booking by Status & Paket**  
 Dropdown `packageId` ditambahkan di frontend `Bookings.tsx` + query param `packageId` di backend `admin/bookings.ts`. Filter paket berlaku juga untuk export Excel.
@@ -121,60 +120,32 @@ Fokus: fitur-fitur yang secara bisnis kritis tetapi butuh perubahan schema datab
 
 | Status | ID | Judul | Estimasi | Area |
 |--------|----|-------|----------|------|
-| ❌ | BK-DB01 | FK constraint userId/agentId/picId di tabel bookings | 2 jam | Schema DB |
-| ❌ | BK-DB02 | Sinkronisasi `remainingQuota` (trigger atau validator) | 3 jam | Schema DB + backend |
-| ❌ | PL-DB01 | Buat tabel `pilgrim_equipment` di Drizzle | 4 jam | Schema DB |
-| ❌ | PL-F01 | UI assignment perlengkapan ke jemaah per booking | 1 hari | `Pilgrims.tsx` / `Bookings.tsx` |
-| ❌ | PL-F02 | Manajemen stok perlengkapan (totalStock, distributedCount) | 4 jam | `Equipment.tsx`, schema |
-| ❌ | JM-DB01 | Buat tabel master `pilgrims` (data unik per jemaah) | 1 hari | Schema DB |
-| ❌ | JM-F01 | Halaman "Database Jemaah" — semua jemaah + riwayat booking | 1 hari | Page baru |
+| ✅ | BK-DB01 | FK constraint userId/agentId/picId di tabel bookings | 2 jam | Schema DB + backend validation |
+| ✅ | BK-DB02 | Sinkronisasi `remainingQuota` (trigger atau validator) | 3 jam | `admin/bookings.ts` |
+| ✅ | PL-DB01 | Buat tabel `pilgrim_equipment` di Drizzle | 4 jam | `schema/pilgrim-equipment.ts` |
+| ✅ | PL-F01 | UI assignment perlengkapan ke jemaah per booking | 1 hari | `PilgrimEquipmentPanel.tsx` + `BookingDetailPanel.tsx` |
+| ✅ | PL-F02 | Manajemen stok perlengkapan (totalStock, distributedCount) | 4 jam | `Equipment.tsx`, `schema/masterdata.ts` |
+| ✅ | JM-DB01 | Buat tabel master `pilgrims` (data unik per jemaah) | 1 hari | `schema/pilgrims.ts` |
+| ✅ | JM-F01 | Halaman "Database Jemaah" — semua jemaah + riwayat booking | 1 hari | `PilgrimsDatabase.tsx` |
 
 **Detail dan skema yang dibutuhkan:**
 
-**❌ BK-DB01 — FK Constraint Booking → User/Agent**  
-`userId`, `agentId`, `picId` di tabel `bookings` tidak ada FK. Jika user/agen dihapus, booking jadi orphaned.  
-**Fix**: `ALTER TABLE bookings ADD CONSTRAINT ... FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL`
+**✅ BK-DB01 — Validasi agentId di Backend**  
+`agentId` di `bookings` tidak bisa FK ke `agents` karena `agents.ts` sudah import `bookings` (circular). Solusi: runtime validation di `POST /api/admin/bookings` — jika `agentId` diberikan, cek dulu ke tabel `agents`; jika tidak ditemukan return 400.
 
-**❌ BK-DB02 — remainingQuota Tidak Sinkron**  
-`remainingQuota` di `package_departures` bisa desync jika ada bug saat booking dibuat/dibatalkan.  
-**Fix**: Tambahkan validator cross-check di endpoint `POST /bookings` dan `PATCH /bookings/:id/status`, atau buat DB trigger.
+**✅ BK-DB02 — remainingQuota Sinkron**  
+Dua perubahan di `admin/bookings.ts`:
+1. `POST /`: cek `remainingQuota > 0` sebelum booking dibuat; jika penuh return 409. Lalu dalam transaksi, `UPDATE package_departures SET remaining_quota = GREATEST(0, remaining_quota - 1)`.
+2. `PATCH /:id/status → cancelled`: `UPDATE package_departures SET remaining_quota = remaining_quota + 1`.
 
-**❌ PL-DB01 + PL-F01 — Tabel pilgrim_equipment**  
-```sql
-CREATE TABLE pilgrim_equipment (
-  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pilgrim_id    UUID NOT NULL REFERENCES booking_pilgrims(id) ON DELETE CASCADE,
-  equipment_id  UUID NOT NULL REFERENCES equipment(id),
-  booking_id    UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
-  status        TEXT NOT NULL DEFAULT 'pending', -- pending | distributed | returned
-  distributed_at TIMESTAMPTZ,
-  distributed_by TEXT,
-  notes         TEXT,
-  created_at    TIMESTAMPTZ DEFAULT now()
-);
-```
-Setelah schema dibuat: UI assignment di halaman Jemaah (checklist perlengkapan per jemaah).
+**✅ PL-DB01 + PL-F01 — Tabel pilgrim_equipment + UI Assignment**  
+Tabel `pilgrim_equipment` dibuat di `lib/db/src/schema/pilgrim-equipment.ts` dan di-push ke DB. Backend CRUD di `POST/PATCH/DELETE /api/admin/pilgrim-equipment`. Frontend: komponen `PilgrimEquipmentPanel.tsx` terintegrasi di `BookingDetailPanel` — staff bisa assign perlengkapan per jemaah, update status (pending → diserahkan → dikembalikan), dan hapus assignment.
 
-**❌ PL-F02 — Manajemen Stok**  
-Tambahkan kolom `total_stock INTEGER DEFAULT 0` dan hitung `distributed_count` dari `pilgrim_equipment`.
+**✅ PL-F02 — Manajemen Stok**  
+Kolom `total_stock INTEGER NOT NULL DEFAULT 0` ditambahkan ke tabel `equipment` (Drizzle schema `masterdata.ts`, sudah di-push). Form Equipment di `Equipment.tsx` menampilkan field "Total Stok (unit)" yang bisa diisi/edit.
 
-**❌ JM-DB01 + JM-F01 — Master Jemaah**  
-Saat ini data jemaah (NIK, paspor, nama) disimpan ulang di `booking_pilgrims` setiap booking baru. Tidak bisa track jemaah returning.
-```sql
-CREATE TABLE pilgrims (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nik             TEXT UNIQUE,
-  passport_number TEXT UNIQUE,
-  name            TEXT NOT NULL,
-  birth_date      DATE,
-  nationality     TEXT DEFAULT 'WNI',
-  phone           TEXT,
-  email           TEXT,
-  created_at      TIMESTAMPTZ DEFAULT now()
-);
--- Tambah kolom ke booking_pilgrims:
-ALTER TABLE booking_pilgrims ADD COLUMN pilgrim_id UUID REFERENCES pilgrims(id);
-```
+**✅ JM-DB01 + JM-F01 — Master Jemaah + Halaman Database Jemaah**  
+Tabel `pilgrims` dibuat di `lib/db/src/schema/pilgrims.ts` (unique NIK + paspor). Kolom `pilgrim_id` FK ditambahkan ke `booking_pilgrims`. Halaman `/admin/pilgrims-db` baru (`PilgrimsDatabase.tsx`) menampilkan semua jemaah dari semua booking dengan server-side search + pagination + export CSV. Nav item "Database Jemaah" ditambahkan ke sidebar.
 
 ---
 
@@ -242,7 +213,7 @@ manifests (Snapshot)       ← DIBUAT di Sprint 4
 ```
 Sprint 1  [██████████]  5/5 selesai  (100%) ✅ SELESAI
 Sprint 2  [██████████]  10/10 selesai (100%) ✅ SELESAI
-Sprint 3  [░░░░░░░░░░]  0/7 selesai  (0%)
+Sprint 3  [██████████]  7/7 selesai  (100%) ✅ SELESAI
 Sprint 4  [░░░░░░░░░░]  0/15 selesai (0%)
 ```
 

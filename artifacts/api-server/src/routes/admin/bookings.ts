@@ -296,6 +296,32 @@ router.post("/", async (req, res) => {
       roomType,
     } = req.body;
 
+    // BK-DB01: Validate agentId exists if provided
+    if (agentId) {
+      const [agentRow] = await db
+        .select({ id: agents.id })
+        .from(agents)
+        .where(eq(agents.id, agentId))
+        .limit(1);
+      if (!agentRow) {
+        res.status(400).json({ error: "Agen tidak ditemukan" });
+        return;
+      }
+    }
+
+    // BK-DB02: Check remaining quota before creating booking
+    if (departureId) {
+      const [dep] = await db
+        .select({ remainingQuota: packageDepartures.remainingQuota })
+        .from(packageDepartures)
+        .where(eq(packageDepartures.id, departureId))
+        .limit(1);
+      if (dep && dep.remainingQuota <= 0) {
+        res.status(409).json({ error: "Kuota keberangkatan penuh, tidak dapat membuat booking baru" });
+        return;
+      }
+    }
+
     let bookingCode = `BNG-ADM-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
     const existingCode = await db.select({ id: bookings.id }).from(bookings).where(eq(bookings.bookingCode, bookingCode)).limit(1);
     if (existingCode.length) {
@@ -344,6 +370,15 @@ router.post("/", async (req, res) => {
         });
       }
 
+      // BK-DB02: decrement remaining quota inside transaction
+      if (departureId) {
+        await tx.execute(sql`
+          UPDATE package_departures
+          SET remaining_quota = GREATEST(0, remaining_quota - 1)
+          WHERE id = ${departureId}
+        `);
+      }
+
       return newBooking;
     });
 
@@ -372,7 +407,7 @@ router.patch(
       };
 
       const [current] = await db
-        .select({ status: bookings.status })
+        .select({ status: bookings.status, departureId: bookings.departureId })
         .from(bookings)
         .where(eq(bookings.id, id))
         .limit(1);
@@ -416,6 +451,15 @@ router.patch(
         ).catch((err) => {
           console.error("[loyalty] Failed to auto-award points:", err);
         });
+      }
+
+      // BK-DB02: restore quota when booking is cancelled
+      if (newStatus === "cancelled" && current.status !== "cancelled" && current.departureId) {
+        await db.execute(sql`
+          UPDATE package_departures
+          SET remaining_quota = remaining_quota + 1
+          WHERE id = ${current.departureId}
+        `);
       }
 
       res.json({ id: updated.id, status: updated.status, notes: updated.notes });

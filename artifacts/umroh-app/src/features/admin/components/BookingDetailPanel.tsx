@@ -5,6 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { fetchInvoiceData, generateInvoiceHTML, openInvoicePrintWindow } from "./InvoiceGenerator";
+import PilgrimEquipmentPanel from "./PilgrimEquipmentPanel";
 import { toast } from "sonner";
 
 interface Branch {
@@ -242,6 +243,16 @@ const BookingDetailPanel = ({ bookingId, packageId, picType, picId, packageTitle
           </ul>
         )}
       </div>
+
+      {/* Equipment assignment — PL-F01 */}
+      {booking && pilgrims.length > 0 && (
+        <div className="bg-muted/50 rounded-lg p-4">
+          <PilgrimEquipmentPanel
+            bookingId={booking.id}
+            pilgrims={pilgrims.map((p) => ({ id: p.id, name: p.name }))}
+          />
+        </div>
+      )}
       </div>
     </div>
   );

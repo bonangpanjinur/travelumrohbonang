@@ -59,6 +59,7 @@ import AdminBlog from "./features/admin/pages/Blog";
 import AdminSettings from "./features/admin/pages/Settings";
 import AdminNavigation from "./features/admin/pages/Navigation";
 import AdminPilgrims from "./features/admin/pages/Pilgrims";
+import AdminPilgrimsDatabase from "./features/admin/pages/PilgrimsDatabase";
 import AdminAgents from "./features/admin/pages/Agents";
 import AdminMuthawifs from "./features/admin/pages/Muthawifs";
 import AdminUsers from "./features/admin/pages/Users";
@@ -186,6 +187,7 @@ const AppContent = () => {
           <Route path="analytics" element={<AdminAnalyticsDashboard />} />
           <Route path="notifications" element={<AdminNotificationsPage />} />
           <Route path="pilgrims" element={<AdminPilgrims />} />
+          <Route path="pilgrims-db" element={<AdminPilgrimsDatabase />} />
           <Route path="branches" element={<AdminBranches />} />
           <Route path="agents" element={<AdminAgents />} />
           <Route path="muthawifs" element={<AdminMuthawifs />} />

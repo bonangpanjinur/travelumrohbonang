@@ -111,6 +111,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Itinerary", labelKey: "menu.itineraries", href: "/admin/itineraries", icon: MapPin, roles: ALL_STAFF },
       { label: "Booking", labelKey: "menu.bookings", href: "/admin/bookings", icon: Ticket, roles: OPERATIONAL },
       { label: "Jemaah", labelKey: "menu.pilgrims", href: "/admin/pilgrims", icon: Users, roles: ALL_STAFF },
+      { label: "Database Jemaah", labelKey: "menu.pilgrims_db", href: "/admin/pilgrims-db", icon: Users, roles: ALL_STAFF },
       { label: "Manifest", labelKey: "menu.manifest", href: "/admin/manifest", icon: ClipboardList, roles: ALL_STAFF },
       { label: "Room Assignment", labelKey: "menu.room_assignment", href: "/admin/room-assignment", icon: BedDouble, roles: ALL_STAFF },
       { label: "Check-In QR", labelKey: "menu.checkin_qr", href: "/admin/check-in", icon: ShieldCheck, roles: ALL_STAFF },

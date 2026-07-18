@@ -18,6 +18,7 @@ interface Equipment {
   category: string | null;
   description: string | null;
   imageUrl: string | null;
+  totalStock: number;
   isActive: boolean;
 }
 
@@ -30,7 +31,7 @@ const AdminEquipment = () => {
   const { toast } = useToast();
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  const [form, setForm] = useState({ name: "", category: "", description: "", imageUrl: "" });
+  const [form, setForm] = useState({ name: "", category: "", description: "", imageUrl: "", totalStock: 0 });
   const [uploadingImg, setUploadingImg] = useState(false);
   const imgInputRef = useRef<HTMLInputElement>(null);
 
@@ -94,6 +95,7 @@ const AdminEquipment = () => {
       category: item.category || "",
       description: item.description || "",
       imageUrl: item.imageUrl || "",
+      totalStock: item.totalStock ?? 0,
     });
     setIsOpen(true);
   };
@@ -114,7 +116,7 @@ const AdminEquipment = () => {
 
   const resetForm = () => {
     setEditing(null);
-    setForm({ name: "", category: "", description: "", imageUrl: "" });
+    setForm({ name: "", category: "", description: "", imageUrl: "", totalStock: 0 });
     if (imgInputRef.current) imgInputRef.current.value = "";
   };
 
@@ -218,6 +220,18 @@ const AdminEquipment = () => {
                       <img src={form.imageUrl} alt="Preview" className="rounded-lg object-cover h-28 w-full border" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                     )}
                   </div>
+                </div>
+                <div>
+                  <Label>Total Stok (unit)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.totalStock}
+                    onChange={(e) => setForm({ ...form, totalStock: parseInt(e.target.value) || 0 })}
+                    className="mt-1"
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Jumlah unit perlengkapan yang dimiliki kantor</p>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>

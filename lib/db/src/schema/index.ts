@@ -1,5 +1,7 @@
+export * from "./pilgrims";
 export * from "./packages";
 export * from "./bookings";
+export * from "./pilgrim-equipment";
 export * from "./profiles";
 export * from "./masterdata";
 export * from "./agents";

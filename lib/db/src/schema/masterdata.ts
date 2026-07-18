@@ -96,6 +96,8 @@ export const equipment = pgTable("equipment", {
   category: text("category"),
   description: text("description"),
   imageUrl: text("image_url"),
+  // PL-F02: stock tracking — total units owned by the travel office
+  totalStock: integer("total_stock").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
   sortOrder: integer("sort_order"),
   createdAt: timestamp("created_at", { withTimezone: true }),

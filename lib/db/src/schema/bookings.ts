@@ -4,6 +4,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { packages, packageDepartures } from "./packages";
 import { branches } from "./masterdata";
+import { masterPilgrims } from "./pilgrims";
 
 export const bookings = pgTable("bookings", {
   id: text("id").primaryKey(),
@@ -51,6 +52,8 @@ export const bookingRooms = pgTable("booking_rooms", {
 export const bookingPilgrims = pgTable("booking_pilgrims", {
   id: text("id").primaryKey(),
   bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
+  // JM-DB01: optional link to master pilgrims table for returning pilgrim tracking
+  pilgrimId: text("pilgrim_id").references(() => masterPilgrims.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   phone: text("phone"),
   email: text("email"),
@@ -65,6 +68,7 @@ export const bookingPilgrims = pgTable("booking_pilgrims", {
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_booking_pilgrims_booking_id").on(t.bookingId),
+  index("idx_booking_pilgrims_pilgrim_id").on(t.pilgrimId),
 ]);
 
 export const pilgrimDocuments = pgTable("pilgrim_documents", {

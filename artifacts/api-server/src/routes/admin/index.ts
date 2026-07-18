@@ -49,6 +49,8 @@ import adminInstallmentsRouter from "./installments";
 import adminItinerariesRouter from "./itineraries";
 import adminPilgrimDocumentsRouter from "./pilgrim-documents";
 import adminUploadsRouter from "./uploads";
+import adminPilgrimEquipmentRouter from "./pilgrim-equipment";
+import adminPilgrimsDbRouter from "./pilgrims-db";
 
 const router = Router();
 
@@ -123,5 +125,11 @@ router.use("/pilgrim-documents", requireStaff, adminPilgrimDocumentsRouter);
 
 // ── IT-01 / PL-02: General image uploads (itinerary days, equipment, etc.) ───
 router.use("/uploads", requireStaff, adminUploadsRouter);
+
+// ── PL-F01 / Sprint-3: Equipment assignment to pilgrims ──────────────────────
+router.use("/pilgrim-equipment", requireStaff, adminPilgrimEquipmentRouter);
+
+// ── JM-F01 / Sprint-3: Master pilgrims database view ─────────────────────────
+router.use("/pilgrims-db", requireStaff, adminPilgrimsDbRouter);
 
 export default router;

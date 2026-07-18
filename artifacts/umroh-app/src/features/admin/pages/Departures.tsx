@@ -78,18 +78,22 @@ const AdminDepartures = () => {
   const { toast } = useToast();
   const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    package_id: string;
+    departure_date: string;
+    return_date: string;
+    quota: number;
+    status: string;
+    muthawif_id: string;
+    prices: Record<string, number>;
+  }>({
     package_id: "",
     departure_date: "",
     return_date: "",
     quota: 45,
     status: "active",
     muthawif_id: "",
-    prices: {
-      quad: 0,
-      triple: 0,
-      double: 0,
-    },
+    prices: Object.fromEntries(ROOM_TYPES.map((t) => [t, 0])),
   });
 
   useEffect(() => {
@@ -157,9 +161,9 @@ const AdminDepartures = () => {
 
   const handleEdit = (dep: Departure) => {
     setEditing(dep);
-    const priceMap = { quad: 0, triple: 0, double: 0 };
+    const priceMap: Record<string, number> = Object.fromEntries(ROOM_TYPES.map((t) => [t, 0]));
     (dep.prices ?? []).forEach((p) => {
-      priceMap[p.room_type as keyof typeof priceMap] = p.price;
+      priceMap[p.room_type] = p.price;
     });
 
     setForm({
@@ -199,7 +203,7 @@ const AdminDepartures = () => {
       quota: 45,
       status: "active",
       muthawif_id: "",
-      prices: { quad: 0, triple: 0, double: 0 },
+      prices: Object.fromEntries(ROOM_TYPES.map((t) => [t, 0])),
     });
   };
 
