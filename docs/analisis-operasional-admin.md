@@ -277,9 +277,9 @@ Tambahkan search/autocomplete untuk pemilihan booking, bukan load semua sekaligu
 | BUG-05 | Paket | 🟠 Medium | Inkonsistensi data (extra hotels) | ✅ Diperbaiki (atomic transaction POST & PATCH) |
 | BUG-06 | Booking Backend | 🟠 Medium | Status transition tidak tervalidasi | ✅ Diperbaiki (state machine VALID_TRANSITIONS) |
 | BUG-07 | Itinerary | 🟠 Medium | Upload gambar tidak ada | Belum diperbaiki |
-| BUG-08 | Jemaah | 🟡 Low | Validasi form tidak lengkap | Belum diperbaiki |
-| BUG-09 | Manifest | 🟡 Low | Tidak ada paginasi | Belum diperbaiki |
-| BUG-10 | Jemaah | 🟡 Low | Limit hardcoded 200 | Belum diperbaiki |
+| BUG-08 | Jemaah | 🟡 Low | Validasi form tidak lengkap | ✅ Diperbaiki (NIK 16 digit, format email, format telepon Indonesia) |
+| BUG-09 | Manifest | 🟡 Low | Tidak ada paginasi | ✅ Diperbaiki (50/halaman, reset saat filter/departur berubah) |
+| BUG-10 | Jemaah | 🟡 Low | Limit hardcoded 200 | ✅ Diperbaiki (search-as-you-type debounced 350ms, limit=20 dari backend) |
 
 ---
 

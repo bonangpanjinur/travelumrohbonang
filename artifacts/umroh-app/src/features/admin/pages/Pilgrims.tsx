@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -71,9 +71,11 @@ const AdminPilgrims = () => {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
-  // Booking options for dropdown
+  // Booking options for dropdown (search-as-you-type — BUG-10)
   const [bookings, setBookings] = useState<BookingOption[]>([]);
   const [bookingSearch, setBookingSearch] = useState("");
+  const [bookingSearchLoading, setBookingSearchLoading] = useState(false);
+  const bookingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchPilgrims = useCallback(async () => {
     try {
@@ -86,30 +88,40 @@ const AdminPilgrims = () => {
     }
   }, [toast]);
 
-  const fetchBookings = useCallback(async () => {
-    try {
-      const result = await apiFetch<{ data: any[] }>("/api/admin/bookings?limit=200");
-      setBookings(
-        (result?.data || []).map((b: any) => ({
-          id: b.id,
-          booking_code: b.bookingCode,
-          package_title: b.packageTitle || "-",
-        }))
-      );
-    } catch (err) {
-      console.error(err);
-      toast({
-        title: "Gagal memuat daftar booking",
-        description: "Dropdown booking mungkin kosong. Coba muat ulang halaman.",
-        variant: "destructive",
-      });
+  // Cari booking saat pengguna mengetik ≥ 2 karakter (debounced 350ms)
+  useEffect(() => {
+    if (bookingDebounceRef.current) clearTimeout(bookingDebounceRef.current);
+    const q = bookingSearch.trim();
+    if (q.length < 2) {
+      setBookings([]);
+      return;
     }
-  }, [toast]);
+    bookingDebounceRef.current = setTimeout(async () => {
+      setBookingSearchLoading(true);
+      try {
+        const result = await apiFetch<{ data: any[] }>(
+          `/api/admin/bookings?search=${encodeURIComponent(q)}&limit=20`
+        );
+        setBookings(
+          (result?.data || []).map((b: any) => ({
+            id: b.id,
+            booking_code: b.bookingCode,
+            package_title: b.packageTitle || "-",
+          }))
+        );
+      } catch {
+        setBookings([]);
+      } finally {
+        setBookingSearchLoading(false);
+      }
+    }, 350);
+
+    return () => { if (bookingDebounceRef.current) clearTimeout(bookingDebounceRef.current); };
+  }, [bookingSearch]);
 
   useEffect(() => {
     fetchPilgrims();
-    fetchBookings();
-  }, [fetchPilgrims, fetchBookings]);
+  }, [fetchPilgrims]);
 
   const filteredPilgrims = pilgrims.filter((p) => {
     const q = search.toLowerCase();
@@ -127,11 +139,8 @@ const AdminPilgrims = () => {
     useAdminPagination(filteredPilgrims);
   useEffect(() => { resetPage(); }, [search]);
 
-  const filteredBookings = bookings.filter(
-    (b) =>
-      b.booking_code.toLowerCase().includes(bookingSearch.toLowerCase()) ||
-      b.package_title.toLowerCase().includes(bookingSearch.toLowerCase())
-  );
+  // Hasil booking sudah difilter di backend — tampilkan langsung (BUG-10)
+  const filteredBookings = bookings;
 
   const openAdd = () => {
     setEditingId(null);
@@ -158,10 +167,38 @@ const AdminPilgrims = () => {
   };
 
   const handleSave = async () => {
+    // ── Validasi form (BUG-08) ──────────────────────────────────────────────
     if (!form.name.trim()) {
       toast({ title: "Nama wajib diisi", variant: "destructive" });
       return;
     }
+    if (form.nik.trim() && !/^\d{16}$/.test(form.nik.trim())) {
+      toast({
+        title: "NIK tidak valid",
+        description: "NIK harus tepat 16 digit angka",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      toast({
+        title: "Email tidak valid",
+        description: "Format email tidak sesuai, contoh: nama@domain.com",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Terima format: 08xx, +62xx, 628xx; strip spasi & tanda pisah sebelum validasi
+    const rawPhone = form.phone.trim().replace(/[\s\-().]/g, "");
+    if (rawPhone && !/^(\+62|62|0)\d{8,13}$/.test(rawPhone)) {
+      toast({
+        title: "Nomor telepon tidak valid",
+        description: "Gunakan format Indonesia, contoh: 0812-3456-7890 atau +6281234567890",
+        variant: "destructive",
+      });
+      return;
+    }
+    // ───────────────────────────────────────────────────────────────────────
     setSaving(true);
     const payload = {
       name: form.name.trim(),
@@ -452,22 +489,30 @@ const AdminPilgrims = () => {
                     className="pl-10"
                   />
                 </div>
-                {bookingSearch && filteredBookings.length > 0 && !form.booking_id && (
+                {bookingSearch.trim().length >= 2 && !form.booking_id && (
                   <div className="border border-border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
-                    {filteredBookings.slice(0, 20).map((b) => (
-                      <button
-                        key={b.id}
-                        type="button"
-                        onClick={() => {
-                          field("booking_id", b.id);
-                          setBookingSearch(b.booking_code);
-                        }}
-                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted flex items-center justify-between gap-2 border-b last:border-0"
-                      >
-                        <span className="font-mono font-semibold">{b.booking_code}</span>
-                        <span className="text-muted-foreground truncate">{b.package_title}</span>
-                      </button>
-                    ))}
+                    {bookingSearchLoading ? (
+                      <div className="flex items-center justify-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Mencari...
+                      </div>
+                    ) : filteredBookings.length === 0 ? (
+                      <p className="px-4 py-3 text-sm text-muted-foreground">Booking tidak ditemukan.</p>
+                    ) : (
+                      filteredBookings.map((b) => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => {
+                            field("booking_id", b.id);
+                            setBookingSearch(b.booking_code);
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted flex items-center justify-between gap-2 border-b last:border-0"
+                        >
+                          <span className="font-mono font-semibold">{b.booking_code}</span>
+                          <span className="text-muted-foreground truncate">{b.package_title}</span>
+                        </button>
+                      ))
+                    )}
                   </div>
                 )}
                 {form.booking_id && (

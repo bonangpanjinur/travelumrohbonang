@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/apiClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
@@ -14,6 +14,7 @@ import { exportToCsv } from "@/shared/lib/exportCsv";
 import { QRCodeSVG } from "qrcode.react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import AdminPagination from "@/features/admin/components/AdminPagination";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,9 +70,12 @@ const fmtDate = (d: string | null) => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const MANIFEST_PAGE_SIZE = 50;
+
 const AdminManifest = () => {
   const [selectedDep, setSelectedDep] = useState<string>("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
 
   // Fetch all departures for the dropdown
   const { data: departuresRes, isLoading: loadingDeps } = useQuery({
@@ -105,7 +109,15 @@ const AdminManifest = () => {
     );
   });
 
+  // Pagination (BUG-09) — reset ke halaman 0 saat filter atau keberangkatan berubah
+  const totalPages = Math.ceil(filtered.length / MANIFEST_PAGE_SIZE);
+  const pagedRows = filtered.slice(page * MANIFEST_PAGE_SIZE, (page + 1) * MANIFEST_PAGE_SIZE);
+
   const groupCount = pilgrims.filter((p) => p.isGroupBooking).length;
+
+  // Reset halaman ketika filter atau keberangkatan berubah (BUG-09)
+  const handleDepChange = (v: string) => { setSelectedDep(v); setSearch(""); setPage(0); };
+  const handleSearchChange = (v: string) => { setSearch(v); setPage(0); };
 
   const handlePrint = () => window.print();
 
@@ -168,7 +180,7 @@ const AdminManifest = () => {
 
       {/* Departure selector */}
       <div className="mb-6 print:hidden">
-        <Select value={selectedDep} onValueChange={(v) => { setSelectedDep(v); setSearch(""); }}>
+        <Select value={selectedDep} onValueChange={handleDepChange}>
           <SelectTrigger className="w-full sm:w-[420px]">
             <SelectValue placeholder="Pilih keberangkatan..." />
           </SelectTrigger>
@@ -255,7 +267,7 @@ const AdminManifest = () => {
             placeholder="Cari nama, no. paspor, kode booking, atau nama rombongan..."
             className="pl-9"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
           />
         </div>
       )}
@@ -296,7 +308,7 @@ const AdminManifest = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((row, i) => {
+              {pagedRows.map((row, i) => {
                 const origin = typeof window !== "undefined" ? window.location.origin : "";
                 const qrPayload = JSON.stringify({
                   v: 1,
@@ -307,9 +319,11 @@ const AdminManifest = () => {
                   pp: row.passportNumber ?? null,
                   url: `${origin}/manifest/checkin?pid=${row.id}&dep=${selectedDep}`,
                 });
+                // Nomor urut global (bukan per halaman) untuk konsistensi cetak
+                const globalIndex = page * MANIFEST_PAGE_SIZE + i + 1;
                 return (
                   <TableRow key={row.id}>
-                    <TableCell className="text-muted-foreground text-sm">{i + 1}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{globalIndex}</TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded whitespace-nowrap">
@@ -359,11 +373,25 @@ const AdminManifest = () => {
         </div>
       )}
 
+      {/* Pagination (BUG-09) */}
+      {filtered.length > MANIFEST_PAGE_SIZE && (
+        <div className="print:hidden">
+          <AdminPagination
+            page={page}
+            totalPages={totalPages}
+            totalCount={filtered.length}
+            pageSize={MANIFEST_PAGE_SIZE}
+            onPageChange={setPage}
+          />
+        </div>
+      )}
+
       {/* Footer count */}
       {filtered.length > 0 && (
         <p className="text-sm text-muted-foreground mt-3 print:hidden">
-          Menampilkan {filtered.length} dari {pilgrims.length} jemaah
+          Menampilkan {pagedRows.length} dari {filtered.length} jemaah
           {search && ` (difilter oleh "${search}")`}
+          {filtered.length < pilgrims.length && ` — ${pilgrims.length} total`}
         </p>
       )}
     </div>
