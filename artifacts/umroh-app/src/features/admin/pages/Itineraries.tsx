@@ -39,16 +39,8 @@ interface Itinerary {
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-/** Build a query string from an object, omitting undefined/null values. */
-function qs(params: Record<string, string | number | boolean | undefined>) {
-  const parts = Object.entries(params)
-    .filter(([, v]) => v !== undefined && v !== null && v !== "")
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
-  return parts.length ? "?" + parts.join("&") : "";
-}
-
 /**
- * Map the flat `package_departures` row returned by GET /api/admin/departures
+ * Map the flat departure row returned by GET /api/admin/departures
  * into the shape this page expects: { id, departure_date, package: { title } }
  */
 function mapApiDeparture(d: any): Departure {
@@ -94,42 +86,44 @@ const AdminItineraries = () => {
   // ── fetch ─────────────────────────────────────────────────────────────────
 
   const fetchData = async () => {
-    // Fetch itineraries and departures independently so a failure in one
-    // (e.g. itineraries table missing in Supabase on prod) does not prevent
-    // the other from loading. This is the main reason the departure dropdown
-    // showed empty even when active departures existed.
     const [itinerariesResult, departuresResult] = await Promise.allSettled([
-      // Go through our backend REST proxy so SERVICE_ROLE_KEY bypasses RLS
-      apiFetch<any[]>(
-        "/rest/v1/itineraries" +
-          qs({ select: "*,departure:package_departures(id,departure_date,package:packages(title)),days:itinerary_days(*)", order: "created_at.desc" }),
-      ),
-      // Use the public REST shim for departures — works in both dev (local postgres)
-      // and production (Supabase HTTP forward) without needing DATABASE_URL or admin auth.
-      apiFetch<any[]>(
-        "/rest/v1/package_departures" +
-          qs({ status: "eq.active", select: "id,departure_date,package:packages(title)", order: "departure_date.asc" }),
-      ),
+      apiFetch<any[]>("/api/admin/itineraries"),
+      apiFetch<{ data: any[] }>("/api/admin/departures"),
     ]);
 
     if (itinerariesResult.status === "fulfilled") {
-      const rawItineraries: any[] = Array.isArray(itinerariesResult.value) ? itinerariesResult.value : [];
-      setItineraries(rawItineraries.map((it: any) => ({
-        ...it,
-        days: (it.days || []).sort((a: ItineraryDay, b: ItineraryDay) => a.day_number - b.day_number),
-      })));
+      const raw: any[] = Array.isArray(itinerariesResult.value) ? itinerariesResult.value : [];
+      setItineraries(
+        raw.map((it: any) => ({
+          ...it,
+          days: (it.days || []).sort(
+            (a: ItineraryDay, b: ItineraryDay) => a.day_number - b.day_number,
+          ),
+        })),
+      );
     } else {
       console.error("[itineraries] fetch error:", itinerariesResult.reason);
-      // Itinerary table may not exist on Supabase yet — don't block the page
+      toast({
+        title: "Gagal memuat itinerary",
+        description: (itinerariesResult.reason as any)?.message ?? "Periksa koneksi atau coba lagi.",
+        variant: "destructive",
+      });
     }
 
     if (departuresResult.status === "fulfilled") {
-      // REST returns a plain array (not { data: [] })
-      const rawDepartures: any[] = Array.isArray(departuresResult.value) ? departuresResult.value : [];
-      setDepartures(rawDepartures.map(mapApiDeparture));
+      const raw: any[] = Array.isArray(departuresResult.value?.data)
+        ? departuresResult.value.data
+        : Array.isArray(departuresResult.value)
+        ? (departuresResult.value as any)
+        : [];
+      setDepartures(raw.map(mapApiDeparture));
     } else {
       console.error("[itineraries] departures fetch error:", departuresResult.reason);
-      toast({ title: "Gagal memuat keberangkatan", description: departuresResult.reason?.message, variant: "destructive" });
+      toast({
+        title: "Gagal memuat keberangkatan",
+        description: (departuresResult.reason as any)?.message,
+        variant: "destructive",
+      });
     }
 
     setLoading(false);
@@ -139,9 +133,13 @@ const AdminItineraries = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.departure_id) {
+      toast({ title: "Keberangkatan wajib dipilih", variant: "destructive" });
+      return;
+    }
     try {
       if (editing) {
-        await apiFetch(`/rest/v1/itineraries${qs({ id: `eq.${editing.id}` })}`, {
+        await apiFetch(`/api/admin/itineraries/${editing.id}`, {
           method: "PATCH",
           body: JSON.stringify({
             departure_id: form.departure_id,
@@ -151,7 +149,7 @@ const AdminItineraries = () => {
         });
         toast({ title: "Itinerary diupdate!" });
       } else {
-        await apiFetch("/rest/v1/itineraries", {
+        await apiFetch("/api/admin/itineraries", {
           method: "POST",
           body: JSON.stringify({
             departure_id: form.departure_id,
@@ -176,7 +174,7 @@ const AdminItineraries = () => {
     if (!selectedItinerary) return;
     try {
       if (editingDay) {
-        await apiFetch(`/rest/v1/itinerary_days${qs({ id: `eq.${editingDay.id}` })}`, {
+        await apiFetch(`/api/admin/itineraries/days/${editingDay.id}`, {
           method: "PATCH",
           body: JSON.stringify({
             day_number: dayForm.day_number,
@@ -187,7 +185,7 @@ const AdminItineraries = () => {
         });
         toast({ title: "Hari diupdate!" });
       } else {
-        await apiFetch("/rest/v1/itinerary_days", {
+        await apiFetch("/api/admin/itineraries/days", {
           method: "POST",
           body: JSON.stringify({
             itinerary_id: selectedItinerary.id,
@@ -242,11 +240,11 @@ const AdminItineraries = () => {
     if (!deleteTargetId) return;
     try {
       if (deleteType === "itinerary") {
-        await apiFetch(`/rest/v1/itineraries${qs({ id: `eq.${deleteTargetId}` })}`, { method: "DELETE" });
+        await apiFetch(`/api/admin/itineraries/${deleteTargetId}`, { method: "DELETE" });
         toast({ title: "Itinerary dihapus" });
         if (selectedItinerary?.id === deleteTargetId) setSelectedItinerary(null);
       } else {
-        await apiFetch(`/rest/v1/itinerary_days${qs({ id: `eq.${deleteTargetId}` })}`, { method: "DELETE" });
+        await apiFetch(`/api/admin/itineraries/days/${deleteTargetId}`, { method: "DELETE" });
         toast({ title: "Hari dihapus" });
       }
       fetchData();

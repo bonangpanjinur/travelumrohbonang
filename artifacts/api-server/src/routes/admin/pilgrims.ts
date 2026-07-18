@@ -100,8 +100,8 @@ router.get("/", async (req: any, res) => {
 router.post("/", async (req: any, res) => {
     try {
         const values = pickPilgrimFields(req.body);
-        if (!values.bookingId || !values.name) {
-          return res.status(400).json({ error: "bookingId and name are required" });
+        if (!values.name) {
+          return res.status(400).json({ error: "name is required" });
         }
         const id = crypto.randomUUID();
         const [inserted] = await db.insert(bookingPilgrims).values({

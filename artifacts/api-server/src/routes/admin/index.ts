@@ -46,6 +46,7 @@ import adminReportsRouter from "./reports";
 import adminRoomAssignmentRouter from "./room-assignment";
 import adminSocialKitRouter from "./social-kit";
 import adminInstallmentsRouter from "./installments";
+import adminItinerariesRouter from "./itineraries";
 
 const router = Router();
 
@@ -111,5 +112,8 @@ router.use("/social-kit", requireAdmin, adminSocialKitRouter);
 
 // ── F-05: Installment management ─────────────────────────────────────────────
 router.use("/installments", requireOperational, adminInstallmentsRouter);
+
+// ── Itineraries (sprint-1: moved from /rest/v1 to proper admin route) ────────
+router.use("/itineraries", requireStaff, adminItinerariesRouter);
 
 export default router;

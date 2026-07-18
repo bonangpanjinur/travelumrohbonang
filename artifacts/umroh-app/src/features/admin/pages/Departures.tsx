@@ -95,10 +95,16 @@ const AdminDepartures = () => {
       setDepartures(departuresRes.data || []);
       setPackages(packagesRes.data || []);
       setMuthawifs(muthawifRes.data || []);
-    } catch {
-      toast({ title: "Gagal memuat data", variant: "destructive" });
+    } catch (err: any) {
+      console.error("[Departures] fetchData error:", err);
+      toast({
+        title: "Gagal memuat data keberangkatan",
+        description: err?.message ?? "Periksa koneksi atau coba lagi.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
