@@ -37,10 +37,25 @@ function getTokenFromRequest(req: Request): string | undefined {
  * Query role from local Postgres when DATABASE_URL is a real connection
  * (i.e. development / Replit). Returns null on any error so the caller
  * can fall back to the Supabase HTTP path.
+ *
+ * Skips entirely when the URL points to a Replit-internal host ("helium")
+ * that is not reachable from Vercel — avoids a 5-second timeout per request.
  */
 async function getLocalRole(userId: string): Promise<string | null> {
   const dbUrl = process.env.DATABASE_URL ?? "";
   if (!dbUrl || dbUrl.includes("localhost/placeholder")) return null;
+  // Replit-internal hosts are not reachable from external runtimes (Vercel).
+  // Skip immediately rather than waiting for the connection timeout.
+  try {
+    const host = new URL(dbUrl).hostname;
+    if (
+      host === "helium" ||
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host.endsWith(".internal") ||
+      host.endsWith(".replit.internal")
+    ) return null;
+  } catch { /* unparseable URL — fall through and let pool.query surface the error */ }
   try {
     const result = await pool.query<{ role: string }>(
       "SELECT role FROM user_roles WHERE user_id = $1 LIMIT 1",

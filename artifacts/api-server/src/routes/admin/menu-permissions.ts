@@ -5,19 +5,17 @@ import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { sendAdminError } from "../../lib/adminApiError";
 import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../../lib/supabaseEnv";
+import { shouldUseSupabaseHttp } from "../../lib/dbFlags";
 
 const ADMIN_ROLES = new Set(["super_admin", "admin", "branch_manager", "staff", "agent"]);
 
 const router = Router();
 
-// When DATABASE_URL is not a real Postgres URL (e.g. Vercel without it set),
-// querying via the Drizzle pool times out and this route returns 503. Fall
-// back to forwarding reads/writes to Supabase's REST API (PostgREST) with
-// the service role key instead, same pattern as routes/rest.ts.
-const USE_SUPABASE_HTTP =
-  !process.env.DATABASE_URL ||
-  process.env.DATABASE_URL.includes("localhost/placeholder") ||
-  process.env.DATABASE_URL === "postgres://localhost/placeholder";
+// When DATABASE_URL is not a real externally-reachable Postgres URL (e.g. Vercel
+// without a proper DATABASE_URL, or Replit-internal "helium" host), querying via
+// the Drizzle pool times out and this route returns 503. Fall back to forwarding
+// reads/writes to Supabase's REST API (PostgREST) instead.
+const USE_SUPABASE_HTTP = shouldUseSupabaseHttp();
 
 function supabaseConfigured(res: import("express").Response): boolean {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {

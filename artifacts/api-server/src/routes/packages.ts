@@ -16,17 +16,13 @@ import {
   sql,
 } from "@workspace/db";
 import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../lib/supabaseEnv";
+import { shouldUseSupabaseHttp } from "../lib/dbFlags";
 
 const router = Router();
 
-// On Vercel, DATABASE_URL/SUPABASE_DATABASE_URL are not set, so the `pg` pool
-// used by Drizzle can't connect — pool.query() hangs until connectionTimeoutMillis
-// and eventually kills the serverless function (see rest.ts for the same guard).
-// Fall back to Supabase's PostgREST HTTP API in that case.
-const USE_SUPABASE_HTTP =
-  !process.env.DATABASE_URL ||
-  process.env.DATABASE_URL.includes("localhost/placeholder") ||
-  process.env.DATABASE_URL === "postgres://localhost/placeholder";
+// When DATABASE_URL is absent or points to a Replit-internal host ("helium"),
+// the pg pool can't connect from Vercel — fall back to Supabase PostgREST HTTP.
+const USE_SUPABASE_HTTP = shouldUseSupabaseHttp();
 
 // Every packages.* -> {category,hotel,airline,airport} relation has TWO foreign
 // key constraints in the live DB (a hand-named one and Postgres's default
