@@ -98,7 +98,9 @@ router.get("/", async (req: Request, res: Response) => {
 
     if (USE_SUPABASE_HTTP) {
       const filters: string[] = [`select=${encodeURIComponent(PKG_EMBED_SELECT)}`];
-      if (active !== "false") filters.push("is_active=eq.true");
+      // is_active is nullable in the schema — treat NULL as active (IS NOT FALSE).
+      // PostgREST OR filter: matches rows where is_active=true OR is_active IS NULL.
+      if (active !== "false") filters.push("or=(is_active.eq.true,is_active.is.null)");
       if (type && typeof type === "string") filters.push(`package_type=eq.${encodeURIComponent(type)}`);
       const rows = await supabaseGet(`packages?${filters.join("&")}`);
       const data = rows.map(mapPkgRow);
@@ -107,7 +109,8 @@ router.get("/", async (req: Request, res: Response) => {
     }
 
     const conditions = [];
-    if (active !== "false") conditions.push(eq(packages.isActive, true));
+    // is_active is nullable — treat NULL as active (IS NOT FALSE matches true + null).
+    if (active !== "false") conditions.push(sql`${packages.isActive} IS NOT FALSE`);
     if (type && typeof type === "string") conditions.push(eq(packages.packageType, type));
 
     const pkgs = await db
