@@ -7,8 +7,11 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 
-const uploadDir = path.join(process.cwd(), "uploads", "images");
-fs.mkdirSync(uploadDir, { recursive: true });
+// Vercel filesystem is read-only under /var/task; use /tmp on Vercel, local in dev.
+const uploadDir = process.env.VERCEL
+  ? "/tmp/uploads/images"
+  : path.join(process.cwd(), "uploads", "images");
+try { fs.mkdirSync(uploadDir, { recursive: true }); } catch {}
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),

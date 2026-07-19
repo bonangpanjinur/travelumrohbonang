@@ -9,9 +9,12 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 
-// Upload file ke folder lokal /tmp/pilgrim-docs (fallback jika storage tidak dikonfigurasi)
-const uploadDir = path.join(process.cwd(), "uploads", "pilgrim-docs");
-fs.mkdirSync(uploadDir, { recursive: true });
+// Upload file ke folder lokal. Vercel filesystem is read-only under /var/task,
+// so use /tmp (writable) on Vercel and a local uploads/ folder in dev.
+const uploadDir = process.env.VERCEL
+  ? "/tmp/uploads/pilgrim-docs"
+  : path.join(process.cwd(), "uploads", "pilgrim-docs");
+try { fs.mkdirSync(uploadDir, { recursive: true }); } catch {}
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),
