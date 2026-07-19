@@ -6,6 +6,7 @@ import {
   eq,
   desc,
 } from "@workspace/db";
+import { sendAdminError, isTableMissing } from "../../lib/adminApiError";
 
 const router = Router();
 
@@ -36,6 +37,7 @@ router.get("/", async (req, res) => {
       .orderBy(desc(refundRequests.createdAt));
     res.json(data);
   } catch (e) {
+    if (isTableMissing(e)) { console.warn("[refunds] table missing — returning []"); return res.json([]); }
     sendAdminError(res, "GET /api/admin/refunds", e);
   }
 });

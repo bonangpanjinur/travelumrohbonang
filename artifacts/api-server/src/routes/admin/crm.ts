@@ -3,6 +3,10 @@ import {
   db, leads, leadFollowUps, leadInteractions, bookingPilgrims,
   eq, desc, asc, and, lte, gte, sql, inArray,
 } from "@workspace/db";
+import { isTableMissing } from "../../lib/adminApiError";
+
+const warnMissing = (route: string) =>
+  console.warn(`[crm] table missing on ${route} — returning empty data`);
 
 const router = Router();
 
@@ -18,6 +22,7 @@ router.get("/pipeline", async (_req, res) => {
     }, {});
     res.json(pipeline);
   } catch (err) {
+    if (isTableMissing(err)) { warnMissing("/pipeline"); return res.json({}); }
     res.status(500).json({ error: "Gagal mengambil pipeline" });
   }
 });
@@ -77,6 +82,7 @@ router.get("/follow-ups", async (req, res) => {
 
     res.json(data);
   } catch (err) {
+    if (isTableMissing(err)) { warnMissing("/follow-ups"); return res.json([]); }
     res.status(500).json({ error: "Gagal mengambil follow-ups" });
   }
 });
@@ -125,6 +131,7 @@ router.get("/repeat-customers", async (_req, res) => {
 
     res.json({ detected: repeatLeads.length, leads: repeatLeads });
   } catch (err) {
+    if (isTableMissing(err)) { warnMissing("/repeat-customers"); return res.json({ detected: 0, leads: [] }); }
     console.error("[crm] repeat-customers error:", err);
     res.status(500).json({ error: "Gagal mendeteksi repeat customer" });
   }
@@ -155,6 +162,7 @@ router.get("/leads", async (req, res) => {
     const data = await query.orderBy(desc(leads.createdAt));
     res.json(data);
   } catch (err) {
+    if (isTableMissing(err)) { warnMissing("/leads"); return res.json([]); }
     res.status(500).json({ error: "Gagal mengambil leads" });
   }
 });
@@ -231,6 +239,7 @@ router.get("/leads/:leadId/interactions", async (req, res) => {
       .orderBy(desc(leadInteractions.createdAt));
     res.json(data);
   } catch (err) {
+    if (isTableMissing(err)) { warnMissing("/leads/:leadId/interactions"); return res.json([]); }
     res.status(500).json({ error: "Gagal mengambil riwayat interaksi" });
   }
 });
@@ -283,6 +292,7 @@ router.get("/leads/:leadId/follow-ups", async (req, res) => {
       .orderBy(asc(leadFollowUps.followUpDate));
     res.json(data);
   } catch (err) {
+    if (isTableMissing(err)) { warnMissing("/leads/:leadId/follow-ups"); return res.json([]); }
     res.status(500).json({ error: "Gagal mengambil follow-ups" });
   }
 });
@@ -358,6 +368,10 @@ router.get("/stats", async (_req, res) => {
 
     res.json(stats);
   } catch (err) {
+    if (isTableMissing(err)) {
+      warnMissing("/stats");
+      return res.json({ total: 0, byStatus: {}, pendingFollowUps: 0, overdueFollowUps: 0, todayFollowUps: 0, conversionRate: 0, repeatCustomers: 0 });
+    }
     res.status(500).json({ error: "Gagal mengambil statistik CRM" });
   }
 });

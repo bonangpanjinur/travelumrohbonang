@@ -81,6 +81,18 @@ function classify(err: any): { error: string; status: number; hint: string } {
   };
 }
 
+/**
+ * Returns true when the error is a PostgreSQL "relation does not exist" (42P01).
+ * Use this on GET endpoints to return empty data instead of a 500 when the
+ * production database hasn't had the schema pushed yet.
+ */
+export function isTableMissing(err: unknown): boolean {
+  const e = err as any;
+  const code = e?.code ?? e?.cause?.code ?? null;
+  const msg = String(e?.message ?? "").toLowerCase();
+  return code === "42P01" || (msg.includes("relation") && msg.includes("does not exist"));
+}
+
 export function sendAdminError(
   res: Response,
   endpoint: string,
