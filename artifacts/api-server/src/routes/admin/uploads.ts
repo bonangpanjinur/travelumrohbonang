@@ -8,10 +8,16 @@ import fs from "fs";
 import multer from "multer";
 
 // Vercel filesystem is read-only under /var/task; use /tmp on Vercel, local in dev.
-const uploadDir = process.env.VERCEL
+// Use a try→fallback pattern so the server doesn't crash if the filesystem is read-only.
+let uploadDir = process.env.VERCEL === "1"
   ? "/tmp/uploads/images"
   : path.join(process.cwd(), "uploads", "images");
-try { fs.mkdirSync(uploadDir, { recursive: true }); } catch {}
+try {
+  fs.mkdirSync(uploadDir, { recursive: true });
+} catch {
+  uploadDir = "/tmp/uploads/images";
+  try { fs.mkdirSync(uploadDir, { recursive: true }); } catch {}
+}
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),

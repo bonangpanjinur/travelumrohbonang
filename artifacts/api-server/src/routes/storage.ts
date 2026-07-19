@@ -9,7 +9,9 @@ const router = Router();
 // Use /tmp on Vercel (only writable path in the serverless filesystem —
 // process.cwd() there is /var/task, which is read-only and throws ENOENT
 // on mkdir). Mirrors the same check in app.ts for the static /uploads route.
-const UPLOADS_DIR =
+// Use a try→fallback pattern: if the primary dir fails (ENOENT/EROFS/EACCES),
+// fall back to /tmp so the module loads even if VERCEL env var isn't set yet.
+let UPLOADS_DIR =
   process.env.VERCEL === "1"
     ? "/tmp/uploads"
     : path.resolve(process.cwd(), "uploads");
@@ -18,8 +20,9 @@ try {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   }
 } catch {
-  // Filesystem may be read-only; uploads will not persist but the module
-  // must still load so unrelated routes keep working.
+  // Filesystem is read-only; fall back to /tmp
+  UPLOADS_DIR = "/tmp/uploads";
+  try { fs.mkdirSync(UPLOADS_DIR, { recursive: true }); } catch {}
 }
 
 // Upload guardrails: cap body size and restrict to safe content-types to
@@ -53,7 +56,9 @@ function validateUploadHeaders(req: Request, res: Response): boolean {
 function getBucketDir(bucket: string): string {
   const safe = bucket.replace(/[^a-zA-Z0-9_-]/g, "_");
   const dir = path.join(UPLOADS_DIR, safe);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(dir)) {
+    try { fs.mkdirSync(dir, { recursive: true }); } catch {}
+  }
   return dir;
 }
 
