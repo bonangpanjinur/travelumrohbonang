@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import PackageCard, { type PackageCardData } from "./PackageCard";
 
 const PackagesPreview = () => {
@@ -12,22 +12,14 @@ const PackagesPreview = () => {
 
   useEffect(() => {
     const fetchPackages = async () => {
-      const { data } = await supabase
-        .from("packages")
-        .select(`
-          id, title, slug, image_url, duration_days, package_type,
-          category:package_categories!packages_category_id_fkey(id, name),
-          hotel_makkah:hotels!packages_hotel_makkah_id_fkey(star, name),
-          airline:airlines!packages_airline_id_fkey(id, name),
-          airport:airports!packages_airport_id_fkey(id, name, city),
-          departures:package_departures(id, departure_date, remaining_quota, prices:departure_prices(price, room_type))
-        `)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(6);
-
-      setPackages((data as unknown as PackageCardData[]) || []);
-      setLoading(false);
+      try {
+        const result = await apiFetch<{ data: PackageCardData[] }>("/api/packages");
+        setPackages(result.data || []);
+      } catch {
+        setPackages([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchPackages();
