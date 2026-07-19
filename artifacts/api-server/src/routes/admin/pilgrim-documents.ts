@@ -9,23 +9,20 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 
-// Upload file ke folder lokal. Vercel filesystem is read-only under /var/task,
-// so use /tmp (writable) on Vercel and a local uploads/ folder in dev.
-// Use a try→fallback pattern: if the primary dir can't be created (read-only
-// filesystem, ENOENT, EROFS, etc.) fall back to /tmp so the server doesn't crash.
-let uploadDir = process.env.VERCEL === "1"
-  ? "/tmp/uploads/pilgrim-docs"
-  : path.join(process.cwd(), "uploads", "pilgrim-docs");
-try {
-  fs.mkdirSync(uploadDir, { recursive: true });
-} catch {
-  // Filesystem is read-only; fall back to /tmp
-  uploadDir = "/tmp/uploads/pilgrim-docs";
-  try { fs.mkdirSync(uploadDir, { recursive: true }); } catch {}
+// Resolve upload dir and ensure it exists — called lazily at request time,
+// never at module load, so the server can't crash during cold-start on Vercel
+// (where /var/task is read-only and mkdirSync throws ENOENT at module scope).
+function getUploadDir(): string {
+  const dir =
+    process.env.VERCEL === "1" || process.cwd().startsWith("/var/task")
+      ? "/tmp/uploads/pilgrim-docs"
+      : path.join(process.cwd(), "uploads", "pilgrim-docs");
+  try { fs.mkdirSync(dir, { recursive: true }); } catch {}
+  return dir;
 }
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
+  destination: (_req, _file, cb) => cb(null, getUploadDir()),
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname) || ".bin";
     cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
@@ -61,7 +58,7 @@ router.post("/upload", upload.single("file"), async (req: any, res) => {
 
 /** GET /api/admin/pilgrim-documents/files/:filename — Sajikan file yang sudah diupload */
 router.get("/files/:filename", (req: any, res) => {
-  const filePath = path.join(uploadDir, req.params.filename);
+  const filePath = path.join(getUploadDir(), req.params.filename);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File tidak ditemukan" });
   res.sendFile(filePath);
 });

@@ -6,24 +6,13 @@ import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
-// Use /tmp on Vercel (only writable path in the serverless filesystem —
-// process.cwd() there is /var/task, which is read-only and throws ENOENT
-// on mkdir). Mirrors the same check in app.ts for the static /uploads route.
-// Use a try→fallback pattern: if the primary dir fails (ENOENT/EROFS/EACCES),
-// fall back to /tmp so the module loads even if VERCEL env var isn't set yet.
-let UPLOADS_DIR =
-  process.env.VERCEL === "1"
+// Resolve base upload dir — no mkdir here; subdirs are created lazily by
+// getBucketDir() at request time so module load never touches the filesystem
+// (Vercel's /var/task is read-only and mkdirSync at module scope crashes cold starts).
+const UPLOADS_DIR =
+  process.env.VERCEL === "1" || process.cwd().startsWith("/var/task")
     ? "/tmp/uploads"
     : path.resolve(process.cwd(), "uploads");
-try {
-  if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-  }
-} catch {
-  // Filesystem is read-only; fall back to /tmp
-  UPLOADS_DIR = "/tmp/uploads";
-  try { fs.mkdirSync(UPLOADS_DIR, { recursive: true }); } catch {}
-}
 
 // Upload guardrails: cap body size and restrict to safe content-types to
 // prevent memory-exhaustion DoS and arbitrary file uploads (see .lovable/plan.md P1).

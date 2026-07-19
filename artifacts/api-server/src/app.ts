@@ -95,17 +95,13 @@ app.use("/rest/v1", restRouter);
 // Use raw body parser only for storage routes (before express.json processes them)
 app.use("/storage/v1", generalLimiter, express.raw({ type: "*/*", limit: "50mb" }), storageRouter);
 
-// Serve uploaded files as static assets
-// Use /tmp on Vercel (read-only filesystem), local uploads/ in dev
+// Serve uploaded files as static assets.
+// No mkdirSync here — express.static handles a missing dir gracefully (404).
+// Subdirs are created lazily at upload time by each route's destination callback.
 const uploadsDir =
-  process.env.VERCEL === "1"
+  process.env.VERCEL === "1" || process.cwd().startsWith("/var/task")
     ? "/tmp/uploads"
     : path.resolve(process.cwd(), "uploads");
-try {
-  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-} catch {
-  // Filesystem may be read-only (serverless); uploads will not persist
-}
 app.use("/uploads", express.static(uploadsDir));
 
 app.use("/api", router);
