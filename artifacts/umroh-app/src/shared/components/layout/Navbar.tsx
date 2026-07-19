@@ -209,10 +209,11 @@ const Navbar = () => {
         )}
         {showText && (
           <div className="leading-none">
-            <span className="font-display text-lg md:text-xl font-bold text-primary-foreground tracking-tight">
+            <span className="font-display text-base lg:text-lg xl:text-xl font-bold text-primary-foreground tracking-tight">
               {branding.company_name}
             </span>
-            <span className="block text-[9px] md:text-[10px] text-gold-light/90 tracking-[0.2em] uppercase mt-0.5">
+            {/* Hide tagline at lg to reclaim horizontal space; show from xl up */}
+            <span className="hidden xl:block text-[9px] text-gold-light/90 tracking-[0.2em] uppercase mt-0.5">
               {branding.tagline}
             </span>
           </div>
@@ -237,7 +238,7 @@ const Navbar = () => {
         {renderLogo()}
 
         {/* Desktop Nav */}
-        <div className="hidden lg:flex items-center gap-0.5 bg-primary-foreground/[0.04] rounded-full px-1 py-1">
+        <div className="hidden lg:flex items-center gap-0 xl:gap-0.5 xl:bg-primary-foreground/[0.04] xl:rounded-full xl:px-1 xl:py-1">
           {displayLinks.map((link) => {
             const isActive = location.pathname === link.url;
             return (
@@ -245,7 +246,7 @@ const Navbar = () => {
                 <Link
                   to={link.url}
                   target={link.open_in_new_tab ? "_blank" : undefined}
-                  className={`relative z-10 px-4 py-2 text-sm font-medium rounded-full transition-colors inline-flex items-center gap-1 ${
+                  className={`relative z-10 px-2.5 xl:px-3.5 py-1.5 text-[12px] xl:text-[13px] font-medium rounded-full transition-colors inline-flex items-center gap-0.5 whitespace-nowrap ${
                     isActive
                       ? "text-primary"
                       : "text-primary-foreground/75 hover:text-gold"
@@ -286,24 +287,22 @@ const Navbar = () => {
         </div>
 
         {/* CTA */}
-        <div className="hidden lg:flex items-center">
-          <div className="flex items-center gap-0.5 bg-primary-foreground/[0.04] rounded-full px-1.5 py-1">
+        <div className="hidden lg:flex items-center shrink-0">
+          <div className="flex items-center gap-0 bg-primary-foreground/[0.04] rounded-full px-1 py-0.5">
             <LanguageSwitcher variant="navbar" />
-            <span className="w-px h-4 bg-primary-foreground/15" />
             <CurrencySwitcher />
-            <span className="w-px h-4 bg-primary-foreground/15" />
             <ThemeToggle variant="navbar" />
 
             {user && (
               <>
-                <span className="w-px h-4 bg-primary-foreground/15" />
+                <span className="w-px h-4 bg-primary-foreground/15 mx-0.5" />
                 <NotificationBell />
               </>
             )}
 
             {user ? (
               <>
-                <span className="w-px h-4 bg-primary-foreground/15" />
+                <span className="w-px h-4 bg-primary-foreground/15 mx-0.5" />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center gap-1.5 text-primary-foreground/80 hover:text-gold hover:bg-primary-foreground/10 rounded-full p-1 pr-2">
