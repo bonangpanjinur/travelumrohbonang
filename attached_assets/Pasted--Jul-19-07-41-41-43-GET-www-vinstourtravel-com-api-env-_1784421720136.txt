@@ -1,0 +1,542 @@
+
+Jul 19 07:41:41.43
+GET
+---
+www.vinstourtravel.com
+/api/.env
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:41:41.43
+POST
+---
+www.vinstourtravel.com
+/api/graphql
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:36:03.92
+GET
+500
+www.vinstourtravel.com
+/api/profile/b27ad804-636b-4994-aeab-071d83f6ac03
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:36:03.62
+GET
+500
+www.vinstourtravel.com
+/api/profile/b27ad804-636b-4994-aeab-071d83f6ac03
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:36:03.35
+GET
+500
+www.vinstourtravel.com
+/api/profile/b27ad804-636b-4994-aeab-071d83f6ac03
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:36:02.74
+GET
+500
+www.vinstourtravel.com
+/api/cms/floating-buttons
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:36:02.74
+GET
+500
+www.vinstourtravel.com
+/api/cms/pages
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:36:02.74
+GET
+500
+www.vinstourtravel.com
+/api/cms/site-settings
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:36:02.74
+GET
+500
+www.vinstourtravel.com
+/api/cms/pages
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:36:02.73
+GET
+500
+www.vinstourtravel.com
+/api/cms/navigation-items
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:36:02.73
+GET
+500
+www.vinstourtravel.com
+/api/cms/site-settings
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:35:34.19
+GET
+500
+travelvins.vercel.app
+/api/admin/menu-permissions/my
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:35:28.39
+GET
+500
+travelvins.vercel.app
+/api/admin/menu-permissions/my
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:26:25.37
+GET
+500
+travelvins.vercel.app
+/api/admin/menu-permissions/my
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+Jul 19 07:26:03.39
+GET
+500
+travelvins.vercel.app
+/api/admin/menu-permissions/my
+Error: ENOENT: no such file or directory, mkdir '/var/task/uploads/pilgrim-docs'
+ 
+    at Object.mkdirSync (node:fs:1350:26)
+ 
+    at file:///var/task/artifacts/api-server/dist/vercel.mjs:402404:5
+ 
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+ 
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+ 
+    at async node:internal/modules/esm/loader:643:26
+ 
+    at async loadApp (file:///var/task/api/%5B...all%5D.mjs:17:17)
+ 
+    at async handler (file:///var/task/api/%5B...all%5D.mjs:24:15)
+ 
+    at async r (/opt/rust/nodejs.js:2:15574)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:2:11595)
+ 
+    at async Server.<anonymous> (/opt/rust/nodejs.js:17:14103) {
+ 
+  errno: -2,
+ 
+  code: 'ENOENT',
+ 
+  syscall: 'mkdir',
+ 
+  path: '/var/task/uploads/pilgrim-docs'
+ 
+}
+No more logs to show within selected timeline
