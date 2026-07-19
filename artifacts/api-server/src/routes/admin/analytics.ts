@@ -45,13 +45,25 @@ function getRange(period: string): RangeConfig {
  * handful of server-side SQL aggregate queries. The frontend only formats
  * labels/colors for display now.
  */
+/** Run a DB query and return { rows: [] } instead of throwing if it fails. */
+async function safeQuery(label: string, query: Promise<{ rows: any[] }>): Promise<{ rows: any[] }> {
+  try {
+    return await query;
+  } catch (err: any) {
+    // Log to Vercel function logs so the admin can diagnose missing tables/columns.
+    console.error(`[analytics/summary] query "${label}" failed — ${err?.message ?? err}`);
+    return { rows: [] };
+  }
+}
+
 router.get("/summary", async (req, res) => {
   try {
     const period = String(req.query.period ?? "30days");
     const { start, end, prevStart, prevEnd, useMonthly } = getRange(period);
 
+    // Use safeQuery so a single missing table/column doesn't crash the whole response.
     const [kpiRows, trendRows, packageRevenueRows, paymentStatusRows, bookingStatusRows, departureRows] = await Promise.all([
-      db.execute(sql`
+      safeQuery("kpi", db.execute(sql`
         with curr_bookings as (
           select id from bookings where created_at between ${start} and ${end} and status is distinct from 'cancelled'
         ),
@@ -65,10 +77,10 @@ router.get("/summary", async (req, res) => {
           (select coalesce(sum(amount),0)::bigint from payments where status = 'verified' and booking_id in (select id from prev_bookings)) as prev_revenue,
           (select count(*)::int from booking_pilgrims where booking_id in (select id from curr_bookings)) as curr_pilgrims,
           (select count(*)::int from booking_pilgrims where booking_id in (select id from prev_bookings)) as prev_pilgrims
-      `),
+      `)),
 
       useMonthly
-        ? db.execute(sql`
+        ? safeQuery("trend-monthly", db.execute(sql`
             select
               to_char(d.bucket, 'YYYY-MM') as key,
               coalesce(b.cnt, 0)::int as bookings,
@@ -87,8 +99,8 @@ router.get("/summary", async (req, res) => {
               group by 1
             ) p on p.bucket = d.bucket
             order by d.bucket
-          `)
-        : db.execute(sql`
+          `))
+        : safeQuery("trend-daily", db.execute(sql`
             select
               to_char(d.bucket, 'YYYY-MM-DD') as key,
               coalesce(b.cnt, 0)::int as bookings,
@@ -107,9 +119,9 @@ router.get("/summary", async (req, res) => {
               group by 1
             ) p on p.bucket = d.bucket
             order by d.bucket
-          `),
+          `)),
 
-      db.execute(sql`
+      safeQuery("package-revenue", db.execute(sql`
         select
           coalesce(pk.title, 'Tanpa Paket') as name,
           count(distinct b.id)::int as bookings,
@@ -121,30 +133,30 @@ router.get("/summary", async (req, res) => {
         group by coalesce(pk.title, 'Tanpa Paket')
         order by revenue desc
         limit 8
-      `),
+      `)),
 
-      db.execute(sql`
+      safeQuery("payment-status", db.execute(sql`
         select status, count(*)::int as count
         from payments
         where created_at between ${start} and ${end} and status is not null
         group by status
-      `),
+      `)),
 
-      db.execute(sql`
+      safeQuery("booking-status", db.execute(sql`
         select status, count(*)::int as count
         from bookings
         where created_at between ${start} and ${end} and status is not null
         group by status
-      `),
+      `)),
 
-      db.execute(sql`
+      safeQuery("departures", db.execute(sql`
         select pd.id, pk.title as package_title, pd.departure_date, pd.quota, pd.remaining_quota
         from package_departures pd
         left join packages pk on pk.id = pd.package_id
         where pd.departure_date >= current_date
         order by pd.departure_date asc
         limit 8
-      `),
+      `)),
     ]);
 
     const kpi = (kpiRows.rows[0] ?? {}) as Record<string, number>;
