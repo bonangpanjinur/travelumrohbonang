@@ -139,13 +139,13 @@ export default function AdminPackageCosts() {
       apiFetch<{ data: any[] }>("/api/packages?active=true"),
       apiFetch<{ data: any[] }>("/api/admin/masterdata/categories"),
       apiFetch<{ data: any[] }>("/api/admin/departures"),
-      apiFetch<{ data: any[] }>("/api/admin/masterdata/currencies"),
+      apiFetch<any[]>("/api/admin/currencies"),               // returns plain array
       apiFetch<{ data: any[] }>("/api/admin/costs/all"),
     ]).then(([pk, pc, dp, cu, cs]) => {
       setPackages((pk.data || []).map(mapPkgOpt));
       setPkgCategories((pc.data || []).map((c: any) => ({ id: c.id, name: c.name })));
       setDepartures((dp.data || []).filter((d: any) => d.status === 'active').map(mapDeparture));
-      setCurrencies((cu.data || []).map(mapCurrency));
+      setCurrencies((Array.isArray(cu) ? cu : []).map(mapCurrency));
       setAllCosts((cs.data || []).map(mapCost));
     });
   }, []);
