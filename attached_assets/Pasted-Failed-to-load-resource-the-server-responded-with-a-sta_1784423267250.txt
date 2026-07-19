@@ -1,0 +1,248 @@
+Failed to load resource: the server responded with a status of 401 ()
+/api/admin/pilgrims-db?limit=50&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/template_pricing?select=*&order=template_name.asc:1  Failed to load resource: the server responded with a status of 404 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+index-T4J-a3wA.js:39  GET https://www.vinstourtravel.com/api/admin/analytics/summary?period=30days 500 (Internal Server Error)
+Pe @ index-T4J-a3wA.js:39
+await in Pe
+(anonymous) @ index-T4J-a3wA.js:454
+(anonymous) @ index-T4J-a3wA.js:454
+Uw @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+KV @ index-T4J-a3wA.js:8
+zk @ index-T4J-a3wA.js:8
+ZV @ index-T4J-a3wA.js:8
+Ww @ index-T4J-a3wA.js:8
+qV @ index-T4J-a3wA.js:8
+UV @ index-T4J-a3wA.js:8
+MV @ index-T4J-a3wA.js:8
+RV @ index-T4J-a3wA.js:8
+JV @ index-T4J-a3wA.js:8
+$ @ index-T4J-a3wA.js:1
+postMessage
+z @ index-T4J-a3wA.js:1
+$ @ index-T4J-a3wA.js:1
+postMessage
+z @ index-T4J-a3wA.js:1
+e.unstable_scheduleCallback @ index-T4J-a3wA.js:1
+XV @ index-T4J-a3wA.js:8
+YV @ index-T4J-a3wA.js:8
+(anonymous) @ index-T4J-a3wA.js:8
+index-T4J-a3wA.js:377  HEAD https://yakjpqqobknrmhfmybhe.supabase.co/rest/v1/ net::ERR_ABORTED 401 (Unauthorized)
+Iat @ index-T4J-a3wA.js:377
+(anonymous) @ index-T4J-a3wA.js:377
+(anonymous) @ index-T4J-a3wA.js:377
+index-T4J-a3wA.js:39  GET https://www.vinstourtravel.com/api/admin/refunds 500 (Internal Server Error)
+Pe @ index-T4J-a3wA.js:39
+await in Pe
+h @ index-T4J-a3wA.js:685
+(anonymous) @ index-T4J-a3wA.js:685
+Uw @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+gf @ index-T4J-a3wA.js:8
+SV @ index-T4J-a3wA.js:8
+KV @ index-T4J-a3wA.js:8
+zk @ index-T4J-a3wA.js:8
+ZV @ index-T4J-a3wA.js:8
+Ww @ index-T4J-a3wA.js:8
+qV @ index-T4J-a3wA.js:8
+UV @ index-T4J-a3wA.js:8
+MV @ index-T4J-a3wA.js:8
+RV @ index-T4J-a3wA.js:8
+JV @ index-T4J-a3wA.js:8
+$ @ index-T4J-a3wA.js:1
+postMessage
+z @ index-T4J-a3wA.js:1
+$ @ index-T4J-a3wA.js:1
+postMessage
+z @ index-T4J-a3wA.js:1
+e.unstable_scheduleCallback @ index-T4J-a3wA.js:1
+XV @ index-T4J-a3wA.js:8
+YV @ index-T4J-a3wA.js:8
+(anonymous) @ index-T4J-a3wA.js:8
+index-T4J-a3wA.js:39  GET https://www.vinstourtravel.com/api/admin/analytics/summary?period=30days 500 (Internal Server Error)

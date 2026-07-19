@@ -36,8 +36,7 @@ router.get("/", async (req, res) => {
       .orderBy(desc(refundRequests.createdAt));
     res.json(data);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to fetch refunds" });
+    sendAdminError(res, "GET /api/admin/refunds", e);
   }
 });
 
@@ -61,8 +60,7 @@ router.patch("/:id", async (req, res) => {
       .returning();
     res.json(updated);
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Failed to update refund request" });
+    sendAdminError(res, "PATCH /api/admin/refunds/:id", e);
   }
 });
 

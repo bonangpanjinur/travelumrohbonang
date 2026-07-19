@@ -191,8 +191,7 @@ router.get("/summary", async (req, res) => {
       })),
     });
   } catch (err) {
-    console.error("[analytics/summary]", err);
-    res.status(500).json({ error: "Failed to load analytics summary" });
+    sendAdminError(res, "GET /api/admin/analytics/summary", err);
   }
 });
 
@@ -257,8 +256,7 @@ router.get("/dashboard-stats", async (req, res) => {
       })),
     });
   } catch (err) {
-    console.error("[analytics/dashboard-stats]", err);
-    res.status(500).json({ error: "Failed to load dashboard stats" });
+    sendAdminError(res, "GET /api/admin/analytics/dashboard-stats", err);
   }
 });
 
