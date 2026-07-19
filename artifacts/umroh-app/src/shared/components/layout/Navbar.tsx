@@ -45,12 +45,20 @@ const defaultBranding: BrandingSettings = {
   display_mode: "both",
 };
 
+// Module-level cache — survives React re-mounts on route changes so the
+// nav never flickers back to defaults after the first successful fetch.
+let _cachedNavItems: NavItem[] | null = null;
+let _cachedBranding: BrandingSettings | null = null;
+let _cachedDynamicPages: { title: string; slug: string }[] | null = null;
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [navItems, setNavItems] = useState<NavItem[]>([]);
-  const [dynamicPages, setDynamicPages] = useState<{title: string, slug: string}[]>([]);
-  const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
+  // Initialise from module-level cache so re-mounts never flash back to defaults
+  const [navItems, setNavItems] = useState<NavItem[]>(_cachedNavItems ?? []);
+  const [dynamicPages, setDynamicPages] = useState<{title: string, slug: string}[]>(_cachedDynamicPages ?? []);
+  const [branding, setBranding] = useState<BrandingSettings>(_cachedBranding ?? defaultBranding);
+  const [navLoaded, setNavLoaded] = useState(_cachedNavItems !== null);
   const [userProfile, setUserProfile] = useState<{ name: string; avatar_url: string } | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -65,7 +73,11 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
+    // Skip fetches if all data already loaded from cache
+    if (_cachedNavItems !== null && _cachedBranding !== null && _cachedDynamicPages !== null) return;
+
     const fetchNavItems = async () => {
+      if (_cachedNavItems !== null) return;
       try {
         const result = await apiFetch<{ data: NavItem[] }>("/api/cms/navigation-items");
         if (result?.data) {
@@ -76,19 +88,25 @@ const Navbar = () => {
             ...parent,
             children: childItems.filter(child => child.parent_id === parent.id),
           }));
+          _cachedNavItems = hierarchy;
           setNavItems(hierarchy);
+          setNavLoaded(true);
         }
       } catch (err) {
         console.error("Error fetching navigation:", err);
+        setNavLoaded(true); // show defaults on error
       }
     };
 
     const fetchBranding = async () => {
+      if (_cachedBranding !== null) return;
       try {
         const result = await apiFetch<{ data: Array<{ key: string; value: unknown }> }>("/api/cms/site-settings");
         const brandingSetting = result?.data?.find((s) => s.key === "branding");
         if (brandingSetting?.value && typeof brandingSetting.value === "object") {
-          setBranding({ ...defaultBranding, ...(brandingSetting.value as object) });
+          const merged = { ...defaultBranding, ...(brandingSetting.value as object) };
+          _cachedBranding = merged;
+          setBranding(merged);
         }
       } catch (err) {
         console.error("Error fetching branding:", err);
@@ -96,9 +114,13 @@ const Navbar = () => {
     };
 
     const fetchDynamicPages = async () => {
+      if (_cachedDynamicPages !== null) return;
       try {
         const result = await apiFetch<{ data: { title: string; slug: string }[] }>("/api/cms/pages");
-        if (result?.data) setDynamicPages(result.data);
+        if (result?.data) {
+          _cachedDynamicPages = result.data;
+          setDynamicPages(result.data);
+        }
       } catch (err) {
         console.error("Error fetching dynamic pages:", err);
       }
@@ -160,7 +182,9 @@ const Navbar = () => {
     }))
   ];
 
-  const displayLinks: NavItem[] = navItems.length > 0 ? navItems : defaultLinks;
+  // Use CMS nav if loaded & non-empty; fall back to hardcoded defaults only after
+  // the fetch has completed (navLoaded=true) and returned nothing.
+  const displayLinks: NavItem[] = (navLoaded && navItems.length === 0) ? defaultLinks : navItems.length > 0 ? navItems : defaultLinks;
 
   const renderLogo = () => {
     const showLogo = branding.display_mode === "logo_only" || branding.display_mode === "both";
