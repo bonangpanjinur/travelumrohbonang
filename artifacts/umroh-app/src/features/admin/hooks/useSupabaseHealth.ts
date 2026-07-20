@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 export type HealthStatus = "checking" | "online" | "offline" | "recovering";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 const CHECK_INTERVAL_MS = 30_000;  // re-check every 30 s while visible
 const TIMEOUT_MS = 6_000;          // fail-fast timeout per check
 const RECOVER_HIDE_DELAY_MS = 4_000; // how long to show the "restored" banner
@@ -20,8 +21,12 @@ async function pingSupabase(): Promise<boolean> {
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
+    const headers: Record<string, string> = {};
+    if (SUPABASE_ANON_KEY) headers["apikey"] = SUPABASE_ANON_KEY;
+
     const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
       method: "HEAD",
+      headers,
       signal: controller.signal,
     });
     // 200 or 401 both mean the server is reachable
