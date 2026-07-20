@@ -17,7 +17,7 @@ import {
   PiggyBank, Users, Wallet, Clock, CheckCircle2, XCircle,
   Search, Download, ChevronRight, ArrowLeft, RefreshCw,
 } from "lucide-react";
-import ResponsiveTable from "@/shared/components/ui/responsive-table";
+import ResponsiveTable from "@/features/admin/components/ResponsiveTable";
 
 const fmtIDR = (n: number) =>
   "Rp" + Math.round(n).toLocaleString("id-ID");
