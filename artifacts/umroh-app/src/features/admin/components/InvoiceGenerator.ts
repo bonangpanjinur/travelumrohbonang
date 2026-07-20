@@ -1,8 +1,9 @@
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import QRCode from "qrcode";
 
-interface InvoiceData {
+export interface InvoiceData {
   bookingCode: string;
   customerName: string;
   customerEmail: string;
@@ -20,51 +21,20 @@ interface InvoiceData {
 }
 
 export const fetchInvoiceData = async (bookingId: string): Promise<InvoiceData | null> => {
-  const [bookingRes, pilgrimsRes, roomsRes, paymentsRes, brandingRes] = await Promise.all([
-    // TEMPORARY: package/departure embeds disabled — production schema cache
-    // has no FK relationship for bookings->packages or bookings->package_departures
-    // (confirmed via direct PostgREST probing). See chat report for details.
-    supabase
-      .from("bookings")
-      .select(`
-        booking_code, total_price, status, created_at, package_id, departure_id,
-        profile:profiles!bookings_user_id_profiles_fkey(name, email)
-      `)
-      .eq("id", bookingId)
-      .single(),
-    supabase.from("booking_pilgrims").select("name, gender").eq("booking_id", bookingId),
-    supabase.from("booking_rooms").select("room_type, quantity, price, subtotal").eq("booking_id", bookingId),
-    supabase.from("payments").select("payment_type, amount, status, paid_at").eq("booking_id", bookingId).order("created_at"),
-    supabase.from("site_settings").select("value").eq("key", "branding").eq("category", "general").maybeSingle(),
-  ]);
-
-  if (!bookingRes.data) return null;
-
-  const b = bookingRes.data as any;
-  const branding = (brandingRes.data?.value as any) || {};
-
-  return {
-    bookingCode: b.booking_code,
-    customerName: b.profile?.name || "-",
-    customerEmail: b.profile?.email || "-",
-    packageTitle: b.package?.title || "-",
-    departureDate: b.departure?.departure_date || null,
-    totalPrice: b.total_price,
-    createdAt: b.created_at,
-    status: b.status,
-    pilgrims: pilgrimsRes.data || [],
-    rooms: (roomsRes.data as any[]) || [],
-    payments: (paymentsRes.data as any[]) || [],
-    companyName: branding.company_name || "UmrohPlus",
-    companyTagline: branding.tagline || "Travel & Tours",
-    logoUrl: branding.logo_url || "",
-  };
+  try {
+    return await apiFetch<InvoiceData>(`/api/admin/bookings/${bookingId}/invoice-data`);
+  } catch (e) {
+    console.error("[fetchInvoiceData]", e);
+    return null;
+  }
 };
 
 const statusLabel: Record<string, string> = {
   draft: "Draft",
   waiting_payment: "Menunggu Pembayaran",
   paid: "Lunas",
+  confirmed: "Terkonfirmasi",
+  completed: "Selesai",
   cancelled: "Dibatalkan",
   pending: "Pending",
 };
@@ -76,17 +46,30 @@ const roomLabel: Record<string, string> = {
   single: "Single (1 orang)",
 };
 
-export const generateInvoiceHTML = (data: InvoiceData): string => {
+export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> => {
   const formatRp = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
   const formatDate = (d: string | null) => {
     if (!d) return "-";
-    try { return format(new Date(d), "d MMMM yyyy", { locale: localeId }); } catch { return d; }
+    try {
+      return format(new Date(d), "d MMMM yyyy", { locale: localeId });
+    } catch {
+      return d;
+    }
   };
 
   const totalPaid = data.payments
-    .filter((p) => p.status === "paid")
+    .filter((p) => p.status === "paid" || p.status === null)
     .reduce((sum, p) => sum + p.amount, 0);
   const remaining = data.totalPrice - totalPaid;
+
+  // Generate QR code for tracking
+  const trackingUrl = `${window.location.origin}/track/${data.bookingCode}`;
+  let qrDataUrl = "";
+  try {
+    qrDataUrl = await QRCode.toDataURL(trackingUrl, { width: 120, margin: 1, color: { dark: "#0d6b4e", light: "#ffffff" } });
+  } catch {
+    // QR code is optional — invoice still works without it
+  }
 
   return `<!DOCTYPE html>
 <html lang="id">
@@ -97,16 +80,15 @@ export const generateInvoiceHTML = (data: InvoiceData): string => {
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1a1a1a; background: #fff; padding: 40px; max-width: 800px; margin: 0 auto; }
     .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0d6b4e; padding-bottom: 20px; margin-bottom: 30px; }
-    .company { }
     .company h1 { font-size: 24px; color: #0d6b4e; margin-bottom: 2px; }
     .company p { font-size: 12px; color: #666; }
     .invoice-title { text-align: right; }
     .invoice-title h2 { font-size: 28px; color: #0d6b4e; font-weight: 700; }
     .invoice-title p { font-size: 13px; color: #666; margin-top: 4px; }
     .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 6px; }
-    .status-paid { background: #dcfce7; color: #166534; }
+    .status-paid,.status-confirmed,.status-completed { background: #dcfce7; color: #166534; }
     .status-waiting { background: #fef9c3; color: #854d0e; }
-    .status-draft { background: #f3f4f6; color: #374151; }
+    .status-draft,.status-pending { background: #f3f4f6; color: #374151; }
     .status-cancelled { background: #fecaca; color: #991b1b; }
     .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 30px; }
     .info-box h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #999; margin-bottom: 8px; }
@@ -121,7 +103,11 @@ export const generateInvoiceHTML = (data: InvoiceData): string => {
     .summary-row.total { border-top: 2px solid #0d6b4e; padding-top: 10px; margin-top: 6px; font-weight: 700; font-size: 16px; color: #0d6b4e; }
     .summary-row.remaining { color: #dc2626; font-weight: 600; }
     .section-title { font-size: 14px; font-weight: 700; color: #0d6b4e; margin-bottom: 12px; margin-top: 28px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
-    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 11px; color: #999; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: flex-end; }
+    .footer-text { font-size: 11px; color: #999; }
+    .qr-section { text-align: center; }
+    .qr-section img { width: 100px; height: 100px; display: block; margin: 0 auto 4px; }
+    .qr-section p { font-size: 9px; color: #999; }
     .logo-img { height: 40px; object-fit: contain; }
     @media print { body { padding: 20px; } @page { margin: 15mm; } }
   </style>
@@ -137,7 +123,7 @@ export const generateInvoiceHTML = (data: InvoiceData): string => {
       <h2>INVOICE</h2>
       <p>${data.bookingCode}</p>
       <p>${formatDate(data.createdAt)}</p>
-      <span class="status-badge ${data.status === "paid" ? "status-paid" : data.status === "waiting_payment" ? "status-waiting" : data.status === "cancelled" ? "status-cancelled" : "status-draft"}">${statusLabel[data.status] || data.status}</span>
+      <span class="status-badge status-${data.status === "waiting_payment" ? "waiting" : data.status}">${statusLabel[data.status] || data.status}</span>
     </div>
   </div>
 
@@ -157,7 +143,12 @@ export const generateInvoiceHTML = (data: InvoiceData): string => {
   <table>
     <thead><tr><th>Tipe Kamar</th><th class="text-center">Jumlah</th><th class="text-right">Harga/Pax</th><th class="text-right">Subtotal</th></tr></thead>
     <tbody>
-      ${data.rooms.map((r) => `<tr><td>${roomLabel[r.room_type] || r.room_type}</td><td class="text-center">${r.quantity}</td><td class="text-right">${formatRp(r.price)}</td><td class="text-right">${formatRp(r.subtotal)}</td></tr>`).join("")}
+      ${data.rooms.map((r) => `<tr>
+        <td>${roomLabel[r.room_type] || r.room_type}</td>
+        <td class="text-center">${r.quantity}</td>
+        <td class="text-right">${formatRp(r.price)}</td>
+        <td class="text-right">${formatRp(r.subtotal)}</td>
+      </tr>`).join("")}
     </tbody>
   </table>` : ""}
 
@@ -166,16 +157,29 @@ export const generateInvoiceHTML = (data: InvoiceData): string => {
   <table>
     <thead><tr><th>No</th><th>Nama</th><th>Jenis Kelamin</th></tr></thead>
     <tbody>
-      ${data.pilgrims.map((p, i) => `<tr><td>${i + 1}</td><td>${p.name}</td><td>${p.gender === "L" || p.gender === "Laki-laki" ? "Laki-laki" : p.gender === "P" || p.gender === "Perempuan" ? "Perempuan" : p.gender || "-"}</td></tr>`).join("")}
+      ${data.pilgrims.map((p, i) => {
+        const g = p.gender?.toLowerCase() ?? "";
+        const gLabel = g === "l" || g === "male" || g === "laki-laki" ? "Laki-laki"
+          : g === "p" || g === "female" || g === "perempuan" ? "Perempuan"
+          : p.gender || "-";
+        return `<tr><td>${i + 1}</td><td>${p.name}</td><td>${gLabel}</td></tr>`;
+      }).join("")}
     </tbody>
   </table>` : ""}
 
   ${data.payments.length > 0 ? `
   <div class="section-title">Riwayat Pembayaran</div>
   <table>
-    <thead><tr><th>Tipe</th><th class="text-right">Jumlah</th><th>Status</th><th>Tanggal Bayar</th></tr></thead>
+    <thead><tr><th>Tipe</th><th class="text-right">Jumlah</th><th>Tanggal Bayar</th></tr></thead>
     <tbody>
-      ${data.payments.map((p) => `<tr><td>${p.payment_type === "dp" ? "DP (Uang Muka)" : p.payment_type === "installment" ? "Cicilan" : "Pelunasan"}</td><td class="text-right">${formatRp(p.amount)}</td><td>${statusLabel[p.status || ""] || p.status || "-"}</td><td>${p.paid_at ? formatDate(p.paid_at) : "-"}</td></tr>`).join("")}
+      ${data.payments.map((p) => {
+        const tl = p.payment_type === "dp" ? "DP (Uang Muka)"
+          : p.payment_type === "installment" ? "Cicilan"
+          : p.payment_type === "balance" ? "Pelunasan"
+          : p.payment_type === "full" ? "Pembayaran Penuh"
+          : p.payment_type || "-";
+        return `<tr><td>${tl}</td><td class="text-right">${formatRp(p.amount)}</td><td>${p.paid_at ? formatDate(p.paid_at) : "-"}</td></tr>`;
+      }).join("")}
     </tbody>
   </table>` : ""}
 
@@ -187,17 +191,24 @@ export const generateInvoiceHTML = (data: InvoiceData): string => {
   </div>
 
   <div class="footer">
-    <p>Invoice ini dihasilkan secara otomatis oleh sistem ${data.companyName}.</p>
-    <p>Terima kasih atas kepercayaan Anda.</p>
+    <div class="footer-text">
+      <p>Invoice ini dihasilkan secara otomatis oleh sistem ${data.companyName}.</p>
+      <p>Terima kasih atas kepercayaan Anda.</p>
+    </div>
+    ${qrDataUrl ? `
+    <div class="qr-section">
+      <img src="${qrDataUrl}" alt="QR Tracking" />
+      <p>Scan untuk cek status pembayaran</p>
+    </div>` : ""}
   </div>
 </body>
 </html>`;
 };
 
-export const openInvoicePrintWindow = (html: string) => {
+export const openInvoicePrintWindow = (html: string): void => {
   const win = window.open("", "_blank");
   if (!win) return;
   win.document.write(html);
   win.document.close();
-  setTimeout(() => win.print(), 500);
+  setTimeout(() => win.print(), 600);
 };

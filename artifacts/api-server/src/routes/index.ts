@@ -24,11 +24,15 @@ import { strictLimiter, writeLimiter } from "../middlewares/rateLimiter";
 
 const router = Router();
 
+import trackRouter from "./track";
+
 // ── Public / no-auth routes ──────────────────────────────────────────────────
 router.use(healthRouter);
 router.use(authRouter);
 router.use("/packages", packagesRouter);
 router.use("/faqs", faqsRouter);
+// Public booking tracking (QR code scan, no auth)
+router.use("/track", trackRouter);
 
 // Public CMS content (blog, pages, gallery, settings, etc.)
 router.use("/cms", cmsRouter);

@@ -116,6 +116,7 @@ const AdminBookings = () => {
         pic_id: b.picId,
         branch_id: b.branchId,
         package: b.packageTitle ? { title: b.packageTitle } : null,
+        departure_id: b.departureId ?? null,
         departure: b.departureDate ? { departure_date: b.departureDate } : null,
         profile: b.userName || b.userEmail ? { name: b.userName, email: b.userEmail } : null,
         branch: b.branchName ? { name: b.branchName } : null,

@@ -38,7 +38,7 @@ const InvoiceButton = ({
         });
         return;
       }
-      const html = generateInvoiceHTML(data);
+      const html = await generateInvoiceHTML(data);
       openInvoicePrintWindow(html);
     } catch (error: any) {
       toast({ 

@@ -7,8 +7,10 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import BookingStatusBadge from "./BookingStatusBadge";
 import BookingDetailPanel from "./BookingDetailPanel";
+import DepartureDetailDrawer from "./DepartureDetailDrawer";
 import { useIsMobile } from "@/shared/hooks/use-mobile";
 import { MobileCard, MobileCardRow } from "./ResponsiveTable";
+import { useState } from "react";
 
 interface Booking {
   id: string;
@@ -17,6 +19,7 @@ interface Booking {
   status: string;
   created_at: string;
   package_id: string | null;
+  departure_id?: string | null;
   pic_type: string | null;
   pic_id: string | null;
   branch_id: string | null;
@@ -35,174 +38,286 @@ interface BookingTableProps {
   expandedId: string | null;
   onToggleExpand: (id: string) => void;
   onRefresh?: () => void;
-  // BK-F02: Bulk selection
   selectedIds?: string[];
   onSelectionChange?: (ids: string[]) => void;
 }
 
-const BookingTable = ({ bookings, expandedId, onToggleExpand, onRefresh, selectedIds = [], onSelectionChange }: BookingTableProps) => {
-  const allSelected = bookings.length > 0 && bookings.every(b => selectedIds.includes(b.id));
+const BookingTable = ({
+  bookings,
+  expandedId,
+  onToggleExpand,
+  onRefresh,
+  selectedIds = [],
+  onSelectionChange,
+}: BookingTableProps) => {
+  const allSelected =
+    bookings.length > 0 && bookings.every((b) => selectedIds.includes(b.id));
   const toggleAll = () => {
     if (!onSelectionChange) return;
-    onSelectionChange(allSelected ? [] : bookings.map(b => b.id));
+    onSelectionChange(allSelected ? [] : bookings.map((b) => b.id));
   };
   const toggleOne = (id: string) => {
     if (!onSelectionChange) return;
-    onSelectionChange(selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id]);
+    onSelectionChange(
+      selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]
+    );
   };
+
+  // Departure detail drawer — shared across the whole table
+  const [departureDrw, setDepartureDrw] = useState<{
+    id: string;
+    packageTitle: string;
+  } | null>(null);
+
   const isMobile = useIsMobile();
+
+  const formatDepartureDate = (d: string | undefined | null) => {
+    if (!d) return "-";
+    try {
+      return format(new Date(d), "d MMM yyyy", { locale: localeId });
+    } catch {
+      return d;
+    }
+  };
 
   if (isMobile) {
     return (
-      <div className="space-y-4">
-        {bookings.map((b) => (
-          <div key={b.id}>
-            <MobileCard>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-mono text-sm font-semibold">{b.booking_code}</p>
-                  <p className="font-semibold mt-1">{b.profile?.name || "-"}</p>
-                  <p className="text-xs text-muted-foreground">{b.profile?.email}</p>
+      <>
+        <div className="space-y-4">
+          {bookings.map((b) => (
+            <div key={b.id}>
+              <MobileCard>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-mono text-sm font-semibold">{b.booking_code}</p>
+                    <p className="font-semibold mt-1">{b.profile?.name || "-"}</p>
+                    <p className="text-xs text-muted-foreground">{b.profile?.email}</p>
+                  </div>
+                  <BookingStatusBadge status={b.status} />
                 </div>
-                <BookingStatusBadge status={b.status} />
-              </div>
-              <MobileCardRow label="Paket">{b.package?.title || "-"}</MobileCardRow>
-              <MobileCardRow label="Keberangkatan">
-                {b.departure?.departure_date
-                  ? format(new Date(b.departure.departure_date), "d MMM yyyy", { locale: localeId })
-                  : "-"}
-              </MobileCardRow>
-              <MobileCardRow label="Total">
-                <span className="font-semibold">Rp {b.total_price.toLocaleString("id-ID")}</span>
-              </MobileCardRow>
-              <MobileCardRow label="Cabang">{b.branch?.name || "—"}</MobileCardRow>
-              <div className="flex gap-2 pt-2 border-t border-border">
-                <Button variant="ghost" size="sm" onClick={() => onToggleExpand(b.id)} className="flex-1">
-                  {expandedId === b.id ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
-                  Detail
-                </Button>
-              </div>
-            </MobileCard>
-            {expandedId === b.id && (
-              <div className="mt-1 bg-muted/30 rounded-xl">
-                <BookingDetailPanel
-                  bookingId={b.id}
-                  packageId={b.package_id}
-                  picType={b.pic_type}
-                  picId={b.pic_id}
-                  packageTitle={b.package?.title || "-"}
-                  branchId={b.branch_id}
-                  onBranchChange={onRefresh}
-                  isGroupBooking={b.is_group_booking}
-                  groupName={b.group_name}
-                  groupPicName={b.pic_name}
-                  groupPicPhone={b.pic_phone}
-                />
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+                <MobileCardRow label="Paket">{b.package?.title || "-"}</MobileCardRow>
+                <MobileCardRow label="Keberangkatan">
+                  {b.departure?.departure_date ? (
+                    <button
+                      onClick={() =>
+                        b.departure_id &&
+                        setDepartureDrw({
+                          id: b.departure_id,
+                          packageTitle: b.package?.title || "",
+                        })
+                      }
+                      className={`${b.departure_id ? "text-primary underline cursor-pointer" : ""}`}
+                    >
+                      {formatDepartureDate(b.departure.departure_date)}
+                    </button>
+                  ) : (
+                    "-"
+                  )}
+                </MobileCardRow>
+                <MobileCardRow label="Total">
+                  <span className="font-semibold">Rp {b.total_price.toLocaleString("id-ID")}</span>
+                </MobileCardRow>
+                <MobileCardRow label="Cabang">{b.branch?.name || "—"}</MobileCardRow>
+                <div className="flex gap-2 pt-2 border-t border-border">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onToggleExpand(b.id)}
+                    className="flex-1"
+                  >
+                    {expandedId === b.id ? (
+                      <EyeOff className="w-4 h-4 mr-1" />
+                    ) : (
+                      <Eye className="w-4 h-4 mr-1" />
+                    )}
+                    Detail
+                  </Button>
+                </div>
+              </MobileCard>
+              {expandedId === b.id && (
+                <div className="mt-1 bg-muted/30 rounded-xl">
+                  <BookingDetailPanel
+                    bookingId={b.id}
+                    packageId={b.package_id}
+                    departureId={b.departure_id}
+                    departureDate={b.departure?.departure_date}
+                    picType={b.pic_type}
+                    picId={b.pic_id}
+                    packageTitle={b.package?.title || "-"}
+                    branchId={b.branch_id}
+                    onBranchChange={onRefresh}
+                    onBookingChange={onRefresh}
+                    isGroupBooking={b.is_group_booking}
+                    groupName={b.group_name}
+                    groupPicName={b.pic_name}
+                    groupPicPhone={b.pic_phone}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <DepartureDetailDrawer
+          departureId={departureDrw?.id ?? null}
+          packageTitle={departureDrw?.packageTitle}
+          onClose={() => setDepartureDrw(null)}
+        />
+      </>
     );
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {onSelectionChange && (
-                <TableHead className="w-10">
-                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Pilih semua" />
-                </TableHead>
-              )}
-              <TableHead>Kode</TableHead>
-              <TableHead>Nama</TableHead>
-              <TableHead>Paket</TableHead>
-              <TableHead>Keberangkatan</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Cabang</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {bookings.map((b) => (
-              <>
-                <TableRow key={b.id} className={expandedId === b.id ? "border-b-0" : ""}>
-                  {onSelectionChange && (
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.includes(b.id)}
-                        onCheckedChange={() => toggleOne(b.id)}
-                        aria-label={`Pilih ${b.booking_code}`}
-                      />
-                    </TableCell>
-                  )}
-                  <TableCell className="font-mono text-sm">
-                    <div>{b.booking_code}</div>
-                    {b.is_group_booking && (
-                      <Badge variant="outline" className="mt-1 text-[10px] border-gold/40 text-gold px-1 py-0 gap-1">
-                        <UsersRound className="w-2.5 h-2.5" />
-                        {b.group_name ? (b.group_name.length > 16 ? b.group_name.slice(0, 16) + "…" : b.group_name) : "Grup"}
-                      </Badge>
+    <>
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {onSelectionChange && (
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={toggleAll}
+                      aria-label="Pilih semua"
+                    />
+                  </TableHead>
+                )}
+                <TableHead>Kode</TableHead>
+                <TableHead>Nama</TableHead>
+                <TableHead>Paket</TableHead>
+                <TableHead>Keberangkatan</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Cabang</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {bookings.map((b) => (
+                <>
+                  <TableRow key={b.id} className={expandedId === b.id ? "border-b-0" : ""}>
+                    {onSelectionChange && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.includes(b.id)}
+                          onCheckedChange={() => toggleOne(b.id)}
+                          aria-label={`Pilih ${b.booking_code}`}
+                        />
+                      </TableCell>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-semibold">{b.profile?.name || "-"}</div>
-                    <div className="text-xs text-muted-foreground">{b.profile?.email}</div>
-                  </TableCell>
-                  
-                  <TableCell>{b.package?.title || "-"}</TableCell>
-                  <TableCell>
-                    {b.departure?.departure_date
-                      ? format(new Date(b.departure.departure_date), "d MMM yyyy", { locale: localeId })
-                      : "-"}
-                  </TableCell>
-                  <TableCell className="font-semibold">
-                    Rp {b.total_price.toLocaleString("id-ID")}
-                  </TableCell>
-                  <TableCell className="text-sm">{b.branch?.name || <span className="text-muted-foreground">—</span>}</TableCell>
-                  <TableCell>
-                    <BookingStatusBadge status={b.status} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onToggleExpand(b.id)}
-                    >
-                      {expandedId === b.id ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      <span className="ml-1">Detail</span>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-                {expandedId === b.id && (
-                  <TableRow key={`${b.id}-detail`}>
-                    <TableCell colSpan={onSelectionChange ? 9 : 8} className="bg-muted/30 p-0">
-                      <BookingDetailPanel
-                        bookingId={b.id}
-                        packageId={b.package_id}
-                        picType={b.pic_type}
-                        picId={b.pic_id}
-                        packageTitle={b.package?.title || "-"}
-                        branchId={b.branch_id}
-                        onBranchChange={onRefresh}
-                        isGroupBooking={b.is_group_booking}
-                        groupName={b.group_name}
-                        groupPicName={b.pic_name}
-                        groupPicPhone={b.pic_phone}
-                      />
+                    <TableCell className="font-mono text-sm">
+                      <div>{b.booking_code}</div>
+                      {b.is_group_booking && (
+                        <Badge
+                          variant="outline"
+                          className="mt-1 text-[10px] border-gold/40 text-gold px-1 py-0 gap-1"
+                        >
+                          <UsersRound className="w-2.5 h-2.5" />
+                          {b.group_name
+                            ? b.group_name.length > 16
+                              ? b.group_name.slice(0, 16) + "…"
+                              : b.group_name
+                            : "Grup"}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-semibold">{b.profile?.name || "-"}</div>
+                      <div className="text-xs text-muted-foreground">{b.profile?.email}</div>
+                    </TableCell>
+                    <TableCell>{b.package?.title || "-"}</TableCell>
+
+                    {/* Departure date — clickable if departure_id is available */}
+                    <TableCell>
+                      {b.departure?.departure_date ? (
+                        b.departure_id ? (
+                          <button
+                            onClick={() =>
+                              setDepartureDrw({
+                                id: b.departure_id!,
+                                packageTitle: b.package?.title || "",
+                              })
+                            }
+                            className="text-primary hover:underline font-medium text-sm cursor-pointer"
+                            title="Klik untuk lihat detail keberangkatan"
+                          >
+                            {formatDepartureDate(b.departure.departure_date)}
+                          </button>
+                        ) : (
+                          <span className="text-sm">
+                            {formatDepartureDate(b.departure.departure_date)}
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+
+                    <TableCell className="font-semibold">
+                      Rp {b.total_price.toLocaleString("id-ID")}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {b.branch?.name || <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                    <TableCell>
+                      <BookingStatusBadge status={b.status} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onToggleExpand(b.id)}
+                      >
+                        {expandedId === b.id ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                        <span className="ml-1">Detail</span>
+                      </Button>
                     </TableCell>
                   </TableRow>
-                )}
-              </>
-            ))}
-          </TableBody>
-        </Table>
+
+                  {expandedId === b.id && (
+                    <TableRow key={`${b.id}-detail`}>
+                      <TableCell
+                        colSpan={onSelectionChange ? 9 : 8}
+                        className="bg-muted/30 p-0"
+                      >
+                        <BookingDetailPanel
+                          bookingId={b.id}
+                          packageId={b.package_id}
+                          departureId={b.departure_id}
+                          departureDate={b.departure?.departure_date}
+                          picType={b.pic_type}
+                          picId={b.pic_id}
+                          packageTitle={b.package?.title || "-"}
+                          branchId={b.branch_id}
+                          onBranchChange={onRefresh}
+                          onBookingChange={onRefresh}
+                          isGroupBooking={b.is_group_booking}
+                          groupName={b.group_name}
+                          groupPicName={b.pic_name}
+                          groupPicPhone={b.pic_phone}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-    </div>
+
+      {/* Departure detail drawer — rendered outside the table to avoid DOM nesting issues */}
+      <DepartureDetailDrawer
+        departureId={departureDrw?.id ?? null}
+        packageTitle={departureDrw?.packageTitle}
+        onClose={() => setDepartureDrw(null)}
+      />
+    </>
   );
 };
 

@@ -3,8 +3,11 @@ import {
   db,
   bookings,
   bookingStatusLogs,
+  bookingPayments,
   packages,
   packageDepartures,
+  departurePrices,
+  siteSettings,
   bookingRooms,
   bookingPilgrims,
   profiles,
@@ -579,6 +582,205 @@ router.patch("/:id/branch", async (req, res) => {
   } catch (e) {
     console.error("[PATCH /api/admin/bookings/:id/branch]", e);
     res.status(500).json({ error: "Failed to update branch" });
+  }
+});
+
+// ── Invoice data — full data for client-side invoice generation ───────────────
+router.get("/:id/invoice-data", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [bookingResult, pilgrimsResult, roomsResult, paymentsResult, brandingResult] =
+      await Promise.all([
+        db.execute(sql`
+          SELECT
+            b.booking_code, b.total_price, b.status, b.created_at,
+            pkg.title      AS package_title,
+            dep.departure_date,
+            prof.name      AS customer_name,
+            prof.email     AS customer_email
+          FROM bookings b
+          LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
+          LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
+          LEFT JOIN profiles           prof ON prof.id = b.user_id
+          WHERE b.id = ${id}
+          LIMIT 1
+        `),
+        db.select().from(bookingPilgrims).where(eq(bookingPilgrims.bookingId, id)),
+        db.select().from(bookingRooms).where(eq(bookingRooms.bookingId, id)),
+        db.execute(sql`
+          SELECT type, amount, paid_at, method, is_voided
+          FROM booking_payments
+          WHERE booking_id = ${id} AND is_voided = false
+          ORDER BY paid_at ASC NULLS LAST
+        `),
+        db.execute(sql`
+          SELECT value FROM site_settings
+          WHERE key = 'branding' AND category = 'general'
+          LIMIT 1
+        `),
+      ]);
+
+    const bRows = (bookingResult as any).rows ?? bookingResult;
+    const booking = bRows[0];
+    if (!booking) {
+      res.status(404).json({ error: "Booking not found" });
+      return;
+    }
+
+    const payRows = (paymentsResult as any).rows ?? paymentsResult;
+    const brandRows = (brandingResult as any).rows ?? brandingResult;
+    const branding: any = brandRows[0]?.value ?? {};
+
+    res.json({
+      bookingCode: booking.booking_code,
+      customerName: booking.customer_name || "-",
+      customerEmail: booking.customer_email || "-",
+      packageTitle: booking.package_title || "-",
+      departureDate: booking.departure_date || null,
+      totalPrice: Number(booking.total_price) || 0,
+      createdAt: booking.created_at,
+      status: booking.status,
+      pilgrims: (pilgrimsResult || []).map((p: any) => ({
+        name: p.name,
+        gender: p.gender,
+      })),
+      rooms: (roomsResult || []).map((r: any) => ({
+        room_type: r.roomType,
+        quantity: r.quantity,
+        price: Number(r.price),
+        subtotal: Number(r.subtotal),
+      })),
+      payments: payRows.map((p: any) => ({
+        payment_type: p.type,
+        amount: Number(p.amount),
+        status: "paid",
+        paid_at: p.paid_at,
+      })),
+      companyName: branding.company_name || "UmrohPlus",
+      companyTagline: branding.tagline || "Travel & Tours",
+      logoUrl: branding.logo_url || "",
+    });
+  } catch (e) {
+    sendAdminError(res, "GET /api/admin/bookings/:id/invoice-data", e);
+  }
+});
+
+// ── Change room type ───────────────────────────────────────────────────────────
+router.patch("/:id/room", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { roomType, quantity, price, subtotal } = req.body;
+
+    if (!roomType || !quantity || price === undefined || subtotal === undefined) {
+      res.status(400).json({ error: "roomType, quantity, price, subtotal wajib diisi" });
+      return;
+    }
+
+    await db.transaction(async (tx: any) => {
+      // Replace existing rooms with the new one
+      await tx.delete(bookingRooms).where(eq(bookingRooms.bookingId, id));
+      await tx.insert(bookingRooms).values({
+        id: crypto.randomUUID(),
+        bookingId: id,
+        roomType: String(roomType),
+        price: String(price),
+        quantity: Number(quantity),
+        subtotal: String(subtotal),
+        createdAt: new Date(),
+      });
+      // Update booking total price
+      await tx
+        .update(bookings)
+        .set({ totalPrice: Number(subtotal) })
+        .where(eq(bookings.id, id));
+
+      // Audit log
+      await tx.insert(bookingStatusLogs).values({
+        id: crypto.randomUUID(),
+        bookingId: id,
+        fromStatus: null,
+        toStatus: "room_changed",
+        changedBy: (req as any).user?.id ?? "admin",
+        notes: `Kamar diubah ke ${roomType} × ${quantity} pax @ Rp ${Number(price).toLocaleString("id-ID")}`,
+      });
+    });
+
+    res.json({ message: "Kamar berhasil diubah" });
+  } catch (e) {
+    sendAdminError(res, "PATCH /api/admin/bookings/:id/room", e);
+  }
+});
+
+// ── Change departure date ─────────────────────────────────────────────────────
+router.patch("/:id/departure", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { departureId } = req.body;
+
+    if (!departureId) {
+      res.status(400).json({ error: "departureId wajib diisi" });
+      return;
+    }
+
+    // Get current booking's departure
+    const [current] = await db
+      .select({ departureId: bookings.departureId, status: bookings.status })
+      .from(bookings)
+      .where(eq(bookings.id, id))
+      .limit(1);
+
+    if (!current) {
+      res.status(404).json({ error: "Booking tidak ditemukan" });
+      return;
+    }
+
+    // Validate new departure exists and has quota
+    const [newDep] = await db
+      .select({
+        remainingQuota: packageDepartures.remainingQuota,
+        departureDate: packageDepartures.departureDate,
+      })
+      .from(packageDepartures)
+      .where(eq(packageDepartures.id, departureId))
+      .limit(1);
+
+    if (!newDep) {
+      res.status(404).json({ error: "Keberangkatan tidak ditemukan" });
+      return;
+    }
+    if (newDep.remainingQuota <= 0) {
+      res.status(409).json({ error: "Kuota keberangkatan penuh" });
+      return;
+    }
+
+    await db.transaction(async (tx: any) => {
+      // Restore quota on the old departure
+      if (current.departureId && current.departureId !== departureId) {
+        await tx.execute(
+          sql`UPDATE package_departures SET remaining_quota = remaining_quota + 1 WHERE id = ${current.departureId}`
+        );
+      }
+      // Consume quota on the new departure
+      await tx.execute(
+        sql`UPDATE package_departures SET remaining_quota = GREATEST(0, remaining_quota - 1) WHERE id = ${departureId}`
+      );
+      // Update booking
+      await tx.update(bookings).set({ departureId }).where(eq(bookings.id, id));
+      // Audit log
+      await tx.insert(bookingStatusLogs).values({
+        id: crypto.randomUUID(),
+        bookingId: id,
+        fromStatus: null,
+        toStatus: "departure_changed",
+        changedBy: (req as any).user?.id ?? "admin",
+        notes: `Keberangkatan diubah ke ${newDep.departureDate}`,
+      });
+    });
+
+    res.json({ message: "Keberangkatan berhasil diubah", departureDate: newDep.departureDate });
+  } catch (e) {
+    sendAdminError(res, "PATCH /api/admin/bookings/:id/departure", e);
   }
 });
 

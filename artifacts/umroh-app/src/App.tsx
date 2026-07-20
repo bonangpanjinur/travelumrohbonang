@@ -30,6 +30,7 @@ import MyDocuments from "./features/jamaah/pages/MyDocuments";
 import AgentPortal from "./features/agent/pages/AgentPortal";
 import BranchDashboard from "./features/dashboard/pages/BranchDashboard";
 import NotFound from "./pages/NotFound";
+import TrackBooking from "./pages/TrackBooking";
 
 // Admin
 import AdminLayout from "@/features/admin/components/AdminLayout";
@@ -150,6 +151,7 @@ const AppContent = () => {
       <Routes>
       {/* Public Routes */}
       <Route path="/" element={<Index />} />
+      <Route path="/track/:code" element={<TrackBooking />} />
       <Route path="/paket" element={<Paket />} />
       <Route path="/paket/:slug" element={<PackageDetail />} />
       <Route path="/bandingkan" element={<Compare />} />
