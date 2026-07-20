@@ -181,6 +181,76 @@ router.post("/bulk-copy", async (req, res) => {
   }
 });
 
+// ── GET /profitability-overview — batch profitability for many packages at once
+// Accepts ?packageIds=id1,id2,id3 and optionally ?departureId=X
+// Returns an array of { packageId, paidBookings, agentCommission, picCommissionPerPax, marketingTotal }
+router.get("/profitability-overview", async (req, res) => {
+  try {
+    const { packageIds: rawIds, departureId } = req.query as { packageIds?: string; departureId?: string };
+    if (!rawIds) return res.json([]);
+
+    const ids = rawIds.split(",").filter(Boolean);
+    if (ids.length === 0) return res.json([]);
+
+    // Fetch all paid bookings for these packages in one query
+    const allBookings = await db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          inArray(bookings.packageId, ids),
+          eq(bookings.status, "paid"),
+          ...(departureId && departureId !== "__all__"
+            ? [eq(bookings.departureId, departureId)]
+            : []),
+        ),
+      );
+
+    const allBookingIds = allBookings.map((b: any) => b.id);
+
+    // Fetch agent commissions for all bookings at once
+    const allAgentComm = allBookingIds.length > 0
+      ? await db.select().from(agentCommissions).where(inArray(agentCommissions.bookingId, allBookingIds))
+      : [];
+
+    // Fetch package commissions for all packages at once
+    const allPkgComm = await db.select().from(packageCommissions).where(inArray(packageCommissions.packageId, ids));
+
+    // Marketing total is global (shared across packages) — fetch once
+    const ftx = await db.select().from(financialTransactions).where(
+      and(
+        eq(financialTransactions.category, "marketing"),
+        eq(financialTransactions.type, "expense"),
+        isNull(financialTransactions.bookingId),
+      ),
+    );
+    const marketingTotal = ftx.reduce((s: number, x: any) => s + Number(x.amount || 0), 0);
+
+    const results = ids.map((pid) => {
+      const pkgBookings = allBookings.filter((b: any) => b.packageId === pid);
+      const pkgBookingIds = pkgBookings.map((b: any) => b.id);
+      const agentComm = allAgentComm
+        .filter((ac: any) => pkgBookingIds.includes(ac.bookingId))
+        .reduce((s: number, x: any) => s + Number(x.amount || 0), 0);
+      const picCommPerPax = allPkgComm
+        .filter((pc: any) => pc.packageId === pid)
+        .reduce((s: number, x: any) => s + Number(x.commissionAmount || 0), 0);
+      return {
+        packageId: pid,
+        paidBookings: pkgBookings,
+        agentCommission: agentComm,
+        picCommissionPerPax: picCommPerPax,
+        marketingTotal,
+      };
+    });
+
+    return res.json(results);
+  } catch (err) {
+    console.error("[costs] profitability-overview:", err);
+    return res.status(500).json({ error: "Failed to fetch profitability overview" });
+  }
+});
+
 // Profitability helper endpoint
 router.get("/profitability/:packageId", async (req, res) => {
   try {

@@ -29,6 +29,7 @@ interface Payment {
   paymentType: string | null;
   paidAt: string | null;
   createdAt: string;
+  jamaahName: string | null;
   booking: {
     id: string;
     bookingCode: string;
@@ -67,7 +68,10 @@ const AdminPayments = () => {
   };
 
   const filteredPayments = payments.filter((p) => {
-    const matchSearch = !search || p.booking?.bookingCode?.toLowerCase().includes(search.toLowerCase());
+    const q = search.toLowerCase();
+    const matchSearch = !search ||
+      p.booking?.bookingCode?.toLowerCase().includes(q) ||
+      (p.jamaahName ?? "").toLowerCase().includes(q);
     const matchStatus = statusFilter === "all" || normalizeStatus(p.status) === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -136,6 +140,7 @@ const AdminPayments = () => {
       case "pending":  return <Badge className="bg-warning/10 text-warning border-warning/20">Menunggu</Badge>;
       case "verified": return <Badge className="bg-success/10 text-success border-success/20">Terverifikasi</Badge>;
       case "rejected": return <Badge className="bg-destructive/10 text-destructive border-destructive/20">Ditolak</Badge>;
+      case "refunded": return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Dikembalikan</Badge>;
       // legacy values kept for backwards compatibility
       case "paid":     return <Badge className="bg-success/10 text-success border-success/20">Terverifikasi</Badge>;
       case "failed":   return <Badge className="bg-destructive/10 text-destructive border-destructive/20">Ditolak</Badge>;
@@ -204,13 +209,25 @@ const AdminPayments = () => {
         <h1 className="text-2xl font-display font-bold">Verifikasi Pembayaran</h1>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <Button variant="outline" onClick={() => {
-            const headers = ["Kode Booking", "Tipe", "Jumlah", "Metode", "Status", "Tanggal"];
+            const statusLabel = (s: string) => {
+              switch (s) {
+                case "pending":  return "Menunggu";
+                case "verified": return "Terverifikasi";
+                case "rejected": return "Ditolak";
+                case "refunded": return "Dikembalikan";
+                case "paid":     return "Terverifikasi";
+                case "failed":   return "Ditolak";
+                default:         return s;
+              }
+            };
+            const headers = ["Kode Booking", "Nama Jamaah", "Tipe", "Jumlah", "Metode", "Status", "Tanggal"];
             const rows = filteredPayments.map(p => [
               p.booking?.bookingCode || "-",
+              p.jamaahName || "-",
               p.paymentType === "dp" ? "DP" : "Pelunasan",
               String(p.amount),
               p.paymentMethod || "-",
-              p.status || "pending",
+              statusLabel(p.status || "pending"),
               p.createdAt?.slice(0, 10) || ""
             ]);
             exportToCsv("payments", headers, rows);
@@ -226,12 +243,13 @@ const AdminPayments = () => {
               className="pl-9 w-full sm:w-64"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {[
               { key: "all", label: "Semua" },
               { key: "pending", label: "Menunggu" },
               { key: "verified", label: "Terverifikasi" },
               { key: "rejected", label: "Ditolak" },
+              { key: "refunded", label: "Dikembalikan" },
             ].map(({ key, label }) => (
               <Button key={key} variant={statusFilter === key ? "default" : "outline"} size="sm" onClick={() => setStatusFilter(key)}>
                 {label}

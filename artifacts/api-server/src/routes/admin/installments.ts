@@ -200,8 +200,14 @@ router.get("/", async (req, res) => {
       bookingId?: string;
     };
 
+    const isOverdueFilter = status === "overdue";
     const conditions: Parameters<typeof and>[0][] = [];
-    if (status) conditions.push(eq(installmentSchedules.status, status));
+    // "overdue" is not a real DB status; query pending rows and post-filter by date.
+    if (isOverdueFilter) {
+      conditions.push(eq(installmentSchedules.status, "pending"));
+    } else if (status) {
+      conditions.push(eq(installmentSchedules.status, status));
+    }
     if (bookingId) conditions.push(eq(installmentSchedules.bookingId, bookingId));
 
     const rows = await db
@@ -228,7 +234,13 @@ router.get("/", async (req, res) => {
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(installmentSchedules.dueDate));
 
-    res.json({ data: rows, total: rows.length });
+    // Post-filter: "overdue" = pending rows whose dueDate is in the past.
+    const now = new Date();
+    const filtered = isOverdueFilter
+      ? rows.filter((r) => r.dueDate && r.dueDate < now)
+      : rows;
+
+    res.json({ data: filtered, total: filtered.length });
   } catch (err) {
     console.error("[admin/installments] list:", err);
     res.status(500).json({ error: "Failed to fetch installments" });

@@ -46,6 +46,17 @@ function xenditHeaders() {
   };
 }
 
+// ── GET /config — expose sandbox/production mode to the frontend ──────────────
+router.get("/config", (_req, res) => {
+  const midtransProd = process.env["MIDTRANS_IS_PRODUCTION"] === "true";
+  const xenditKey = process.env["XENDIT_API_KEY"] ?? "";
+  const xenditProd = xenditKey.startsWith("xnd_production_");
+  res.json({
+    midtrans: { mode: midtransProd ? "production" : "sandbox" },
+    xendit: { mode: xenditProd ? "production" : "sandbox" },
+  });
+});
+
 // ── GET /transactions ─────────────────────────────────────────────────────────
 
 router.get("/transactions", async (_req, res) => {

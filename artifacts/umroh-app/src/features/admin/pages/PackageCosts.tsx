@@ -212,20 +212,30 @@ export default function AdminPackageCosts() {
   useEffect(() => { if (selectedPkg) loadCosts(selectedPkg); else { setCosts([]); setProfit(null); } }, [selectedPkg, filterDeparture]);
 
   useEffect(() => {
+    // Guard: wait until currencies are loaded (avoid 0-rate conversions)
+    if (currencies.length === 0) return;
+
     (async () => {
       if (filteredPackages.length === 0) { setOverview([]); return; }
       const ids = filteredPackages.map((p) => p.id);
-      
+
       try {
-        const results = await Promise.all(ids.map(async (pid) => {
-          const p = packages.find(pkg => pkg.id === pid)!;
-          const data = await apiFetch<any>(`/api/admin/costs/profitability/${pid}${filterDeparture !== "__all__" ? `?departureId=${filterDeparture}` : ""}`);
+        // Single batch request instead of N individual calls (prevents N+1 timeout)
+        const qs = new URLSearchParams({ packageIds: ids.join(",") });
+        if (filterDeparture !== "__all__") qs.set("departureId", filterDeparture);
+        const batchData = await apiFetch<any[]>(`/api/admin/costs/profitability-overview?${qs}`);
+
+        const results = (batchData || []).map((data: any) => {
+          const pid = data.packageId;
+          const p = packages.find(pkg => pkg.id === pid);
+          if (!p) return null;
+
           const paidBookings = data.paidBookings || [];
           const soldPax = paidBookings.length;
-          const revenue = paidBookings.reduce((s: number, b: any) => s + Number(b.total_price || 0), 0);
+          const revenue = paidBookings.reduce((s: number, b: any) => s + Number(b.total_price || b.totalPrice || 0), 0);
           const agent = data.agentCommission;
           const pic = data.picCommissionPerPax * soldPax;
-          
+
           let perPax = 0, fixed = 0;
           const pkgCosts = allCosts.filter((x) =>
             x.package_id === pid && x.is_active !== false &&
@@ -235,17 +245,18 @@ export default function AdminPackageCosts() {
             const idr = toIDR(Number(c.unit_cost || 0), c.currency_code) * Number(c.qty || 0);
             if (c.is_per_pax) perPax += idr; else fixed += idr;
           }
-          
+
           const hppTotal = perPax * soldPax + fixed;
           const netProfit = revenue - hppTotal - agent - pic;
           const margin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
-          
+
           return {
             package_id: pid, title: p.title, type: p.package_type,
             hpp_per_pax: perPax, hpp_fixed: fixed, sold_pax: soldPax,
             revenue, net_profit: netProfit, margin,
           };
-        }));
+        }).filter(Boolean) as typeof overview;
+
         setOverview(results);
       } catch {
         toast.error("Gagal memuat ringkasan paket");

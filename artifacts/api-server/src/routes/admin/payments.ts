@@ -4,6 +4,7 @@ import {
   bookings,
   bookingPayments,
   payments,
+  profiles,
   eq,
   and,
   sql,
@@ -41,6 +42,7 @@ router.get("/all", async (req, res) => {
         paymentType: payments.paymentType,
         paidAt: payments.paidAt,
         createdAt: payments.createdAt,
+        jamaahName: profiles.name,
         booking: {
           id: bookings.id,
           bookingCode: bookings.bookingCode,
@@ -51,6 +53,7 @@ router.get("/all", async (req, res) => {
       })
       .from(payments)
       .leftJoin(bookings, eq(payments.bookingId, bookings.id))
+      .leftJoin(profiles, eq(profiles.id, bookings.userId))
       .orderBy(desc(payments.createdAt));
     res.json(data);
   } catch (e) {

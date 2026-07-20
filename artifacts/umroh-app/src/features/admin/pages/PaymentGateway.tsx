@@ -121,6 +121,20 @@ const PaymentGateway = () => {
     onError: (e: any) => toast.error("Gagal membuat pembayaran: " + e.message),
   });
 
+  // Fetch gateway config (sandbox vs production) to show correct labels
+  const { data: gatewayConfig } = useQuery({
+    queryKey: ["gateway-config"],
+    queryFn: () => apiFetch<{ midtrans: { mode: string }; xendit: { mode: string } }>("/api/admin/payment-gateway/config"),
+    staleTime: 60_000,
+  });
+
+  const modeLabel = (gateway: string) => {
+    if (gateway === "midtrans") {
+      return gatewayConfig?.midtrans?.mode === "production" ? "Production" : "Sandbox";
+    }
+    return gatewayConfig?.xendit?.mode === "production" ? "Production" : "Sandbox";
+  };
+
   // Check status mutation — polls gateway for current status
   const checkStatusMutation = useMutation({
     mutationFn: async ({ txId }: { gateway: string; txId: string }) => {
@@ -297,7 +311,7 @@ const PaymentGateway = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
-                            {tx.status === "pending" && (
+                            {(tx.status === "pending" || tx.status === "expired") && (
                               <Button size="sm" variant="outline" onClick={() => checkStatusMutation.mutate({ gateway: tx.gateway, txId: tx.id })}>
                                 <RefreshCw className="w-3 h-3" />
                               </Button>
@@ -331,8 +345,8 @@ const PaymentGateway = () => {
               <Select value={selectedGateway} onValueChange={setSelectedGateway}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="midtrans">Midtrans (Sandbox)</SelectItem>
-                  <SelectItem value="xendit">Xendit (Sandbox)</SelectItem>
+                  <SelectItem value="midtrans">Midtrans ({modeLabel("midtrans")})</SelectItem>
+                  <SelectItem value="xendit">Xendit ({modeLabel("xendit")})</SelectItem>
                 </SelectContent>
               </Select>
             </div>
