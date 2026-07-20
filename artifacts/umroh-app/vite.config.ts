@@ -30,8 +30,21 @@ export default defineConfig(async ({ command }) => {
   // serve the app at the domain root instead of Replit's path-based routing.
   const basePath = process.env.BASE_PATH ?? '/';
 
+  // Map server-side Supabase secrets to VITE_ env vars so they are available
+  // to the browser bundle without requiring duplicate env entries.
+  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '';
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY ?? '';
+  // Extract project-ref (subdomain) from the URL, e.g. https://abcdef.supabase.co → abcdef
+  const supabaseProjectId = process.env.VITE_SUPABASE_PROJECT_ID
+    ?? (supabaseUrl ? (new URL(supabaseUrl).hostname.split('.')[0]) : '');
+
   return {
     base: basePath,
+    define: {
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnonKey),
+      'import.meta.env.VITE_SUPABASE_PROJECT_ID': JSON.stringify(supabaseProjectId),
+    },
     plugins: [
       react(),
       tailwindcss(),
