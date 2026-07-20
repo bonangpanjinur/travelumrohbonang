@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
@@ -121,27 +120,24 @@ const Booking = () => {
         return;
       }
 
-      const [pkgRes, branchRes, agentRes] = await Promise.all([
-        supabase.from("packages").select("id, title, slug").eq("slug", slug).maybeSingle(),
-        supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
-        supabase.from("agents_public" as any).select("id, name, branch_id, branch:branches(name)").order("name")
+      // Fetch package (includes all departures inline), branches, and agents in parallel
+      const [pkgData, branchData, agentData] = await Promise.all([
+        apiFetch<any>(`/api/packages/${encodeURIComponent(slug)}`).catch(() => null),
+        apiFetch<Branch[]>(`/rest/v1/branches?is_active=eq.true&select=id,name&order=name`).catch(() => []),
+        apiFetch<Agent[]>(`/rest/v1/agents?select=id,name,branch_id&order=name`).catch(() => []),
       ]);
 
-      setBranches(branchRes.data || []);
-      setAgents((agentRes.data as any) || []);
+      setBranches(Array.isArray(branchData) ? branchData : []);
+      setAgents(Array.isArray(agentData) ? agentData : []);
 
-      if (pkgRes.data) {
-        setPkg(pkgRes.data);
+      if (pkgData && pkgData.id) {
+        setPkg({ id: pkgData.id, title: pkgData.title, slug: pkgData.slug });
 
-        const { data: depData } = await supabase
-          .from("package_departures")
-          .select(`*, prices:departure_prices(room_type, price)`)
-          .eq("id", departureId)
-          .maybeSingle();
-
-        if (depData) {
-          setDeparture(depData as unknown as Departure);
-          const initialRooms = (depData as unknown as Departure).prices.map((p) => ({
+        // Find the specific departure from the package's inline departures list
+        const dep = (pkgData.departures ?? []).find((d: any) => d.id === departureId) ?? null;
+        if (dep) {
+          setDeparture(dep as Departure);
+          const initialRooms = (dep as Departure).prices.map((p) => ({
             room_type: p.room_type,
             quantity: 0,
             price: p.price,
@@ -266,12 +262,10 @@ const Booking = () => {
       try {
         const ref = getStoredReferral();
         if (ref) {
-          const { data: ag } = await supabase
-            .from("agents_public" as any)
-            .select("id")
-            .eq("referral_code", ref)
-            .maybeSingle();
-          const agRow = ag as { id: string } | null;
+          const rows = await apiFetch<{ id: string }[]>(
+            `/rest/v1/agents?referral_code=eq.${encodeURIComponent(ref)}&select=id&limit=1`
+          ).catch(() => []);
+          const agRow = Array.isArray(rows) ? rows[0] : null;
           if (agRow?.id) {
             agentIdFromRef = agRow.id;
             clearStoredReferral();

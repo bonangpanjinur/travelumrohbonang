@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { useAuth } from "@/shared/hooks/useAuth";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
@@ -39,6 +39,8 @@ interface Package {
   hotel_madinah: { name: string; star: number } | null;
   airline: { name: string } | null;
   airport: { name: string; city: string } | null;
+  departures: Departure[];
+  extra_hotels?: ExtraHotel[];
 }
 
 interface ExtraHotel {
@@ -63,64 +65,35 @@ const PackageDetail = () => {
   const { tenant } = useTenant();
   const { format: formatPrice } = useCurrency();
   const [pkg, setPkg] = useState<Package | null>(null);
-  const [departures, setDepartures] = useState<Departure[]>([]);
-  const [extraHotels, setExtraHotels] = useState<ExtraHotel[]>([]);
   const [selectedDeparture, setSelectedDeparture] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!slug) return;
+
     const fetchPackage = async () => {
-      const { data: pkgData, error } = await supabase
-        .from("packages")
-        .select(`
-          *,
-          category:package_categories!packages_category_id_fkey(name),
-          hotel_makkah:hotels!packages_hotel_makkah_id_fkey(name, star),
-          hotel_madinah:hotels!packages_hotel_madinah_id_fkey(name, star),
-          airline:airlines!packages_airline_id_fkey(name),
-          airport:airports(name, city)
-        `)
-        .eq("slug", slug!)
-        .maybeSingle();
-
-      if (error) {
-        // A real query error (RLS denial, missing FK constraint breaking the embed, network, etc.)
-        // is a different situation than "no such package" — surface it instead of silently
-        // falling through to the generic not-found screen, which makes this undiagnosable.
-        console.error("[PackageDetail] failed to fetch package by slug:", slug, error);
-        setFetchError(error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (pkgData) {
-        setPkg(pkgData as unknown as Package);
-
-        const [depRes, extraRes] = await Promise.all([
-          supabase
-            .from("package_departures")
-            .select(`*, prices:departure_prices(room_type, price)`)
-            .eq("package_id", pkgData.id)
-            .order("departure_date", { ascending: true }),
-          supabase
-            .from("package_hotels")
-            .select(`id, label, hotel:hotels(name, star, city)`)
-            .eq("package_id", pkgData.id)
-            .order("sort_order"),
-        ]);
-
-        setDepartures((depRes.data as unknown as Departure[]) || []);
-        setExtraHotels((extraRes.data as unknown as ExtraHotel[]) || []);
-      } else if (slug) {
-        // No package matched — check the slug redirect table for an old → new mapping
-        const redirectTo = await lookupSlugRedirect("package", slug, tenant?.id);
-        if (redirectTo) {
-          navigate(buildRedirectPath("package", redirectTo), { replace: true });
-          return;
+      setLoading(true);
+      setFetchError(null);
+      try {
+        const data: Package = await apiFetch(`/api/packages/${encodeURIComponent(slug)}`);
+        setPkg(data);
+      } catch (err: any) {
+        // 404 → check slug redirect table
+        if (err?.status === 404 || err?.message?.includes("404")) {
+          const redirectTo = await lookupSlugRedirect("package", slug, tenant?.id);
+          if (redirectTo) {
+            navigate(buildRedirectPath("package", redirectTo), { replace: true });
+            return;
+          }
+          // No redirect — genuine 404, leave pkg as null
+        } else {
+          console.error("[PackageDetail] failed to fetch package by slug:", slug, err);
+          setFetchError(err?.message ?? "Unknown error");
         }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchPackage();
@@ -139,6 +112,9 @@ const PackageDetail = () => {
     if (!prices || prices.length === 0) return 0;
     return Math.min(...prices.map((p) => p.price));
   };
+
+  const departures = pkg?.departures ?? [];
+  const extraHotels = pkg?.extra_hotels ?? [];
 
   if (loading) {
     return (

@@ -33,17 +33,28 @@ export function isLocalOnlyDbHost(url: string): boolean {
  * PostgREST HTTP API instead of hitting the local Postgres pool directly.
  *
  * Conditions that trigger HTTP mode:
- *   1. No DATABASE_URL / SUPABASE_DATABASE_URL at all (placeholder)
- *   2. URL is the sentinel "postgres://localhost/placeholder"
- *   3. URL points to a Replit-internal or localhost host (not reachable
- *      from Vercel or any external runtime)
+ *   1. DATABASE_URL is absent or the placeholder sentinel
+ *   2. DATABASE_URL points to a local-only host (helium / localhost) AND
+ *      Supabase credentials are actually present — so we have something to
+ *      fall back to.  Without creds there is no point switching modes; we
+ *      let the Drizzle pool try the direct URL (it works fine on Replit
+ *      where "helium" is reachable internally).
  */
 export function shouldUseSupabaseHttp(): boolean {
   const effectiveUrl =
     process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || "";
-  return (
-    !effectiveUrl ||
-    effectiveUrl.includes("localhost/placeholder") ||
-    isLocalOnlyDbHost(effectiveUrl)
-  );
+
+  if (!effectiveUrl || effectiveUrl.includes("localhost/placeholder")) {
+    return true;
+  }
+
+  if (isLocalOnlyDbHost(effectiveUrl)) {
+    // Only fall back to Supabase HTTP when creds exist; otherwise use the
+    // direct pool (helium is reachable inside Replit).
+    const hasSupabaseCreds =
+      !!process.env.SUPABASE_URL && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+    return hasSupabaseCreds;
+  }
+
+  return false;
 }

@@ -4,6 +4,7 @@ import {
   packages,
   packageDepartures,
   departurePrices,
+  packageHotels,
   hotels,
   airlines,
   airports,
@@ -12,6 +13,7 @@ import {
   profiles,
   eq,
   and,
+  asc,
   desc,
   sql,
 } from "@workspace/db";
@@ -35,7 +37,8 @@ const PKG_EMBED_SELECT =
   "hotel_madinah:hotels!packages_hotel_madinah_id_fkey(id,name,star:stars,city,description)," +
   "airline:airlines!packages_airline_id_fkey(id,name,code)," +
   "airport:airports!packages_airport_id_fkey(id,name,code,city)," +
-  "departures:package_departures!package_departures_package_id_fkey(id,departure_date,return_date,quota,remaining_quota,status,muthawif_id,prices:departure_prices!departure_prices_departure_id_fkey(price,room_type))";
+  "departures:package_departures!package_departures_package_id_fkey(id,departure_date,return_date,quota,remaining_quota,status,muthawif_id,prices:departure_prices!departure_prices_departure_id_fkey(price,room_type))," +
+  "extra_hotels:package_hotels!package_hotels_package_id_fkey(id,label,sort_order,hotel:hotels!package_hotels_hotel_id_fkey(name,star:stars,city))";
 
 async function supabaseGet(path: string): Promise<any> {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -88,6 +91,14 @@ function mapPkgRow(row: any) {
       status: d.status,
       muthawif_id: d.muthawif_id,
       prices: d.prices ?? [],
+    })),
+    extra_hotels: (row.extra_hotels ?? []).map((eh: any) => ({
+      id: eh.id,
+      label: eh.label ?? null,
+      sort_order: eh.sort_order ?? null,
+      hotel: eh.hotel
+        ? { name: eh.hotel.name, star: eh.hotel.star ?? null, city: eh.hotel.city ?? null }
+        : null,
     })),
   };
 }
@@ -276,13 +287,14 @@ router.get("/:slug", async (req: Request, res: Response) => {
       return;
     }
 
-    const [deps, hotelMakkah, hotelMadinah, airline, airport, category] = await Promise.all([
+    const [deps, hotelMakkah, hotelMadinah, airline, airport, category, extraHotelRows] = await Promise.all([
       db.select().from(packageDepartures).where(eq(packageDepartures.packageId, pkg.id)),
       pkg.hotelMakkahId ? db.select().from(hotels).where(eq(hotels.id, pkg.hotelMakkahId)).limit(1) : Promise.resolve([]),
       pkg.hotelMadinahId ? db.select().from(hotels).where(eq(hotels.id, pkg.hotelMadinahId)).limit(1) : Promise.resolve([]),
       pkg.airlineId ? db.select().from(airlines).where(eq(airlines.id, pkg.airlineId)).limit(1) : Promise.resolve([]),
       pkg.airportId ? db.select().from(airports).where(eq(airports.id, pkg.airportId)).limit(1) : Promise.resolve([]),
       pkg.categoryId ? db.select().from(packageCategories).where(eq(packageCategories.id, pkg.categoryId)).limit(1) : Promise.resolve([]),
+      db.select().from(packageHotels).where(eq(packageHotels.packageId, pkg.id)).orderBy(asc(packageHotels.sortOrder)),
     ]);
 
     const departuresWithPrices = await Promise.all(
@@ -303,6 +315,13 @@ router.get("/:slug", async (req: Request, res: Response) => {
         };
       }),
     );
+
+    // Fetch hotel details for extra hotels
+    const extraHotelIds = extraHotelRows.map((eh) => eh.hotelId).filter(Boolean);
+    const extraHotelDetails = extraHotelIds.length > 0
+      ? await db.select().from(hotels).where(sql`${hotels.id} = ANY(ARRAY[${sql.raw(extraHotelIds.map(id => `'${id}'`).join(","))}]::text[])`)
+      : [];
+    const extraHotelMap = Object.fromEntries(extraHotelDetails.map((h) => [h.id, h]));
 
     const h1 = hotelMakkah[0] ?? null;
     const h2 = hotelMadinah[0] ?? null;
@@ -334,6 +353,15 @@ router.get("/:slug", async (req: Request, res: Response) => {
       airline: a ? { id: a.id, name: a.name, code: a.code } : null,
       airport: ap ? { id: ap.id, name: ap.name, code: ap.code, city: ap.city } : null,
       departures: departuresWithPrices,
+      extra_hotels: extraHotelRows.map((eh) => {
+        const h = extraHotelMap[eh.hotelId];
+        return {
+          id: eh.id,
+          label: eh.label ?? null,
+          sort_order: eh.sortOrder ?? null,
+          hotel: h ? { name: h.name, star: h.stars ?? null, city: h.city ?? null } : null,
+        };
+      }),
     });
   } catch (err) {
     console.error(err);

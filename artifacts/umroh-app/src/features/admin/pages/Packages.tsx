@@ -8,8 +8,9 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import { Badge } from "@/shared/components/ui/badge";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Hotel, X, Search, Download, ExternalLink, Copy } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Hotel, X, Search, Download, ExternalLink, Copy, Package, CheckCircle2, XCircle } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import { Link } from "react-router-dom";
 import PackageCommissions from "@/features/admin/components/PackageCommissions";
@@ -106,16 +107,26 @@ const AdminPackages = () => {
   const [expandedCommission, setExpandedCommission] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const { toast } = useToast();
   const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const filteredPackages = packages.filter((p) =>
-    (p.title ?? "").toLowerCase().includes(search.toLowerCase()) ||
-    (p.package_type ?? "").toLowerCase().includes(search.toLowerCase())
-  );
+  const activeCount   = packages.filter(p => p.is_active !== false).length;
+  const inactiveCount = packages.filter(p => p.is_active === false).length;
+
+  const filteredPackages = packages.filter((p) => {
+    const matchesSearch =
+      (p.title ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.package_type ?? "").toLowerCase().includes(search.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" && p.is_active !== false) ||
+      (statusFilter === "inactive" && p.is_active === false);
+    return matchesSearch && matchesStatus;
+  });
   const { page, setPage, totalPages, totalCount, paginatedItems, pageSize, resetPage } = useAdminPagination(filteredPackages);
-  useEffect(() => { resetPage(); }, [search]);
+  useEffect(() => { resetPage(); }, [search, statusFilter]);
 
   const [categories, setCategories] = useState<Option[]>([]);
   const [hotels, setHotels] = useState<HotelOption[]>([]);
@@ -401,28 +412,18 @@ const AdminPackages = () => {
   // ── JSX ───────────────────────────────────────────────────────────────────
 
   return (
-    <div>
+    <div className="space-y-5">
       <DeleteAlertDialog open={isDeleteOpen} onOpenChange={cancelDelete} onConfirm={() => confirmDelete(executeDelete)} title="Hapus Paket?" description="Paket yang dihapus tidak dapat dikembalikan." />
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-display font-bold">Paket</h1>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => {
-            const headers = ["Nama Paket", "Tipe", "Durasi (Hari)", "Min DP", "Status", "Slug"];
-            const rows = filteredPackages.map(p => [
-              p.title, p.package_type || "-", String(p.duration_days),
-              String(p.minimum_dp || 0), p.is_active ? "Aktif" : "Nonaktif", p.slug
-            ]);
-            exportToCsv("packages", headers, rows);
-          }}>
-            <Download className="w-4 h-4 mr-2" /> Export CSV
-          </Button>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Cari paket..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 w-64" />
-          </div>
+
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-bold">Paket</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Kelola semua paket perjalanan (Umroh, Haji, Wisata)</p>
+        </div>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button className="gradient-gold text-primary">
+            <Button className="gradient-gold text-primary shrink-0">
               <Plus className="w-4 h-4 mr-2" /> Tambah Paket
             </Button>
           </DialogTrigger>
@@ -647,100 +648,249 @@ const AdminPackages = () => {
             </form>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* ── Stats bar ── */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "Total Paket", value: packages.length, icon: Package, color: "text-primary", bg: "bg-primary/8" },
+          { label: "Aktif",       value: activeCount,     icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
+          { label: "Nonaktif",    value: inactiveCount,   icon: XCircle,      color: "text-muted-foreground", bg: "bg-muted/50" },
+        ].map(({ label, value, icon: Icon, color, bg }) => (
+          <div key={label} className={`rounded-xl border border-border p-4 flex items-center gap-3 ${bg}`}>
+            <div className={`rounded-lg p-2 bg-background/60 ${color}`}>
+              <Icon className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold leading-none">{value}</p>
+              <p className="text-xs text-muted-foreground mt-1">{label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Toolbar: filter tabs + search + export ── */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Filter tabs */}
+        <div className="flex rounded-lg border border-border bg-muted/30 p-0.5 gap-0.5">
+          {(["all", "active", "inactive"] as const).map((f) => {
+            const labels = { all: "Semua", active: "Aktif", inactive: "Nonaktif" };
+            return (
+              <button
+                key={f}
+                onClick={() => setStatusFilter(f)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  statusFilter === f
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {labels[f]}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search */}
+        <div className="relative flex-1 min-w-[180px] max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Cari nama / tipe..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-9"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => {
+            const headers = ["Nama Paket", "Tipe", "Durasi (Hari)", "Min DP", "Status", "Slug"];
+            const rows = filteredPackages.map(p => [
+              p.title, p.package_type || "-", String(p.duration_days),
+              String(p.minimum_dp || 0), p.is_active !== false ? "Aktif" : "Nonaktif", p.slug
+            ]);
+            exportToCsv("packages", headers, rows);
+          }}>
+            <Download className="w-4 h-4 mr-1.5" /> Export CSV
+          </Button>
         </div>
       </div>
 
-      {/* P3-07: Bulk action bar */}
+      {/* ── Bulk action bar ── */}
       {selectedIds.length > 0 && (
-        <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-xl">
+        <div className="flex items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-xl">
           <span className="text-sm font-medium text-primary">{selectedIds.length} paket dipilih</span>
-          <Button size="sm" variant="outline" onClick={() => handleBulkStatus(true)}>Aktifkan</Button>
-          <Button size="sm" variant="outline" onClick={() => handleBulkStatus(false)}>Nonaktifkan</Button>
-          <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Batal Pilih</Button>
+          <div className="flex gap-2 ml-2">
+            <Button size="sm" variant="outline" onClick={() => handleBulkStatus(true)}>
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1.5 text-emerald-600" /> Aktifkan
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleBulkStatus(false)}>
+              <XCircle className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" /> Nonaktifkan
+            </Button>
+          </div>
+          <Button size="sm" variant="ghost" className="ml-auto text-muted-foreground" onClick={() => setSelectedIds([])}>
+            Batalkan
+          </Button>
         </div>
       )}
 
+      {/* ── Table / empty states ── */}
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-4 border-b border-border last:border-0 animate-pulse">
+              <div className="w-4 h-4 bg-muted rounded" />
+              <div className="w-12 h-12 bg-muted rounded-lg shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-muted rounded w-1/3" />
+                <div className="h-3 bg-muted rounded w-1/5" />
+              </div>
+              <div className="h-6 w-14 bg-muted rounded-full" />
+              <div className="flex gap-1">{[...Array(4)].map((_, j) => <div key={j} className="w-8 h-8 bg-muted rounded" />)}</div>
+            </div>
+          ))}
         </div>
       ) : filteredPackages.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">{search ? "Tidak ditemukan paket" : "Belum ada paket"}</div>
+        <div className="bg-card border border-border rounded-xl flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center mb-4">
+            <Package className="w-7 h-7 text-muted-foreground" />
+          </div>
+          <p className="font-semibold text-foreground mb-1">
+            {search ? "Paket tidak ditemukan" : statusFilter !== "all" ? "Tidak ada paket di kategori ini" : "Belum ada paket"}
+          </p>
+          <p className="text-sm text-muted-foreground mb-4">
+            {search ? `Tidak ada hasil untuk "${search}"` : "Mulai dengan menambahkan paket pertama Anda"}
+          </p>
+          {!search && statusFilter === "all" && (
+            <Button className="gradient-gold text-primary" onClick={() => setIsOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" /> Tambah Paket
+            </Button>
+          )}
+        </div>
       ) : (
         <>
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.length === paginatedItems.length && paginatedItems.length > 0}
-                    onChange={toggleSelectAll}
-                    className="rounded border-border"
-                    title="Pilih semua"
-                  />
-                </TableHead>
-                <TableHead>Nama Paket</TableHead>
-                <TableHead>Tipe</TableHead>
-                <TableHead>Durasi</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedItems.map((pkg) => (
-                <React.Fragment key={pkg.id}>
-                  <TableRow>
-                    <TableCell>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(pkg.id)}
-                        onChange={() => toggleSelect(pkg.id)}
-                        className="rounded border-border"
-                      />
-                    </TableCell>
-                    <TableCell className="font-semibold">{pkg.title}</TableCell>
-                    <TableCell>{pkg.package_type || "-"}</TableCell>
-                    <TableCell>{pkg.duration_days} hari</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${pkg.is_active ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
-                        {pkg.is_active ? "Aktif" : "Nonaktif"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => setExpandedCommission(expandedCommission === pkg.id ? null : pkg.id)} title="Komisi">
-                          {expandedCommission === pkg.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </Button>
-                        <Link to={`/paket/${pkg.slug}`} target="_blank">
-                          <Button variant="ghost" size="icon"><Eye className="w-4 h-4" /></Button>
-                        </Link>
-                        <Button variant="ghost" size="icon" title="Duplikat Paket" onClick={() => handleClone(pkg)}>
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(pkg)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => requestDelete(pkg.id)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                  {expandedCommission === pkg.id && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="bg-muted/50 p-4">
-                        <PackageCommissions packageId={pkg.id} packageTitle={pkg.title} />
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableHead className="w-10 pl-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.length === paginatedItems.length && paginatedItems.length > 0}
+                      onChange={toggleSelectAll}
+                      className="rounded border-border cursor-pointer"
+                      title="Pilih semua"
+                    />
+                  </TableHead>
+                  <TableHead className="font-semibold">Paket</TableHead>
+                  <TableHead className="font-semibold">Tipe & Durasi</TableHead>
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="text-right font-semibold pr-4">Aksi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedItems.map((pkg) => (
+                  <React.Fragment key={pkg.id}>
+                    <TableRow className="hover:bg-muted/20 transition-colors group">
+                      <TableCell className="pl-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(pkg.id)}
+                          onChange={() => toggleSelect(pkg.id)}
+                          className="rounded border-border cursor-pointer"
+                        />
+                      </TableCell>
+
+                      {/* Thumbnail + title */}
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-muted border border-border">
+                            {pkg.image_url ? (
+                              <img src={pkg.image_url} alt={pkg.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="w-5 h-5 text-muted-foreground/50" />
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm leading-tight">{pkg.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 font-mono">{pkg.slug}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      {/* Type + duration */}
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {pkg.package_type ? (
+                            <Badge variant="secondary" className="w-fit text-xs capitalize">{pkg.package_type}</Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                          <span className="text-xs text-muted-foreground">{pkg.duration_days} hari</span>
+                        </div>
+                      </TableCell>
+
+                      {/* Status */}
+                      <TableCell>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                          pkg.is_active !== false
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                            : "bg-muted text-muted-foreground"
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${pkg.is_active !== false ? "bg-emerald-500" : "bg-muted-foreground/50"}`} />
+                          {pkg.is_active !== false ? "Aktif" : "Nonaktif"}
+                        </span>
+                      </TableCell>
+
+                      {/* Actions */}
+                      <TableCell className="pr-4">
+                        <div className="flex justify-end items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost" size="icon" className="h-8 w-8"
+                            title="Panel Komisi"
+                            onClick={() => setExpandedCommission(expandedCommission === pkg.id ? null : pkg.id)}
+                          >
+                            {expandedCommission === pkg.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </Button>
+                          <Link to={`/paket/${pkg.slug}`} target="_blank">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Lihat di Frontend">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </Link>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Duplikat" onClick={() => handleClone(pkg)}>
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => handleEdit(pkg)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-destructive hover:bg-destructive/10" title="Hapus" onClick={() => requestDelete(pkg.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  )}
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
+
+                    {/* Commission panel */}
+                    {expandedCommission === pkg.id && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="bg-muted/30 p-4 border-t border-border">
+                          <PackageCommissions packageId={pkg.id} packageTitle={pkg.title} />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
         </>
       )}
     </div>

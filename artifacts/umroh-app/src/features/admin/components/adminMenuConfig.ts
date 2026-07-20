@@ -106,7 +106,7 @@ export const menuGroups: MenuGroup[] = [
     labelKey: "menu.group.operations",
     icon: Package,
     items: [
-      { label: "Paket Umroh", labelKey: "menu.packages", href: "/admin/packages", icon: Package, roles: ALL_STAFF },
+      { label: "Paket", labelKey: "menu.packages", href: "/admin/packages", icon: Package, roles: ALL_STAFF },
       { label: "Jadwal Keberangkatan", labelKey: "menu.departures", href: "/admin/departures", icon: Calendar, roles: ALL_STAFF },
       { label: "Itinerary Perjalanan", labelKey: "menu.itineraries", href: "/admin/itineraries", icon: MapPin, roles: ALL_STAFF },
       { label: "Booking", labelKey: "menu.bookings", href: "/admin/bookings", icon: Ticket, roles: OPERATIONAL },
