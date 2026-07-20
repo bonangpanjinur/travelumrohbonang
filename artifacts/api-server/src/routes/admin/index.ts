@@ -54,6 +54,7 @@ import adminPilgrimsDbRouter from "./pilgrims-db";
 import adminEquipmentReportRouter from "./equipment-report";
 import adminFeatureFlagsRouter from "./feature-flags";
 import adminAccountingRouter from "./accounting";
+import adminSavingsRouter from "./savings";
 
 const router = Router();
 
@@ -121,6 +122,9 @@ router.use("/social-kit", requireAdmin, adminSocialKitRouter);
 
 // ── F-05: Installment management ─────────────────────────────────────────────
 router.use("/installments", requireOperational, adminInstallmentsRouter);
+
+// ── Tabungan Umroh ────────────────────────────────────────────────────────────
+router.use("/savings", requireFinance, adminSavingsRouter);
 
 // ── Itineraries (sprint-1: moved from /rest/v1 to proper admin route) ────────
 router.use("/itineraries", requireStaff, adminItinerariesRouter);

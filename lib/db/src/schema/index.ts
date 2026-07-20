@@ -16,3 +16,4 @@ export * from "./itineraries";
 export * from "./auth";
 export * from "./manifests";
 export * from "./incidents";
+export * from "./savings";

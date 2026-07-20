@@ -77,6 +77,8 @@ import AdminMultiBranch from "./features/admin/pages/MultiBranch";
 import AdminTenantSites from "./features/admin/pages/TenantSites";
 import AdminTemplateUpgrades from "./features/admin/pages/TemplateUpgrades";
 import AdminInstallments from "./features/admin/pages/Installments";
+import AdminSavings from "./features/admin/pages/Savings";
+import MySavings from "./features/jamaah/pages/MySavings";
 import AdminManifest from "./features/admin/pages/Manifest";
 import AdminEquipmentReport from "./features/admin/pages/EquipmentReport";
 import AdminProofAccessLogs from "./features/admin/pages/PaymentProofAccessLogs";
@@ -170,6 +172,7 @@ const AppContent = () => {
         <Route path="/branch-dashboard" element={<BranchDashboard />} />
         <Route path="/account/2fa" element={<Account2FA />} />
         <Route path="/contract/:bookingId" element={<ContractSign />} />
+        <Route path="/tabungan" element={<MySavings />} />
       </Route>
       <Route path="/galeri" element={<Gallery />} />
       <Route path="/blog" element={<Blog />} />
@@ -225,6 +228,7 @@ const AppContent = () => {
           <Route path="tenant-sites" element={<AdminTenantSites />} />
           <Route path="template-upgrades" element={<AdminTemplateUpgrades />} />
           <Route path="installments" element={<AdminInstallments />} />
+          <Route path="savings" element={<AdminSavings />} />
           <Route path="manifest" element={<AdminManifest />} />
           <Route path="proof-access-logs" element={<AdminProofAccessLogs />} />
           <Route path="agent-withdrawals" element={<AdminAgentWithdrawals />} />

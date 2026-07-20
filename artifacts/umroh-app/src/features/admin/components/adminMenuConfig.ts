@@ -50,6 +50,7 @@ import {
   Backpack,
   BedDouble,
   ToggleRight,
+  PiggyBank,
   type LucideIcon
 
 } from "lucide-react";
@@ -134,6 +135,7 @@ export const menuGroups: MenuGroup[] = [
     items: [
       { label: "Pembayaran", labelKey: "menu.payments", href: "/admin/payments", icon: CreditCard, roles: OPERATIONAL, featureId: "payments" },
       { label: "Cicilan", labelKey: "menu.installments", href: "/admin/installments", icon: Receipt, roles: FINANCE, featureId: "installments" },
+      { label: "Tabungan Umroh", labelKey: "menu.savings", href: "/admin/savings", icon: PiggyBank, roles: FINANCE },
       { label: "HPP & Profitabilitas", labelKey: "menu.cost_profitability", href: "/admin/package-costs", icon: Calculator, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
       { label: "Akuntansi & Keuangan", labelKey: "menu.accounting", href: "/admin/accounting", icon: BarChart3, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
       { label: "Payment Gateway", labelKey: "menu.payment_gateway", href: "/admin/payment-gateway", icon: Wallet, roles: SUPER_ADMIN_ADMIN, featureId: "payments" },

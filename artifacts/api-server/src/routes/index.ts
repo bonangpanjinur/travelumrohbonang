@@ -18,6 +18,7 @@ import wishlistsRouter from "./wishlists";
 import pilgrimTestimonialsRouter from "./pilgrim-testimonials";
 import paymentGatewayWebhooksRouter from "./payment-gateway-webhooks";
 import agentRouter from "./agent";
+import savingsRouter from "./savings";
 import cronRouter from "./admin/cron";
 import { strictLimiter, writeLimiter } from "../middlewares/rateLimiter";
 
@@ -78,6 +79,9 @@ router.use("/payments/webhook", writeLimiter, paymentGatewayWebhooksRouter);
 
 // Agent portal — dedicated endpoints scoped to the authenticated user's own agent record
 router.use("/agent", strictLimiter, agentRouter);
+
+// Tabungan Umroh — user savings portal
+router.use("/savings", strictLimiter, savingsRouter);
 
 // Client-side logging (no auth required — best-effort; write-rate-limited at router level)
 router.use("/logs", writeLimiter, logsRouter);
