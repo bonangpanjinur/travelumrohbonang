@@ -41,8 +41,15 @@ const BASE_EXPENSE_CATEGORIES = [
 const CUSTOM_CATS_KEY = "accounting_custom_cats";
 
 function loadCustomCats(): { income: string[]; expense: string[] } {
-  try { return JSON.parse(localStorage.getItem(CUSTOM_CATS_KEY) || "{}") || { income: [], expense: [] }; }
-  catch { return { income: [], expense: [] }; }
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CUSTOM_CATS_KEY) || "{}");
+    return {
+      income: Array.isArray(parsed?.income) ? parsed.income : [],
+      expense: Array.isArray(parsed?.expense) ? parsed.expense : [],
+    };
+  } catch {
+    return { income: [], expense: [] };
+  }
 }
 function saveCustomCats(cats: { income: string[]; expense: string[] }) {
   localStorage.setItem(CUSTOM_CATS_KEY, JSON.stringify(cats));
