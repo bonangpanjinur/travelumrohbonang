@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
@@ -15,45 +16,45 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import {
   Search, Plus, CreditCard, Wallet, RefreshCw, Copy, CheckCircle,
-  Clock, XCircle, AlertTriangle, QrCode, Building2, Eye
+  Clock, XCircle, AlertTriangle, QrCode, Building2, Eye, ExternalLink,
+  CheckCheck, Loader2,
 } from "lucide-react";
 import PaymentGatewaySettings from "../components/PaymentGatewaySettings";
 
 const BANKS_MIDTRANS = [
-  { code: "bca", label: "BCA" },
-  { code: "bni", label: "BNI" },
-  { code: "bri", label: "BRI" },
-  { code: "permata", label: "Permata" },
+  { code: "bca", label: "BCA" }, { code: "bni", label: "BNI" },
+  { code: "bri", label: "BRI" }, { code: "permata", label: "Permata" },
 ];
-
 const BANKS_XENDIT = [
-  { code: "BCA", label: "BCA" },
-  { code: "BNI", label: "BNI" },
-  { code: "BRI", label: "BRI" },
-  { code: "MANDIRI", label: "Mandiri" },
-  { code: "PERMATA", label: "Permata" },
-  { code: "BSI", label: "BSI" },
+  { code: "BCA", label: "BCA" }, { code: "BNI", label: "BNI" },
+  { code: "BRI", label: "BRI" }, { code: "MANDIRI", label: "Mandiri" },
+  { code: "PERMATA", label: "Permata" }, { code: "BSI", label: "BSI" },
 ];
-
 const PAYMENT_METHODS = [
   { value: "bank_transfer", label: "Virtual Account", icon: Building2 },
   { value: "qris", label: "QRIS", icon: QrCode },
 ];
-
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof CheckCircle }> = {
   pending: { label: "Menunggu", variant: "outline", icon: Clock },
-  paid: { label: "Dibayar", variant: "default", icon: CheckCircle },
+  paid:    { label: "Dibayar",  variant: "default", icon: CheckCircle },
   expired: { label: "Kadaluarsa", variant: "secondary", icon: AlertTriangle },
-  failed: { label: "Gagal", variant: "destructive", icon: XCircle },
+  failed:  { label: "Gagal",    variant: "destructive", icon: XCircle },
   cancelled: { label: "Dibatalkan", variant: "secondary", icon: XCircle },
 };
 
+const AUTO_REFRESH_SECS = 30;
+
 const PaymentGateway = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [createDialog, setCreateDialog] = useState(false);
   const [detailDialog, setDetailDialog] = useState<any>(null);
+  const [selectedTxIds, setSelectedTxIds] = useState<Set<string>>(new Set());
+  const [bulkChecking, setBulkChecking] = useState(false);
+  const [countdown, setCountdown] = useState(AUTO_REFRESH_SECS);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Form state
   const [selectedGateway, setSelectedGateway] = useState<string>("midtrans");
@@ -64,15 +65,12 @@ const PaymentGateway = () => {
   const [customerName, setCustomerName] = useState<string>("");
   const [customerEmail, setCustomerEmail] = useState<string>("");
 
-  // Fetch transactions from Express API (P1-2: replaces supabase.functions.invoke)
-  const { data: transactions = [], isLoading } = useQuery({
+  const { data: transactions = [], isLoading, refetch } = useQuery({
     queryKey: ["gateway-transactions", search, statusFilter],
     queryFn: async () => {
       const data = await apiFetch<any[]>("/api/admin/payment-gateway/transactions");
       let result = data || [];
-      if (statusFilter !== "all") {
-        result = result.filter((tx: any) => tx.status === statusFilter);
-      }
+      if (statusFilter !== "all") result = result.filter((tx: any) => tx.status === statusFilter);
       if (search) {
         const q = search.toLowerCase();
         result = result.filter((tx: any) =>
@@ -85,43 +83,49 @@ const PaymentGateway = () => {
     },
   });
 
-  // Fetch bookings for selection
+  // Auto-refresh pending transactions every 30s
+  useEffect(() => {
+    const hasPending = transactions.some((t: any) => t.status === "pending");
+    if (!hasPending) { setCountdown(AUTO_REFRESH_SECS); return; }
+
+    setCountdown(AUTO_REFRESH_SECS);
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          refetch();
+          return AUTO_REFRESH_SECS;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, [transactions.length, refetch]);
+
   const { data: bookings = [] } = useQuery({
     queryKey: ["bookings-for-gateway"],
     queryFn: async () => {
-      const result = await apiFetch<{ data: any[]; total: number }>("/api/admin/bookings?limit=200")
-        .catch(() => ({ data: [], total: 0 }));
+      const result = await apiFetch<{ data: any[]; total: number }>("/api/admin/bookings?limit=200").catch(() => ({ data: [], total: 0 }));
       return (result?.data ?? []).filter((b: any) => ["pending", "draft", "confirmed"].includes(b.status));
     },
   });
 
-  // Create payment mutation — calls Express API
   const createPaymentMutation = useMutation({
-    mutationFn: async () => {
-      return await apiFetch<any>("/api/admin/payment-gateway/transactions", {
-        method: "POST",
-        body: JSON.stringify({
-          gateway: selectedGateway,
-          bookingId: selectedBookingId || null,
-          amount: parseFloat(paymentAmount),
-          bankCode: selectedBank || null,
-          paymentMethod: selectedMethod,
-          customerName,
-          customerEmail,
-        }),
-      });
-    },
+    mutationFn: async () => apiFetch<any>("/api/admin/payment-gateway/transactions", {
+      method: "POST",
+      body: JSON.stringify({
+        gateway: selectedGateway, bookingId: selectedBookingId || null,
+        amount: parseFloat(paymentAmount), bankCode: selectedBank || null,
+        paymentMethod: selectedMethod, customerName, customerEmail,
+      }),
+    }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["gateway-transactions"] });
       toast.success(`Pembayaran berhasil dibuat via ${selectedGateway.toUpperCase()}`);
-      setCreateDialog(false);
-      setDetailDialog(data);
-      resetForm();
+      setCreateDialog(false); setDetailDialog(data); resetForm();
     },
     onError: (e: any) => toast.error("Gagal membuat pembayaran: " + e.message),
   });
 
-  // Fetch gateway config (sandbox vs production) to show correct labels
   const { data: gatewayConfig } = useQuery({
     queryKey: ["gateway-config"],
     queryFn: () => apiFetch<{ midtrans: { mode: string }; xendit: { mode: string } }>("/api/admin/payment-gateway/config"),
@@ -129,20 +133,13 @@ const PaymentGateway = () => {
   });
 
   const modeLabel = (gateway: string) => {
-    if (gateway === "midtrans") {
-      return gatewayConfig?.midtrans?.mode === "production" ? "Production" : "Sandbox";
-    }
+    if (gateway === "midtrans") return gatewayConfig?.midtrans?.mode === "production" ? "Production" : "Sandbox";
     return gatewayConfig?.xendit?.mode === "production" ? "Production" : "Sandbox";
   };
 
-  // Check status mutation — polls gateway for current status
   const checkStatusMutation = useMutation({
-    mutationFn: async ({ txId }: { gateway: string; txId: string }) => {
-      return await apiFetch<any>(`/api/admin/payment-gateway/transactions/${txId}/check`, {
-        method: "POST",
-        body: JSON.stringify({}),
-      });
-    },
+    mutationFn: async ({ txId }: { gateway: string; txId: string }) =>
+      apiFetch<any>(`/api/admin/payment-gateway/transactions/${txId}/check`, { method: "POST", body: JSON.stringify({}) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["gateway-transactions"] });
       toast.success("Status diperbarui");
@@ -150,14 +147,27 @@ const PaymentGateway = () => {
     onError: (e: any) => toast.error("Gagal cek status: " + e.message),
   });
 
+  const handleBulkCheck = async () => {
+    if (selectedTxIds.size === 0) return;
+    setBulkChecking(true);
+    let ok = 0, fail = 0;
+    const txList = transactions.filter((t: any) => selectedTxIds.has(t.id));
+    for (const tx of txList) {
+      try {
+        await apiFetch(`/api/admin/payment-gateway/transactions/${tx.id}/check`, { method: "POST", body: JSON.stringify({}) });
+        ok++;
+      } catch { fail++; }
+    }
+    queryClient.invalidateQueries({ queryKey: ["gateway-transactions"] });
+    setBulkChecking(false);
+    setSelectedTxIds(new Set());
+    toast.success(`Selesai: ${ok} berhasil${fail > 0 ? `, ${fail} gagal` : ""}`);
+  };
+
   const resetForm = () => {
-    setSelectedGateway("midtrans");
-    setSelectedMethod("bank_transfer");
-    setSelectedBank("");
-    setSelectedBookingId("");
-    setPaymentAmount("");
-    setCustomerName("");
-    setCustomerEmail("");
+    setSelectedGateway("midtrans"); setSelectedMethod("bank_transfer");
+    setSelectedBank(""); setSelectedBookingId("");
+    setPaymentAmount(""); setCustomerName(""); setCustomerEmail("");
   };
 
   const copyToClipboard = (text: string) => {
@@ -166,11 +176,29 @@ const PaymentGateway = () => {
   };
 
   const bankList = selectedGateway === "midtrans" ? BANKS_MIDTRANS : BANKS_XENDIT;
-
-  // Stats
   const totalPending = transactions.filter((t: any) => t.status === "pending").length;
   const totalPaid = transactions.filter((t: any) => t.status === "paid").length;
   const totalAmount = transactions.filter((t: any) => t.status === "paid").reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+  const pendingTxs = transactions.filter((t: any) => t.status === "pending" || t.status === "expired");
+  const allPendingSelected = pendingTxs.length > 0 && pendingTxs.every((t: any) => selectedTxIds.has(t.id));
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedTxIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedTxIds(next);
+  };
+
+  const toggleSelectAll = () => {
+    if (allPendingSelected) {
+      const next = new Set(selectedTxIds);
+      pendingTxs.forEach((t: any) => next.delete(t.id));
+      setSelectedTxIds(next);
+    } else {
+      const next = new Set(selectedTxIds);
+      pendingTxs.forEach((t: any) => next.add(t.id));
+      setSelectedTxIds(next);
+    }
+  };
 
   const handleBookingSelect = (bookingId: string) => {
     setSelectedBookingId(bookingId);
@@ -200,145 +228,184 @@ const PaymentGateway = () => {
           <TabsTrigger value="settings">Pengaturan API</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="settings" className="mt-4">
-          <PaymentGatewaySettings />
-        </TabsContent>
+        <TabsContent value="settings" className="mt-4"><PaymentGatewaySettings /></TabsContent>
 
         <TabsContent value="transactions" className="mt-4 space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10"><CreditCard className="w-5 h-5 text-primary" /></div>
-            <div><p className="text-2xl font-bold">{transactions.length}</p><p className="text-xs text-muted-foreground">Total Transaksi</p></div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-500/10"><Clock className="w-5 h-5 text-amber-600" /></div>
-            <div><p className="text-2xl font-bold">{totalPending}</p><p className="text-xs text-muted-foreground">Menunggu Bayar</p></div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success/10"><CheckCircle className="w-5 h-5 text-success" /></div>
-            <div><p className="text-2xl font-bold">{totalPaid}</p><p className="text-xs text-muted-foreground">Sudah Bayar</p></div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10"><Wallet className="w-5 h-5 text-primary" /></div>
-            <div><p className="text-2xl font-bold">Rp {totalAmount.toLocaleString("id-ID")}</p><p className="text-xs text-muted-foreground">Total Terbayar</p></div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Cari ID transaksi, VA, booking code..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="pending">Menunggu</SelectItem>
-                <SelectItem value="paid">Dibayar</SelectItem>
-                <SelectItem value="expired">Kadaluarsa</SelectItem>
-                <SelectItem value="failed">Gagal</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10"><CreditCard className="w-5 h-5 text-primary" /></div>
+                <div><p className="text-2xl font-bold">{transactions.length}</p><p className="text-xs text-muted-foreground">Total Transaksi</p></div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-500/10"><Clock className="w-5 h-5 text-amber-600" /></div>
+                <div>
+                  <p className="text-2xl font-bold">{totalPending}</p>
+                  <p className="text-xs text-muted-foreground">Menunggu Bayar</p>
+                  {totalPending > 0 && <p className="text-xs text-amber-600">Refresh dalam {countdown}s</p>}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-success/10"><CheckCircle className="w-5 h-5 text-success" /></div>
+                <div><p className="text-2xl font-bold">{totalPaid}</p><p className="text-xs text-muted-foreground">Sudah Bayar</p></div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10"><Wallet className="w-5 h-5 text-primary" /></div>
+                <div><p className="text-xl font-bold">Rp {totalAmount.toLocaleString("id-ID")}</p><p className="text-xs text-muted-foreground">Total Terbayar</p></div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Transaction Table */}
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
-          ) : transactions.length === 0 ? (
-            <div className="p-12 text-center text-muted-foreground">
-              <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>Belum ada transaksi payment gateway</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID Transaksi</TableHead>
-                    <TableHead>Gateway</TableHead>
-                    <TableHead>Booking</TableHead>
-                    <TableHead>Metode</TableHead>
-                    <TableHead>VA / Ref</TableHead>
-                    <TableHead className="text-right">Jumlah</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Waktu</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map((tx: any) => {
-                    const config = STATUS_CONFIG[tx.status] || STATUS_CONFIG.pending;
-                    const StatusIcon = config.icon;
-                    return (
-                      <TableRow key={tx.id}>
-                        <TableCell className="font-mono text-xs">{tx.gatewayTransactionId || "-"}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="uppercase text-xs">{tx.gateway}</Badge>
-                        </TableCell>
-                        <TableCell className="text-sm">{tx.bookingCode || "-"}</TableCell>
-                        <TableCell className="text-sm capitalize">{tx.paymentMethod?.replace("_", " ") || "-"} {tx.bankCode ? `(${tx.bankCode.toUpperCase()})` : ""}</TableCell>
-                        <TableCell>
-                          {tx.vaNumber ? (
-                            <button onClick={() => copyToClipboard(tx.vaNumber)} className="flex items-center gap-1 font-mono text-xs hover:text-primary">
-                              {tx.vaNumber} <Copy className="w-3 h-3" />
-                            </button>
-                          ) : "-"}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">Rp {Number(tx.amount).toLocaleString("id-ID")}</TableCell>
-                        <TableCell>
-                          <Badge variant={config.variant} className="gap-1">
-                            <StatusIcon className="w-3 h-3" />{config.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {tx.createdAt ? format(new Date(tx.createdAt), "dd MMM yyyy HH:mm", { locale: localeId }) : "-"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-1 justify-end">
-                            {(tx.status === "pending" || tx.status === "expired") && (
-                              <Button size="sm" variant="outline" onClick={() => checkStatusMutation.mutate({ gateway: tx.gateway, txId: tx.id })}>
-                                <RefreshCw className="w-3 h-3" />
-                              </Button>
-                            )}
-                            <Button size="sm" variant="ghost" onClick={() => setDetailDialog(tx)}>
-                              <Eye className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+          {/* Filters */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input placeholder="Cari ID transaksi, VA, booking code..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Status</SelectItem>
+                    <SelectItem value="pending">Menunggu</SelectItem>
+                    <SelectItem value="paid">Dibayar</SelectItem>
+                    <SelectItem value="expired">Kadaluarsa</SelectItem>
+                    <SelectItem value="failed">Gagal</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="icon" onClick={() => refetch()} title="Refresh manual">
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Bulk action bar */}
+          {selectedTxIds.size > 0 && (
+            <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <span className="text-sm font-medium">{selectedTxIds.size} transaksi dipilih</span>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setSelectedTxIds(new Set())}>Batal</Button>
+                <Button size="sm" disabled={bulkChecking} onClick={handleBulkCheck}>
+                  {bulkChecking ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <CheckCheck className="w-3 h-3 mr-1" />}
+                  Cek Semua Status
+                </Button>
+              </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+
+          {/* Transaction Table */}
+          <Card>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
+              ) : transactions.length === 0 ? (
+                <div className="p-12 text-center text-muted-foreground">
+                  <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>Belum ada transaksi payment gateway</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-8">
+                          {pendingTxs.length > 0 && (
+                            <input type="checkbox" checked={allPendingSelected} onChange={toggleSelectAll} className="rounded border-border" title="Pilih semua pending" />
+                          )}
+                        </TableHead>
+                        <TableHead>ID Transaksi</TableHead>
+                        <TableHead>Gateway</TableHead>
+                        <TableHead>Booking</TableHead>
+                        <TableHead>Metode</TableHead>
+                        <TableHead>VA / Ref</TableHead>
+                        <TableHead className="text-right">Jumlah</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Waktu</TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {transactions.map((tx: any) => {
+                        const config = STATUS_CONFIG[tx.status] || STATUS_CONFIG.pending;
+                        const StatusIcon = config.icon;
+                        const isPendingOrExpired = tx.status === "pending" || tx.status === "expired";
+                        return (
+                          <TableRow key={tx.id} className={selectedTxIds.has(tx.id) ? "bg-primary/5" : ""}>
+                            <TableCell>
+                              {isPendingOrExpired && (
+                                <input type="checkbox" checked={selectedTxIds.has(tx.id)} onChange={() => toggleSelect(tx.id)} className="rounded border-border" />
+                              )}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">{tx.gatewayTransactionId || "-"}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="uppercase text-xs">{tx.gateway}</Badge>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {tx.bookingCode && tx.bookingId ? (
+                                <button
+                                  className="flex items-center gap-1 text-primary hover:underline font-mono text-xs"
+                                  onClick={() => navigate(`/admin/bookings?search=${tx.bookingCode}`)}
+                                >
+                                  {tx.bookingCode} <ExternalLink className="w-3 h-3" />
+                                </button>
+                              ) : tx.bookingCode || "-"}
+                            </TableCell>
+                            <TableCell className="text-sm capitalize">
+                              {tx.paymentMethod?.replace("_", " ") || "-"} {tx.bankCode ? `(${tx.bankCode.toUpperCase()})` : ""}
+                            </TableCell>
+                            <TableCell>
+                              {tx.vaNumber ? (
+                                <button onClick={() => copyToClipboard(tx.vaNumber)} className="flex items-center gap-1 font-mono text-xs hover:text-primary">
+                                  {tx.vaNumber} <Copy className="w-3 h-3" />
+                                </button>
+                              ) : "-"}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">Rp {Number(tx.amount).toLocaleString("id-ID")}</TableCell>
+                            <TableCell>
+                              <Badge variant={config.variant} className="gap-1">
+                                <StatusIcon className="w-3 h-3" />{config.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {tx.createdAt ? format(new Date(tx.createdAt), "dd MMM yyyy HH:mm", { locale: localeId }) : "-"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-1 justify-end">
+                                {isPendingOrExpired && (
+                                  <Button size="sm" variant="outline" title="Cek status" onClick={() => checkStatusMutation.mutate({ gateway: tx.gateway, txId: tx.id })}>
+                                    <RefreshCw className="w-3 h-3" />
+                                  </Button>
+                                )}
+                                <Button size="sm" variant="ghost" onClick={() => setDetailDialog(tx)}>
+                                  <Eye className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
       {/* Create Payment Dialog */}
       <Dialog open={createDialog} onOpenChange={setCreateDialog}>
         <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Buat Pembayaran Baru</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Buat Pembayaran Baru</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
               <Label>Gateway</Label>
@@ -350,33 +417,26 @@ const PaymentGateway = () => {
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label>Metode Pembayaran</Label>
               <Select value={selectedMethod} onValueChange={setSelectedMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {PAYMENT_METHODS.map(m => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                  ))}
+                  {PAYMENT_METHODS.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-
             {selectedMethod === "bank_transfer" && (
               <div>
                 <Label>Bank</Label>
                 <Select value={selectedBank} onValueChange={setSelectedBank}>
                   <SelectTrigger><SelectValue placeholder="Pilih bank" /></SelectTrigger>
                   <SelectContent>
-                    {bankList.map(b => (
-                      <SelectItem key={b.code} value={b.code}>{b.label}</SelectItem>
-                    ))}
+                    {bankList.map(b => <SelectItem key={b.code} value={b.code}>{b.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             )}
-
             <div>
               <Label>Booking (opsional)</Label>
               <Select value={selectedBookingId} onValueChange={handleBookingSelect}>
@@ -390,12 +450,10 @@ const PaymentGateway = () => {
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label>Jumlah (Rp)</Label>
               <Input type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} placeholder="100000" />
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Nama Customer</Label>
@@ -406,12 +464,7 @@ const PaymentGateway = () => {
                 <Input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} placeholder="email@..." />
               </div>
             </div>
-
-            <Button
-              className="w-full"
-              disabled={!paymentAmount || createPaymentMutation.isPending}
-              onClick={() => createPaymentMutation.mutate()}
-            >
+            <Button className="w-full" disabled={!paymentAmount || createPaymentMutation.isPending} onClick={() => createPaymentMutation.mutate()}>
               {createPaymentMutation.isPending ? "Memproses..." : "Generate Pembayaran"}
             </Button>
           </div>
@@ -421,9 +474,7 @@ const PaymentGateway = () => {
       {/* Detail Dialog */}
       <Dialog open={!!detailDialog} onOpenChange={() => setDetailDialog(null)}>
         <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Detail Transaksi</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Detail Transaksi</DialogTitle></DialogHeader>
           {detailDialog && (
             <div className="space-y-3">
               {detailDialog.vaNumber && (
@@ -440,6 +491,15 @@ const PaymentGateway = () => {
                 <div className="font-medium uppercase">{detailDialog.gateway}</div>
                 <div><span className="text-muted-foreground">ID Transaksi:</span></div>
                 <div className="font-mono text-xs">{detailDialog.gatewayTransactionId || "-"}</div>
+                {detailDialog.bookingCode && <>
+                  <div><span className="text-muted-foreground">Booking:</span></div>
+                  <div>
+                    <button className="font-mono text-xs text-primary hover:underline flex items-center gap-1"
+                      onClick={() => { setDetailDialog(null); navigate(`/admin/bookings?search=${detailDialog.bookingCode}`); }}>
+                      {detailDialog.bookingCode} <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
+                </>}
                 <div><span className="text-muted-foreground">Jumlah:</span></div>
                 <div className="font-medium">Rp {Number(detailDialog.amount).toLocaleString("id-ID")}</div>
                 <div><span className="text-muted-foreground">Status:</span></div>
@@ -449,12 +509,10 @@ const PaymentGateway = () => {
                     return <Badge variant={config.variant}>{config.label}</Badge>;
                   })()}
                 </div>
-                {detailDialog.expiryTime && (
-                  <>
-                    <div><span className="text-muted-foreground">Expired:</span></div>
-                    <div className="text-xs">{format(new Date(detailDialog.expiryTime), "dd MMM yyyy HH:mm", { locale: localeId })}</div>
-                  </>
-                )}
+                {detailDialog.expiryTime && <>
+                  <div><span className="text-muted-foreground">Expired:</span></div>
+                  <div className="text-xs">{format(new Date(detailDialog.expiryTime), "dd MMM yyyy HH:mm", { locale: localeId })}</div>
+                </>}
               </div>
             </div>
           )}

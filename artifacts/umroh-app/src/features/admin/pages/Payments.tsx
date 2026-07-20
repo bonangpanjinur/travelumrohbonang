@@ -1,14 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/shared/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/shared/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Badge } from "@/shared/components/ui/badge";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Label } from "@/shared/components/ui/label";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import { useToast } from "@/shared/hooks/use-toast";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { CheckCircle, XCircle, Image, DollarSign, FileText, Download, ZoomIn, Search, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import {
+  CheckCircle, XCircle, Image, DollarSign, FileText, Download, ZoomIn,
+  Search, Loader2, AlertCircle, RefreshCw, Clock, CheckCheck, CalendarRange,
+} from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import LoadingSpinner from "@/shared/components/ui/loading-spinner";
 import { useProofUrl } from "@/features/booking/hooks/useProofUrl";
@@ -39,6 +43,12 @@ interface Payment {
   } | null;
 }
 
+const normalizeStatus = (status: string) => {
+  if (status === "paid") return "verified";
+  if (status === "failed") return "rejected";
+  return status;
+};
+
 const AdminPayments = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,11 +58,18 @@ const AdminPayments = () => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const { toast } = useToast();
   const [verifyTarget, setVerifyTarget] = useState<{ payment: Payment; approve: boolean } | null>(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectTarget, setRejectTarget] = useState<Payment | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+
+  // Batch approve
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchApproving, setBatchApproving] = useState(false);
+  const [batchConfirmOpen, setBatchConfirmOpen] = useState(false);
 
   const { url: proofViewUrl, loading: proofLoading, error: proofError, reload: reloadProof } = useProofUrl(
     selectedPayment?.proofUrl ?? null,
@@ -60,29 +77,31 @@ const AdminPayments = () => {
     "admin/payments"
   );
 
-  // Normalize legacy status values to new canonical names for filtering
-  const normalizeStatus = (status: string) => {
-    if (status === "paid") return "verified";
-    if (status === "failed") return "rejected";
-    return status;
-  };
-
-  const filteredPayments = payments.filter((p) => {
+  const filteredPayments = useMemo(() => payments.filter((p) => {
     const q = search.toLowerCase();
     const matchSearch = !search ||
       p.booking?.bookingCode?.toLowerCase().includes(q) ||
       (p.jamaahName ?? "").toLowerCase().includes(q);
     const matchStatus = statusFilter === "all" || normalizeStatus(p.status) === statusFilter;
-    return matchSearch && matchStatus;
-  });
+    const createdDate = p.createdAt ? new Date(p.createdAt) : null;
+    const matchFrom = !dateFrom || (createdDate && createdDate >= new Date(dateFrom));
+    const matchTo = !dateTo || (createdDate && createdDate <= new Date(dateTo + "T23:59:59"));
+    return matchSearch && matchStatus && matchFrom && matchTo;
+  }), [payments, search, statusFilter, dateFrom, dateTo]);
 
   const { page, setPage, totalPages, totalCount, paginatedItems, pageSize, resetPage } = useAdminPagination(filteredPayments);
 
-  useEffect(() => { resetPage(); }, [search, statusFilter]);
+  useEffect(() => { resetPage(); }, [search, statusFilter, dateFrom, dateTo]);
+  useEffect(() => { fetchPayments(); }, []);
 
-  useEffect(() => {
-    fetchPayments();
-  }, []);
+  // Summary cards
+  const summaryPending = useMemo(() => payments.filter(p => normalizeStatus(p.status) === "pending"), [payments]);
+  const summaryVerified = useMemo(() => payments.filter(p => normalizeStatus(p.status) === "verified"), [payments]);
+  const summaryRejected = useMemo(() => payments.filter(p => normalizeStatus(p.status) === "rejected"), [payments]);
+  const totalPendingAmount = useMemo(() => summaryPending.reduce((s, p) => s + Number(p.amount), 0), [summaryPending]);
+  const totalVerifiedAmount = useMemo(() => summaryVerified.reduce((s, p) => s + Number(p.amount), 0), [summaryVerified]);
+
+  const pendingInView = useMemo(() => filteredPayments.filter(p => p.status === "pending"), [filteredPayments]);
 
   const fetchPayments = async () => {
     setError(null);
@@ -98,7 +117,6 @@ const AdminPayments = () => {
   };
 
   const handleApprove = (payment: Payment) => setVerifyTarget({ payment, approve: true });
-
   const handleReject = (payment: Payment) => {
     setRejectTarget(payment);
     setRejectReason("");
@@ -135,13 +153,63 @@ const AdminPayments = () => {
     }
   };
 
+  const executeBatchApprove = async () => {
+    setBatchConfirmOpen(false);
+    setBatchApproving(true);
+    try {
+      const result = await apiFetch<{ ok: number; failed: number; results: { id: string; ok: boolean; error?: string }[] }>(
+        "/api/admin/payments/bulk-verify",
+        { method: "POST", body: JSON.stringify({ ids: Array.from(selectedIds) }) },
+      );
+      if (result.failed === 0) {
+        toast({ title: `${result.ok} pembayaran disetujui!`, description: "Status booking diupdate otomatis." });
+      } else if (result.ok === 0) {
+        toast({ title: "Batch approve gagal", description: `Semua ${result.failed} pembayaran gagal diproses.`, variant: "destructive" });
+      } else {
+        toast({
+          title: `${result.ok} disetujui, ${result.failed} gagal`,
+          description: result.results.filter(r => !r.ok).map(r => r.error ?? "Unknown").join("; "),
+          variant: "default",
+        });
+      }
+      setSelectedIds(new Set());
+      fetchPayments();
+    } catch (err: any) {
+      toast({ title: "Gagal batch approve", description: err.message, variant: "destructive" });
+    } finally {
+      setBatchApproving(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const toggleSelectAll = () => {
+    const pendingIds = pendingInView.map(p => p.id);
+    if (pendingIds.every(id => selectedIds.has(id))) {
+      const next = new Set(selectedIds);
+      pendingIds.forEach(id => next.delete(id));
+      setSelectedIds(next);
+    } else {
+      const next = new Set(selectedIds);
+      pendingIds.forEach(id => next.add(id));
+      setSelectedIds(next);
+    }
+  };
+
+  const allPendingSelected = pendingInView.length > 0 && pendingInView.every(p => selectedIds.has(p.id));
+
+  const fmtIDR = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":  return <Badge className="bg-warning/10 text-warning border-warning/20">Menunggu</Badge>;
       case "verified": return <Badge className="bg-success/10 text-success border-success/20">Terverifikasi</Badge>;
       case "rejected": return <Badge className="bg-destructive/10 text-destructive border-destructive/20">Ditolak</Badge>;
       case "refunded": return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Dikembalikan</Badge>;
-      // legacy values kept for backwards compatibility
       case "paid":     return <Badge className="bg-success/10 text-success border-success/20">Terverifikasi</Badge>;
       case "failed":   return <Badge className="bg-destructive/10 text-destructive border-destructive/20">Ditolak</Badge>;
       default:         return <Badge variant="outline">{status}</Badge>;
@@ -157,13 +225,33 @@ const AdminPayments = () => {
   };
 
   const handleZoom = () => setZoomLevel((prev) => (prev >= 2 ? 1 : prev + 0.5));
-
-  // Determine if a payment is "actionable" (pending or legacy statuses that need triage)
   const isPending = (status: string) => status === "pending";
+
+  const handleExport = () => {
+    const statusLabel = (s: string) => {
+      switch (normalizeStatus(s)) {
+        case "pending": return "Menunggu";
+        case "verified": return "Terverifikasi";
+        case "rejected": return "Ditolak";
+        case "refunded": return "Dikembalikan";
+        default: return s;
+      }
+    };
+    const headers = ["Kode Booking", "Nama Jamaah", "Tipe", "Jumlah", "Metode", "Status", "Tanggal"];
+    const rows = filteredPayments.map(p => [
+      p.booking?.bookingCode || "-",
+      p.jamaahName || "-",
+      p.paymentType === "dp" ? "DP" : "Pelunasan",
+      String(p.amount),
+      p.paymentMethod || "-",
+      statusLabel(p.status || "pending"),
+      p.createdAt?.slice(0, 10) || ""
+    ]);
+    exportToCsv("payments", headers, rows);
+  };
 
   return (
     <div>
-      {/* Confirm approve dialog */}
       <ConfirmAlertDialog
         open={!!verifyTarget}
         onOpenChange={() => setVerifyTarget(null)}
@@ -174,7 +262,16 @@ const AdminPayments = () => {
         variant="default"
       />
 
-      {/* Reject dialog with reason input */}
+      <ConfirmAlertDialog
+        open={batchConfirmOpen}
+        onOpenChange={setBatchConfirmOpen}
+        onConfirm={executeBatchApprove}
+        title={`Setujui ${selectedIds.size} Pembayaran Sekaligus?`}
+        description="Semua pembayaran yang dipilih akan diverifikasi dan status booking diupdate otomatis."
+        confirmLabel="Setujui Semua"
+        variant="default"
+      />
+
       <Dialog open={rejectDialogOpen} onOpenChange={(o) => { setRejectDialogOpen(o); if (!o) setRejectTarget(null); }}>
         <DialogContent>
           <DialogHeader>
@@ -205,59 +302,6 @@ const AdminPayments = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-        <h1 className="text-2xl font-display font-bold">Verifikasi Pembayaran</h1>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <Button variant="outline" onClick={() => {
-            const statusLabel = (s: string) => {
-              switch (s) {
-                case "pending":  return "Menunggu";
-                case "verified": return "Terverifikasi";
-                case "rejected": return "Ditolak";
-                case "refunded": return "Dikembalikan";
-                case "paid":     return "Terverifikasi";
-                case "failed":   return "Ditolak";
-                default:         return s;
-              }
-            };
-            const headers = ["Kode Booking", "Nama Jamaah", "Tipe", "Jumlah", "Metode", "Status", "Tanggal"];
-            const rows = filteredPayments.map(p => [
-              p.booking?.bookingCode || "-",
-              p.jamaahName || "-",
-              p.paymentType === "dp" ? "DP" : "Pelunasan",
-              String(p.amount),
-              p.paymentMethod || "-",
-              statusLabel(p.status || "pending"),
-              p.createdAt?.slice(0, 10) || ""
-            ]);
-            exportToCsv("payments", headers, rows);
-          }}>
-            <Download className="w-4 h-4 mr-2" /> Export CSV
-          </Button>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cari kode booking..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 w-full sm:w-64"
-            />
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {[
-              { key: "all", label: "Semua" },
-              { key: "pending", label: "Menunggu" },
-              { key: "verified", label: "Terverifikasi" },
-              { key: "rejected", label: "Ditolak" },
-              { key: "refunded", label: "Dikembalikan" },
-            ].map(({ key, label }) => (
-              <Button key={key} variant={statusFilter === key ? "default" : "outline"} size="sm" onClick={() => setStatusFilter(key)}>
-                {label}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </div>
 
       {/* Image Preview Dialog */}
       <Dialog open={imageOpen} onOpenChange={(open) => { setImageOpen(open); setZoomLevel(1); }}>
@@ -315,6 +359,106 @@ const AdminPayments = () => {
         </DialogContent>
       </Dialog>
 
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+        <h1 className="text-2xl font-display font-bold">Verifikasi Pembayaran</h1>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
+          <Button variant="outline" onClick={fetchPayments} size="icon" title="Refresh">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="bg-amber-100 p-2 rounded-lg"><Clock className="h-5 w-5 text-amber-600" /></div>
+            <div>
+              <p className="text-sm text-muted-foreground">Menunggu Verifikasi</p>
+              <p className="text-xl font-bold">{summaryPending.length} <span className="text-sm font-normal text-muted-foreground">transaksi</span></p>
+              <p className="text-xs text-amber-600 font-medium">{fmtIDR(totalPendingAmount)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="bg-green-100 p-2 rounded-lg"><CheckCircle className="h-5 w-5 text-green-600" /></div>
+            <div>
+              <p className="text-sm text-muted-foreground">Terverifikasi</p>
+              <p className="text-xl font-bold">{summaryVerified.length} <span className="text-sm font-normal text-muted-foreground">transaksi</span></p>
+              <p className="text-xs text-green-600 font-medium">{fmtIDR(totalVerifiedAmount)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="bg-red-100 p-2 rounded-lg"><XCircle className="h-5 w-5 text-red-600" /></div>
+            <div>
+              <p className="text-sm text-muted-foreground">Ditolak</p>
+              <p className="text-xl font-bold">{summaryRejected.length} <span className="text-sm font-normal text-muted-foreground">transaksi</span></p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cari kode booking atau nama jamaah..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { key: "all", label: "Semua" },
+              { key: "pending", label: "Menunggu" },
+              { key: "verified", label: "Terverifikasi" },
+              { key: "rejected", label: "Ditolak" },
+              { key: "refunded", label: "Dikembalikan" },
+            ].map(({ key, label }) => (
+              <Button key={key} variant={statusFilter === key ? "default" : "outline"} size="sm" onClick={() => setStatusFilter(key)}>
+                {label}
+              </Button>
+            ))}
+          </div>
+        </div>
+        {/* Date Range Filter */}
+        <div className="flex flex-col sm:flex-row gap-3 items-center">
+          <CalendarRange className="w-4 h-4 text-muted-foreground hidden sm:block" />
+          <div className="flex gap-2 items-center flex-wrap">
+            <Label className="text-sm text-muted-foreground whitespace-nowrap">Filter Tanggal:</Label>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto text-sm" />
+            <span className="text-muted-foreground text-sm">s/d</span>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto text-sm" />
+            {(dateFrom || dateTo) && (
+              <Button variant="ghost" size="sm" onClick={() => { setDateFrom(""); setDateTo(""); }}>Reset</Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Batch Approve Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between p-3 mb-4 bg-primary/5 border border-primary/20 rounded-lg">
+          <span className="text-sm font-medium">{selectedIds.size} pembayaran dipilih</span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>Batal Pilih</Button>
+            <Button size="sm" disabled={batchApproving} onClick={() => setBatchConfirmOpen(true)}>
+              {batchApproving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <CheckCheck className="w-3 h-3 mr-1" />}
+              Setujui Semua
+            </Button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <LoadingSpinner />
       ) : error ? (
@@ -328,6 +472,17 @@ const AdminPayments = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8">
+                      {pendingInView.length > 0 && (
+                        <input
+                          type="checkbox"
+                          checked={allPendingSelected}
+                          onChange={toggleSelectAll}
+                          className="rounded border-border"
+                          title="Pilih semua pending"
+                        />
+                      )}
+                    </TableHead>
                     <TableHead>Kode Booking</TableHead>
                     <TableHead>Tipe</TableHead>
                     <TableHead>Jumlah</TableHead>
@@ -340,7 +495,17 @@ const AdminPayments = () => {
                 </TableHeader>
                 <TableBody>
                   {paginatedItems.map((payment) => (
-                    <TableRow key={payment.id}>
+                    <TableRow key={payment.id} className={selectedIds.has(payment.id) ? "bg-primary/5" : ""}>
+                      <TableCell>
+                        {isPending(payment.status) && (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(payment.id)}
+                            onChange={() => toggleSelect(payment.id)}
+                            className="rounded border-border"
+                          />
+                        )}
+                      </TableCell>
                       <TableCell className="font-mono font-semibold">{payment.booking?.bookingCode || "-"}</TableCell>
                       <TableCell><Badge variant="outline" className="text-xs">{getPaymentTypeLabel(payment.paymentType)}</Badge></TableCell>
                       <TableCell>

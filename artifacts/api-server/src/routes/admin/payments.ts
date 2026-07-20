@@ -83,6 +83,83 @@ router.get("/recent-pending", async (req, res) => {
   }
 });
 
+// ── POST /bulk-verify — batch approve multiple pending payments ───────────────
+router.post("/bulk-verify", async (req, res) => {
+  try {
+    const { ids } = req.body as { ids?: string[] };
+    const adminId = (req as any).user?.id as string | undefined;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "ids array is required" });
+    }
+    if (ids.length > 50) {
+      return res.status(400).json({ error: "Maximum 50 payments per batch" });
+    }
+
+    const results: { id: string; ok: boolean; error?: string }[] = [];
+
+    for (const id of ids) {
+      try {
+        const [payment] = await db.select().from(payments).where(eq(payments.id, id)).limit(1);
+        if (!payment || payment.status !== "pending") {
+          results.push({ id, ok: false, error: "Not found or not pending" });
+          continue;
+        }
+
+        const now = new Date();
+        await db.update(payments).set({
+          status: "verified",
+          verifiedBy: adminId ?? null,
+          verifiedAt: now,
+          paidAt: payment.paidAt ?? now,
+        }).where(eq(payments.id, id));
+
+        // Idempotent bookingPayments record
+        const ref = `manual-${id}`;
+        const already = await db.select({ id: bookingPayments.id }).from(bookingPayments)
+          .where(and(eq(bookingPayments.bookingId, payment.bookingId), eq(bookingPayments.referenceNumber, ref), eq(bookingPayments.isVoided, false)))
+          .limit(1);
+        if (already.length === 0) {
+          await db.insert(bookingPayments).values({
+            id: crypto.randomUUID(),
+            bookingId: payment.bookingId,
+            type: payment.paymentType ?? "manual",
+            amount: payment.amount,
+            paidAt: payment.paidAt ?? now,
+            method: payment.paymentMethod ?? "transfer",
+            referenceNumber: ref,
+            notes: `Bulk verified by admin`,
+            recordedBy: adminId ?? null,
+            isVoided: false,
+            createdAt: now,
+          });
+        }
+
+        const { paymentStatus } = await computePaymentStatus(payment.bookingId);
+        await syncBookingStatus(payment.bookingId, paymentStatus);
+        await recordFinancialTransaction({
+          bookingId: payment.bookingId,
+          amount: payment.amount,
+          type: "income",
+          category: "booking_payment",
+          description: `Bulk verified by admin (${id})`,
+          referenceNumber: ref,
+          recordedBy: adminId,
+        });
+
+        results.push({ id, ok: true });
+      } catch (err: any) {
+        results.push({ id, ok: false, error: err?.message ?? "Unknown error" });
+      }
+    }
+
+    const ok = results.filter(r => r.ok).length;
+    res.json({ ok, failed: results.length - ok, results });
+  } catch (e) {
+    console.error("[admin/payments] bulk-verify error:", e);
+    res.status(500).json({ error: "Failed to bulk verify payments" });
+  }
+});
+
 // ── PATCH /verify/:id ─────────────────────────────────────────────────────────
 // Admin confirms a manual payment proof (bank transfer upload).
 // Flow:

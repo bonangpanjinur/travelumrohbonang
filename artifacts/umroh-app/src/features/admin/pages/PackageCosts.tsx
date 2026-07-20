@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { Badge } from "@/shared/components/ui/badge";
 import { Switch } from "@/shared/components/ui/switch";
-import { Calculator, Plus, Trash2, TrendingUp, Wallet, Percent, Filter, Pencil } from "lucide-react";
+import { Calculator, Plus, Trash2, TrendingUp, Wallet, Percent, Filter, Pencil, Download } from "lucide-react";
+import { exportToCsv } from "@/shared/lib/exportCsv";
 import { toast } from "sonner";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 import ResponsiveTable from "@/features/admin/components/ResponsiveTable";
@@ -435,11 +436,30 @@ export default function AdminPackageCosts() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
           <CardTitle className="text-base">Ringkasan Paket ({overview.length})</CardTitle>
-          <div className="text-xs text-muted-foreground">
-            Total Revenue: <span className="font-semibold text-foreground">{fmtIDR(overviewTotals.revenue)}</span> ·
-            Laba: <span className={`font-semibold ${overviewTotals.net_profit >= 0 ? "text-emerald-600" : "text-destructive"}`}>{fmtIDR(overviewTotals.net_profit)}</span>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="text-xs text-muted-foreground">
+              Total Revenue: <span className="font-semibold text-foreground">{fmtIDR(overviewTotals.revenue)}</span> ·
+              Laba: <span className={`font-semibold ${overviewTotals.net_profit >= 0 ? "text-emerald-600" : "text-destructive"}`}>{fmtIDR(overviewTotals.net_profit)}</span>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => {
+              const headers = ["Paket", "Jenis", "HPP/Pax", "HPP Tetap", "Harga Jual Rata-rata", "Pax", "Revenue", "Laba Bersih", "Margin %"];
+              const rows = overview.map(r => [
+                r.title,
+                PACKAGE_TYPES.find(t => t.value === r.type)?.label || r.type || "-",
+                String(Math.round(r.hpp_per_pax)),
+                String(Math.round(r.hpp_fixed)),
+                r.sold_pax > 0 ? String(Math.round(r.revenue / r.sold_pax)) : "0",
+                String(r.sold_pax),
+                String(Math.round(r.revenue)),
+                String(Math.round(r.net_profit)),
+                r.margin.toFixed(1),
+              ]);
+              exportToCsv(`hpp_ringkasan_${new Date().toISOString().slice(0,10)}`, headers, rows);
+            }}>
+              <Download className="w-3 h-3 mr-1" /> Export
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -620,7 +640,32 @@ export default function AdminPackageCosts() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="text-base">Komponen HPP ({visibleCosts.length})</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Komponen HPP ({visibleCosts.length})</CardTitle>
+              {visibleCosts.length > 0 && (
+                <Button variant="outline" size="sm" onClick={() => {
+                  const headers = ["Kategori", "Item", "Keberangkatan", "Qty", "Unit", "Harga Satuan", "Mata Uang", "Total IDR", "Tipe", "Status"];
+                  const rows = visibleCosts.map(c => {
+                    const cat = CATEGORIES.find(x => x.value === c.category)?.label || c.category;
+                    const idr = toIDR(Number(c.unit_cost), c.currency_code) * Number(c.qty);
+                    const dep = c.departure_id ? departures.find(d => d.id === c.departure_id) : null;
+                    return [
+                      cat, c.item_name,
+                      dep ? new Date(dep.departure_date).toLocaleDateString("id-ID") : "Semua",
+                      String(c.qty), c.unit || "-",
+                      String(c.unit_cost), c.currency_code,
+                      String(Math.round(idr)),
+                      c.is_per_pax ? "Per Pax" : "Tetap",
+                      c.is_active !== false ? "Aktif" : "Nonaktif",
+                    ];
+                  });
+                  const pkg = packages.find(p => p.id === selectedPkg);
+                  exportToCsv(`hpp_detail_${pkg?.title?.replace(/\s+/g, "_") || selectedPkg}_${new Date().toISOString().slice(0,10)}`, headers, rows);
+                }}>
+                  <Download className="w-3 h-3 mr-1" /> Export
+                </Button>
+              )}
+            </CardHeader>
             <CardContent>
               {loading ? <div className="text-muted-foreground text-sm">Memuat…</div> :
                visibleCosts.length === 0 ? <div className="text-muted-foreground text-sm">Belum ada komponen biaya untuk paket ini.</div> :
