@@ -28,6 +28,8 @@ import {
   Wallet,
   Languages,
   GitBranch,
+  AlertTriangle,
+  BarChart2,
   ArrowUpCircle,
   ClipboardList,
   Receipt,
@@ -117,7 +119,9 @@ export const menuGroups: MenuGroup[] = [
       { label: "Check-In Keberangkatan", labelKey: "menu.checkin_qr", href: "/admin/check-in", icon: ShieldCheck, roles: ALL_STAFF },
       { label: "Perlengkapan Manasik", labelKey: "menu.manasik_kit", href: "/admin/manasik", icon: BookOpen, roles: SUPER_ADMIN_ADMIN },
       { label: "Dokumen Jemaah", labelKey: "menu.pilgrim_documents", href: "/admin/documents", icon: FileCheck, roles: OPERATIONAL },
+      { label: "Tracking Dokumen", labelKey: "menu.document_tracking", href: "/admin/document-tracking", icon: BarChart2, roles: ALL_STAFF },
       { label: "Laporan Perlengkapan", labelKey: "menu.equipment_report", href: "/admin/equipment-report", icon: Backpack, roles: ALL_STAFF },
+      { label: "Laporan Insiden", labelKey: "menu.incident_management", href: "/admin/incident-management", icon: AlertTriangle, roles: OPERATIONAL },
     ],
   },
   {

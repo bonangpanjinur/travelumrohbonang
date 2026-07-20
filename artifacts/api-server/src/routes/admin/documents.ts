@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, bookingPilgrims, pilgrimDocuments, bookings, eq, and } from "@workspace/db";
+import { db, bookingPilgrims, pilgrimDocuments, bookings, packages, packageDepartures, eq, and, inArray } from "@workspace/db";
 import {
   AdminUpsertDocumentRequest,
   PilgrimDocumentSchema,
@@ -270,6 +270,102 @@ router.delete("/pilgrims/:pilgrimId/:documentType", async (req, res) => {
     res.json({ message: "Document record reset successfully", pilgrimCompletionPct: completionPct });
   } catch {
     res.status(500).json({ error: "Failed to delete document" });
+  }
+});
+
+// ── Departure-level document tracking summary ─────────────────────────────
+// GET /api/admin/documents/departure-summary?departureId=xxx
+router.get("/departure-summary", async (req, res) => {
+  try {
+    const { departureId } = req.query as Record<string, string>;
+    if (!departureId) {
+      res.status(400).json({ error: "departureId is required" });
+      return;
+    }
+
+    // All bookings for this departure
+    const departureBookings = await db
+      .select({
+        bookingId:    bookings.id,
+        bookingCode:  bookings.bookingCode,
+        packageTitle: packages.title,
+        departureDate: packageDepartures.departureDate,
+      })
+      .from(bookings)
+      .leftJoin(packages,          eq(bookings.packageId,    packages.id))
+      .leftJoin(packageDepartures, eq(bookings.departureId,  packageDepartures.id))
+      .where(eq(bookings.departureId, departureId));
+
+    if (!departureBookings.length) {
+      res.json({ totalPilgrims: 0, fullyVerified: 0, partial: 0, notStarted: 0, pilgrims: [], departureInfo: null });
+      return;
+    }
+
+    const bookingIds = departureBookings.map((b) => b.bookingId);
+    const bookingMap = new Map(departureBookings.map((b) => [b.bookingId, b]));
+
+    // All pilgrims in those bookings
+    const pilgrims = await db
+      .select({
+        id:        bookingPilgrims.id,
+        name:      bookingPilgrims.name,
+        nik:       bookingPilgrims.nik,
+        gender:    bookingPilgrims.gender,
+        bookingId: bookingPilgrims.bookingId,
+      })
+      .from(bookingPilgrims)
+      .where(inArray(bookingPilgrims.bookingId, bookingIds));
+
+    if (!pilgrims.length) {
+      res.json({ totalPilgrims: 0, fullyVerified: 0, partial: 0, notStarted: 0, pilgrims: [], departureInfo: departureBookings[0] });
+      return;
+    }
+
+    const pilgrimIds = pilgrims.map((p) => p.id);
+    const allDocs = await db
+      .select()
+      .from(pilgrimDocuments)
+      .where(inArray(pilgrimDocuments.pilgrimId, pilgrimIds));
+
+    const docsByPilgrim = new Map<string, typeof allDocs>();
+    for (const d of allDocs) {
+      if (!docsByPilgrim.has(d.pilgrimId)) docsByPilgrim.set(d.pilgrimId, []);
+      docsByPilgrim.get(d.pilgrimId)!.push(d);
+    }
+
+    const result = pilgrims.map((p) => {
+      const docs = docsByPilgrim.get(p.id) ?? [];
+      const completionPct = computePilgrimCompletion(docs);
+      const bk = bookingMap.get(p.bookingId);
+      const docMap: Record<string, string> = {};
+      for (const d of docs) docMap[d.documentType] = d.status;
+      return {
+        pilgrimId:    p.id,
+        name:         p.name,
+        nik:          p.nik,
+        gender:       p.gender,
+        bookingCode:  bk?.bookingCode ?? null,
+        completionPct,
+        documents:    docMap,
+      };
+    });
+
+    const fullyVerified = result.filter((p) => p.completionPct === 100).length;
+    const notStarted    = result.filter((p) => p.completionPct === 0).length;
+    const partial       = result.length - fullyVerified - notStarted;
+
+    res.json({
+      totalPilgrims: result.length,
+      fullyVerified,
+      partial,
+      notStarted,
+      requiredDocTypes: REQUIRED_DOCUMENT_TYPES,
+      departureInfo: departureBookings[0],
+      pilgrims: result,
+    });
+  } catch (e) {
+    console.error("[documents GET /departure-summary]", e);
+    res.status(500).json({ error: "Failed to fetch document summary" });
   }
 });
 

@@ -111,6 +111,8 @@ import ContractSign from "./features/jamaah/pages/ContractSign";
 import AdminErrorLogs from "./features/admin/pages/ErrorLogs";
 import AdminRestDiagLogs from "./features/admin/pages/RestDiagLogs";
 import AdminIncidentReportView from "./features/admin/pages/IncidentReportView";
+import AdminIncidentManagement from "./features/admin/pages/IncidentManagement";
+import AdminDocumentTracking from "./features/admin/pages/DocumentTracking";
 import AdminIntegrations from "./features/admin/pages/Integrations";
 import AdminLoginSettings from "./features/admin/pages/LoginSettings";
 import AdminSEO from "./features/admin/pages/SEO";
@@ -244,6 +246,8 @@ const AppContent = () => {
           <Route path="error-logs" element={<AdminErrorLogs />} />
           <Route path="rest-diag" element={<AdminRestDiagLogs />} />
           <Route path="incident-reports/:id" element={<AdminIncidentReportView />} />
+          <Route path="incident-management" element={<AdminIncidentManagement />} />
+          <Route path="document-tracking" element={<AdminDocumentTracking />} />
           <Route path="integrations" element={<AdminIntegrations />} />
           <Route path="login-settings" element={<AdminLoginSettings />} />
           <Route path="seo" element={<AdminSEO />} />
