@@ -32,7 +32,7 @@ const bgClass: Record<string, string> = {
   whatsapp: "bg-[#25D366] hover:bg-[#1ead58]",
   instagram: "bg-gradient-to-tr from-amber-500 via-pink-500 to-purple-600 hover:opacity-90",
   facebook: "bg-[#1877F2] hover:bg-[#1464cf]",
-  tiktok: "bg-gray-900 hover:bg-black",
+  tiktok: "bg-neutral-900 hover:bg-black dark:bg-neutral-700 dark:hover:bg-neutral-600",
   youtube: "bg-red-600 hover:bg-red-700",
   telegram: "bg-sky-500 hover:bg-sky-600",
 };

@@ -20,7 +20,7 @@ interface BookingStatusBadgeProps {
 
 const BookingStatusBadge = ({ status }: BookingStatusBadgeProps) => {
   return (
-    <Badge className={statusColors[status] || "bg-gray-100 text-gray-800"}>
+    <Badge className={statusColors[status] || "bg-muted text-muted-foreground"}>
       {statusLabels[status] || status}
     </Badge>
   );

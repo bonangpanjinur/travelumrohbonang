@@ -350,14 +350,14 @@ const AdminContracts = () => {
               </div>
               {preview.htmlContent && (
                 <div
-                  className="border border-border rounded-lg p-4 text-sm bg-white text-black max-h-64 overflow-y-auto"
+                  className="border border-border rounded-lg p-4 text-sm bg-card text-card-foreground max-h-64 overflow-y-auto"
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(preview.htmlContent) }}
                 />
               )}
               {preview.signatureDataUrl && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">Tanda Tangan Digital:</p>
-                  <div className="border border-border rounded-lg p-2 bg-white inline-block">
+                  <div className="border border-border rounded-lg p-2 bg-card inline-block">
                     <img
                       src={preview.signatureDataUrl}
                       alt="Tanda tangan"

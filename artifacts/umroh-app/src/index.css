@@ -278,6 +278,131 @@
   }
 }
 
+/* ── Dark mode: semantic overrides for Tailwind light-palette shades ────────
+   These selectors sit OUTSIDE any @layer, so they cascade over all layered
+   Tailwind utilities without needing !important.  They make the common
+   *-50 / *-100 "status badge" patterns and hardcoded gray text readable on
+   dark backgrounds without touching every individual component file.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Neutral / gray ── */
+.dark .bg-white         { background-color: hsl(var(--card)); }
+.dark .bg-gray-50       { background-color: hsl(var(--background)); }
+.dark .bg-gray-100      { background-color: hsl(var(--muted)); }
+.dark .bg-gray-200      { background-color: hsl(var(--muted)); }
+.dark .text-black       { color: hsl(var(--foreground)); }
+.dark .text-gray-900    { color: hsl(var(--foreground)); }
+.dark .text-gray-800    { color: hsl(var(--foreground) / 0.9); }
+.dark .text-gray-700    { color: hsl(var(--foreground) / 0.8); }
+.dark .text-gray-600    { color: hsl(var(--muted-foreground)); }
+.dark .text-gray-500    { color: hsl(var(--muted-foreground)); }
+.dark .text-gray-400    { color: hsl(var(--muted-foreground) / 0.75); }
+.dark .text-gray-300    { color: hsl(var(--muted-foreground) / 0.6); }
+.dark .border-gray-100  { border-color: hsl(var(--border)); }
+.dark .border-gray-200  { border-color: hsl(var(--border)); }
+.dark .border-gray-300  { border-color: hsl(var(--border)); }
+
+/* ── Red / danger ── */
+.dark .bg-red-50        { background-color: hsl(0 60% 15% / 0.4); }
+.dark .bg-red-100       { background-color: hsl(0 60% 15% / 0.5); }
+.dark .text-red-700     { color: hsl(0 85% 70%); }
+.dark .text-red-800     { color: hsl(0 85% 72%); }
+.dark .border-red-200   { border-color: hsl(0 55% 28%); }
+.dark .border-red-300   { border-color: hsl(0 55% 32%); }
+
+/* ── Amber / warning ── */
+.dark .bg-amber-50      { background-color: hsl(38 70% 12% / 0.45); }
+.dark .bg-amber-100     { background-color: hsl(38 70% 14% / 0.5); }
+.dark .text-amber-700   { color: hsl(38 95% 65%); }
+.dark .text-amber-800   { color: hsl(38 95% 68%); }
+.dark .border-amber-200 { border-color: hsl(38 65% 28%); }
+.dark .border-amber-300 { border-color: hsl(38 65% 32%); }
+
+/* ── Yellow ── */
+.dark .bg-yellow-50     { background-color: hsl(48 70% 12% / 0.45); }
+.dark .bg-yellow-100    { background-color: hsl(48 70% 14% / 0.5); }
+.dark .text-yellow-700  { color: hsl(48 95% 62%); }
+.dark .text-yellow-800  { color: hsl(48 95% 65%); }
+.dark .border-yellow-200 { border-color: hsl(48 65% 28%); }
+
+/* ── Emerald / success ── */
+.dark .bg-emerald-50    { background-color: hsl(142 55% 10% / 0.4); }
+.dark .bg-emerald-100   { background-color: hsl(142 55% 12% / 0.5); }
+.dark .text-emerald-700 { color: hsl(142 55% 60%); }
+.dark .text-emerald-800 { color: hsl(142 55% 62%); }
+.dark .border-emerald-200 { border-color: hsl(142 50% 20%); }
+.dark .border-emerald-300 { border-color: hsl(142 50% 24%); }
+
+/* ── Green ── */
+.dark .bg-green-50      { background-color: hsl(120 55% 10% / 0.4); }
+.dark .bg-green-100     { background-color: hsl(120 55% 12% / 0.5); }
+.dark .text-green-700   { color: hsl(120 55% 58%); }
+.dark .text-green-800   { color: hsl(120 55% 60%); }
+.dark .border-green-200 { border-color: hsl(120 50% 20%); }
+
+/* ── Blue / info ── */
+.dark .bg-blue-50       { background-color: hsl(221 55% 12% / 0.4); }
+.dark .bg-blue-100      { background-color: hsl(221 55% 14% / 0.5); }
+.dark .text-blue-700    { color: hsl(221 80% 72%); }
+.dark .text-blue-800    { color: hsl(221 80% 74%); }
+.dark .border-blue-200  { border-color: hsl(221 55% 24%); }
+.dark .border-blue-300  { border-color: hsl(221 55% 28%); }
+
+/* ── Purple ── */
+.dark .bg-purple-50     { background-color: hsl(270 55% 12% / 0.4); }
+.dark .bg-purple-100    { background-color: hsl(270 55% 14% / 0.5); }
+.dark .text-purple-700  { color: hsl(270 70% 72%); }
+.dark .text-purple-800  { color: hsl(270 70% 74%); }
+.dark .border-purple-200 { border-color: hsl(270 55% 24%); }
+
+/* ── Orange ── */
+.dark .bg-orange-50     { background-color: hsl(25 70% 12% / 0.4); }
+.dark .bg-orange-100    { background-color: hsl(25 70% 14% / 0.5); }
+.dark .text-orange-700  { color: hsl(25 90% 65%); }
+.dark .text-orange-800  { color: hsl(25 90% 68%); }
+.dark .border-orange-200 { border-color: hsl(25 65% 26%); }
+
+/* ── Pink / rose ── */
+.dark .bg-pink-50       { background-color: hsl(330 55% 12% / 0.4); }
+.dark .bg-pink-100      { background-color: hsl(330 55% 14% / 0.5); }
+.dark .text-pink-700    { color: hsl(330 75% 70%); }
+.dark .bg-rose-50       { background-color: hsl(350 55% 12% / 0.4); }
+.dark .bg-rose-100      { background-color: hsl(350 55% 14% / 0.5); }
+.dark .text-rose-700    { color: hsl(350 75% 70%); }
+
+/* ── Teal / cyan ── */
+.dark .bg-teal-50       { background-color: hsl(175 55% 10% / 0.4); }
+.dark .bg-teal-100      { background-color: hsl(175 55% 12% / 0.5); }
+.dark .text-teal-700    { color: hsl(175 65% 55%); }
+.dark .bg-cyan-50       { background-color: hsl(185 55% 10% / 0.4); }
+.dark .text-cyan-700    { color: hsl(185 65% 55%); }
+
+/* ── Indigo / violet ── */
+.dark .bg-indigo-50     { background-color: hsl(239 55% 12% / 0.4); }
+.dark .bg-indigo-100    { background-color: hsl(239 55% 14% / 0.5); }
+.dark .text-indigo-700  { color: hsl(239 75% 72%); }
+.dark .text-indigo-800  { color: hsl(239 75% 74%); }
+.dark .border-indigo-200 { border-color: hsl(239 55% 26%); }
+.dark .bg-violet-50     { background-color: hsl(259 55% 12% / 0.4); }
+.dark .text-violet-700  { color: hsl(259 70% 72%); }
+
+/* ── Slate (often used instead of gray) ── */
+.dark .bg-slate-50      { background-color: hsl(var(--background)); }
+.dark .bg-slate-100     { background-color: hsl(var(--muted)); }
+.dark .text-slate-700   { color: hsl(var(--foreground) / 0.8); }
+.dark .text-slate-600   { color: hsl(var(--muted-foreground)); }
+.dark .text-slate-500   { color: hsl(var(--muted-foreground)); }
+.dark .text-slate-400   { color: hsl(var(--muted-foreground) / 0.75); }
+.dark .text-slate-300   { color: hsl(var(--muted-foreground) / 0.6); }
+.dark .border-slate-200 { border-color: hsl(var(--border)); }
+
+/* ── Zinc ── */
+.dark .bg-zinc-50       { background-color: hsl(var(--background)); }
+.dark .bg-zinc-100      { background-color: hsl(var(--muted)); }
+.dark .text-zinc-700    { color: hsl(var(--foreground) / 0.8); }
+.dark .text-zinc-600    { color: hsl(var(--muted-foreground)); }
+.dark .border-zinc-200  { border-color: hsl(var(--border)); }
+
 /* ── Print styles ───────────────────────────────────────────────────────────
    Hides admin chrome (sidebar, topbar, buttons) so hanya tabel manifest
    yang tercetak. Kelas Tailwind print:hidden tetap bekerja normal.

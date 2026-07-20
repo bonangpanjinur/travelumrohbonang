@@ -1067,7 +1067,7 @@ const AdminPilgrims = () => {
                         <span className={`text-xs px-2 py-0.5 rounded-full inline-block mt-0.5 ${
                           doc.status === "verified" ? "bg-green-100 text-green-700"
                           : doc.status === "submitted" ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-600"
+                          : "bg-muted text-muted-foreground"
                         }`}>
                           {doc.status === "verified" ? "✓ Terverifikasi" : doc.status === "submitted" ? "Diserahkan" : doc.status}
                         </span>

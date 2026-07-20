@@ -106,8 +106,8 @@ const ROLE_CONFIG: Record<Role, RoleConfig> = {
     label: "Buyer / Jemaah",
     description: "Pengguna biasa — hanya akses portal jemaah, tidak bisa masuk admin",
     icon: User,
-    color: "text-gray-500",
-    badge: "bg-gray-100 text-gray-600 border-gray-300",
+    color: "text-muted-foreground",
+    badge: "bg-muted text-muted-foreground border-border",
     permissions: {
       operational: false, finance: false, marketing: false,
       content: false, settings: false, roles: false, integrations: false,
@@ -128,7 +128,7 @@ const PERMISSION_COLS: { key: keyof RoleConfig["permissions"]; label: string; ic
 function PermIcon({ value }: { value: boolean | "partial" }) {
   if (value === true) return <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />;
   if (value === "partial") return <AlertCircle className="w-4 h-4 text-amber-500 mx-auto" />;
-  return <XCircle className="w-4 h-4 text-gray-300 mx-auto" />;
+  return <XCircle className="w-4 h-4 text-muted-foreground/40 mx-auto" />;
 }
 
 function RoleBadge({ role }: { role: string }) {
@@ -404,7 +404,7 @@ const RoleManagement = () => {
                             <span>
                               {val === true && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
                               {val === "partial" && <AlertCircle className="w-3.5 h-3.5 text-amber-500" />}
-                              {val === false && <XCircle className="w-3.5 h-3.5 text-gray-300" />}
+                              {val === false && <XCircle className="w-3.5 h-3.5 text-muted-foreground/40" />}
                             </span>
                           </div>
                         );
@@ -425,7 +425,7 @@ const RoleManagement = () => {
                 {" · "}
                 <AlertCircle className="w-3 h-3 inline text-amber-500 mr-1" />Akses terbatas
                 {" · "}
-                <XCircle className="w-3 h-3 inline text-gray-300 mr-1" />Tidak dapat akses
+                <XCircle className="w-3 h-3 inline text-muted-foreground/40 mr-1" />Tidak dapat akses
               </CardDescription>
             </CardHeader>
             <CardContent className="overflow-x-auto">
