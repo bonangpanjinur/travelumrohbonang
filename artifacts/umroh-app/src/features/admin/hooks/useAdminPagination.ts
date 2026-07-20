@@ -1,14 +1,14 @@
 import { useState, useMemo } from "react";
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
 
-export function useAdminPagination<T>(items: T[]) {
+export function useAdminPagination<T>(items: T[], pageSize: number = DEFAULT_PAGE_SIZE) {
   const [page, setPage] = useState(0);
 
-  const totalPages = Math.ceil(items.length / PAGE_SIZE);
+  const totalPages = Math.ceil(items.length / pageSize);
   const paginatedItems = useMemo(
-    () => items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
-    [items, page]
+    () => items.slice(page * pageSize, (page + 1) * pageSize),
+    [items, page, pageSize]
   );
 
   const resetPage = () => setPage(0);
@@ -19,7 +19,7 @@ export function useAdminPagination<T>(items: T[]) {
     totalPages,
     totalCount: items.length,
     paginatedItems,
-    pageSize: PAGE_SIZE,
+    pageSize,
     resetPage,
   };
 }

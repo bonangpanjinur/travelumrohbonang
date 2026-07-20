@@ -64,7 +64,7 @@ const MobileBottomNav = () => {
               to={to}
               aria-current={active ? "page" : undefined}
               className={`flex flex-col items-center justify-center gap-1 min-h-11 text-[11px] font-medium transition-colors ${
-                active ? "text-gold" : "text-muted-foreground hover:text-foreground"
+                active ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <Icon className="w-5 h-5" strokeWidth={active ? 2.4 : 2} />

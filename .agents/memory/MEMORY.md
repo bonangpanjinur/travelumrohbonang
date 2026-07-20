@@ -9,3 +9,5 @@
 - [artifact.toml service paths must list every root prefix](artifact-toml-service-paths.md) — a ported Express backend mounting multiple root prefixes (/api, /rest/v1, /storage/v1) needs all of them in the service's `paths`, or those requests silently hit the wrong artifact.
 - [Missing DB tables after import](missing-db-tables-after-import.md) — run `cd lib/db && pnpm drizzle-kit push` to create all schema tables after cloning; site_settings etc. don't auto-create.
 - [CMS data via apiFetch](cms-apifetch-pattern.md) — Navbar, Footer, AdminLayout must use apiFetch("/api/cms/...") not supabase client; REST shim HEAD count queries are unreliable so dashboard stats use GET /api/admin/analytics/dashboard-stats.
+- [Auth middleware anon-key skip](auth-anon-key-skip.md) — Supabase anon key is a JWT without `sub`; middleware must skip Supabase /auth/v1/user call for tokens with no `sub` claim to avoid 403 bad_jwt spam.
+- [misc route prefix](misc-route-prefix.md) — frontend calls /api/misc/payment-settings; server mounts miscRouter twice: once at root (legacy) and once at /misc.

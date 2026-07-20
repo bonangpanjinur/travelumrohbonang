@@ -91,6 +91,25 @@ function timeoutSignal(ms: number): AbortSignal {
 }
 
 /**
+ * Quickly decode a JWT payload (no signature verification) to check if it
+ * looks like a real user token (has a `sub` claim). Supabase anon/service-role
+ * keys are JWTs too, but they use `role` instead of `sub`. Calling
+ * /auth/v1/user with them always returns 403 bad_jwt, so we skip that round-trip.
+ */
+function jwtHasSubClaim(token: string): boolean {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(
+      Buffer.from(parts[1], "base64url").toString("utf8"),
+    ) as Record<string, unknown>;
+    return typeof payload["sub"] === "string" && payload["sub"].length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Result type for Supabase role lookup.
  *  { reachable: true,  role: string | null } — Supabase responded (even if no row)
  *  { reachable: false }                      — transport/config error; cannot trust result
@@ -209,6 +228,11 @@ async function resolveUser(token: string): Promise<AuthUser | null> {
   const cached = tokenCache.get(token);
   if (cached && Date.now() < cached.expiresAt) return cached.user;
 
+  // Fast-path: skip Supabase HTTP call for non-user JWTs (anon key, service-role
+  // key, etc.). They have no `sub` claim and Supabase always rejects them with
+  // 403 bad_jwt — checking locally avoids a wasted round-trip + noisy log.
+  if (!jwtHasSubClaim(token)) return null;
+
   if (!SUPABASE_URL || !SUPABASE_KEY) return null;
 
   try {
@@ -220,7 +244,13 @@ async function resolveUser(token: string): Promise<AuthUser | null> {
       },
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (isDev) {
+        const body = await res.text().catch(() => "");
+        console.log(`[authMiddleware] Supabase /auth/v1/user returned ${res.status}: ${body.slice(0, 200)}`);
+      }
+      return null;
+    }
 
     const su = (await res.json()) as {
       id: string;
