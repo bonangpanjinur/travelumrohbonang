@@ -125,6 +125,7 @@ import AdminMenuPermissions from "./features/admin/pages/MenuPermissions";
 import AdminFeatureManagement from "./features/admin/pages/FeatureManagement";
 import FinanceDashboard from "./features/admin/pages/FinanceDashboard";
 import Piutang from "./features/admin/pages/Piutang";
+import DepartureFinance from "./features/admin/pages/DepartureFinance";
 import { useEffect } from "react";
 import { installGlobalErrorHandlers } from "@/shared/lib/errorLogger";
 import ErrorBoundary from "@/shared/components/common/ErrorBoundary";
@@ -265,6 +266,7 @@ const AppContent = () => {
           <Route path="feature-management" element={<AdminFeatureManagement />} />
           <Route path="finance-dashboard" element={<FinanceDashboard />} />
           <Route path="piutang" element={<Piutang />} />
+          <Route path="departure-finance" element={<DepartureFinance />} />
         </Route>
       </Route>
 

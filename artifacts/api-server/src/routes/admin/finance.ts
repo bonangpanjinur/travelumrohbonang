@@ -293,4 +293,279 @@ router.get("/piutang", async (req: Request, res: Response) => {
   }
 });
 
+
+// ── Keuangan Per Keberangkatan — List ─────────────────────────────────────────
+// GET /api/admin/finance/departures
+router.get("/departures", async (req: Request, res: Response) => {
+  try {
+    const rows = await db.execute(sql`
+      WITH
+      -- 1. Aggregate payments per booking
+      paid_agg AS (
+        SELECT booking_id, SUM(amount) AS total_paid
+        FROM booking_payments
+        WHERE is_voided = false
+        GROUP BY booking_id
+      ),
+      -- 2. Aggregate booking revenue + seat counts per departure
+      booking_agg AS (
+        SELECT
+          b.departure_id,
+          COUNT(DISTINCT b.id)                                                     AS booking_count,
+          COALESCE(SUM(b.total_price), 0)                                          AS target_revenue,
+          COALESCE(SUM(COALESCE(pa.total_paid, 0)), 0)                             AS collected,
+          COUNT(DISTINCT CASE WHEN COALESCE(pa.total_paid,0) >= b.total_price THEN b.id END) AS lunas_count
+        FROM bookings b
+        LEFT JOIN paid_agg pa ON pa.booking_id = b.id
+        WHERE b.status NOT IN ('cancelled','draft')
+        GROUP BY b.departure_id
+      ),
+      -- 3. Compute HPP per departure using pre-aggregated seat count (no nested aggregates)
+      hpp_agg AS (
+        SELECT
+          pc.departure_id,
+          SUM(
+            pc.unit_cost * pc.qty *
+            CASE WHEN pc.is_per_pax THEN COALESCE(ba.booking_count, 0) ELSE 1 END
+          ) AS hpp_total
+        FROM package_costs pc
+        LEFT JOIN booking_agg ba ON ba.departure_id = pc.departure_id
+        WHERE pc.is_active = true
+          AND pc.departure_id IS NOT NULL
+        GROUP BY pc.departure_id
+      )
+      SELECT
+        dep.id,
+        dep.departure_date,
+        dep.return_date,
+        dep.quota,
+        dep.status                                   AS departure_status,
+        pkg.id                                       AS package_id,
+        pkg.title                                    AS package_title,
+        COALESCE(ba.booking_count, 0)                AS booking_count,
+        COALESCE(ba.lunas_count, 0)                  AS lunas_count,
+        COALESCE(ba.target_revenue, 0)               AS target_revenue,
+        COALESCE(ba.collected, 0)                    AS collected,
+        COALESCE(ba.target_revenue, 0) - COALESCE(ba.collected, 0) AS outstanding,
+        COALESCE(ha.hpp_total, 0)                    AS hpp_total
+      FROM package_departures dep
+      JOIN packages pkg ON pkg.id = dep.package_id
+      LEFT JOIN booking_agg ba ON ba.departure_id = dep.id
+      LEFT JOIN hpp_agg ha ON ha.departure_id = dep.id
+      ORDER BY dep.departure_date::timestamp DESC
+    `);
+
+    const getRows = (r: any) => (r as any).rows ?? r;
+
+    const data = getRows(rows).map((r: any) => {
+      const target     = Number(r.target_revenue);
+      const collected  = Number(r.collected);
+      const hpp        = Number(r.hpp_total);
+      const grossProfit = collected - hpp;
+      return {
+        id:              r.id,
+        departureDate:   r.departure_date,
+        returnDate:      r.return_date,
+        quota:           Number(r.quota),
+        departureStatus: r.departure_status,
+        packageId:       r.package_id,
+        packageTitle:    r.package_title,
+        bookingCount:    Number(r.booking_count),
+        lunasCount:      Number(r.lunas_count),
+        targetRevenue:   target,
+        collected,
+        outstanding:     Number(r.outstanding),
+        pctCollected:    target > 0 ? Math.round((collected / target) * 100) : 0,
+        hppTotal:        hpp,
+        grossProfit,
+        marginPct:       collected > 0 ? Math.round((grossProfit / collected) * 100) : 0,
+      };
+    });
+
+    res.json({ data });
+  } catch (e) {
+    sendError(res, "GET /admin/finance/departures", e);
+  }
+});
+
+// ── Keuangan Per Keberangkatan — Detail ───────────────────────────────────────
+// GET /api/admin/finance/departure/:departureId
+router.get("/departure/:departureId", async (req: Request, res: Response) => {
+  try {
+    const { departureId } = req.params;
+
+    const [depResult, costsResult, pilgrimsResult] = await Promise.all([
+      // Departure + revenue summary
+      db.execute(sql`
+        SELECT
+          dep.id,
+          dep.departure_date,
+          dep.return_date,
+          dep.quota,
+          dep.status        AS departure_status,
+          pkg.id            AS package_id,
+          pkg.title         AS package_title,
+          COUNT(DISTINCT b.id)                                        AS booking_count,
+          COALESCE(SUM(b.total_price), 0)                             AS target_revenue,
+          COALESCE(SUM(paid.total_paid), 0)                           AS collected,
+          COALESCE(SUM(b.total_price), 0) - COALESCE(SUM(paid.total_paid), 0) AS outstanding,
+          COUNT(DISTINCT CASE WHEN COALESCE(paid.total_paid, 0) >= b.total_price THEN b.id END) AS lunas_count
+        FROM package_departures dep
+        JOIN packages pkg ON pkg.id = dep.package_id
+        LEFT JOIN bookings b ON b.departure_id = dep.id AND b.status NOT IN ('cancelled','draft')
+        LEFT JOIN (
+          SELECT booking_id, SUM(amount) AS total_paid
+          FROM booking_payments WHERE is_voided = false
+          GROUP BY booking_id
+        ) paid ON paid.booking_id = b.id
+        WHERE dep.id = ${departureId}
+        GROUP BY dep.id, dep.departure_date, dep.return_date, dep.quota, dep.status, pkg.id, pkg.title
+      `),
+
+      // Operational costs (package_costs for this departure)
+      db.execute(sql`
+        SELECT
+          pc.id,
+          pc.category,
+          pc.item_name,
+          pc.qty,
+          pc.unit,
+          pc.unit_cost,
+          pc.is_per_pax,
+          pc.notes,
+          -- filled seats count for per-pax calculation
+          (
+            SELECT COUNT(*) FROM bookings b2
+            WHERE b2.departure_id = ${departureId}
+              AND b2.status NOT IN ('cancelled','draft')
+          ) AS filled_seats
+        FROM package_costs pc
+        WHERE pc.departure_id = ${departureId}
+          AND pc.is_active = true
+        ORDER BY pc.category, pc.sort_order, pc.item_name
+      `),
+
+      // Pilgrims per booking
+      db.execute(sql`
+        SELECT
+          b.id,
+          b.booking_code,
+          b.total_price,
+          b.status,
+          b.created_at,
+          p.name          AS customer_name,
+          p.phone         AS customer_phone,
+          p.email         AS customer_email,
+          COALESCE(paid.total_paid, 0) AS total_paid,
+          b.total_price - COALESCE(paid.total_paid, 0) AS outstanding
+        FROM bookings b
+        LEFT JOIN profiles p ON p.id = b.user_id
+        LEFT JOIN (
+          SELECT booking_id, SUM(amount) AS total_paid
+          FROM booking_payments WHERE is_voided = false
+          GROUP BY booking_id
+        ) paid ON paid.booking_id = b.id
+        WHERE b.departure_id = ${departureId}
+          AND b.status NOT IN ('cancelled','draft')
+        ORDER BY b.created_at ASC
+      `),
+    ]);
+
+    const getRows = (r: any) => (r as any).rows ?? r;
+
+    const depRow = getRows(depResult)[0];
+    if (!depRow) {
+      return res.status(404).json({ error: "Keberangkatan tidak ditemukan" });
+    }
+
+    const targetRevenue = Number(depRow.target_revenue);
+    const collected     = Number(depRow.collected);
+    const outstanding   = Number(depRow.outstanding);
+    const bookingCount  = Number(depRow.booking_count);
+
+    // Build operational costs with computed budgeted amount
+    let hppTotal = 0;
+    const operationalCosts = getRows(costsResult).map((r: any) => {
+      const qty         = Number(r.qty) || 1;
+      const unitCost    = Number(r.unit_cost) || 0;
+      const filledSeats = Number(r.filled_seats) || 0;
+      const multiplier  = r.is_per_pax ? filledSeats : 1;
+      const budgeted    = unitCost * qty * multiplier;
+      hppTotal += budgeted;
+      return {
+        id:         r.id,
+        category:   r.category,
+        itemName:   r.item_name,
+        qty,
+        unit:       r.unit,
+        unitCost,
+        isPerPax:   r.is_per_pax,
+        budgeted,
+        notes:      r.notes,
+      };
+    });
+
+    const grossProfit = collected - hppTotal;
+
+    const pilgrims = getRows(pilgrimsResult).map((r: any) => {
+      const totalPrice = Number(r.total_price);
+      const totalPaid  = Number(r.total_paid);
+      const out        = Number(r.outstanding);
+      let payStatus: string;
+      if (totalPaid === 0)                         payStatus = "belum_bayar";
+      else if (totalPaid >= totalPrice)             payStatus = "lunas";
+      else if (totalPaid / totalPrice < 0.3)        payStatus = "baru_dp";
+      else if (totalPaid / totalPrice < 0.9)        payStatus = "sebagian";
+      else                                           payStatus = "hampir_lunas";
+
+      return {
+        id:            r.id,
+        bookingCode:   r.booking_code,
+        customerName:  r.customer_name  ?? "-",
+        customerPhone: r.customer_phone ?? null,
+        customerEmail: r.customer_email ?? null,
+        totalPrice,
+        totalPaid,
+        outstanding:   out,
+        status:        r.status,
+        payStatus,
+        pctPaid:       totalPrice > 0 ? Math.round((totalPaid / totalPrice) * 100) : 0,
+        createdAt:     r.created_at,
+      };
+    });
+
+    res.json({
+      departure: {
+        id:              depRow.id,
+        departureDate:   depRow.departure_date,
+        returnDate:      depRow.return_date,
+        quota:           Number(depRow.quota),
+        filledSeats:     bookingCount,
+        departureStatus: depRow.departure_status,
+        packageId:       depRow.package_id,
+        packageTitle:    depRow.package_title,
+      },
+      revenue: {
+        target:       targetRevenue,
+        collected,
+        outstanding,
+        pctCollected: targetRevenue > 0 ? Math.round((collected / targetRevenue) * 100) : 0,
+        lunasCount:   Number(depRow.lunas_count),
+        bookingCount,
+      },
+      hpp: {
+        total: hppTotal,
+        perPax: bookingCount > 0 ? Math.round(hppTotal / bookingCount) : 0,
+      },
+      operationalCosts,
+      grossProfit,
+      marginPct: collected > 0 ? Math.round((grossProfit / collected) * 100) : 0,
+      pilgrims,
+    });
+  } catch (e) {
+    sendError(res, "GET /admin/finance/departure/:id", e);
+  }
+});
+
 export default router;
+

@@ -136,6 +136,7 @@ export const menuGroups: MenuGroup[] = [
     items: [
       // ── Ringkasan ──────────────────────────────────────────────────────────
       { label: "Dashboard Keuangan",       labelKey: "menu.finance_dashboard",   href: "/admin/finance-dashboard",  icon: LayoutDashboard, roles: FINANCE, featureId: "reports" },
+      { label: "Keuangan Keberangkatan",   labelKey: "menu.departure_finance",   href: "/admin/departure-finance",  icon: BarChart3, roles: FINANCE, featureId: "reports" },
       // ── Penerimaan ─────────────────────────────────────────────────────────
       { label: "Pembayaran Jemaah",        labelKey: "menu.payments",             href: "/admin/payments",           icon: CreditCard, roles: OPERATIONAL, featureId: "payments" },
       { label: "Cicilan",                  labelKey: "menu.installments",         href: "/admin/installments",       icon: Receipt, roles: FINANCE, featureId: "installments" },
