@@ -8,9 +8,14 @@ const CHECK_INTERVAL_MS = 30_000;  // re-check every 30 s while visible
 const TIMEOUT_MS = 6_000;          // fail-fast timeout per check
 const RECOVER_HIDE_DELAY_MS = 4_000; // how long to show the "restored" banner
 
-/** True when we have a real Supabase URL to ping. */
+/** True when we have both a real Supabase URL and anon key to ping with. */
 function isConfigured(): boolean {
-  return !!SUPABASE_URL && !SUPABASE_URL.includes("placeholder");
+  return (
+    !!SUPABASE_URL &&
+    !SUPABASE_URL.includes("placeholder") &&
+    !!SUPABASE_ANON_KEY &&
+    !SUPABASE_ANON_KEY.includes("placeholder")
+  );
 }
 
 /** Ping the Supabase REST root — lightweight, no auth required. */
