@@ -55,6 +55,7 @@ import adminEquipmentReportRouter from "./equipment-report";
 import adminFeatureFlagsRouter from "./feature-flags";
 import adminAccountingRouter from "./accounting";
 import adminSavingsRouter from "./savings";
+import adminFinanceRouter from "./finance";
 
 const router = Router();
 
@@ -143,5 +144,8 @@ router.use("/pilgrims-db", requireStaff, adminPilgrimsDbRouter);
 
 // ── PL-F03: Laporan distribusi perlengkapan ────────────────────────────────────
 router.use("/equipment-report", requireStaff, adminEquipmentReportRouter);
+
+// ── Keuangan: Dashboard & Piutang AR ─────────────────────────────────────────
+router.use("/finance", requireFinance, adminFinanceRouter);
 
 export default router;

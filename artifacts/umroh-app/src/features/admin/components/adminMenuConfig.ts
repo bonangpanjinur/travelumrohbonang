@@ -51,6 +51,7 @@ import {
   BedDouble,
   ToggleRight,
   PiggyBank,
+  TrendingDown,
   type LucideIcon
 
 } from "lucide-react";
@@ -133,18 +134,26 @@ export const menuGroups: MenuGroup[] = [
     labelKey: "menu.group.finance",
     icon: Wallet,
     items: [
-      { label: "Pembayaran", labelKey: "menu.payments", href: "/admin/payments", icon: CreditCard, roles: OPERATIONAL, featureId: "payments" },
-      { label: "Cicilan", labelKey: "menu.installments", href: "/admin/installments", icon: Receipt, roles: FINANCE, featureId: "installments" },
-      { label: "Tabungan Umroh", labelKey: "menu.savings", href: "/admin/savings", icon: PiggyBank, roles: FINANCE },
-      { label: "HPP & Profitabilitas", labelKey: "menu.cost_profitability", href: "/admin/package-costs", icon: Calculator, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
-      { label: "Akuntansi & Keuangan", labelKey: "menu.accounting", href: "/admin/accounting", icon: BarChart3, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
-      { label: "Payment Gateway", labelKey: "menu.payment_gateway", href: "/admin/payment-gateway", icon: Wallet, roles: SUPER_ADMIN_ADMIN, featureId: "payments" },
-      { label: "Dashboard Analitik", labelKey: "menu.analytics_dashboard", href: "/admin/analytics", icon: LineChart, roles: FINANCE, featureId: "reports" },
-      { label: "Laporan", labelKey: "menu.reports", href: "/admin/reports", icon: FileText, roles: FINANCE, featureId: "reports" },
-      { label: "Histori Akses Bukti", labelKey: "menu.proof_access_logs", href: "/admin/proof-access-logs", icon: ShieldCheck, roles: SUPER_ADMIN_ADMIN, featureId: "payments" },
-      { label: "Pencairan Komisi Agen", labelKey: "menu.agent_withdrawals", href: "/admin/agent-withdrawals", icon: Wallet, roles: SUPER_ADMIN_ADMIN, featureId: "agents" },
-      { label: "Refund Jamaah", labelKey: "menu.refunds", href: "/admin/refunds", icon: Receipt, roles: SUPER_ADMIN_ADMIN, featureId: "refunds" },
-      { label: "Kontrak Jamaah", labelKey: "menu.contracts", href: "/admin/contracts", icon: FileCheck, roles: ALL_STAFF, featureId: "contracts" },
+      // ── Ringkasan ──────────────────────────────────────────────────────────
+      { label: "Dashboard Keuangan",       labelKey: "menu.finance_dashboard",   href: "/admin/finance-dashboard",  icon: LayoutDashboard, roles: FINANCE, featureId: "reports" },
+      // ── Penerimaan ─────────────────────────────────────────────────────────
+      { label: "Pembayaran Jemaah",        labelKey: "menu.payments",             href: "/admin/payments",           icon: CreditCard, roles: OPERATIONAL, featureId: "payments" },
+      { label: "Cicilan",                  labelKey: "menu.installments",         href: "/admin/installments",       icon: Receipt, roles: FINANCE, featureId: "installments" },
+      { label: "Tabungan Umroh",           labelKey: "menu.savings",              href: "/admin/savings",            icon: PiggyBank, roles: FINANCE },
+      // ── Piutang ────────────────────────────────────────────────────────────
+      { label: "Piutang Jemaah",           labelKey: "menu.piutang",              href: "/admin/piutang",            icon: TrendingDown, roles: FINANCE, featureId: "payments" },
+      { label: "Refund Jamaah",            labelKey: "menu.refunds",              href: "/admin/refunds",            icon: Receipt, roles: SUPER_ADMIN_ADMIN, featureId: "refunds" },
+      // ── Keuangan Paket ─────────────────────────────────────────────────────
+      { label: "HPP & Profitabilitas",     labelKey: "menu.cost_profitability",   href: "/admin/package-costs",      icon: Calculator, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
+      // ── Pembukuan ──────────────────────────────────────────────────────────
+      { label: "Akuntansi & Keuangan",     labelKey: "menu.accounting",           href: "/admin/accounting",         icon: BarChart3, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
+      { label: "Dashboard Analitik",       labelKey: "menu.analytics_dashboard",  href: "/admin/analytics",          icon: LineChart, roles: FINANCE, featureId: "reports" },
+      { label: "Laporan",                  labelKey: "menu.reports",              href: "/admin/reports",            icon: FileText, roles: FINANCE, featureId: "reports" },
+      // ── Konfigurasi Keuangan ───────────────────────────────────────────────
+      { label: "Pencairan Komisi Agen",    labelKey: "menu.agent_withdrawals",    href: "/admin/agent-withdrawals",  icon: Wallet, roles: SUPER_ADMIN_ADMIN, featureId: "agents" },
+      { label: "Payment Gateway",          labelKey: "menu.payment_gateway",      href: "/admin/payment-gateway",    icon: Wallet, roles: SUPER_ADMIN_ADMIN, featureId: "payments" },
+      { label: "Kontrak Jamaah",           labelKey: "menu.contracts",            href: "/admin/contracts",          icon: FileCheck, roles: ALL_STAFF, featureId: "contracts" },
+      { label: "Histori Akses Bukti",      labelKey: "menu.proof_access_logs",    href: "/admin/proof-access-logs",  icon: ShieldCheck, roles: SUPER_ADMIN_ADMIN, featureId: "payments" },
     ],
   },
   {
