@@ -8,6 +8,8 @@ import AdminNotificationBell from "./AdminNotificationBell";
 import { useMemo, useState, useEffect } from "react";
 import { menuGroups, type BrandingSettings, type MenuItem } from "./adminMenuConfig";
 import { useMenuPermissions } from "@/features/admin/hooks/useMenuPermissions";
+import { useFeatureFlags } from "@/features/admin/hooks/useFeatureFlags";
+import type { FeatureId } from "@/features/admin/config/featureDefinitions";
 import { useAdminNotifications } from "@/features/admin/hooks/useAdminNotifications";
 import { useSidebarFavorites } from "@/features/admin/hooks/useSidebarFavorites";
 import { useSidebarRecent } from "@/features/admin/hooks/useSidebarRecent";
@@ -34,6 +36,8 @@ const AdminSidebar = ({
   const { role, user } = useAuth();
   const { t } = useLanguage();
   const rolePermissions = useMenuPermissions();
+  const { isEnabled } = useFeatureFlags();
+  const isSuperAdmin = role === "super_admin";
   const location = useLocation();
   const { unreadBookings, unreadPayments } = useAdminNotifications();
   const { favorites, toggleFavorite } = useSidebarFavorites();
@@ -43,14 +47,22 @@ const AdminSidebar = ({
   const [search, setSearch] = useState("");
   const isSearching = search.trim().length > 0;
 
-  // Permission-aware visibility check, shared by every rendering path (groups, favorites, recent).
+  // Permission-aware + feature-flag visibility check.
+  // Super admin always sees everything; other roles are also gated by feature flags.
   const isItemVisible = (item: MenuItem) => {
+    // Role/DB-permission check
     if (rolePermissions !== null) {
       const dbPerm = rolePermissions[item.labelKey];
-      if (dbPerm !== undefined) return dbPerm;
+      if (dbPerm !== undefined && !dbPerm) return false;
     }
-    if (!item.roles) return true;
-    return !!role && item.roles.includes(role);
+    if (item.roles && !(!!role && item.roles.includes(role))) return false;
+
+    // Feature flag check (super_admin bypasses — they can always see everything)
+    if (!isSuperAdmin && item.featureId) {
+      return isEnabled(item.featureId as FeatureId);
+    }
+
+    return true;
   };
 
   const labelFor = (item: MenuItem) => t(item.labelKey);

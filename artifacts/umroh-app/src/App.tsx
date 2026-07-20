@@ -119,6 +119,7 @@ import AdminSEO from "./features/admin/pages/SEO";
 import PackageCosts from "./features/admin/pages/PackageCosts";
 import AdminPackageCategories from "./features/admin/pages/PackageCategories";
 import AdminMenuPermissions from "./features/admin/pages/MenuPermissions";
+import AdminFeatureManagement from "./features/admin/pages/FeatureManagement";
 import { useEffect } from "react";
 import { installGlobalErrorHandlers } from "@/shared/lib/errorLogger";
 import ErrorBoundary from "@/shared/components/common/ErrorBoundary";
@@ -253,6 +254,7 @@ const AppContent = () => {
           <Route path="seo" element={<AdminSEO />} />
           <Route path="social-kit" element={<AdminSocialKit />} />
           <Route path="menu-permissions" element={<AdminMenuPermissions />} />
+          <Route path="feature-management" element={<AdminFeatureManagement />} />
         </Route>
       </Route>
 
