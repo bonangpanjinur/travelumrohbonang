@@ -198,7 +198,8 @@ const AdminSidebar = ({
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={t("sidebar.search_placeholder")}
                   type="search"
-                  autoComplete="off"
+                  name="sidebar-menu-search"
+                  autoComplete="new-password"
                   className="w-full pl-8 pr-7 py-2 rounded-lg bg-primary-foreground/10 border border-primary-foreground/10 text-sm text-primary-foreground placeholder:text-primary-foreground/40 focus:outline-none focus:ring-1 focus:ring-accent/60 transition-colors"
                 />
                 {search && (
