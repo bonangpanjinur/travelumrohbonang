@@ -12,6 +12,7 @@ import { useAdminNotifications } from "@/features/admin/hooks/useAdminNotificati
 import { useSidebarFavorites } from "@/features/admin/hooks/useSidebarFavorites";
 import { useSidebarRecent } from "@/features/admin/hooks/useSidebarRecent";
 import AdminSidebarGroup from "./AdminSidebarGroup";
+import { AdminThemePicker } from "./AdminThemePicker";
 
 interface AdminSidebarProps {
   branding: BrandingSettings;
@@ -296,6 +297,7 @@ const AdminSidebar = ({
                 <Globe className="w-4 h-4" />
               </a>
               <ThemeToggle variant="admin" />
+              <AdminThemePicker />
               <AdminNotificationBell />
               {!collapsed && <LanguageSwitcher variant="admin" />}
               <button

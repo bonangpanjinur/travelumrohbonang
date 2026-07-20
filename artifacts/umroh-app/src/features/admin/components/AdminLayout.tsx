@@ -9,11 +9,13 @@ import { type BrandingSettings, defaultBranding } from "./adminMenuConfig";
 import { AdminQueryErrorBoundary } from "./AdminQueryErrorBoundary";
 import { AdminHealthBanner } from "./AdminHealthBanner";
 import { AdminSessionTimeoutModal } from "./AdminSessionTimeoutModal";
+import { AdminThemeContext, useAdminThemeProvider } from "@/features/admin/hooks/useAdminTheme";
 
 const AdminLayout = () => {
   const { role, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const adminTheme = useAdminThemeProvider();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -55,6 +57,7 @@ const AdminLayout = () => {
   };
 
   return (
+    <AdminThemeContext.Provider value={adminTheme}>
     <div className="min-h-screen bg-muted">
       {/* Global health banner — shown when Supabase is unreachable */}
       <AdminHealthBanner />
@@ -90,6 +93,7 @@ const AdminLayout = () => {
       {/* Session expiry warning modal */}
       <AdminSessionTimeoutModal />
     </div>
+    </AdminThemeContext.Provider>
   );
 };
 
