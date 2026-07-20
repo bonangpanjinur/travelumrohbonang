@@ -95,19 +95,19 @@ router.get("/dashboard", async (req: Request, res: Response) => {
           FROM booking_payments WHERE is_voided = false
           GROUP BY booking_id
         ) paid ON paid.booking_id = b.id
-        WHERE dep.departure_date BETWEEN NOW() AND NOW() + INTERVAL '90 days'
+        WHERE dep.departure_date::timestamp BETWEEN NOW() AND NOW() + INTERVAL '90 days'
         GROUP BY dep.id, dep.departure_date, pkg.title
-        ORDER BY dep.departure_date ASC
+        ORDER BY dep.departure_date::timestamp ASC
       `),
 
       // Aging buckets — berapa booking per bucket hari-ke-keberangkatan
       db.execute(sql`
         SELECT
           CASE
-            WHEN dep.departure_date < NOW() THEN 'overdue'
-            WHEN dep.departure_date <= NOW() + INTERVAL '14 days'  THEN 'kritis'
-            WHEN dep.departure_date <= NOW() + INTERVAL '30 days'  THEN 'mendesak'
-            WHEN dep.departure_date <= NOW() + INTERVAL '60 days'  THEN 'perhatian'
+            WHEN dep.departure_date::timestamp < NOW() THEN 'overdue'
+            WHEN dep.departure_date::timestamp <= NOW() + INTERVAL '14 days'  THEN 'kritis'
+            WHEN dep.departure_date::timestamp <= NOW() + INTERVAL '30 days'  THEN 'mendesak'
+            WHEN dep.departure_date::timestamp <= NOW() + INTERVAL '60 days'  THEN 'perhatian'
             ELSE 'normal'
           END AS bucket,
           COUNT(DISTINCT b.id) AS count,
@@ -206,7 +206,7 @@ router.get("/piutang", async (req: Request, res: Response) => {
         b.total_price - COALESCE(paid.total_paid, 0)          AS outstanding,
         CASE
           WHEN dep.departure_date IS NULL THEN NULL
-          ELSE EXTRACT(DAY FROM dep.departure_date::timestamp - NOW())::int
+          ELSE EXTRACT(DAY FROM (dep.departure_date::timestamp - NOW()))::int
         END AS days_to_departure
       FROM bookings b
       LEFT JOIN profiles            p   ON p.id   = b.user_id
@@ -221,7 +221,7 @@ router.get("/piutang", async (req: Request, res: Response) => {
         AND COALESCE(paid.total_paid, 0) < b.total_price
         ${package_id   ? sql`AND b.package_id   = ${package_id}`   : sql``}
         ${departure_id ? sql`AND b.departure_id = ${departure_id}` : sql``}
-      ORDER BY dep.departure_date ASC NULLS LAST, b.created_at DESC
+      ORDER BY dep.departure_date::timestamp ASC NULLS LAST, b.created_at DESC
     `);
 
     let data = ((rows as any).rows ?? rows).map((r: any) => {
