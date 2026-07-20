@@ -387,11 +387,40 @@ artifacts/
 
 ---
 
-## 📌 Urutan Pengerjaan yang Disarankan
+## 📌 Daftar Prioritas
+
+### Prioritas 1 — Segera (dampak langsung, mudah dikerjakan)
+
+| # | Fitur | Fase | Estimasi | Alasan |
+|---|-------|------|----------|--------|
+| P1 | Reminder Piutang via WA (bulk) | Fase 5 | 0.5 hari | Tombol UI sudah ada, hanya perlu endpoint backend. Langsung bisa dipakai admin untuk tagih jemaah. |
+| P2 | Auto-Alert Deadline Lunas (cron) | Fase 3 | 1 hari | Pola cron sudah ada (`installmentReminderCron`), tinggal duplikasi logika. Mencegah jemaah lupa bayar mendekati keberangkatan. |
+
+### Prioritas 2 — Penting (nilai bisnis tinggi, perlu lebih banyak kerja)
+
+| # | Fitur | Fase | Estimasi | Alasan |
+|---|-------|------|----------|--------|
+| P3 | Keuangan Per Keberangkatan | Fase 2 | 2 hari | Manajer perlu tahu P&L tiap keberangkatan — revenue vs HPP vs biaya aktual. Data sudah ada di DB, tinggal agregasi dan UI. |
+| P4 | Biaya Operasional Aktual vs Budget | Fase 4 | 1 hari | Saat ini semua biaya dianggap "budgeted". Menambah kolom aktual + variance membuat kontrol pengeluaran jadi bermakna. |
+
+### Prioritas 3 — Backlog (nilai jangka panjang, bisa ditunda)
+
+| # | Fitur | Estimasi | Alasan Tunda |
+|---|-------|----------|--------------|
+| B1 | Laporan Keuangan Bulanan PDF/Excel | 2 hari | Berguna tapi bisa diekspor manual dari piutang dulu |
+| B2 | Rekonsiliasi Payment Gateway | 2 hari | Penting untuk skala besar; belum ada keluhan gap saat ini |
+| B3 | Multi-Currency | 3 hari | Hanya relevan jika ada paket harga USD/SAR |
+| B4 | Refund Tracking Terstruktur | 1 hari | Refund saat ini masih jarang; prosedur manual cukup |
+| B5 | Budget vs Realisasi Tahunan | 2 hari | Butuh data historis yang cukup dulu |
+| B6 | Komisi Agen di Laporan Keuangan | 1 hari | Modul komisi sudah ada; integrasi ke laporan bisa belakangan |
+
+### Urutan Eksekusi Rekomendasi
 
 ```
-Fase 5 (Reminder WA)     → ~0.5 hari  — paling mudah, tombol sudah ada
-Fase 3 (Auto-Alert)      → ~1 hari    — pola cron sudah ada, tinggal duplikasi
-Fase 2 (Keuangan Depart) → ~2 hari    — fitur terbesar, paling berguna
-Fase 4 (Biaya Aktual)    → ~1 hari    — peningkatan incremental
+1. Fase 5  → Reminder WA          (0.5 hari)  — quick win
+2. Fase 3  → Auto-Alert Cron      (1 hari)    — automasi tagihan
+3. Fase 2  → Keuangan Keberangkatan(2 hari)   — insight P&L
+4. Fase 4  → Biaya Aktual         (1 hari)    — kontrol pengeluaran
+── total estimasi: ~4.5 hari kerja ──
+5. Backlog — sesuai kebutuhan bisnis
 ```
