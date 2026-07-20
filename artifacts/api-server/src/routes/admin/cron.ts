@@ -7,6 +7,7 @@ import { Router } from "express";
 import { sendDocumentReminders } from "../../lib/documentReminderCron";
 import { sendFollowUpReminders } from "../../lib/followUpCron";
 import { sendInstallmentReminders } from "../../lib/installmentReminderCron";
+import { sendPaymentDeadlineAlerts } from "../../lib/paymentDeadlineAlertCron";
 
 const router = Router();
 
@@ -54,6 +55,17 @@ router.get("/installment-reminder", async (req, res) => {
     res.json({ ok: true, job: "installment-reminder" });
   } catch (err) {
     console.error("[cron] installment-reminder failed:", err);
+    res.status(500).json({ error: "Cron job failed" });
+  }
+});
+
+router.get("/payment-deadline-alert", async (req, res) => {
+  if (!verifyCronSecret(req, res)) return;
+  try {
+    await sendPaymentDeadlineAlerts();
+    res.json({ ok: true, job: "payment-deadline-alert" });
+  } catch (err) {
+    console.error("[cron] payment-deadline-alert failed:", err);
     res.status(500).json({ error: "Cron job failed" });
   }
 });

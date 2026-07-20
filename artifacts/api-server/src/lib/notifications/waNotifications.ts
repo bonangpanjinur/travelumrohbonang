@@ -14,6 +14,8 @@ import {
   documentsCompleteWA,
   departureReminderWA,
   installmentReminderWA,
+  paymentDeadlineAlertWA,
+  paymentDeadlineAdminSummaryWA,
 } from "@workspace/whatsapp";
 
 interface BookingWAContext {

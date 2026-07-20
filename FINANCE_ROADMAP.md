@@ -16,7 +16,7 @@
 | Fase 1B | Invoice + QR Tracking | ✅ Selesai |
 | Fase 1C | Cicilan (Installment) Otomatis | ✅ Selesai |
 | Fase 2 | Keuangan Per Keberangkatan | ✅ Selesai |
-| Fase 3 | Auto-Alert Deadline Lunas | 🔲 Belum |
+| Fase 3 | Auto-Alert Deadline Lunas | ✅ Selesai |
 | Fase 4 | Biaya Operasional Per Paket | 🔲 Belum |
 | Fase 5 | Reminder Piutang via WA | 🔲 Belum |
 

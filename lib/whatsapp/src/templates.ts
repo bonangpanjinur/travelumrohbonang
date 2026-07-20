@@ -87,6 +87,56 @@ Pastikan seluruh dokumen dan persiapan sudah lengkap sebelum tanggal keberangkat
 Semoga menjadi umroh yang mabrur 🤲`;
 }
 
+export function paymentDeadlineAlertWA(data: {
+  jamaahName: string;
+  bookingCode: string;
+  packageName: string;
+  outstanding: number | string;
+  departureDate: string;
+  daysLeft: number;
+}): string {
+  const urgencyIcon =
+    data.daysLeft <= 7 ? "🔴" : data.daysLeft <= 14 ? "🟠" : "🟡";
+  return `Assalamu'alaikum *${data.jamaahName}* 👋
+
+${urgencyIcon} *Pengingat Pelunasan — H-${data.daysLeft}*
+
+Anda masih memiliki sisa pembayaran untuk paket umroh Anda.
+
+📋 *Detail:*
+• Kode Booking: *${data.bookingCode}*
+• Paket: ${data.packageName}
+• Sisa Pembayaran: *${formatIDR(data.outstanding)}*
+• Tanggal Berangkat: *${data.departureDate}*
+
+⏳ Hanya tersisa *${data.daysLeft} hari* lagi. Segera lunasi agar keberangkatan Anda tidak terhambat.
+
+Terima kasih 🙏`;
+}
+
+export function paymentDeadlineAdminSummaryWA(data: {
+  criticalCount: number;
+  totalOutstanding: number | string;
+  departures: Array<{ packageTitle: string; departureDate: string; outstanding: number; count: number }>;
+}): string {
+  const lines = data.departures
+    .map(
+      (d) =>
+        `• ${d.packageTitle} (${d.departureDate}): ${d.count} jemaah, sisa ${formatIDR(d.outstanding)}`
+    )
+    .join("\n");
+  return `🔴 *Alert Admin — Pelunasan Kritis*
+
+Ada *${data.criticalCount}* booking yang belum lunas menjelang keberangkatan (≤ H-7).
+
+Total outstanding: *${formatIDR(data.totalOutstanding)}*
+
+Keberangkatan kritis:
+${lines}
+
+Segera follow-up jemaah terkait.`;
+}
+
 export function installmentReminderWA(data: {
   jamaahName: string;
   bookingCode: string;
