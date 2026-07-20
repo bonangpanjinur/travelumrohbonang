@@ -209,6 +209,49 @@ router.get("/summary", async (req, res) => {
 });
 
 /**
+ * GET /api/admin/analytics/agent-stats?period=...
+ *
+ * K-05 FIX: Agent performance stats for Reports.tsx
+ * Previously Reports.tsx queried Supabase directly; now it uses this endpoint.
+ */
+router.get("/agent-stats", async (req, res) => {
+  try {
+    const period = String(req.query.period ?? "30days");
+    const { start, end } = getRange(period);
+
+    const rows = await safeQuery("agent-stats", db.execute(sql`
+      select
+        a.id,
+        a.name,
+        br.name as branch,
+        count(distinct b.id)::int as bookings,
+        coalesce(sum(pay.amount), 0)::bigint as revenue
+      from bookings b
+      join agents a on a.id = b.pic_id and b.pic_type = 'agent'
+      left join branches br on br.id = a.branch_id
+      left join payments pay on pay.booking_id = b.id and pay.status = 'verified'
+      where b.created_at between ${start} and ${end}
+        and b.status is distinct from 'cancelled'
+      group by a.id, a.name, br.name
+      order by revenue desc
+      limit 50
+    `));
+
+    res.json(
+      (rows.rows as { id: string; name: string; branch: string | null; bookings: number | string; revenue: number | string }[]).map((r) => ({
+        id: r.id,
+        name: r.name ?? "-",
+        branch: r.branch ?? null,
+        bookings: Number(r.bookings ?? 0),
+        revenue: Number(r.revenue ?? 0),
+      }))
+    );
+  } catch (err) {
+    sendAdminError(res, "GET /api/admin/analytics/agent-stats", err);
+  }
+});
+
+/**
  * GET /api/admin/analytics/dashboard-stats
  *
  * All dashboard KPI counts in a single round-trip so the admin Dashboard

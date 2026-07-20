@@ -290,7 +290,12 @@ const AnalyticsDashboard = () => {
                       <p className="text-sm text-muted-foreground">{kpi.label}</p>
                       <p className="text-2xl font-bold tracking-tight">{kpi.value}</p>
                       <TrendBadge
-                        current={typeof kpi.value === "number" ? kpi.value : kpis[kpi.label === "Total Booking" ? "bookings" : kpi.label === "Total Jemaah" ? "pilgrims" : "revenue"] ?? 0}
+                        current={typeof kpi.value === "number" ? kpi.value : kpis[
+                          kpi.label === "Total Booking" ? "bookings" :
+                          kpi.label === "Total Jemaah" ? "pilgrims" :
+                          kpi.label === "Rata-rata Booking" ? "avgValue" :
+                          "revenue"
+                        ] ?? 0}
                         prev={typeof kpi.prev === "number" ? kpi.prev : 0}
                       />
                     </div>

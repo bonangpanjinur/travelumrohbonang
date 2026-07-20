@@ -14,6 +14,7 @@
  */
 import { Router } from "express";
 import { db, paymentGatewayTransactions, bookings, eq, desc } from "@workspace/db";
+import { syncFromGatewayTransaction } from "../../lib/paymentSync";
 
 const router = Router();
 
@@ -260,6 +261,23 @@ router.post("/transactions/:id/check", async (req, res) => {
       .set({ status, updatedAt: new Date(), ...(status === "paid" ? { paidAt: new Date() } : {}) })
       .where(eq(paymentGatewayTransactions.id, req.params.id))
       .returning();
+
+    // K-03 FIX: sync booking + ledger when manual check resolves to "paid".
+    // Previously this was missing, causing bookings to stay "pending" even after payment.
+    if (status === "paid" && updated?.bookingId) {
+      try {
+        await syncFromGatewayTransaction({
+          bookingId: updated.bookingId,
+          amount: Math.round(Number(updated.amount ?? 0)),
+          gateway: updated.gateway ?? "unknown",
+          orderId: updated.orderId ?? updated.id,
+          newStatus: "paid",
+        });
+      } catch (syncErr) {
+        // Log but don't fail the response — the status is already saved.
+        console.error("[payment-gateway] check sync error:", syncErr);
+      }
+    }
 
     res.json(updated);
   } catch (err: any) {

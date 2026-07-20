@@ -1,21 +1,27 @@
+/**
+ * K-05 FIX: Reports.tsx — replaced all direct supabase client calls with
+ * apiFetch via /api/admin/analytics/summary and /api/admin/analytics/agent-stats.
+ * Previously the page was broken in dev (no Supabase URL configured).
+ */
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Badge } from "@/shared/components/ui/badge";
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, LineChart, Line, Legend 
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line, Legend
 } from "recharts";
-import { format, parseISO, isValid, subDays, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { 
-  TrendingUp, Users, Package, Calendar, DollarSign, 
-  BarChart3, PieChartIcon, Award, Building2 
+import {
+  TrendingUp, Users, Package, Calendar, DollarSign,
+  BarChart3, PieChartIcon, Award, Building2
 } from "lucide-react";
 import CommissionReport from "@/features/admin/components/CommissionReport";
+import { toast } from "sonner";
 
 const COLORS = ["hsl(142, 76%, 36%)", "hsl(45, 93%, 47%)", "hsl(142, 50%, 50%)", "hsl(45, 70%, 60%)", "hsl(200, 70%, 50%)"];
 
@@ -48,6 +54,18 @@ interface AgentStats {
   revenue: number;
 }
 
+interface AnalyticsSummary {
+  kpis: {
+    bookings: number;
+    revenue: number;
+    pilgrims: number;
+    avgValue: number;
+  };
+  trend: { key: string; bookings: number; revenue: number }[];
+  packageRevenue: { name: string; bookings: number; revenue: number }[];
+  departures: { id: string; package_title: string; departure_date: string; quota: number; booked: number }[];
+}
+
 const AdminReports = () => {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("30days");
@@ -62,258 +80,77 @@ const AdminReports = () => {
     avgBookingValue: 0,
   });
 
-  useEffect(() => {
-    fetchAllData();
-  }, [period]);
-
   const getDateRange = () => {
     const now = new Date();
+    const msPerDay = 24 * 60 * 60 * 1000;
     switch (period) {
-      case "7days":
-        return { start: subDays(now, 7), end: now };
-      case "30days":
-        return { start: subDays(now, 30), end: now };
-      case "3months":
-        return { start: subMonths(now, 3), end: now };
-      case "6months":
-        return { start: subMonths(now, 6), end: now };
-      case "1year":
-        return { start: subMonths(now, 12), end: now };
-      default:
-        return { start: subDays(now, 30), end: now };
+      case "7days":   return { start: new Date(now.getTime() - 7  * msPerDay), end: now };
+      case "30days":  return { start: new Date(now.getTime() - 30 * msPerDay), end: now };
+      case "3months": { const s = new Date(now); s.setMonth(s.getMonth() - 3);  return { start: s, end: now }; }
+      case "6months": { const s = new Date(now); s.setMonth(s.getMonth() - 6);  return { start: s, end: now }; }
+      case "1year":   { const s = new Date(now); s.setFullYear(s.getFullYear() - 1); return { start: s, end: now }; }
+      default:        return { start: new Date(now.getTime() - 30 * msPerDay), end: now };
     }
   };
 
-  const fetchAllData = async () => {
-    setLoading(true);
-    const { start, end } = getDateRange();
+  useEffect(() => {
+    const fetchAllData = async () => {
+      setLoading(true);
+      try {
+        const [summary, agents] = await Promise.all([
+          apiFetch<AnalyticsSummary>(`/api/admin/analytics/summary?period=${period}`),
+          apiFetch<AgentStats[]>(`/api/admin/analytics/agent-stats?period=${period}`).catch(() => []),
+        ]);
 
-    await Promise.all([
-      fetchBookingStats(start, end),
-      fetchPackageStats(start, end),
-      fetchDepartureStats(),
-      fetchAgentStats(start, end),
-      fetchSummary(start, end),
-    ]);
+        // KPI summary
+        setSummary({
+          totalBookings: summary.kpis.bookings,
+          totalRevenue: summary.kpis.revenue,
+          totalPilgrims: summary.kpis.pilgrims,
+          avgBookingValue: summary.kpis.avgValue,
+        });
 
-    setLoading(false);
-  };
+        // Booking stats — format trend keys to "d MMM" labels
+        const useMonthly = ["3months", "6months", "1year"].includes(period);
+        setBookingStats(
+          summary.trend.map((t) => {
+            let label = t.key;
+            try {
+              const d = useMonthly ? new Date(`${t.key}-01`) : new Date(t.key);
+              if (!isNaN(d.getTime())) {
+                label = format(d, useMonthly ? "MMM yy" : "d MMM", { locale: localeId });
+              }
+            } catch { /* keep raw key */ }
+            return { date: label, count: t.bookings, revenue: t.revenue };
+          })
+        );
 
-  const fetchBookingStats = async (start: Date, end: Date) => {
-    const { data: bookings } = await supabase
-      .from("bookings")
-      .select("id, created_at")
-      .gte("created_at", start.toISOString())
-      .lte("created_at", end.toISOString())
-      .neq("status", "cancelled");
+        // Package stats
+        setPackageStats(summary.packageRevenue);
 
-    const { data: payments } = await supabase
-      .from("payments")
-      .select("amount, paid_at, created_at")
-      .eq("status", "paid")
-      .gte("created_at", start.toISOString())
-      .lte("created_at", end.toISOString());
+        // Departure stats
+        setDepartureStats(
+          summary.departures.map((d) => ({
+            id: d.id,
+            package_title: d.package_title,
+            departure_date: d.departure_date,
+            quota: d.quota,
+            booked: d.booked,
+            remaining: d.quota - d.booked,
+          }))
+        );
 
-    if (!bookings) return;
+        // Agent stats
+        setAgentStats(agents);
+      } catch (err: any) {
+        toast.error(err?.message ?? "Gagal memuat laporan");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Group bookings by date
-    const grouped = bookings.reduce((acc: Record<string, { count: number; revenue: number }>, booking) => {
-      const _d = booking.created_at ? parseISO(booking.created_at) : null;
-      const date = _d && isValid(_d) ? format(_d, "yyyy-MM-dd") : "1970-01-01";
-      if (!acc[date]) acc[date] = { count: 0, revenue: 0 };
-      acc[date].count++;
-      return acc;
-    }, {});
-
-    // Add revenue from payments to the correct dates
-    (payments || []).forEach(payment => {
-      const _pd = payment.paid_at || payment.created_at;
-      const _pdate = _pd ? parseISO(_pd) : null;
-      const date = _pdate && isValid(_pdate) ? format(_pdate, "yyyy-MM-dd") : "1970-01-01";
-      if (!grouped[date]) grouped[date] = { count: 0, revenue: 0 };
-      grouped[date].revenue += payment.amount || 0;
-    });
-
-    const stats = Object.entries(grouped)
-      .map(([date, { count, revenue }]) => ({
-        date: format(new Date(date), "d MMM", { locale: localeId }),
-        count,
-        revenue,
-      }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    setBookingStats(stats);
-  };
-
-  const fetchPackageStats = async (start: Date, end: Date) => {
-    const { data: bookings } = await supabase
-      .from("bookings")
-      .select(`
-        id,
-        package:packages(title)
-      `)
-      .gte("created_at", start.toISOString())
-      .lte("created_at", end.toISOString())
-      .neq("status", "cancelled");
-
-    if (!bookings) return;
-
-    const bookingIds = bookings.map(b => b.id);
-    const { data: payments } = await supabase
-      .from("payments")
-      .select("amount, booking_id")
-      .eq("status", "paid")
-      .in("booking_id", bookingIds);
-
-    const grouped = bookings.reduce((acc: Record<string, { bookings: number; revenue: number }>, booking: any) => {
-      const name = booking.package?.title || "Unknown";
-      if (!acc[name]) acc[name] = { bookings: 0, revenue: 0 };
-      acc[name].bookings++;
-      
-      // Find payments for this booking
-      const bookingPayments = (payments || []).filter(p => p.booking_id === booking.id);
-      const bookingRevenue = bookingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-      acc[name].revenue += bookingRevenue;
-      
-      return acc;
-    }, {});
-
-    const stats = Object.entries(grouped)
-      .map(([name, { bookings, revenue }]) => ({ name, bookings, revenue }))
-      .sort((a, b) => b.bookings - a.bookings);
-
-    setPackageStats(stats);
-  };
-
-  const fetchDepartureStats = async () => {
-    const { data: departures } = await supabase
-      .from("package_departures")
-      .select(`
-        id, departure_date, quota, remaining_quota,
-        package:packages(title)
-      `)
-      .gte("departure_date", new Date().toISOString().split("T")[0])
-      .order("departure_date", { ascending: true })
-      .limit(10);
-
-    if (!departures) return;
-
-    const stats = departures.map((dep: any) => ({
-      id: dep.id,
-      package_title: dep.package?.title || "-",
-      departure_date: dep.departure_date,
-      quota: dep.quota,
-      booked: dep.quota - dep.remaining_quota,
-      remaining: dep.remaining_quota,
-    }));
-
-    setDepartureStats(stats);
-  };
-
-  const fetchAgentStats = async (start: Date, end: Date) => {
-    const { data: bookings } = await supabase
-      .from("bookings")
-      .select(`
-        id, pic_id, pic_type
-      `)
-      .eq("pic_type", "agent")
-      .gte("created_at", start.toISOString())
-      .lte("created_at", end.toISOString())
-      .neq("status", "cancelled");
-
-    if (!bookings || bookings.length === 0) {
-      setAgentStats([]);
-      return;
-    }
-
-    const bookingIds = bookings.map(b => b.id);
-    const { data: payments } = await supabase
-      .from("payments")
-      .select("amount, booking_id")
-      .eq("status", "paid")
-      .in("booking_id", bookingIds);
-
-    // Get unique agent IDs
-    const agentIds = [...new Set(bookings.map((b) => b.pic_id).filter(Boolean))];
-    
-    if (agentIds.length === 0) {
-      setAgentStats([]);
-      return;
-    }
-
-    const { data: agents } = await supabase
-      .from("agents")
-      .select("id, name, branch:branches(name)")
-      .in("id", agentIds.filter((id): id is string => id !== null));
-
-    if (!agents) return;
-
-    const agentMap = agents.reduce((acc: Record<string, any>, agent: any) => {
-      acc[agent.id] = { name: agent.name, branch: agent.branch?.name || null };
-      return acc;
-    }, {});
-
-    const grouped = bookings.reduce((acc: Record<string, { bookings: number; revenue: number }>, booking) => {
-      const agentId = booking.pic_id;
-      if (!agentId || !agentMap[agentId]) return acc;
-      if (!acc[agentId]) acc[agentId] = { bookings: 0, revenue: 0 };
-      acc[agentId].bookings++;
-      
-      // Find payments for this booking
-      const bookingPayments = (payments || []).filter(p => p.booking_id === booking.id);
-      const bookingRevenue = bookingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-      acc[agentId].revenue += bookingRevenue;
-      
-      return acc;
-    }, {});
-
-    const stats = Object.entries(grouped)
-      .map(([id, { bookings, revenue }]) => ({
-        id,
-        name: agentMap[id]?.name || "-",
-        branch: agentMap[id]?.branch,
-        bookings,
-        revenue,
-      }))
-      .sort((a, b) => b.revenue - a.revenue);
-
-    setAgentStats(stats);
-  };
-
-  const fetchSummary = async (start: Date, end: Date) => {
-    const { data: bookings } = await supabase
-      .from("bookings")
-      .select("id")
-      .gte("created_at", start.toISOString())
-      .lte("created_at", end.toISOString())
-      .neq("status", "cancelled");
-
-    const bookingIds = bookings?.map(b => b.id) || [];
-    
-    const { data: payments } = await supabase
-      .from("payments")
-      .select("amount")
-      .eq("status", "paid")
-      .in("booking_id", bookingIds);
-
-    const { data: pilgrims } = await supabase
-      .from("booking_pilgrims")
-      .select("id, booking:bookings!inner(created_at, status)")
-      .gte("booking.created_at", start.toISOString())
-      .lte("booking.created_at", end.toISOString())
-      .neq("booking.status", "cancelled");
-
-    const totalBookings = bookings?.length || 0;
-    const totalRevenue = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-    const totalPilgrims = pilgrims?.length || 0;
-
-    setSummary({
-      totalBookings,
-      totalRevenue,
-      totalPilgrims,
-      avgBookingValue: totalBookings > 0 ? totalRevenue / totalBookings : 0,
-    });
-  };
+    fetchAllData();
+  }, [period]);
 
   const formatCurrency = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
 
@@ -432,7 +269,7 @@ const AdminReports = () => {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                      <Tooltip 
+                      <Tooltip
                         contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
                         formatter={(value: number) => [formatCurrency(value), "Pendapatan"]}
                       />
@@ -454,7 +291,7 @@ const AdminReports = () => {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                      <Tooltip 
+                      <Tooltip
                         contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
                       />
                       <Bar dataKey="count" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} name="Jumlah Booking" />
@@ -485,11 +322,11 @@ const AdminReports = () => {
                         paddingAngle={5}
                         dataKey="bookings"
                       >
-                        {packageStats.map((entry, index) => (
+                        {packageStats.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip 
+                      <Tooltip
                         contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
                       />
                       <Legend />
@@ -514,7 +351,9 @@ const AdminReports = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {departureStats.map((dep) => (
+                    {departureStats.length === 0 ? (
+                      <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground">Tidak ada keberangkatan mendatang</TableCell></TableRow>
+                    ) : departureStats.map((dep) => (
                       <TableRow key={dep.id}>
                         <TableCell className="font-medium">{dep.package_title}</TableCell>
                         <TableCell>{format(new Date(dep.departure_date), "d MMM yyyy")}</TableCell>
@@ -539,20 +378,22 @@ const AdminReports = () => {
               <CardTitle className="text-lg">Pendapatan per Agen</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px] w-full mb-6">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={agentStats} layout="vertical" margin={{ left: 40 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} width={100} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
-                      formatter={(value: number) => [formatCurrency(value), "Pendapatan"]}
-                    />
-                    <Bar dataKey="revenue" fill="hsl(45, 93%, 47%)" name="Pendapatan" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {agentStats.length > 0 && (
+                <div className="h-[300px] w-full mb-6">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={agentStats} layout="vertical" margin={{ left: 40 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} width={100} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
+                        formatter={(value: number) => [formatCurrency(value), "Pendapatan"]}
+                      />
+                      <Bar dataKey="revenue" fill="hsl(45, 93%, 47%)" name="Pendapatan" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -563,7 +404,9 @@ const AdminReports = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {agentStats.map((agent) => (
+                  {agentStats.length === 0 ? (
+                    <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground">Belum ada data agen</TableCell></TableRow>
+                  ) : agentStats.map((agent) => (
                     <TableRow key={agent.id}>
                       <TableCell className="font-medium">{agent.name}</TableCell>
                       <TableCell>{agent.branch || "-"}</TableCell>

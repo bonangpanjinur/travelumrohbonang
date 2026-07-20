@@ -4,12 +4,14 @@
  * GET  /api/admin/installments          — all installments (filterable by status/bookingId)
  * GET  /api/admin/installments/overdue  — overdue installments only
  * POST /api/admin/installments/send-reminders — manually trigger H-7 reminders
+ * PATCH /api/admin/installments/:id     — update installment status (marks paid → syncs ledger)
  */
 
 import { Router } from "express";
 import {
   db,
   installmentSchedules,
+  bookingPayments,
   bookings,
   packages,
   profiles,
@@ -19,6 +21,12 @@ import {
   asc,
 } from "@workspace/db";
 import { sendInstallmentReminders } from "../../lib/installmentReminderCron";
+import {
+  computePaymentStatus,
+  syncBookingStatus,
+  recordFinancialTransaction,
+  createNotification,
+} from "../../lib/paymentSync";
 
 const router = Router();
 
@@ -71,29 +79,110 @@ router.post("/send-reminders", async (_req, res) => {
 });
 
 // ── PATCH /:id — mark a single installment (e.g. "paid") ─────────────────────
+// K-01 FIX: when status → "paid", also create a bookingPayments record,
+// sync bookings.status, and record a financial_transactions entry so the
+// ledger stays consistent with the manual verify flow.
 router.patch("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { status, paidAt } = req.body as { status?: string; paidAt?: string };
+    const adminId = (req as any).user?.id as string | undefined;
 
     if (!status) {
       return res.status(400).json({ error: "status is required" });
     }
 
     const now = new Date();
+    const paidAtDate = paidAt ? new Date(paidAt) : now;
+
+    // Fetch the installment first so we have bookingId + amount for the sync.
+    const [existing] = await db
+      .select()
+      .from(installmentSchedules)
+      .where(eq(installmentSchedules.id, id))
+      .limit(1);
+
+    if (!existing) {
+      return res.status(404).json({ error: "Installment not found" });
+    }
+
     const [updated] = await db
       .update(installmentSchedules)
       .set({
         status,
         ...(status === "paid"
-          ? { paidAt: paidAt ? new Date(paidAt) : now }
+          ? { paidAt: paidAtDate }
           : { paidAt: null }),
       })
       .where(eq(installmentSchedules.id, id))
       .returning();
 
-    if (!updated) {
-      return res.status(404).json({ error: "Installment not found" });
+    // ── K-01: sync ledger when marking paid ───────────────────────────────────
+    if (status === "paid" && existing.bookingId) {
+      const bookingId = existing.bookingId;
+      const amount = Number(existing.amount ?? 0);
+      const referenceNumber = `installment-${id}`;
+
+      // Idempotency: skip if we already have a bookingPayments record for this installment.
+      const alreadyRecorded = await db
+        .select({ id: bookingPayments.id })
+        .from(bookingPayments)
+        .where(
+          and(
+            eq(bookingPayments.bookingId, bookingId),
+            eq(bookingPayments.referenceNumber, referenceNumber),
+            eq(bookingPayments.isVoided, false),
+          ),
+        )
+        .limit(1);
+
+      if (alreadyRecorded.length === 0) {
+        await db.insert(bookingPayments).values({
+          id: crypto.randomUUID(),
+          bookingId,
+          type: "installment",
+          amount,
+          paidAt: paidAtDate,
+          method: "manual",
+          referenceNumber,
+          notes: `Installment #${existing.installmentNumber ?? ""} marked paid by admin`,
+          recordedBy: adminId ?? null,
+          isVoided: false,
+          createdAt: now,
+        });
+      }
+
+      // Sync booking status based on total paid so far.
+      const { paymentStatus, remaining } = await computePaymentStatus(bookingId);
+      await syncBookingStatus(bookingId, paymentStatus);
+
+      // Record in financial ledger.
+      await recordFinancialTransaction({
+        bookingId,
+        amount,
+        type: "income",
+        category: "installment_payment",
+        description: `Installment #${existing.installmentNumber ?? ""} paid (admin: ${referenceNumber})`,
+        referenceNumber,
+        recordedBy: adminId,
+      });
+
+      // In-app notification to jamaah.
+      const [booking] = await db
+        .select({ userId: bookings.userId })
+        .from(bookings)
+        .where(eq(bookings.id, bookingId))
+        .limit(1);
+
+      if (booking?.userId) {
+        await createNotification({
+          userId: booking.userId,
+          title: paymentStatus === "paid" ? "Cicilan Lunas ✓" : `Cicilan #${existing.installmentNumber ?? ""} Dikonfirmasi`,
+          message: paymentStatus === "paid"
+            ? "Selamat! Semua cicilan Anda telah lunas dan booking sudah dikonfirmasi."
+            : `Cicilan sebesar Rp${amount.toLocaleString("id-ID")} telah dikonfirmasi. Sisa pembayaran: Rp${remaining.toLocaleString("id-ID")}.`,
+        });
+      }
     }
 
     res.json(updated);

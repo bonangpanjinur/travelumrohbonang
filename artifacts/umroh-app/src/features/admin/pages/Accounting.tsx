@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -27,6 +27,8 @@ const incomeCategories = [
   "Pembayaran Paket",
   "DP Booking",
   "Pelunasan",
+  "booking_payment",
+  "installment_payment",
   "Komisi",
   "Lain-lain (Pemasukan)",
 ];
@@ -40,16 +42,29 @@ const expenseCategories = [
   "Konsumsi",
   "Visa & Dokumen",
   "Marketing",
+  "refund",
   "Lain-lain (Pengeluaran)",
 ];
+
+interface Transaction {
+  id: string;
+  type: string;
+  category: string;
+  description: string | null;
+  amount: string | number;
+  transactionDate: string | null;
+  referenceNumber: string | null;
+  recordedBy: string | null;
+  createdAt: string | null;
+}
 
 interface TransactionForm {
   type: "income" | "expense";
   category: string;
   description: string;
   amount: string;
-  transaction_date: string;
-  reference_number: string;
+  transactionDate: string;
+  referenceNumber: string;
 }
 
 const defaultForm: TransactionForm = {
@@ -57,8 +72,8 @@ const defaultForm: TransactionForm = {
   category: "",
   description: "",
   amount: "",
-  transaction_date: new Date().toISOString().split("T")[0],
-  reference_number: "",
+  transactionDate: new Date().toISOString().split("T")[0],
+  referenceNumber: "",
 };
 
 const AdminAccounting = () => {
@@ -73,22 +88,15 @@ const AdminAccounting = () => {
 
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["financial_transactions"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("financial_transactions")
-        .select("*")
-        .order("transaction_date", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => apiFetch<Transaction[]>("/api/admin/accounting"),
   });
 
-  const filtered = transactions.filter((t: any) => {
+  const filtered = transactions.filter((t) => {
     const matchesSearch =
       !search ||
       t.category?.toLowerCase().includes(search.toLowerCase()) ||
       t.description?.toLowerCase().includes(search.toLowerCase()) ||
-      t.reference_number?.toLowerCase().includes(search.toLowerCase());
+      t.referenceNumber?.toLowerCase().includes(search.toLowerCase());
     const matchesType = filterType === "all" || t.type === filterType;
     return matchesSearch && matchesType;
   });
@@ -98,11 +106,11 @@ const AdminAccounting = () => {
 
   // Summary calculations
   const totalIncome = transactions
-    .filter((t: any) => t.type === "income")
-    .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
   const totalExpense = transactions
-    .filter((t: any) => t.type === "expense")
-    .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
   const balance = totalIncome - totalExpense;
 
   const saveMutation = useMutation({
@@ -110,24 +118,22 @@ const AdminAccounting = () => {
       const payload = {
         type: data.type,
         category: data.category,
-        description: data.description || null,
+        description: data.description || undefined,
         amount: Number.isFinite(parseFloat(String(data.amount))) ? parseFloat(String(data.amount)) : 0,
-        transaction_date: data.transaction_date,
-        reference_number: data.reference_number || null,
-        created_by: user?.id,
+        transactionDate: data.transactionDate,
+        referenceNumber: data.referenceNumber || undefined,
       };
 
       if (editId) {
-        const { error } = await supabase
-          .from("financial_transactions")
-          .update(payload)
-          .eq("id", editId);
-        if (error) throw error;
+        return apiFetch(`/api/admin/accounting/${editId}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
       } else {
-        const { error } = await supabase
-          .from("financial_transactions")
-          .insert(payload);
-        if (error) throw error;
+        return apiFetch("/api/admin/accounting", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
       }
     },
     onSuccess: () => {
@@ -141,13 +147,8 @@ const AdminAccounting = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("financial_transactions")
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) =>
+      apiFetch(`/api/admin/accounting/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["financial_transactions"] });
       toast.success("Transaksi dihapus");
@@ -156,15 +157,17 @@ const AdminAccounting = () => {
     onError: (err: any) => toast.error(err.message),
   });
 
-  const handleEdit = (t: any) => {
+  const handleEdit = (t: Transaction) => {
     setEditId(t.id);
     setForm({
-      type: t.type,
+      type: t.type as "income" | "expense",
       category: t.category,
       description: t.description || "",
       amount: String(t.amount),
-      transaction_date: t.transaction_date,
-      reference_number: t.reference_number || "",
+      transactionDate: t.transactionDate
+        ? t.transactionDate.toString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+      referenceNumber: t.referenceNumber || "",
     });
     setDialogOpen(true);
   };
@@ -215,7 +218,7 @@ const AdminAccounting = () => {
                 </div>
                 <div>
                   <Label>Tanggal</Label>
-                  <Input type="date" value={form.transaction_date} onChange={(e) => setForm({ ...form, transaction_date: e.target.value })} />
+                  <Input type="date" value={form.transactionDate} onChange={(e) => setForm({ ...form, transactionDate: e.target.value })} />
                 </div>
               </div>
               <div>
@@ -235,7 +238,7 @@ const AdminAccounting = () => {
               </div>
               <div>
                 <Label>No. Referensi (opsional)</Label>
-                <Input placeholder="INV-001" value={form.reference_number} onChange={(e) => setForm({ ...form, reference_number: e.target.value })} />
+                <Input placeholder="INV-001" value={form.referenceNumber} onChange={(e) => setForm({ ...form, referenceNumber: e.target.value })} />
               </div>
               <div>
                 <Label>Keterangan (opsional)</Label>
@@ -285,8 +288,11 @@ const AdminAccounting = () => {
       {/* Monthly Trend Chart */}
       {transactions.length > 0 && (() => {
         const monthlyData: Record<string, { month: string; pemasukan: number; pengeluaran: number }> = {};
-        transactions.forEach((t: any) => {
-          const key = t.transaction_date?.substring(0, 7); // YYYY-MM
+        transactions.forEach((t) => {
+          const dateStr = t.transactionDate
+            ? (typeof t.transactionDate === "string" ? t.transactionDate : new Date(t.transactionDate).toISOString())
+            : null;
+          const key = dateStr?.substring(0, 7); // YYYY-MM
           if (!key) return;
           if (!monthlyData[key]) {
             const [y, m] = key.split("-");
@@ -371,10 +377,10 @@ const AdminAccounting = () => {
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Belum ada transaksi</TableCell>
                   </TableRow>
                 ) : (
-                  paginatedItems.map((t: any) => (
+                  paginatedItems.map((t) => (
                     <TableRow key={t.id}>
                       <TableCell className="whitespace-nowrap">
-                        {safeFormatDate(t.transaction_date, "dd MMM yyyy", { locale: localeId })}
+                        {safeFormatDate(t.transactionDate, "dd MMM yyyy", { locale: localeId })}
                       </TableCell>
                       <TableCell>
                         <Badge variant={t.type === "income" ? "default" : "destructive"} className={t.type === "income" ? "bg-success/10 text-success hover:bg-success/10" : ""}>
@@ -383,7 +389,7 @@ const AdminAccounting = () => {
                       </TableCell>
                       <TableCell>{t.category}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{t.description || "-"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{t.reference_number || "-"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{t.referenceNumber || "-"}</TableCell>
                       <TableCell className={`text-right font-semibold whitespace-nowrap ${t.type === "income" ? "text-success" : "text-destructive"}`}>
                         {t.type === "income" ? "+" : "-"}{formatCurrency(Number(t.amount))}
                       </TableCell>

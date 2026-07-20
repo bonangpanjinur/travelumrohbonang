@@ -53,6 +53,7 @@ import adminPilgrimEquipmentRouter from "./pilgrim-equipment";
 import adminPilgrimsDbRouter from "./pilgrims-db";
 import adminEquipmentReportRouter from "./equipment-report";
 import adminFeatureFlagsRouter from "./feature-flags";
+import adminAccountingRouter from "./accounting";
 
 const router = Router();
 
@@ -70,6 +71,7 @@ router.use("/menu-permissions", requireOperational, adminMenuPermissionsRouter);
 router.use("/feature-flags", requireAdmin, adminFeatureFlagsRouter);
 router.use("/analytics", requireFinance, adminAnalyticsRouter);
 router.use("/reports", requireFinance, adminReportsRouter);
+router.use("/accounting", requireFinance, adminAccountingRouter);
 
 // ── Full admin routes (super_admin + admin only) ────────────────────────────
 router.use("/users", requireAdmin, adminUsersRouter);
