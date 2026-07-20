@@ -11,3 +11,4 @@
 - [CMS data via apiFetch](cms-apifetch-pattern.md) — Navbar, Footer, AdminLayout must use apiFetch("/api/cms/...") not supabase client; REST shim HEAD count queries are unreliable so dashboard stats use GET /api/admin/analytics/dashboard-stats.
 - [Auth middleware anon-key skip](auth-anon-key-skip.md) — Supabase anon key is a JWT without `sub`; middleware must skip Supabase /auth/v1/user call for tokens with no `sub` claim to avoid 403 bad_jwt spam.
 - [misc route prefix](misc-route-prefix.md) — frontend calls /api/misc/payment-settings; server mounts miscRouter twice: once at root (legacy) and once at /misc.
+- [Umroh Tabungan module](savings-module.md) — savings schema skips FK to profiles (uuid/text mismatch); ResponsiveTable imports from @/features/admin/components not @/shared.
