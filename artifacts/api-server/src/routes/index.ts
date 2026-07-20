@@ -32,8 +32,11 @@ router.use("/faqs", faqsRouter);
 // Public CMS content (blog, pages, gallery, settings, etc.)
 router.use("/cms", cmsRouter);
 
-// Misc public helpers (currencies, tenant-site)
+// Misc public helpers (currencies, tenant-site, payment-settings)
+// Mounted at both root (legacy) and /misc (new canonical) so existing callers
+// that hit /api/currencies or /api/payment-settings still work.
 router.use(miscRouter);
+router.use("/misc", miscRouter);
 
 // ── Admin (all sub-routes protected individually inside adminRouter) ──────────
 router.use("/admin", strictLimiter, adminRouter);

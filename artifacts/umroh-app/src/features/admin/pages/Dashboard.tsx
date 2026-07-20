@@ -63,14 +63,17 @@ const AdminDashboard = () => {
     const fetchAll = async () => {
       try {
         const [statsResult, recentResult] = await Promise.all([
-          apiFetch<DashboardStats>("/api/admin/analytics/dashboard-stats"),
+          apiFetch<DashboardStats>("/api/admin/analytics/dashboard-stats")
+            .catch(() => null),
           apiFetch<{ data: RecentBooking[] }>("/api/admin/bookings?limit=5")
             .catch(() => ({ data: [] as RecentBooking[] })),
         ]);
 
-        const { monthlyTrend: trend, ...counts } = statsResult;
-        setStats(counts);
-        setMonthlyTrend(trend ?? []);
+        if (statsResult) {
+          const { monthlyTrend: trend, ...counts } = statsResult;
+          setStats(counts);
+          setMonthlyTrend(trend ?? []);
+        }
         setRecentBookings(recentResult.data || []);
       } catch (error) {
         console.error("Error fetching stats:", error);
