@@ -83,6 +83,10 @@ export const packageCosts = pgTable("package_costs", {
   notes: text("notes"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }),
+  // Fase 4: realisasi biaya aktual
+  actualAmount: numeric("actual_amount"),
+  invoiceReference: text("invoice_reference"),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
 }, (t) => [
   index("idx_package_costs_package_id").on(t.packageId),
   index("idx_package_costs_departure_id").on(t.departureId),

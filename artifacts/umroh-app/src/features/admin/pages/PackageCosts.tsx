@@ -644,19 +644,22 @@ export default function AdminPackageCosts() {
               <CardTitle className="text-base">Komponen HPP ({visibleCosts.length})</CardTitle>
               {visibleCosts.length > 0 && (
                 <Button variant="outline" size="sm" onClick={() => {
-                  const headers = ["Kategori", "Item", "Keberangkatan", "Qty", "Unit", "Harga Satuan", "Mata Uang", "Total IDR", "Tipe", "Status"];
+                  const headers = ["Kategori","Item","Keberangkatan","Qty","Unit","Harga Satuan","Mata Uang","Budget IDR","Aktual IDR","Variance IDR","Tipe","Status","No. Faktur","Tgl Bayar"];
                   const rows = visibleCosts.map(c => {
                     const cat = CATEGORIES.find(x => x.value === c.category)?.label || c.category;
-                    const idr = toIDR(Number(c.unit_cost), c.currency_code) * Number(c.qty);
+                    const bgt = toIDR(Number(c.unit_cost), c.currency_code) * Number(c.qty);
                     const dep = c.departure_id ? departures.find(d => d.id === c.departure_id) : null;
+                    const vari = c.actual_amount != null ? c.actual_amount - bgt : null;
                     return [
                       cat, c.item_name,
                       dep ? new Date(dep.departure_date).toLocaleDateString("id-ID") : "Semua",
-                      String(c.qty), c.unit || "-",
-                      String(c.unit_cost), c.currency_code,
-                      String(Math.round(idr)),
+                      String(c.qty), c.unit || "-", String(c.unit_cost), c.currency_code,
+                      String(Math.round(bgt)),
+                      c.actual_amount != null ? String(Math.round(c.actual_amount)) : "",
+                      vari != null ? String(Math.round(vari)) : "",
                       c.is_per_pax ? "Per Pax" : "Tetap",
                       c.is_active !== false ? "Aktif" : "Nonaktif",
+                      c.invoice_reference || "", c.paid_at ? new Date(c.paid_at).toLocaleDateString("id-ID") : "",
                     ];
                   });
                   const pkg = packages.find(p => p.id === selectedPkg);
@@ -677,7 +680,9 @@ export default function AdminPackageCosts() {
                        <th className="p-2 text-left">Item</th>
                        <th className="p-2 text-left">Keberangkatan</th>
                        <th className="p-2 text-left">Qty × Harga</th>
-                       <th className="p-2 text-left">IDR</th>
+                       <th className="p-2 text-right">Budget</th>
+                       <th className="p-2 text-right">Aktual</th>
+                       <th className="p-2 text-right">Variance</th>
                        <th className="p-2 text-left">Tipe</th>
                        <th className="p-2 text-left">Status</th>
                        <th className="p-2 text-right">Aksi</th>
@@ -686,16 +691,35 @@ export default function AdminPackageCosts() {
                    <tbody>
                      {visibleCosts.map((c) => {
                        const cat = CATEGORIES.find((x) => x.value === c.category)?.label || c.category;
-                       const idr = toIDR(Number(c.unit_cost), c.currency_code) * Number(c.qty);
+                       const budget = toIDR(Number(c.unit_cost), c.currency_code) * Number(c.qty);
+                       const actual = c.actual_amount;
+                       const variance = actual != null ? actual - budget : null;
                        const dep = c.departure_id ? departures.find((d) => d.id === c.departure_id) : null;
                        const inactive = c.is_active === false;
                        return (
                          <tr key={c.id} className={`border-b ${inactive ? "opacity-50" : ""}`}>
                            <td className="p-2"><Badge variant="outline">{cat}</Badge></td>
-                           <td className="p-2">{c.item_name}{c.notes && <div className="text-xs text-muted-foreground">{c.notes}</div>}</td>
+                           <td className="p-2">
+                             {c.item_name}
+                             {c.invoice_reference && <div className="text-xs text-muted-foreground">{c.invoice_reference}{c.paid_at ? " · " + new Date(c.paid_at).toLocaleDateString("id-ID") : ""}</div>}
+                             {c.notes && <div className="text-xs text-muted-foreground">{c.notes}</div>}
+                           </td>
                            <td className="p-2 text-xs">{dep ? new Date(dep.departure_date).toLocaleDateString("id-ID") : <span className="text-muted-foreground">Semua</span>}</td>
-                           <td className="p-2">{c.qty} {c.unit} × {c.currency_code} {Number(c.unit_cost).toLocaleString("id-ID")}</td>
-                           <td className="p-2 font-medium">{fmtIDR(idr)}</td>
+                           <td className="p-2 text-xs">{c.qty} {c.unit} × {c.currency_code} {Number(c.unit_cost).toLocaleString("id-ID")}</td>
+                           <td className="p-2 text-right font-medium">{fmtIDR(budget)}</td>
+                           <td className="p-2 text-right">
+                             {actual != null
+                               ? <span className="font-medium">{fmtIDR(actual)}</span>
+                               : <span className="text-muted-foreground text-xs flex items-center justify-end gap-1"><CircleDashed className="w-3 h-3" />Belum</span>}
+                           </td>
+                           <td className="p-2 text-right">
+                             {variance != null
+                               ? <span className={"font-semibold text-xs flex items-center justify-end gap-1 " + (variance > 0 ? "text-destructive" : "text-emerald-600")}>
+                                   {variance > 0 ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                                   {variance > 0 ? "+" : ""}{fmtIDR(Math.abs(variance))}
+                                 </span>
+                               : <span className="text-muted-foreground text-xs">—</span>}
+                           </td>
                            <td className="p-2 text-xs">{c.is_per_pax ? "Per pax" : "Tetap"}</td>
                            <td className="p-2">
                              <Badge variant={inactive ? "secondary" : "default"}>{inactive ? "Nonaktif" : "Aktif"}</Badge>
@@ -714,6 +738,28 @@ export default function AdminPackageCosts() {
                          </tr>
                        );
                      })}
+                     {visibleCosts.length > 0 && (() => {
+                       const ac = visibleCosts.filter(c => c.is_active !== false).length;
+                       const tv = totals.actualTotal > 0 ? totals.actualTotal - totals.budgetedTotal : null;
+                       return (
+                         <tr className="bg-muted/30 font-semibold text-sm border-t-2">
+                           <td className="p-2" colSpan={4}>Total ({ac} item aktif)</td>
+                           <td className="p-2 text-right">{fmtIDR(totals.budgetedTotal)}</td>
+                           <td className="p-2 text-right">
+                             {totals.actualTotal > 0
+                               ? <span>{fmtIDR(totals.actualTotal)}{totals.missingActualCount > 0 && <span className="font-normal text-xs text-amber-600 ml-1">({totals.missingActualCount} kosong)</span>}</span>
+                               : <span className="text-muted-foreground font-normal text-xs">Belum ada</span>}
+                           </td>
+                           <td className="p-2 text-right">
+                             {tv != null && <span className={"flex items-center justify-end gap-1 text-xs " + (tv > 0 ? "text-destructive" : "text-emerald-600")}>
+                               {tv > 0 ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                               {tv > 0 ? "+" : ""}{fmtIDR(Math.abs(tv))}
+                             </span>}
+                           </td>
+                           <td colSpan={3}></td>
+                         </tr>
+                       );
+                     })()}
                    </tbody>
                  </table>
                </ResponsiveTable>}

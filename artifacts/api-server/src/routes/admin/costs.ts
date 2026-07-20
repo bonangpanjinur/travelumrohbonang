@@ -252,6 +252,47 @@ router.get("/profitability-overview", async (req, res) => {
 });
 
 // Profitability helper endpoint
+// ── GET /summary?packageId=X — budgeted vs actual vs variance per category
+router.get("/summary", async (req, res) => {
+  try {
+    const { packageId, departureId } = req.query as { packageId?: string; departureId?: string };
+    if (!packageId) return res.status(400).json({ error: "packageId required" });
+
+    const { sql, db } = await import("@workspace/db");
+
+    const getRows = (r: any) => (r as any).rows ?? r;
+
+    const result = await db.execute(sql`
+      SELECT
+        category,
+        SUM(
+          CASE WHEN is_active THEN
+            COALESCE(unit_cost::numeric, 0) * COALESCE(qty::numeric, 1)
+          ELSE 0 END
+        )::numeric AS budgeted_total,
+        SUM(actual_amount::numeric)             AS actual_total,
+        SUM(actual_amount::numeric) - SUM(
+          CASE WHEN is_active THEN
+            COALESCE(unit_cost::numeric, 0) * COALESCE(qty::numeric, 1)
+          ELSE 0 END
+        )                                       AS variance,
+        COUNT(*) FILTER (WHERE actual_amount IS NULL AND is_active) AS missing_actual_count
+      FROM package_costs
+      WHERE package_id = ${packageId}
+        ${departureId && departureId !== "__all__" ? sql`AND (departure_id = ${departureId} OR departure_id IS NULL)` : sql``}
+      GROUP BY category
+      ORDER BY category
+    `);
+
+    const rows = getRows(result);
+    return res.json({ data: rows });
+  } catch (err) {
+    console.error("[costs] summary:", err);
+    return res.status(500).json({ error: "Failed to fetch cost summary" });
+  }
+});
+
+// Profitability helper endpoint
 router.get("/profitability/:packageId", async (req, res) => {
   try {
     const { packageId } = req.params;

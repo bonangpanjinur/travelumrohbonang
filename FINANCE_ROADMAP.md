@@ -17,7 +17,7 @@
 | Fase 1C | Cicilan (Installment) Otomatis | ✅ Selesai |
 | Fase 2 | Keuangan Per Keberangkatan | ✅ Selesai |
 | Fase 3 | Auto-Alert Deadline Lunas | ✅ Selesai |
-| Fase 4 | Biaya Operasional Per Paket | 🔲 Belum |
+| Fase 4 | Biaya Operasional Per Paket | ✅ Selesai |
 | Fase 5 | Reminder Piutang via WA | 🔲 Belum |
 
 ---
