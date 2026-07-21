@@ -852,7 +852,7 @@ router.post("/backfill-pemesan", async (req, res) => {
 router.post("/:id/pilgrims", async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, phone, gender } = req.body;
+    const { name, phone, gender, email, nik, birthDate, nationality, passportNumber, passportExpiry } = req.body;
 
     if (!name || !name.trim()) {
       res.status(400).json({ error: "Nama jamaah wajib diisi" });
@@ -888,8 +888,14 @@ router.post("/:id/pilgrims", async (req, res) => {
         id: crypto.randomUUID(),
         bookingId: id,
         name: name.trim(),
-        phone: phone?.trim() || null,
-        gender: gender || null,
+        phone: phone?.trim()          || null,
+        gender: gender                || null,
+        email: email?.trim()          || null,
+        nik: nik?.trim()              || null,
+        birthDate: birthDate          || null,
+        nationality: nationality?.trim() || null,
+        passportNumber: passportNumber?.trim() || null,
+        passportExpiry: passportExpiry || null,
         createdAt: new Date(),
       }).returning();
 

@@ -5,7 +5,7 @@ import {
   Users, UserCheck, DollarSign, FileDown, Building2, UsersRound,
   PhoneCall, History, ExternalLink, Bed, Calendar, Loader2,
   Plus, Trash2, Save, X, CheckCircle2, XCircle, Trophy, ChevronDown,
-  CreditCard, FileText, Pencil,
+  CreditCard, FileText, Pencil, Search, AlertCircle, Globe,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -97,7 +97,28 @@ interface NewJamaahForm {
   name: string;
   phone: string;
   gender: string;
+  email: string;
+  nik: string;
+  birthDate: string;
+  nationality: string;
+  passportNumber: string;
+  passportExpiry: string;
 }
+
+/** Returns completeness level: 'complete' | 'partial' | 'empty' */
+function getPilgrimCompleteness(p: FullPilgrim): "complete" | "partial" | "empty" {
+  const required = [p.nik, p.passportNumber, p.passportExpiry, p.gender, p.phone];
+  const filled = required.filter(Boolean).length;
+  if (filled === required.length) return "complete";
+  if (filled >= 2) return "partial";
+  return "empty";
+}
+
+const COMPLETENESS_CFG = {
+  complete: { label: "Lengkap",   cls: "text-green-600",  title: "Data lengkap (NIK, paspor, HP, gender terisi)" },
+  partial:  { label: "Sebagian",  cls: "text-amber-500",  title: "Data belum lengkap — klik untuk melengkapi" },
+  empty:    { label: "Minim",     cls: "text-red-500",    title: "Data sangat minim — perlu dilengkapi segera" },
+};
 
 interface NewPaymentForm {
   type: string;
@@ -118,7 +139,10 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
   manual: "Manual",
 };
 
-const emptyNewJamaah = (): NewJamaahForm => ({ name: "", phone: "", gender: "" });
+const emptyNewJamaah = (): NewJamaahForm => ({
+  name: "", phone: "", gender: "", email: "",
+  nik: "", birthDate: "", nationality: "", passportNumber: "", passportExpiry: "",
+});
 const emptyNewPayment = (): NewPaymentForm => ({
   type: "dp",
   amount: "",
@@ -158,6 +182,9 @@ const BookingDetailPanel = ({
   const [newJamaah, setNewJamaah] = useState<NewJamaahForm>(emptyNewJamaah());
   const [savingJamaah, setSavingJamaah] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+
+  // Jamaah search/filter
+  const [jamaahSearch, setJamaahSearch] = useState("");
 
   // Payment form
   const [showAddPayment, setShowAddPayment] = useState(false);
@@ -329,9 +356,15 @@ const BookingDetailPanel = ({
       await apiFetch(`/api/admin/bookings/${bookingId}/pilgrims`, {
         method: "POST",
         body: JSON.stringify({
-          name:   newJamaah.name.trim(),
-          phone:  newJamaah.phone.trim() || null,
-          gender: newJamaah.gender || null,
+          name:           newJamaah.name.trim(),
+          phone:          newJamaah.phone.trim()          || null,
+          gender:         newJamaah.gender                || null,
+          email:          newJamaah.email.trim()          || null,
+          nik:            newJamaah.nik.trim()            || null,
+          birthDate:      newJamaah.birthDate             || null,
+          nationality:    newJamaah.nationality.trim()    || null,
+          passportNumber: newJamaah.passportNumber.trim() || null,
+          passportExpiry: newJamaah.passportExpiry        || null,
         }),
       });
       toast.success(`${newJamaah.name} berhasil ditambahkan`);
@@ -605,23 +638,27 @@ const BookingDetailPanel = ({
             </h4>
             <Button
               size="sm" variant="outline" className="h-7 gap-1.5 text-xs"
-              onClick={() => { setShowAddJamaah(!showAddJamaah); setNewJamaah(emptyNewJamaah()); }}
+              onClick={() => { setShowAddJamaah(!showAddJamaah); setNewJamaah(emptyNewJamaah()); setJamaahSearch(""); }}
             >
               <Plus className="w-3 h-3" /> Tambah
             </Button>
           </div>
 
+          {/* ── Form tambah jamaah lengkap ─────────────────────────────────── */}
           {showAddJamaah && (
             <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-background">
               <p className="text-xs font-semibold text-primary">Jamaah Baru</p>
               <div className="space-y-2">
-                <Input
-                  value={newJamaah.name}
-                  onChange={(e) => setNewJamaah((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="Nama lengkap *"
-                  className="h-7 text-xs"
-                  autoFocus
-                />
+                {/* Row 1: nama + gender */}
+                <div className="grid grid-cols-2 gap-1.5">
+                  <Input
+                    value={newJamaah.name}
+                    onChange={(e) => setNewJamaah((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Nama lengkap *"
+                    className="h-7 text-xs col-span-2"
+                    autoFocus
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-1.5">
                   <Input
                     value={newJamaah.phone}
@@ -638,6 +675,55 @@ const BookingDetailPanel = ({
                     </SelectContent>
                   </Select>
                 </div>
+                {/* Row 2: NIK + tgl lahir */}
+                <div className="grid grid-cols-2 gap-1.5">
+                  <Input
+                    value={newJamaah.nik}
+                    onChange={(e) => setNewJamaah((p) => ({ ...p, nik: e.target.value }))}
+                    placeholder="NIK (16 digit)"
+                    className="h-7 text-xs"
+                    maxLength={16}
+                  />
+                  <Input
+                    value={newJamaah.birthDate}
+                    onChange={(e) => setNewJamaah((p) => ({ ...p, birthDate: e.target.value }))}
+                    placeholder="Tgl Lahir"
+                    className="h-7 text-xs"
+                    type="date"
+                  />
+                </div>
+                {/* Row 3: passport + expiry */}
+                <div className="grid grid-cols-2 gap-1.5">
+                  <Input
+                    value={newJamaah.passportNumber}
+                    onChange={(e) => setNewJamaah((p) => ({ ...p, passportNumber: e.target.value }))}
+                    placeholder="No. Paspor"
+                    className="h-7 text-xs"
+                  />
+                  <Input
+                    value={newJamaah.passportExpiry}
+                    onChange={(e) => setNewJamaah((p) => ({ ...p, passportExpiry: e.target.value }))}
+                    placeholder="Berlaku s/d"
+                    className="h-7 text-xs"
+                    type="date"
+                  />
+                </div>
+                {/* Row 4: email + nationality */}
+                <div className="grid grid-cols-2 gap-1.5">
+                  <Input
+                    value={newJamaah.email}
+                    onChange={(e) => setNewJamaah((p) => ({ ...p, email: e.target.value }))}
+                    placeholder="Email"
+                    className="h-7 text-xs"
+                    type="email"
+                  />
+                  <Input
+                    value={newJamaah.nationality}
+                    onChange={(e) => setNewJamaah((p) => ({ ...p, nationality: e.target.value }))}
+                    placeholder="Kewarganegaraan"
+                    className="h-7 text-xs"
+                  />
+                </div>
                 <div className="flex gap-1.5 justify-end">
                   <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setShowAddJamaah(false)} disabled={savingJamaah}>
                     <X className="w-3 h-3" /> Batal
@@ -651,40 +737,96 @@ const BookingDetailPanel = ({
             </div>
           )}
 
+          {/* ── Search / filter jamaah ──────────────────────────────────────── */}
+          {pilgrims.length > 3 && (
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+              <Input
+                value={jamaahSearch}
+                onChange={(e) => setJamaahSearch(e.target.value)}
+                placeholder="Cari nama / NIK..."
+                className="h-7 text-xs pl-6"
+              />
+              {jamaahSearch && (
+                <button
+                  onClick={() => setJamaahSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── Completeness summary ────────────────────────────────────────── */}
+          {pilgrims.length > 0 && (() => {
+            const incomplete = pilgrims.filter((p) => getPilgrimCompleteness(p) !== "complete");
+            if (incomplete.length === 0) return null;
+            return (
+              <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                <AlertCircle className="w-3 h-3 shrink-0" />
+                <span>{incomplete.length} jemaah belum lengkap datanya — klik nama untuk melengkapi</span>
+              </div>
+            );
+          })()}
+
           {pilgrims.length === 0 ? (
             <p className="text-sm text-muted-foreground">Belum ada data jemaah</p>
-          ) : (
-            <ul className="text-sm space-y-1.5">
-              {pilgrims.map((p, i) => (
-                <li key={p.id} className="flex items-center gap-2 group">
-                  <UserCheck className="w-3 h-3 text-muted-foreground shrink-0" />
-                  <button
-                    onClick={() => setSelectedPilgrim(p)}
-                    className="text-left font-medium hover:text-primary hover:underline transition-colors flex items-center gap-1 flex-1 min-w-0"
-                    title="Klik untuk lihat/edit detail jemaah"
-                  >
-                    <span className="truncate">{i + 1}. {p.name}</span>
-                    <ExternalLink className="w-2.5 h-2.5 opacity-50 shrink-0" />
-                  </button>
-                  {p.gender && (
-                    <span className="text-muted-foreground text-xs shrink-0">
-                      {p.gender === "L" || p.gender?.toLowerCase() === "male" || p.gender === "Laki-laki" ? "L" : "P"}
-                    </span>
-                  )}
-                  <button
-                    onClick={() => handleRemoveJamaah(p.id, p.name)}
-                    disabled={removingId === p.id}
-                    className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 shrink-0"
-                    title="Hapus jamaah ini"
-                  >
-                    {removingId === p.id
-                      ? <Loader2 className="w-3 h-3 animate-spin" />
-                      : <Trash2 className="w-3 h-3" />}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          ) : (() => {
+            const keyword = jamaahSearch.toLowerCase().trim();
+            const filtered = keyword
+              ? pilgrims.filter((p) =>
+                  p.name.toLowerCase().includes(keyword) ||
+                  (p.nik ?? "").toLowerCase().includes(keyword)
+                )
+              : pilgrims;
+            if (filtered.length === 0) {
+              return <p className="text-xs text-muted-foreground text-center py-2">Tidak ditemukan</p>;
+            }
+            return (
+              <ul className="text-sm space-y-1.5">
+                {filtered.map((p, i) => {
+                  const comp = getPilgrimCompleteness(p);
+                  const compCfg = COMPLETENESS_CFG[comp];
+                  return (
+                    <li key={p.id} className="flex items-center gap-2 group">
+                      <UserCheck className="w-3 h-3 text-muted-foreground shrink-0" />
+                      <button
+                        onClick={() => setSelectedPilgrim(p)}
+                        className="text-left font-medium hover:text-primary hover:underline transition-colors flex items-center gap-1 flex-1 min-w-0"
+                        title="Klik untuk lihat/edit detail jemaah"
+                      >
+                        <span className="truncate">{i + 1}. {p.name}</span>
+                        <ExternalLink className="w-2.5 h-2.5 opacity-50 shrink-0" />
+                      </button>
+                      {/* Completeness indicator */}
+                      <span
+                        className={`text-[10px] shrink-0 font-medium ${compCfg.cls}`}
+                        title={compCfg.title}
+                      >
+                        {comp === "complete" ? "✓" : comp === "partial" ? "~" : "!"}
+                      </span>
+                      {p.gender && (
+                        <span className="text-muted-foreground text-xs shrink-0">
+                          {p.gender === "L" || p.gender?.toLowerCase() === "male" || p.gender === "Laki-laki" ? "L" : "P"}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => handleRemoveJamaah(p.id, p.name)}
+                        disabled={removingId === p.id}
+                        className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                        title="Hapus jamaah ini"
+                      >
+                        {removingId === p.id
+                          ? <Loader2 className="w-3 h-3 animate-spin" />
+                          : <Trash2 className="w-3 h-3" />}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            );
+          })()}
         </div>
 
         {/* ── Equipment assignment ──────────────────────────────────────────── */}

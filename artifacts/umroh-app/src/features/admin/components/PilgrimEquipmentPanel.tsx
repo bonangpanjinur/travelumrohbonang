@@ -15,7 +15,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Trash2, Package, CheckCircle2, RotateCcw } from "lucide-react";
+import { Plus, Trash2, Package, CheckCircle2, RotateCcw, Users } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Pilgrim {
@@ -68,6 +68,7 @@ const PilgrimEquipmentPanel = ({ bookingId, pilgrims }: PilgrimEquipmentPanelPro
   const qc = useQueryClient();
   const [newPilgrimId, setNewPilgrimId] = useState("");
   const [newEquipmentId, setNewEquipmentId] = useState("");
+  const [bulkEquipmentId, setBulkEquipmentId] = useState("");
 
   // Fetch all assignments for this booking
   const { data: assignData, isLoading } = useQuery({
@@ -117,8 +118,31 @@ const PilgrimEquipmentPanel = ({ bookingId, pilgrims }: PilgrimEquipmentPanelPro
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
       apiFetch(`/api/admin/pilgrim-equipment/${id}`, { method: "DELETE" }),
-    onSuccess: () => { toast({ title: "Ditetapan dihapus" }); invalidate(); },
+    onSuccess: () => { toast({ title: "Penetapan dihapus" }); invalidate(); },
     onError: (e: any) => toast({ title: "Gagal hapus", description: e?.message, variant: "destructive" }),
+  });
+
+  const bulkAssignMutation = useMutation({
+    mutationFn: (equipmentId: string) =>
+      apiFetch("/api/admin/pilgrim-equipment/bulk-assign", {
+        method: "POST",
+        body: JSON.stringify({
+          assignments: pilgrims.map((p) => ({
+            pilgrimId: p.id,
+            equipmentId,
+            bookingId,
+          })),
+        }),
+      }),
+    onSuccess: (res: any) => {
+      toast({
+        title: `Berhasil: ${res.inserted} jemaah`,
+        description: res.skipped ? `${res.skipped} sudah ada, dilewati` : undefined,
+      });
+      setBulkEquipmentId("");
+      invalidate();
+    },
+    onError: (e: any) => toast({ title: "Gagal bulk assign", description: e?.message, variant: "destructive" }),
   });
 
   const canAdd = newPilgrimId && newEquipmentId;
@@ -131,10 +155,11 @@ const PilgrimEquipmentPanel = ({ bookingId, pilgrims }: PilgrimEquipmentPanelPro
         <Badge variant="outline" className="text-xs">{assignments.length} item</Badge>
       </div>
 
-      {/* Add new assignment */}
-      <div className="flex flex-wrap gap-2 mb-4 p-3 border rounded-lg bg-muted/30">
+      {/* Add new assignment — per jemaah */}
+      <div className="flex flex-wrap gap-2 mb-2 p-3 border rounded-lg bg-muted/30">
+        <p className="w-full text-xs font-medium text-muted-foreground mb-1">Tambah per jemaah</p>
         <Select value={newPilgrimId} onValueChange={setNewPilgrimId}>
-          <SelectTrigger className="w-[200px] h-8 text-sm">
+          <SelectTrigger className="w-[180px] h-8 text-sm">
             <SelectValue placeholder="Pilih jemaah" />
           </SelectTrigger>
           <SelectContent>
@@ -144,7 +169,7 @@ const PilgrimEquipmentPanel = ({ bookingId, pilgrims }: PilgrimEquipmentPanelPro
           </SelectContent>
         </Select>
         <Select value={newEquipmentId} onValueChange={setNewEquipmentId}>
-          <SelectTrigger className="w-[200px] h-8 text-sm">
+          <SelectTrigger className="w-[180px] h-8 text-sm">
             <SelectValue placeholder="Pilih perlengkapan" />
           </SelectTrigger>
           <SelectContent>
@@ -164,6 +189,38 @@ const PilgrimEquipmentPanel = ({ bookingId, pilgrims }: PilgrimEquipmentPanelPro
           <Plus className="w-3 h-3 mr-1" /> Tambah
         </Button>
       </div>
+
+      {/* Bulk assign — satu item ke SEMUA jemaah */}
+      {pilgrims.length > 1 && (
+        <div className="flex flex-wrap gap-2 mb-4 p-3 border border-primary/20 rounded-lg bg-primary/5">
+          <p className="w-full text-xs font-medium text-primary mb-1 flex items-center gap-1.5">
+            <Users className="w-3 h-3" /> Assign ke semua {pilgrims.length} jemaah sekaligus
+          </p>
+          <Select value={bulkEquipmentId} onValueChange={setBulkEquipmentId}>
+            <SelectTrigger className="w-[220px] h-8 text-sm">
+              <SelectValue placeholder="Pilih perlengkapan" />
+            </SelectTrigger>
+            <SelectContent>
+              {equipmentList.map((e) => (
+                <SelectItem key={e.id} value={e.id}>
+                  {e.name}{e.category ? ` (${e.category})` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            disabled={!bulkEquipmentId || bulkAssignMutation.isPending}
+            onClick={() => bulkAssignMutation.mutate(bulkEquipmentId)}
+            className="h-8"
+          >
+            {bulkAssignMutation.isPending
+              ? <span className="w-3 h-3 mr-1 border-2 border-current border-t-transparent rounded-full animate-spin inline-block" />
+              : <Users className="w-3 h-3 mr-1" />}
+            Assign Semua
+          </Button>
+        </div>
+      )}
 
       {/* Assignments table */}
       {isLoading ? (
