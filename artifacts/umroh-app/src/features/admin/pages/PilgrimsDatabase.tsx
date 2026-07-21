@@ -16,22 +16,22 @@ import { exportToCsv } from "@/shared/lib/exportCsv";
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PilgrimRow {
   id: string;
-  booking_id: string;
+  bookingId: string;
   name: string;
   phone: string | null;
   email: string | null;
   gender: string | null;
   nik: string | null;
-  birth_date: string | null;
+  birthDate: string | null;
   nationality: string | null;
-  passport_number: string | null;
-  passport_expiry: string | null;
-  room_type: string | null;
-  created_at: string | null;
-  booking_code: string;
-  booking_status: string | null;
-  package_title: string | null;
-  departure_date: string | null;
+  passportNumber: string | null;
+  passportExpiry: string | null;
+  roomType: string | null;
+  createdAt: string | null;
+  bookingCode: string;
+  bookingStatus: string | null;
+  packageTitle: string | null;
+  departureDate: string | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -99,16 +99,16 @@ const AdminPilgrimsDatabase = () => {
       p.name,
       genderLabel(p.gender),
       p.nik ?? "-",
-      p.passport_number ?? "-",
-      fmtDate(p.passport_expiry),
-      fmtDate(p.birth_date),
+      p.passportNumber ?? "-",
+      fmtDate(p.passportExpiry),
+      fmtDate(p.birthDate),
       p.nationality ?? "-",
       p.phone ?? "-",
-      p.booking_code,
-      p.booking_status ?? "-",
-      p.package_title ?? "-",
-      fmtDate(p.departure_date),
-      p.room_type ?? "-",
+      p.bookingCode,
+      p.bookingStatus ?? "-",
+      p.packageTitle ?? "-",
+      fmtDate(p.departureDate),
+      p.roomType ?? "-",
     ]);
     exportToCsv("database-jemaah", headers, rows);
   };
@@ -180,30 +180,30 @@ const AdminPilgrimsDatabase = () => {
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell>{genderLabel(p.gender)}</TableCell>
                   <TableCell className="font-mono text-xs">{p.nik ?? "-"}</TableCell>
-                  <TableCell className="font-mono text-sm">{p.passport_number ?? "-"}</TableCell>
-                  <TableCell className="text-sm">{fmtDate(p.passport_expiry)}</TableCell>
+                  <TableCell className="font-mono text-sm">{p.passportNumber ?? "-"}</TableCell>
+                  <TableCell className="text-sm">{fmtDate(p.passportExpiry)}</TableCell>
                   <TableCell className="text-sm">{p.phone ?? "-"}</TableCell>
                   <TableCell>
                     <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
-                      {p.booking_code}
+                      {p.bookingCode}
                     </span>
                   </TableCell>
                   <TableCell>
-                    {p.booking_status ? (
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border capitalize ${STATUS_COLORS[p.booking_status] ?? "bg-muted text-muted-foreground"}`}>
-                        {p.booking_status}
+                    {p.bookingStatus ? (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border capitalize ${STATUS_COLORS[p.bookingStatus] ?? "bg-muted text-muted-foreground"}`}>
+                        {p.bookingStatus}
                       </span>
                     ) : "-"}
                   </TableCell>
                   <TableCell className="text-sm max-w-[160px] truncate">
-                    {p.package_title ?? "-"}
+                    {p.packageTitle ?? "-"}
                   </TableCell>
                   <TableCell className="text-sm whitespace-nowrap">
-                    {fmtDate(p.departure_date)}
+                    {fmtDate(p.departureDate)}
                   </TableCell>
                   <TableCell>
-                    {p.room_type ? (
-                      <Badge variant="outline" className="text-xs capitalize">{p.room_type}</Badge>
+                    {p.roomType ? (
+                      <Badge variant="outline" className="text-xs capitalize">{p.roomType}</Badge>
                     ) : "-"}
                   </TableCell>
                 </TableRow>

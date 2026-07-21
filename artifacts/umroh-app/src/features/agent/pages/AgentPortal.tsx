@@ -465,7 +465,7 @@ const AgentPortal = () => {
                         const commission = Number(b.commission) || 0;
                         return (
                           <TableRow key={b.id}>
-                            <TableCell className="font-mono text-xs">{b.bookingCode ?? b.booking_code}</TableCell>
+                            <TableCell className="font-mono text-xs">{b.bookingCode}</TableCell>
                             <TableCell className="text-sm">{b.packageTitle ?? b.packages?.title ?? "-"}</TableCell>
                             <TableCell className="text-sm">
                               {format(new Date(b.createdAt ?? b.created_at), "dd MMM yyyy", { locale: localeId })}

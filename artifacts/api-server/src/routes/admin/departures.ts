@@ -103,23 +103,23 @@ router.get("/", async (req, res) => {
       pricesByDeparture.set(price.departureId, list);
     }
 
-    // Shape the response to match the snake_case + nested format the frontend expects.
+    // Return camelCase — matches Drizzle default and frontend interface.
     const departuresWithPrices = data.map((dep: any) => {
       const filled = filledCountMap.get(dep.id) ?? 0;
       const realRemainingQuota = Math.max(0, (dep.quota ?? 0) - filled);
       return {
         id: dep.id,
-        package_id: dep.packageId,
-        departure_date: dep.departureDate,
-        return_date: dep.returnDate ?? null,
+        packageId: dep.packageId,
+        departureDate: dep.departureDate,
+        returnDate: dep.returnDate ?? null,
         quota: dep.quota,
-        remaining_quota: realRemainingQuota,
+        remainingQuota: realRemainingQuota,
         status: dep.status,
-        muthawif_id: dep.muthawifId ?? null,
+        muthawifId: dep.muthawifId ?? null,
         package: dep.packageTitle ? { id: dep.packageId, title: dep.packageTitle } : null,
         prices: (pricesByDeparture.get(dep.id) ?? []).map((p) => ({
           id: p.id,
-          room_type: p.roomType,
+          roomType: p.roomType,
           price: Number(p.price),
         })),
       };

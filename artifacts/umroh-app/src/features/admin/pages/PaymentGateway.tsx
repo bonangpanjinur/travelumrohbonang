@@ -444,7 +444,7 @@ const PaymentGateway = () => {
                 <SelectContent>
                   {bookings.map((b: any) => (
                     <SelectItem key={b.id} value={b.id}>
-                      {b.bookingCode ?? b.booking_code} - Rp {Number(b.totalPrice ?? b.total_price ?? 0).toLocaleString("id-ID")}
+                      {b.bookingCode} - Rp {Number(b.totalPrice ?? 0).toLocaleString("id-ID")}
                     </SelectItem>
                   ))}
                 </SelectContent>

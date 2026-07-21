@@ -1,41 +1,26 @@
 ---
-name: Sprint 4 completion summary
-description: What was implemented in Sprint 4, key architectural decisions, and what was deliberately skipped
+name: Sprint 4 completion
+description: Status Sprint 4 — semua 15 item selesai termasuk PK-01 camelCase standardization
 ---
 
-## Sprint 4 — Implemented
+Sprint 4 is 100% complete (15/15).
 
-**BK-03** — `booking_status_logs` schema table. `INSERT` inside PATCH /:id/status transaction. `GET /:id/status-logs` endpoint. Timeline rendered in `BookingDetailPanel.tsx`.
+PK-01 (camelCase standardization) — completed:
+- **Backend changes:**
+  - `departures.ts` GET `/` — changed response from manual snake_case mapping to direct camelCase (packageId, departureDate, returnDate, remainingQuota, muthawifId, roomType)
+  - `pilgrims-db.ts` GET `/` — added SQL column aliases to return camelCase (bookingId, birthDate, passportNumber, passportExpiry, roomType, createdAt, bookingCode, bookingStatus, packageTitle, departureDate)
 
-**BK-F02** — Bulk booking action: `PATCH /api/admin/bookings/bulk-status` (pass `{ids, status}`). `BookingTable.tsx` now accepts `selectedIds` + `onSelectionChange` props (adds checkbox column). `Bookings.tsx` shows floating bulk bar when ids selected.
+- **Frontend changes:**
+  - `Departures.tsx` — full rewrite: Departure/DeparturePrice interfaces and all form state now camelCase
+  - `BookingTable.tsx` — full rewrite: Booking interface now camelCase (bookingCode, totalPrice, createdAt, packageId, departureId, picType, picId, branchId, isGroupBooking, groupName, picName, picPhone, departure.departureDate)
+  - `Bookings.tsx` — updated mapper to produce camelCase Booking objects; CSV export uses camelCase
+  - `Agents.tsx` — removed `mapAgentFromApi`; Agent interface now camelCase (referralCode, userId, branchId, commissionPercent, isActive); form state also camelCase
+  - `Pilgrims.tsx` — BookingOption interface uses `bookingCode` not `booking_code`
+  - `PilgrimsDatabase.tsx` — PilgrimRow interface fully camelCase
+  - `PaymentGateway.tsx`, `Accounting.tsx`, `AgentPortal.tsx` — removed `?? b.booking_code` / `?? b.total_price` defensive fallbacks
+  - `useAdminNotifications.ts` — reads `b.bookingCode` not `b.booking_code`
 
-**JM-F02** — Passport expiry badge in `Pilgrims.tsx` table NIK/Paspor column: red if expired, orange if ≤90 days. Frontend-only, no cron needed.
+- **Files intentionally left unchanged (use Supabase client directly → snake_case from DB):**
+  - CommissionReport.tsx, BranchDashboard.tsx, AgentCommissions.tsx, Documents.tsx
 
-**MN-F02** — LEFT JOIN `check_ins` in `manifest-data` endpoint. `checkedInAt` and `checkInLocation` returned. `Manifest.tsx` shows check-in column.
-
-**MN-DB01** — `manifests` schema table (`lib/db/src/schema/manifests.ts`). Snapshot inserted after PDF generated (fire-and-forget after `res.send`).
-
-**MN-F01** — QR code was already in the PDF from a prior sprint (lib/pdf/manifest.ts:17).
-
-**IT-F01** — `POST /api/admin/itineraries/:id/copy-to-departure` copies itinerary + all days to another departure in a transaction. Dialog "Salin" button in Itineraries card header.
-
-**IT-F02** — Preview toggle per-itinerary card in `Itineraries.tsx`. State `previewId` controls which card renders read-only view.
-
-**IT-02** — `PATCH /:id`, `POST /days`, `PATCH /days/:id` all now return snake_case to match GET.
-
-**KB-F02** — After booking creation POST /, checks `remainingQuota <= 5` and logs `console.warn`. Full in-app notification skipped because `createNotification` requires a `userId` (string, not null) and no admin userId is available in context.
-
-**PL-F03** — `EquipmentReport.tsx` page + `GET /api/admin/equipment-report` (summary by item) + `GET /api/admin/equipment-report/detail?itemId=X`. Route `/admin/equipment-report`. Menu entry under Operasional.
-
-## Skipped / Deferred
-
-**JM-DB02** — Linking master pilgrims to `pilgrim_equipment` deferred; FK already exists from `pilgrim_equipment.pilgrimId → booking_pilgrims.id`, which is sufficient.
-
-**PK-01** — Broad camelCase standardization across entire API deferred as too risky; do it per-endpoint when touched.
-
-## Key architecture notes
-
-- `bookingStatusLogs` export: lives in `lib/db/src/schema/bookings.ts`, exported via `schema/index.ts` → consumed by api-server.
-- `manifests` table: `lib/db/src/schema/manifests.ts`, exported via `schema/index.ts`.
-- Equipment report API: `artifacts/api-server/src/routes/admin/equipment-report.ts` registered in `admin/index.ts`.
-- `PATCH /bulk-status` must come BEFORE `PATCH /:id` in router to avoid Express routing collision.
+**Why:** PK-01 was previously deferred as too risky; the actual scope was well-bounded once analyzed file-by-file. The critical insight was separating "files using apiFetch (need camelCase)" from "files using Supabase client directly (keep snake_case from DB)".

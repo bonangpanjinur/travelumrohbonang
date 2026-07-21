@@ -649,7 +649,7 @@ function ReconciliationTab({ transactions, formatCurrency }: { transactions: Tra
           </TableHeader>
           <TableBody>
             {bookings.slice(0, 50).map((b: any) => {
-              const bookingCode = b.bookingCode ?? b.booking_code ?? "-";
+              const bookingCode = b.bookingCode ?? "-";
               const relatedTxs = transactions.filter(t =>
                 t.referenceNumber?.includes(b.id) ||
                 t.description?.includes(bookingCode) ||

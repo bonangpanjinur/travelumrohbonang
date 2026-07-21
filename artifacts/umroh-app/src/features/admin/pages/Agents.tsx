@@ -23,33 +23,12 @@ interface Agent {
   name: string;
   phone: string | null;
   email: string | null;
-  referral_code: string | null;
-  user_id: string | null;
-  branch_id: string | null;
-  commission_percent: number | null;
-  is_active: boolean;
+  referralCode: string | null;
+  userId: string | null;
+  branchId: string | null;
+  commissionPercent: number | null;
+  isActive: boolean;
   branch?: { name: string } | null;
-}
-
-// API returns Drizzle camelCase; map to the snake_case interface used by JSX.
-function mapAgentFromApi(a: any): Agent {
-  return {
-    id: a.id,
-    name: a.name,
-    phone: a.phone ?? null,
-    email: a.email ?? null,
-    referral_code: a.referralCode ?? a.referral_code ?? null,
-    user_id: a.userId ?? a.user_id ?? null,
-    branch_id: a.branchId ?? a.branch_id ?? null,
-    // numeric Drizzle type is returned as string from Postgres
-    commission_percent:
-      a.commissionPercent != null
-        ? Number(a.commissionPercent)
-        : a.commission_percent != null
-          ? Number(a.commission_percent)
-          : null,
-    is_active: a.isActive ?? a.is_active ?? true,
-  };
 }
 
 interface Branch {
@@ -72,10 +51,10 @@ const AdminAgents = () => {
     name: "",
     phone: "",
     email: "",
-    referral_code: "",
-    branch_id: "",
-    commission_percent: 0,
-    is_active: true,
+    referralCode: "",
+    branchId: "",
+    commissionPercent: 0,
+    isActive: true,
   });
 
   useEffect(() => {
@@ -89,7 +68,10 @@ const AdminAgents = () => {
         apiFetch<Branch[]>("/api/admin/branches"),
       ]);
       
-      setAgents((agentsRes || []).map(mapAgentFromApi));
+      setAgents((agentsRes || []).map((a: any) => ({
+        ...a,
+        commissionPercent: a.commissionPercent != null ? Number(a.commissionPercent) : null,
+      })));
       setBranches(branchesRes || []);
     } catch (e) {
       console.error(e);
@@ -102,15 +84,14 @@ const AdminAgents = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Use camelCase keys — Drizzle's insert/update expects the schema field names
     const payload: any = {
       name: form.name,
       phone: form.phone || null,
       email: form.email || null,
-      referralCode: form.referral_code || null,
-      branchId: form.branch_id || null,
-      commissionPercent: form.commission_percent || 0,
-      isActive: form.is_active,
+      referralCode: form.referralCode || null,
+      branchId: form.branchId || null,
+      commissionPercent: form.commissionPercent || 0,
+      isActive: form.isActive,
     };
 
     // Try to find a user account by email and link it
@@ -152,10 +133,10 @@ const AdminAgents = () => {
       name: agent.name,
       phone: agent.phone || "",
       email: agent.email || "",
-      referral_code: agent.referral_code || "",
-      branch_id: agent.branch_id || "",
-      commission_percent: agent.commission_percent || 0,
-      is_active: agent.is_active,
+      referralCode: agent.referralCode || "",
+      branchId: agent.branchId || "",
+      commissionPercent: agent.commissionPercent || 0,
+      isActive: agent.isActive,
     });
     setIsOpen(true);
   };
@@ -174,7 +155,7 @@ const AdminAgents = () => {
     try {
       await apiFetch(`/api/admin/agents/${agent.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ isActive: !agent.is_active }),
+        body: JSON.stringify({ isActive: !agent.isActive }),
       });
       fetchData();
     } catch (e) {
@@ -188,10 +169,10 @@ const AdminAgents = () => {
       name: "",
       phone: "",
       email: "",
-      referral_code: "",
-      branch_id: "",
-      commission_percent: 0,
-      is_active: true,
+      referralCode: "",
+      branchId: "",
+      commissionPercent: 0,
+      isActive: true,
     });
   };
 
@@ -203,7 +184,7 @@ const AdminAgents = () => {
       agent.name.toLowerCase().includes(term) ||
       (agent.phone?.toLowerCase().includes(term)) ||
       (normalizedTerm && agentPhoneNorm.includes(normalizedTerm));
-    const matchBranch = filterBranch === "all" || agent.branch_id === filterBranch;
+    const matchBranch = filterBranch === "all" || agent.branchId === filterBranch;
     return matchSearch && matchBranch;
   });
 
@@ -211,8 +192,8 @@ const AdminAgents = () => {
 
   useEffect(() => { resetPage(); }, [searchTerm, filterBranch]);
 
-  const activeCount = agents.filter(a => a.is_active).length;
-  const totalCommission = agents.reduce((sum, a) => sum + (a.commission_percent || 0), 0);
+  const activeCount = agents.filter(a => a.isActive).length;
+  const totalCommission = agents.reduce((sum, a) => sum + (a.commissionPercent || 0), 0);
   const avgCommission = agents.length > 0 ? (totalCommission / agents.length).toFixed(1) : 0;
 
   return (
@@ -272,8 +253,8 @@ const AdminAgents = () => {
               <div>
                 <Label>Kode Referral</Label>
                 <Input
-                  value={form.referral_code}
-                  onChange={(e) => setForm({ ...form, referral_code: e.target.value.toUpperCase().replace(/\s/g, "") })}
+                  value={form.referralCode}
+                  onChange={(e) => setForm({ ...form, referralCode: e.target.value.toUpperCase().replace(/\s/g, "") })}
                   placeholder="AGEN001"
                   className="mt-1 font-mono"
                 />
@@ -281,8 +262,8 @@ const AdminAgents = () => {
               <div>
                 <Label>Cabang</Label>
                 <Select 
-                  value={form.branch_id || "none"} 
-                  onValueChange={(value) => setForm({ ...form, branch_id: value === "none" ? "" : value })}
+                  value={form.branchId || "none"} 
+                  onValueChange={(value) => setForm({ ...form, branchId: value === "none" ? "" : value })}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Pilih cabang (opsional)" />
@@ -305,8 +286,8 @@ const AdminAgents = () => {
                   min="0"
                   max="100"
                   step="0.5"
-                  value={form.commission_percent} 
-                  onChange={(e) => setForm({ ...form, commission_percent: parseFloat(e.target.value) || 0 })} 
+                  value={form.commissionPercent} 
+                  onChange={(e) => setForm({ ...form, commissionPercent: parseFloat(e.target.value) || 0 })} 
                   placeholder="Persentase komisi"
                   className="mt-1" 
                 />
@@ -315,8 +296,8 @@ const AdminAgents = () => {
               <div className="flex items-center justify-between">
                 <Label>Status Aktif</Label>
                 <Switch
-                  checked={form.is_active}
-                  onCheckedChange={(checked) => setForm({ ...form, is_active: checked })}
+                  checked={form.isActive}
+                  onCheckedChange={(checked) => setForm({ ...form, isActive: checked })}
                 />
               </div>
               
@@ -372,7 +353,7 @@ const AdminAgents = () => {
           const headers = ["Nama", "Telepon", "Cabang", "Komisi (%)", "Status"];
           const rows = filteredAgents.map(a => [
             a.name, a.phone || "-", a.branch?.name || "-",
-            String(a.commission_percent || 0), a.is_active ? "Aktif" : "Nonaktif"
+            String(a.commissionPercent || 0), a.isActive ? "Aktif" : "Nonaktif"
           ]);
           exportToCsv("agents", headers, rows);
         }}>
@@ -463,12 +444,12 @@ const AdminAgents = () => {
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="secondary" className="font-semibold">
-                        {agent.commission_percent || 0}%
+                        {agent.commissionPercent || 0}%
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       <Switch
-                        checked={agent.is_active}
+                        checked={agent.isActive}
                         onCheckedChange={() => handleToggleActive(agent)}
                       />
                     </TableCell>

@@ -38,23 +38,23 @@ router.get("/", async (req, res) => {
     const rows = await db.execute<Record<string, any>>(sql`
       SELECT
         bp.id,
-        bp.booking_id,
-        bp.pilgrim_id,
+        bp.booking_id       AS "bookingId",
+        bp.pilgrim_id       AS "pilgrimId",
         bp.name,
         bp.phone,
         bp.email,
         bp.gender,
         bp.nik,
-        bp.birth_date,
+        bp.birth_date       AS "birthDate",
         bp.nationality,
-        bp.passport_number,
-        bp.passport_expiry,
-        bp.room_type,
-        bp.created_at,
-        b.booking_code,
-        b.status        AS booking_status,
-        pkg.title       AS package_title,
-        pd.departure_date
+        bp.passport_number  AS "passportNumber",
+        bp.passport_expiry  AS "passportExpiry",
+        bp.room_type        AS "roomType",
+        bp.created_at       AS "createdAt",
+        b.booking_code      AS "bookingCode",
+        b.status            AS "bookingStatus",
+        pkg.title           AS "packageTitle",
+        pd.departure_date   AS "departureDate"
       FROM booking_pilgrims bp
       JOIN bookings b ON b.id = bp.booking_id
       LEFT JOIN packages pkg ON pkg.id = b.package_id

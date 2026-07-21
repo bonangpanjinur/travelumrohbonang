@@ -89,7 +89,7 @@ interface Pilgrim {
 
 interface BookingOption {
   id: string;
-  booking_code: string;
+  bookingCode: string;
   package_title: string;
 }
 
@@ -174,7 +174,7 @@ const AdminPilgrims = () => {
         setBookings(
           (result?.data || []).map((b: any) => ({
             id: b.id,
-            booking_code: b.bookingCode,
+            bookingCode: b.bookingCode,
             package_title: b.packageTitle || "-",
           }))
         );
@@ -840,11 +840,11 @@ const AdminPilgrims = () => {
                           type="button"
                           onClick={() => {
                             field("booking_id", b.id);
-                            setBookingSearch(b.booking_code);
+                            setBookingSearch(b.bookingCode);
                           }}
                           className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted flex items-center justify-between gap-2 border-b last:border-0"
                         >
-                          <span className="font-mono font-semibold">{b.booking_code}</span>
+                          <span className="font-mono font-semibold">{b.bookingCode}</span>
                           <span className="text-muted-foreground truncate">{b.package_title}</span>
                         </button>
                       ))

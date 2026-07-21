@@ -23,16 +23,16 @@ import { useDeleteConfirm } from "@/features/admin/hooks/useDeleteConfirm";
 
 interface Package { id: string; title: string }
 interface Muthawif { id: string; name: string }
-interface DeparturePrice { id: string; room_type: string; price: number }
+interface DeparturePrice { id: string; roomType: string; price: number }
 interface Departure {
   id: string;
-  package_id: string;
-  departure_date: string;
-  return_date: string | null;
+  packageId: string;
+  departureDate: string;
+  returnDate: string | null;
   quota: number;
-  remaining_quota: number;
+  remainingQuota: number;
   status: string;
-  muthawif_id: string | null;
+  muthawifId: string | null;
   package: Package | null;
   prices: DeparturePrice[];
 }
@@ -54,11 +54,11 @@ const formatPrice = (price: number) =>
 
 /** Filter prices: valid room type and price > 0 */
 const validPrices = (prices: DeparturePrice[]) =>
-  prices.filter((p) => ROOM_TYPES.includes(p.room_type) && p.price > 0);
+  prices.filter((p) => ROOM_TYPES.includes(p.roomType) && p.price > 0);
 
 const StatusBadge = ({ dep }: { dep: Departure }) => {
-  const isFull = dep.remaining_quota === 0 || dep.status === "penuh";
-  const isAlmostFull = !isFull && dep.quota > 0 && dep.remaining_quota / dep.quota <= 0.2;
+  const isFull = dep.remainingQuota === 0 || dep.status === "penuh";
+  const isAlmostFull = !isFull && dep.quota > 0 && dep.remainingQuota / dep.quota <= 0.2;
   const isClosed = dep.status === "closed";
 
   if (isFull) return (
@@ -88,10 +88,10 @@ const StatusBadge = ({ dep }: { dep: Departure }) => {
 };
 
 const QuotaBar = ({ dep }: { dep: Departure }) => {
-  const pct = quotaPercent(dep.remaining_quota, dep.quota);
-  const booked = dep.quota - dep.remaining_quota;
-  const isFull = dep.remaining_quota === 0;
-  const isAlmostFull = !isFull && dep.quota > 0 && dep.remaining_quota / dep.quota <= 0.2;
+  const pct = quotaPercent(dep.remainingQuota, dep.quota);
+  const booked = dep.quota - dep.remainingQuota;
+  const isFull = dep.remainingQuota === 0;
+  const isAlmostFull = !isFull && dep.quota > 0 && dep.remainingQuota / dep.quota <= 0.2;
   const barColor = isFull ? "bg-red-500" : isAlmostFull ? "bg-amber-400" : "bg-emerald-500";
 
   return (
@@ -109,7 +109,7 @@ const QuotaBar = ({ dep }: { dep: Departure }) => {
         <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
       </div>
       <p className="text-xs text-muted-foreground">
-        {dep.remaining_quota > 0 ? `Sisa ${dep.remaining_quota} kursi` : "Semua kursi terisi"}
+        {dep.remainingQuota > 0 ? `Sisa ${dep.remainingQuota} kursi` : "Semua kursi terisi"}
       </p>
     </div>
   );
@@ -129,11 +129,11 @@ const AdminDepartures = () => {
   const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
 
   const [form, setForm] = useState<{
-    package_id: string; departure_date: string; return_date: string;
-    quota: number; status: string; muthawif_id: string; prices: Record<string, number>;
+    packageId: string; departureDate: string; returnDate: string;
+    quota: number; status: string; muthawifId: string; prices: Record<string, number>;
   }>({
-    package_id: "", departure_date: "", return_date: "",
-    quota: 45, status: "active", muthawif_id: "",
+    packageId: "", departureDate: "", returnDate: "",
+    quota: 45, status: "active", muthawifId: "",
     prices: Object.fromEntries(ROOM_TYPES.map((t) => [t, 0])),
   });
 
@@ -158,7 +158,7 @@ const AdminDepartures = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.return_date && form.departure_date && new Date(form.return_date) <= new Date(form.departure_date)) {
+    if (form.returnDate && form.departureDate && new Date(form.returnDate) <= new Date(form.departureDate)) {
       toast({ title: "Tanggal pulang tidak valid", description: "Tanggal pulang harus setelah tanggal berangkat.", variant: "destructive" });
       return;
     }
@@ -181,8 +181,16 @@ const AdminDepartures = () => {
   const handleEdit = (dep: Departure) => {
     setEditing(dep);
     const priceMap: Record<string, number> = Object.fromEntries(ROOM_TYPES.map((t) => [t, 0]));
-    (dep.prices ?? []).forEach((p) => { if (ROOM_TYPES.includes(p.room_type)) priceMap[p.room_type] = p.price; });
-    setForm({ package_id: dep.package_id, departure_date: dep.departure_date, return_date: dep.return_date || "", quota: dep.quota, status: dep.status || "active", muthawif_id: dep.muthawif_id || "", prices: priceMap });
+    (dep.prices ?? []).forEach((p) => { if (ROOM_TYPES.includes(p.roomType)) priceMap[p.roomType] = p.price; });
+    setForm({
+      packageId: dep.packageId,
+      departureDate: dep.departureDate,
+      returnDate: dep.returnDate || "",
+      quota: dep.quota,
+      status: dep.status || "active",
+      muthawifId: dep.muthawifId || "",
+      prices: priceMap,
+    });
     setIsOpen(true);
   };
 
@@ -198,7 +206,11 @@ const AdminDepartures = () => {
 
   const resetForm = () => {
     setEditing(null);
-    setForm({ package_id: "", departure_date: "", return_date: "", quota: 45, status: "active", muthawif_id: "", prices: Object.fromEntries(ROOM_TYPES.map((t) => [t, 0])) });
+    setForm({
+      packageId: "", departureDate: "", returnDate: "",
+      quota: 45, status: "active", muthawifId: "",
+      prices: Object.fromEntries(ROOM_TYPES.map((t) => [t, 0])),
+    });
   };
 
   const filteredDepartures = departures.filter((d) =>
@@ -244,7 +256,7 @@ const AdminDepartures = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label>Paket *</Label>
-                  <Select value={form.package_id} onValueChange={(val) => setForm({ ...form, package_id: val })}>
+                  <Select value={form.packageId} onValueChange={(val) => setForm({ ...form, packageId: val })}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih paket" /></SelectTrigger>
                     <SelectContent>
                       {packages.map((pkg) => (<SelectItem key={pkg.id} value={pkg.id}>{pkg.title}</SelectItem>))}
@@ -254,11 +266,11 @@ const AdminDepartures = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Tanggal Berangkat *</Label>
-                    <Input type="date" value={form.departure_date} onChange={(e) => setForm({ ...form, departure_date: e.target.value })} required className="mt-1" />
+                    <Input type="date" value={form.departureDate} onChange={(e) => setForm({ ...form, departureDate: e.target.value })} required className="mt-1" />
                   </div>
                   <div>
                     <Label>Tanggal Pulang</Label>
-                    <Input type="date" value={form.return_date} min={form.departure_date || undefined} onChange={(e) => setForm({ ...form, return_date: e.target.value })} className="mt-1" />
+                    <Input type="date" value={form.returnDate} min={form.departureDate || undefined} onChange={(e) => setForm({ ...form, returnDate: e.target.value })} className="mt-1" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -280,7 +292,7 @@ const AdminDepartures = () => {
                 </div>
                 <div>
                   <Label>Muthawif</Label>
-                  <Select value={form.muthawif_id} onValueChange={(val) => setForm({ ...form, muthawif_id: val })}>
+                  <Select value={form.muthawifId} onValueChange={(val) => setForm({ ...form, muthawifId: val })}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih muthawif (opsional)" /></SelectTrigger>
                     <SelectContent>
                       {muthawifs.map((m) => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
@@ -356,11 +368,11 @@ const AdminDepartures = () => {
                         </p>
                         <div className="flex items-center gap-1.5 mt-1.5 text-muted-foreground text-xs">
                           <Calendar className="w-3.5 h-3.5 shrink-0" />
-                          <span>{safeFormatDate(dep.departure_date, "d MMM yyyy")}</span>
-                          {dep.return_date && (
+                          <span>{safeFormatDate(dep.departureDate, "d MMM yyyy")}</span>
+                          {dep.returnDate && (
                             <>
                               <ArrowRight className="w-3 h-3 shrink-0" />
-                              <span>{safeFormatDate(dep.return_date, "d MMM yyyy")}</span>
+                              <span>{safeFormatDate(dep.returnDate, "d MMM yyyy")}</span>
                             </>
                           )}
                         </div>
@@ -383,7 +395,7 @@ const AdminDepartures = () => {
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                           {prices.map((p) => (
                             <div key={p.id} className="flex items-baseline justify-between text-xs">
-                              <span className="text-muted-foreground">{ROOM_LABELS[p.room_type] ?? p.room_type}</span>
+                              <span className="text-muted-foreground">{ROOM_LABELS[p.roomType] ?? p.roomType}</span>
                               <span className="font-medium tabular-nums">{formatPrice(p.price)}</span>
                             </div>
                           ))}
@@ -428,7 +440,7 @@ const AdminDepartures = () => {
                         title="Sinkronkan Quota (perbaiki hitungan kuota dari data booking aktual)"
                         onClick={async () => {
                           try {
-                            const result = await apiFetch(`/api/admin/departures/${dep.id}/sync-quota`, { method: "POST" });
+                            const result = await apiFetch<{ filled: number; remaining: number }>(`/api/admin/departures/${dep.id}/sync-quota`, { method: "POST" });
                             toast({ title: `Quota disinkronkan: ${result.filled} booking aktif, sisa ${result.remaining} kursi` });
                             fetchData();
                           } catch (err: any) {
@@ -493,7 +505,7 @@ const AdminDepartures = () => {
           {galleryDep && (
             <DepartureGalleryPanel
               departureId={galleryDep.id}
-              departureLabel={safeFormatDate(galleryDep.departure_date, "d MMMM yyyy")}
+              departureLabel={safeFormatDate(galleryDep.departureDate, "d MMMM yyyy")}
             />
           )}
         </GalleryDialogContent>

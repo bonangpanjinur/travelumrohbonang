@@ -4,7 +4,7 @@
 - [Idempotent ledger awards](idempotent-ledger-award-marker.md) — for one-time point/credit awards tied to an event (e.g. booking completion), encode the event id in a ledger row's description/marker field and check for it before inserting, rather than adding new schema columns.
 - [Artifact registration rescan trick](artifact-registration-rescan.md) — if listArtifacts()/listWorkflows() are empty despite valid artifact.toml files, create a disposable throwaway artifact to force a rescan, then delete it.
 - [F-05 Cicilan implementation](f05-cicilan-implementation.md) — full installment schedule feature: DB schema, backend service, cron, routes, webhooks, frontend hook+component. Schema already pushed to DB.
-- [Sprint 4 completion](sprint4-completion.md) — 13/15 items done (BK-03, BK-F02, JM-F02, MN-F02, MN-DB01, IT-F01, IT-F02, IT-02, KB-F02, PL-F03, PK-F01/PK-02 already done). JM-DB02 and PK-01 deliberately deferred.
+- [Sprint 4 completion](sprint4-completion.md) — 15/15 DONE including PK-01 camelCase; key: separate apiFetch files (update) vs Supabase-direct files (leave snake_case).
 - [Orval zod client requires zod v4](orval-zod-v4-runtime.md) — Orval's zod client target emits v4-only syntax; pinning the catalog to zod v3 compiles fine but crashes at runtime.
 - [artifact.toml service paths must list every root prefix](artifact-toml-service-paths.md) — a ported Express backend mounting multiple root prefixes (/api, /rest/v1, /storage/v1) needs all of them in the service's `paths`, or those requests silently hit the wrong artifact.
 - [Missing DB tables after import](missing-db-tables-after-import.md) — run `cd lib/db && pnpm drizzle-kit push` to create all schema tables after cloning; site_settings etc. don't auto-create.

@@ -14,21 +14,21 @@ import { useState } from "react";
 
 interface Booking {
   id: string;
-  booking_code: string;
-  total_price: number;
+  bookingCode: string;
+  totalPrice: number;
   status: string;
-  created_at: string;
-  package_id: string | null;
-  departure_id?: string | null;
-  pic_type: string | null;
-  pic_id: string | null;
-  branch_id: string | null;
-  is_group_booking?: boolean;
-  group_name?: string | null;
-  pic_name?: string | null;
-  pic_phone?: string | null;
+  createdAt: string;
+  packageId: string | null;
+  departureId?: string | null;
+  picType: string | null;
+  picId: string | null;
+  branchId: string | null;
+  isGroupBooking?: boolean;
+  groupName?: string | null;
+  picName?: string | null;
+  picPhone?: string | null;
   package: { title: string } | null;
-  departure: { departure_date: string } | null;
+  departure: { departureDate: string } | null;
   profile: { name: string; email: string } | null;
   branch: { name: string } | null;
 }
@@ -89,7 +89,7 @@ const BookingTable = ({
               <MobileCard>
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-mono text-sm font-semibold">{b.booking_code}</p>
+                    <p className="font-mono text-sm font-semibold">{b.bookingCode}</p>
                     <p className="font-semibold mt-1">{b.profile?.name || "-"}</p>
                     <p className="text-xs text-muted-foreground">{b.profile?.email}</p>
                   </div>
@@ -97,25 +97,25 @@ const BookingTable = ({
                 </div>
                 <MobileCardRow label="Paket">{b.package?.title || "-"}</MobileCardRow>
                 <MobileCardRow label="Keberangkatan">
-                  {b.departure?.departure_date ? (
+                  {b.departure?.departureDate ? (
                     <button
                       onClick={() =>
-                        b.departure_id &&
+                        b.departureId &&
                         setDepartureDrw({
-                          id: b.departure_id,
+                          id: b.departureId,
                           packageTitle: b.package?.title || "",
                         })
                       }
-                      className={`${b.departure_id ? "text-primary underline cursor-pointer" : ""}`}
+                      className={`${b.departureId ? "text-primary underline cursor-pointer" : ""}`}
                     >
-                      {formatDepartureDate(b.departure.departure_date)}
+                      {formatDepartureDate(b.departure.departureDate)}
                     </button>
                   ) : (
                     "-"
                   )}
                 </MobileCardRow>
                 <MobileCardRow label="Total">
-                  <span className="font-semibold">Rp {b.total_price.toLocaleString("id-ID")}</span>
+                  <span className="font-semibold">Rp {b.totalPrice.toLocaleString("id-ID")}</span>
                 </MobileCardRow>
                 <MobileCardRow label="Cabang">{b.branch?.name || "—"}</MobileCardRow>
                 <div className="flex gap-2 pt-2 border-t border-border">
@@ -138,19 +138,19 @@ const BookingTable = ({
                 <div className="mt-1 bg-muted/30 rounded-xl">
                   <BookingDetailPanel
                     bookingId={b.id}
-                    packageId={b.package_id}
-                    departureId={b.departure_id}
-                    departureDate={b.departure?.departure_date}
-                    picType={b.pic_type}
-                    picId={b.pic_id}
+                    packageId={b.packageId}
+                    departureId={b.departureId}
+                    departureDate={b.departure?.departureDate}
+                    picType={b.picType}
+                    picId={b.picId}
                     packageTitle={b.package?.title || "-"}
-                    branchId={b.branch_id}
+                    branchId={b.branchId}
                     onBranchChange={onRefresh}
                     onBookingChange={onRefresh}
-                    isGroupBooking={b.is_group_booking}
-                    groupName={b.group_name}
-                    groupPicName={b.pic_name}
-                    groupPicPhone={b.pic_phone}
+                    isGroupBooking={b.isGroupBooking}
+                    groupName={b.groupName}
+                    groupPicName={b.picName}
+                    groupPicPhone={b.picPhone}
                   />
                 </div>
               )}
@@ -202,22 +202,22 @@ const BookingTable = ({
                         <Checkbox
                           checked={selectedIds.includes(b.id)}
                           onCheckedChange={() => toggleOne(b.id)}
-                          aria-label={`Pilih ${b.booking_code}`}
+                          aria-label={`Pilih ${b.bookingCode}`}
                         />
                       </TableCell>
                     )}
                     <TableCell className="font-mono text-sm">
-                      <div>{b.booking_code}</div>
-                      {b.is_group_booking && (
+                      <div>{b.bookingCode}</div>
+                      {b.isGroupBooking && (
                         <Badge
                           variant="outline"
                           className="mt-1 text-[10px] border-gold/40 text-gold px-1 py-0 gap-1"
                         >
                           <UsersRound className="w-2.5 h-2.5" />
-                          {b.group_name
-                            ? b.group_name.length > 16
-                              ? b.group_name.slice(0, 16) + "…"
-                              : b.group_name
+                          {b.groupName
+                            ? b.groupName.length > 16
+                              ? b.groupName.slice(0, 16) + "…"
+                              : b.groupName
                             : "Grup"}
                         </Badge>
                       )}
@@ -228,25 +228,25 @@ const BookingTable = ({
                     </TableCell>
                     <TableCell>{b.package?.title || "-"}</TableCell>
 
-                    {/* Departure date — clickable if departure_id is available */}
+                    {/* Departure date — clickable if departureId is available */}
                     <TableCell>
-                      {b.departure?.departure_date ? (
-                        b.departure_id ? (
+                      {b.departure?.departureDate ? (
+                        b.departureId ? (
                           <button
                             onClick={() =>
                               setDepartureDrw({
-                                id: b.departure_id!,
+                                id: b.departureId!,
                                 packageTitle: b.package?.title || "",
                               })
                             }
                             className="text-primary hover:underline font-medium text-sm cursor-pointer"
                             title="Klik untuk lihat detail keberangkatan"
                           >
-                            {formatDepartureDate(b.departure.departure_date)}
+                            {formatDepartureDate(b.departure.departureDate)}
                           </button>
                         ) : (
                           <span className="text-sm">
-                            {formatDepartureDate(b.departure.departure_date)}
+                            {formatDepartureDate(b.departure.departureDate)}
                           </span>
                         )
                       ) : (
@@ -255,7 +255,7 @@ const BookingTable = ({
                     </TableCell>
 
                     <TableCell className="font-semibold">
-                      Rp {b.total_price.toLocaleString("id-ID")}
+                      Rp {b.totalPrice.toLocaleString("id-ID")}
                     </TableCell>
                     <TableCell className="text-sm">
                       {b.branch?.name || <span className="text-muted-foreground">—</span>}
@@ -287,21 +287,21 @@ const BookingTable = ({
                       >
                         <BookingDetailPanel
                           bookingId={b.id}
-                          packageId={b.package_id}
-                          departureId={b.departure_id}
-                          departureDate={b.departure?.departure_date}
-                          picType={b.pic_type}
-                          picId={b.pic_id}
+                          packageId={b.packageId}
+                          departureId={b.departureId}
+                          departureDate={b.departure?.departureDate}
+                          picType={b.picType}
+                          picId={b.picId}
                           packageTitle={b.package?.title || "-"}
-                          branchId={b.branch_id}
+                          branchId={b.branchId}
                           onBranchChange={onRefresh}
                           onBookingChange={onRefresh}
-                          pemesanName={(b as any).pemesanName ?? b.pic_name ?? null}
-                          pemesanPhone={(b as any).pemesanPhone ?? b.pic_phone ?? null}
-                          isGroupBooking={b.is_group_booking}
-                          groupName={b.group_name}
-                          groupPicName={b.pic_name}
-                          groupPicPhone={b.pic_phone}
+                          pemesanName={b.picName ?? null}
+                          pemesanPhone={b.picPhone ?? null}
+                          isGroupBooking={b.isGroupBooking}
+                          groupName={b.groupName}
+                          groupPicName={b.picName}
+                          groupPicPhone={b.picPhone}
                         />
                       </TableCell>
                     </TableRow>

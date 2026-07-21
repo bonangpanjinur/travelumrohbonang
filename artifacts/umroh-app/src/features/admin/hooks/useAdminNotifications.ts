@@ -59,11 +59,11 @@ function buildBookingNotif(b: any): AdminNotif {
     id: `booking-${b.id}`,
     type: "booking",
     title: "Booking Baru",
-    message: `${b.profile?.name || b.user_name || "Jamaah"} — ${b.booking_code || b.id.slice(0, 8)}`,
+    message: `${b.profile?.name || b.user_name || "Jamaah"} — ${b.bookingCode || b.id.slice(0, 8)}`,
     created_at: b.created_at,
     is_read: false,
     link: "/admin/bookings",
-    booking_code: b.booking_code,
+    booking_code: b.bookingCode,
     user_name: b.profile?.name || b.user_name,
   };
 }
@@ -156,7 +156,7 @@ export function useAdminNotifications() {
       const bookingNotifs: AdminNotif[] = (bookingsResult.data || []).map((b) =>
         buildBookingNotif({
           id: b.id,
-          booking_code: b.bookingCode,
+          booking_code: b.bookingCode ?? b.booking_code,
           created_at: b.createdAt,
           profile: { name: b.userName || "" },
         })

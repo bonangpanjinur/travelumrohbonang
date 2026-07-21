@@ -107,25 +107,25 @@ const AdminBookings = () => {
       const res = await apiFetch<{ data: any[]; total: number }>(url);
       const mapped: Booking[] = (res.data || []).map((b) => ({
         id: b.id,
-        booking_code: b.bookingCode,
-        total_price: Number(b.totalPrice) || 0,
+        bookingCode: b.bookingCode,
+        totalPrice: Number(b.totalPrice) || 0,
         status: b.status,
-        created_at: b.createdAt,
-        package_id: b.packageId,
-        pic_type: b.picType,
-        pic_id: b.picId,
-        branch_id: b.branchId,
+        createdAt: b.createdAt,
+        packageId: b.packageId,
+        picType: b.picType,
+        picId: b.picId,
+        branchId: b.branchId,
         package: b.packageTitle ? { title: b.packageTitle } : null,
-        departure_id: b.departureId ?? null,
-        departure: b.departureDate ? { departure_date: b.departureDate } : null,
+        departureId: b.departureId ?? null,
+        departure: b.departureDate ? { departureDate: b.departureDate } : null,
         profile: (b.pemesanName || b.userName || b.userEmail)
           ? { name: b.pemesanName || b.userName || "-", email: b.pemesanEmail || b.userEmail || "" }
           : null,
         branch: b.branchName ? { name: b.branchName } : null,
-        is_group_booking: b.isGroupBooking ?? false,
-        group_name: b.groupName ?? null,
-        pic_name: b.picName ?? null,
-        pic_phone: b.picPhone ?? null,
+        isGroupBooking: b.isGroupBooking ?? false,
+        groupName: b.groupName ?? null,
+        picName: b.picName ?? null,
+        picPhone: b.picPhone ?? null,
       }));
       setBookings(mapped);
       setTotalCount(res.total || 0);
@@ -169,9 +169,9 @@ const AdminBookings = () => {
           <Button variant="outline" onClick={() => {
             const headers = ["Kode Booking", "Nama", "Email", "Paket", "Total Harga", "Status", "Tanggal"];
             const rows = bookings.map(b => [
-              b.booking_code, b.profile?.name || "-", b.profile?.email || "-",
-              b.package?.title || "-", String(b.total_price),
-              b.status || "draft", b.created_at ? new Date(b.created_at).toISOString().slice(0, 10) : ""
+              b.bookingCode, b.profile?.name || "-", b.profile?.email || "-",
+              b.package?.title || "-", String(b.totalPrice),
+              b.status || "draft", b.createdAt ? new Date(b.createdAt).toISOString().slice(0, 10) : ""
             ]);
             exportToCsv("bookings", headers, rows);
           }}>

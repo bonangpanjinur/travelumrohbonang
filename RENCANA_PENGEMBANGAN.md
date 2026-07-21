@@ -23,7 +23,7 @@
 Sprint 1  [██████████]  5/5  (100%) ✅ SELESAI
 Sprint 2  [██████████]  10/10 (100%) ✅ SELESAI
 Sprint 3  [██████████]  7/7  (100%) ✅ SELESAI
-Sprint 4  [█████████░]  14/15 (93%)  — 1 item ditunda
+Sprint 4  [██████████]  15/15 (100%) ✅ SELESAI
 Booking & Manifest Baru  [░░░░░░░░░░]  0/6  (0%)  ← ANTRIAN BERIKUTNYA
 ```
 
@@ -90,7 +90,7 @@ Booking & Manifest Baru  [░░░░░░░░░░]  0/6  (0%)  ← ANTRIA
 | ✅ | PK-02 | Extra Hotels pakai flag `is_active`, tidak hardcode nama | `Packages.tsx` |
 | ✅ | PK-F01 | Preview halaman publik paket dari admin | Tombol Eye → `/paket/:slug` |
 | ✅ | PL-F03 | Laporan distribusi perlengkapan (ringkasan + export) | `EquipmentReport.tsx`, `/api/admin/equipment-report` |
-| ⏭ | PK-01 | Standarisasi camelCase di seluruh API & frontend | **Ditunda** — terlalu luas & berisiko; perbaiki per-fitur |
+| ✅ | PK-01 | Standarisasi camelCase di seluruh API & frontend | GET /departures, /pilgrims-db → camelCase; Departures, BookingTable, Bookings, Agents, Pilgrims, PilgrimsDatabase, PaymentGateway, Accounting, AgentPortal, useAdminNotifications — semua hapus snake_case remapping |
 
 ---
 
@@ -264,7 +264,7 @@ Minggu depan:
 
 Nanti (jika ada waktu):
   [P5] Riwayat cetak manifest        ← low priority, schema sudah siap
-  [PK-01] Standarisasi camelCase     ← sangat berisiko, lakukan per-fitur
+  [PK-01] Standarisasi camelCase     ✅ selesai — semua API & frontend sudah camelCase
 ```
 
 ---
