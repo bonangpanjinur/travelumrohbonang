@@ -52,6 +52,7 @@ import {
   ToggleRight,
   PiggyBank,
   TrendingDown,
+  Scale,
   type LucideIcon
 
 } from "lucide-react";
@@ -127,6 +128,11 @@ export const menuGroups: MenuGroup[] = [
       { label: "Tracking Dokumen", labelKey: "menu.document_tracking", href: "/admin/document-tracking", icon: BarChart2, roles: ALL_STAFF, featureId: "documents" },
       { label: "Laporan Perlengkapan", labelKey: "menu.equipment_report", href: "/admin/equipment-report", icon: Backpack, roles: ALL_STAFF, featureId: "equipment" },
       { label: "Laporan Insiden", labelKey: "menu.incident_management", href: "/admin/incident-management", icon: AlertTriangle, roles: OPERATIONAL, featureId: "incident_management" },
+      // ── O-8/9/10/11 ───────────────────────────────────────────────────────────
+      { label: "Distribusi Perlengkapan", labelKey: "menu.equipment_distribution", href: "/admin/equipment-distribution", icon: Backpack, roles: SUPER_ADMIN_ADMIN, featureId: "equipment" },
+      { label: "Tracking Visa", labelKey: "menu.visa_tracking", href: "/admin/visa-tracking", icon: FileCheck, roles: OPERATIONAL },
+      { label: "Assignment Kursi", labelKey: "menu.seat_assignment", href: "/admin/seat-assignment", icon: ClipboardList, roles: OPERATIONAL },
+      { label: "Checklist Keberangkatan", labelKey: "menu.departure_checklist", href: "/admin/departure-checklist", icon: ClipboardList, roles: ALL_STAFF },
     ],
   },
   {
@@ -148,6 +154,13 @@ export const menuGroups: MenuGroup[] = [
       { label: "HPP & Profitabilitas",     labelKey: "menu.cost_profitability",   href: "/admin/package-costs",      icon: Calculator, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
       // ── Pembukuan ──────────────────────────────────────────────────────────
       { label: "Akuntansi & Keuangan",     labelKey: "menu.accounting",           href: "/admin/accounting",         icon: BarChart3, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
+      // ── F-7/8/10 ──────────────────────────────────────────────────────────────
+      { label: "Chart of Accounts",        labelKey: "menu.coa",                  href: "/admin/chart-of-accounts",  icon: BarChart3, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
+      { label: "Buku Besar",               labelKey: "menu.general_ledger",       href: "/admin/general-ledger",     icon: BookOpen, roles: FINANCE, featureId: "reports" },
+      { label: "Neraca Saldo",             labelKey: "menu.trial_balance",        href: "/admin/trial-balance",      icon: Scale, roles: FINANCE, featureId: "reports" },
+      { label: "Laporan Keuangan",         labelKey: "menu.financial_reports",    href: "/admin/financial-reports",  icon: FileText, roles: FINANCE, featureId: "reports" },
+      { label: "Rekonsiliasi Bank",        labelKey: "menu.bank_reconciliation",  href: "/admin/bank-reconciliation", icon: CreditCard, roles: FINANCE, featureId: "reports" },
+      // ── Existing ──────────────────────────────────────────────────────────────
       { label: "Dashboard Analitik",       labelKey: "menu.analytics_dashboard",  href: "/admin/analytics",          icon: LineChart, roles: FINANCE, featureId: "reports" },
       { label: "Laporan",                  labelKey: "menu.reports",              href: "/admin/reports",            icon: FileText, roles: FINANCE, featureId: "reports" },
       // ── Konfigurasi Keuangan ───────────────────────────────────────────────

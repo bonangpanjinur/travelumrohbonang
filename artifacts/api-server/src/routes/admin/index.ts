@@ -56,6 +56,11 @@ import adminFeatureFlagsRouter from "./feature-flags";
 import adminAccountingRouter from "./accounting";
 import adminSavingsRouter from "./savings";
 import adminFinanceRouter from "./finance";
+import adminCoaRouter from "./coa";
+import adminVisaRouter from "./visa";
+import adminSeatAssignmentRouter from "./seat-assignment";
+import adminChecklistRouter from "./checklist";
+import adminBankReconciliationRouter from "./bank-reconciliation";
 
 const router = Router();
 
@@ -147,5 +152,20 @@ router.use("/equipment-report", requireStaff, adminEquipmentReportRouter);
 
 // ── Keuangan: Dashboard & Piutang AR ─────────────────────────────────────────
 router.use("/finance", requireFinance, adminFinanceRouter);
+
+// ── F-7: Chart of Accounts + Buku Besar + Trial Balance ──────────────────────
+router.use("/coa", requireFinance, adminCoaRouter);
+
+// ── O-9: Visa Tracking ────────────────────────────────────────────────────────
+router.use("/visa", requireStaff, adminVisaRouter);
+
+// ── O-10: Seat Assignment ─────────────────────────────────────────────────────
+router.use("/seat-assignment", requireStaff, adminSeatAssignmentRouter);
+
+// ── O-11: Pre-departure Checklist ─────────────────────────────────────────────
+router.use("/checklist", requireStaff, adminChecklistRouter);
+
+// ── F-10: Rekonsiliasi Bank ───────────────────────────────────────────────────
+router.use("/bank-reconciliation", requireFinance, adminBankReconciliationRouter);
 
 export default router;

@@ -676,5 +676,186 @@ router.get("/departure/:departureId", async (req: Request, res: Response) => {
   }
 });
 
+// ── F-8: Laporan Keuangan — Income Statement ─────────────────────────────────
+// GET /api/admin/finance/reports/income-statement?from=YYYY-MM-DD&to=YYYY-MM-DD
+router.get("/reports/income-statement", async (req: Request, res: Response) => {
+  try {
+    const { from, to } = req.query as { from?: string; to?: string };
+
+    const conditions: string[] = [];
+    if (from) conditions.push(`ft.transaction_date >= '${from}'::timestamptz`);
+    if (to)   conditions.push(`ft.transaction_date <= '${to}'::timestamptz`);
+    const whereClause = conditions.length > 0 ? `AND ${conditions.join(" AND ")}` : "";
+
+    const rows = await db.execute(sql.raw(`
+      SELECT
+        ft.type,
+        ft.category,
+        COALESCE(coa.name, ft.category) AS account_name,
+        COALESCE(coa.code, '')          AS account_code,
+        SUM(ft.amount::numeric)         AS total
+      FROM financial_transactions ft
+      LEFT JOIN chart_of_accounts coa ON coa.id = ft.account_id
+      WHERE ft.type IN ('income', 'expense') ${whereClause}
+      GROUP BY ft.type, ft.category, coa.name, coa.code
+      ORDER BY ft.type, SUM(ft.amount::numeric) DESC
+    `));
+
+    const getRows = (r: any) => (r as any).rows ?? r;
+    const data = getRows(rows);
+
+    const revenueItems = data.filter((r: any) => r.type === "income").map((r: any) => ({
+      category: r.category,
+      accountName: r.account_name,
+      accountCode: r.account_code,
+      total: Number(r.total),
+    }));
+    const expenseItems = data.filter((r: any) => r.type === "expense").map((r: any) => ({
+      category: r.category,
+      accountName: r.account_name,
+      accountCode: r.account_code,
+      total: Number(r.total),
+    }));
+
+    const totalRevenue = revenueItems.reduce((s: number, r: any) => s + r.total, 0);
+    const totalExpense = expenseItems.reduce((s: number, r: any) => s + r.total, 0);
+
+    res.json({
+      period: { from: from ?? null, to: to ?? null },
+      revenue: { items: revenueItems, total: totalRevenue },
+      expense: { items: expenseItems, total: totalExpense },
+      grossProfit: totalRevenue - totalExpense,
+      netIncome: totalRevenue - totalExpense,
+    });
+  } catch (e) {
+    sendError(res, "GET /admin/finance/reports/income-statement", e);
+  }
+});
+
+// ── F-8: Laporan Keuangan — Balance Sheet ─────────────────────────────────────
+// GET /api/admin/finance/reports/balance-sheet?date=YYYY-MM-DD
+router.get("/reports/balance-sheet", async (req: Request, res: Response) => {
+  try {
+    const { date } = req.query as { date?: string };
+    const dateFilter = date ? `AND ft.transaction_date <= '${date}'::timestamptz` : "";
+
+    const rows = await db.execute(sql.raw(`
+      SELECT
+        coa.type,
+        coa.category,
+        coa.code,
+        coa.name,
+        coa.normal_balance,
+        COALESCE(SUM(CASE WHEN ft.entry_type = 'debit' THEN ft.amount::numeric ELSE 0 END), 0) AS total_debit,
+        COALESCE(SUM(CASE WHEN ft.entry_type = 'credit' THEN ft.amount::numeric ELSE 0 END), 0) AS total_credit
+      FROM chart_of_accounts coa
+      LEFT JOIN financial_transactions ft ON ft.account_id = coa.id ${dateFilter}
+      WHERE coa.is_active = true AND coa.type IN ('asset', 'liability', 'equity')
+      GROUP BY coa.id, coa.type, coa.category, coa.code, coa.name, coa.normal_balance
+      ORDER BY coa.code
+    `));
+
+    const getRows = (r: any) => (r as any).rows ?? r;
+    const data = getRows(rows);
+
+    const computeBalance = (row: any) => {
+      const debit = Number(row.total_debit);
+      const credit = Number(row.total_credit);
+      return row.normal_balance === "debit" ? debit - credit : credit - debit;
+    };
+
+    const assets = data.filter((r: any) => r.type === "asset").map((r: any) => ({
+      code: r.code, name: r.name, category: r.category, balance: computeBalance(r),
+    }));
+    const liabilities = data.filter((r: any) => r.type === "liability").map((r: any) => ({
+      code: r.code, name: r.name, category: r.category, balance: computeBalance(r),
+    }));
+    const equity = data.filter((r: any) => r.type === "equity").map((r: any) => ({
+      code: r.code, name: r.name, category: r.category, balance: computeBalance(r),
+    }));
+
+    const totalAssets = assets.reduce((s: number, r: any) => s + r.balance, 0);
+    const totalLiabilities = liabilities.reduce((s: number, r: any) => s + r.balance, 0);
+    const totalEquity = equity.reduce((s: number, r: any) => s + r.balance, 0);
+
+    res.json({
+      asOf: date ?? new Date().toISOString().split("T")[0],
+      assets: { items: assets, total: totalAssets },
+      liabilities: { items: liabilities, total: totalLiabilities },
+      equity: { items: equity, total: totalEquity },
+      totalLiabilitiesEquity: totalLiabilities + totalEquity,
+    });
+  } catch (e) {
+    sendError(res, "GET /admin/finance/reports/balance-sheet", e);
+  }
+});
+
+// ── F-8: Laporan Keuangan — Cash Flow ────────────────────────────────────────
+// GET /api/admin/finance/reports/cash-flow?from=YYYY-MM-DD&to=YYYY-MM-DD
+router.get("/reports/cash-flow", async (req: Request, res: Response) => {
+  try {
+    const { from, to } = req.query as { from?: string; to?: string };
+
+    const conditions: string[] = [];
+    if (from) conditions.push(`bp.paid_at >= '${from}'::timestamptz`);
+    if (to)   conditions.push(`bp.paid_at <= '${to}'::timestamptz`);
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    // Operating: actual cash received from bookings
+    const [inflows, outflows] = await Promise.all([
+      db.execute(sql.raw(`
+        SELECT
+          DATE_TRUNC('month', bp.paid_at) AS month,
+          SUM(bp.amount) AS total
+        FROM booking_payments bp
+        ${whereClause}
+        GROUP BY month
+        ORDER BY month
+      `)),
+      db.execute(sql.raw(`
+        SELECT
+          DATE_TRUNC('month', ft.transaction_date) AS month,
+          SUM(ft.amount::numeric) AS total
+        FROM financial_transactions ft
+        WHERE ft.type = 'expense' ${conditions.length > 0 ? "AND ft.transaction_date >= '" + from + "'::timestamptz" : ""}
+          ${to ? "AND ft.transaction_date <= '" + to + "'::timestamptz" : ""}
+        GROUP BY month
+        ORDER BY month
+      `)),
+    ]);
+
+    const getRows = (r: any) => (r as any).rows ?? r;
+
+    const inflowMap = new Map(getRows(inflows).map((r: any) => [
+      new Date(r.month).toISOString().slice(0, 7),
+      Number(r.total),
+    ]));
+    const outflowMap = new Map(getRows(outflows).map((r: any) => [
+      new Date(r.month).toISOString().slice(0, 7),
+      Number(r.total),
+    ]));
+
+    const allMonths = Array.from(new Set([...inflowMap.keys(), ...outflowMap.keys()])).sort();
+
+    const monthly = allMonths.map((m) => {
+      const inflow = inflowMap.get(m) ?? 0;
+      const outflow = outflowMap.get(m) ?? 0;
+      return { month: m, inflow, outflow, net: inflow - outflow };
+    });
+
+    const totalInflow = monthly.reduce((s, r) => s + r.inflow, 0);
+    const totalOutflow = monthly.reduce((s, r) => s + r.outflow, 0);
+
+    res.json({
+      period: { from: from ?? null, to: to ?? null },
+      monthly,
+      summary: { totalInflow, totalOutflow, netCashFlow: totalInflow - totalOutflow },
+    });
+  } catch (e) {
+    sendError(res, "GET /admin/finance/reports/cash-flow", e);
+  }
+});
+
 export default router;
+
 

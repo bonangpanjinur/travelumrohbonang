@@ -97,7 +97,12 @@ export const financialTransactions = pgTable("financial_transactions", {
   transactionDate: timestamp("transaction_date", { withTimezone: true }),
   recordedBy: text("recorded_by"),
   createdAt: timestamp("created_at", { withTimezone: true }),
+  // F-7: link ke Chart of Accounts (nullable untuk backward compat)
+  accountId: text("account_id"),
+  // debit | credit — untuk double-entry accounting
+  entryType: text("entry_type"),
 }, (t) => [
   index("idx_financial_transactions_booking_id").on(t.bookingId),
   index("idx_financial_transactions_type").on(t.type),
+  index("idx_financial_transactions_account_id").on(t.accountId),
 ]);

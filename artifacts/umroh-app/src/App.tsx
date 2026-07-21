@@ -126,6 +126,15 @@ import AdminFeatureManagement from "./features/admin/pages/FeatureManagement";
 import FinanceDashboard from "./features/admin/pages/FinanceDashboard";
 import Piutang from "./features/admin/pages/Piutang";
 import DepartureFinance from "./features/admin/pages/DepartureFinance";
+import ChartOfAccounts from "./features/admin/pages/ChartOfAccounts";
+import GeneralLedger from "./features/admin/pages/GeneralLedger";
+import TrialBalance from "./features/admin/pages/TrialBalance";
+import FinancialReports from "./features/admin/pages/FinancialReports";
+import VisaTracking from "./features/admin/pages/VisaTracking";
+import SeatAssignment from "./features/admin/pages/SeatAssignment";
+import DepartureChecklist from "./features/admin/pages/DepartureChecklist";
+import EquipmentDistribution from "./features/admin/pages/EquipmentDistribution";
+import BankReconciliation from "./features/admin/pages/BankReconciliation";
 import { useEffect } from "react";
 import { installGlobalErrorHandlers } from "@/shared/lib/errorLogger";
 import ErrorBoundary from "@/shared/components/common/ErrorBoundary";
@@ -267,6 +276,22 @@ const AppContent = () => {
           <Route path="finance-dashboard" element={<FinanceDashboard />} />
           <Route path="piutang" element={<Piutang />} />
           <Route path="departure-finance" element={<DepartureFinance />} />
+          {/* F-7: Chart of Accounts + Buku Besar */}
+          <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
+          <Route path="general-ledger" element={<GeneralLedger />} />
+          <Route path="trial-balance" element={<TrialBalance />} />
+          {/* F-8: Laporan Keuangan */}
+          <Route path="financial-reports" element={<FinancialReports />} />
+          {/* F-10: Rekonsiliasi Bank */}
+          <Route path="bank-reconciliation" element={<BankReconciliation />} />
+          {/* O-8: Equipment Distribution */}
+          <Route path="equipment-distribution" element={<EquipmentDistribution />} />
+          {/* O-9: Visa Tracking */}
+          <Route path="visa-tracking" element={<VisaTracking />} />
+          {/* O-10: Seat Assignment */}
+          <Route path="seat-assignment" element={<SeatAssignment />} />
+          {/* O-11: Pre-departure Checklist */}
+          <Route path="departure-checklist" element={<DepartureChecklist />} />
         </Route>
       </Route>
 
