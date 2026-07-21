@@ -1,8 +1,8 @@
 # Rencana Pengembangan UmrohPlus — Master Document
 
-> Digabung dari: `rencana-perbaikan-operasional.md` + `RENCANA_PENGEMBANGAN_BOOKING_MANIFEST.md`  
+> Digabung dari: `RENCANA_PENGEMBANGAN.md` + `docs/rencana-pengembangan-booking-keberangkatan.md`  
 > Terakhir diperbarui: 21 Juli 2026  
-> Verifikasi status berdasarkan: inspeksi kode + memory sprint agent
+> Verifikasi status: inspeksi kode langsung
 
 ---
 
@@ -11,8 +11,7 @@
 | Ikon | Arti |
 |------|------|
 | ✅ | Selesai diimplementasi |
-| 🔄 | Sebagian selesai (schema/backend ada, UI belum) |
-| ⏭ | Ditunda deliberate (terlalu berisiko saat ini) |
+| 🔄 | Sebagian selesai (backend ada, UI belum — atau sebaliknya) |
 | ❌ | Belum dikerjakan |
 
 ---
@@ -20,251 +19,250 @@
 ## PROGRESS KESELURUHAN
 
 ```
-Sprint 1  [██████████]  5/5  (100%) ✅ SELESAI
+Sprint 1  [██████████]  5/5   (100%) ✅ SELESAI
 Sprint 2  [██████████]  10/10 (100%) ✅ SELESAI
-Sprint 3  [██████████]  7/7  (100%) ✅ SELESAI
+Sprint 3  [██████████]  7/7   (100%) ✅ SELESAI
 Sprint 4  [██████████]  15/15 (100%) ✅ SELESAI
-Booking & Manifest Baru  [░░░░░░░░░░]  0/6  (0%)  ← ANTRIAN BERIKUTNYA
+Backlog   [██░░░░░░░░]  3/13  (23%)  ← SEDANG BERJALAN
 ```
 
 ---
 
-## ✅ SPRINT 1 — Bug Kritis & Quick Wins (SELESAI)
+## ✅ SPRINT 1–4 (SELESAI SEMUA)
 
-| Status | ID | Judul | File Utama |
-|--------|----|-------|------------|
-| ✅ | BK-02 | Export Excel tidak jalan (URL hardcode) | `Bookings.tsx` |
-| ✅ | KB-03 | Manifest PDF bergantung `VITE_API_URL` | `Departures.tsx` |
-| ✅ | JM-01 | Upload dokumen ke path Supabase hardcode | `Pilgrims.tsx` + backend baru |
-| ✅ | BK-01 | Halaman Booking kosong & search sempit | `Bookings.tsx`, `bookings.ts` |
-| ✅ | JM-02 | Validasi nomor HP terlalu ketat | `Pilgrims.tsx` |
+<details>
+<summary>Lihat detail sprint (klik untuk expand)</summary>
 
----
+### Sprint 1 — Bug Kritis & Quick Wins
+| ✅ | ID | Judul |
+|----|----|-------|
+| ✅ | BK-02 | Export Excel tidak jalan (URL hardcode) |
+| ✅ | KB-03 | Manifest PDF bergantung `VITE_API_URL` |
+| ✅ | JM-01 | Upload dokumen ke path Supabase hardcode |
+| ✅ | BK-01 | Halaman Booking kosong & search sempit |
+| ✅ | JM-02 | Validasi nomor HP terlalu ketat |
 
-## ✅ SPRINT 2 — Perbaikan UI & UX (SELESAI)
+### Sprint 2 — Perbaikan UI & UX
+| ✅ | ID | Judul |
+|----|----|-------|
+| ✅ | KB-02 | Redesign UI Keberangkatan (badge status + progress bar quota) |
+| ✅ | KB-F01 | Tombol clone/duplikat keberangkatan |
+| ✅ | PL-01 | Pagination + search halaman Perlengkapan |
+| ✅ | KB-01 | Tipe kamar dinamis (quad/triple/double/single) |
+| ✅ | BK-F01 | Filter Booking by status & paket |
+| ✅ | BK-F03 | Tampilkan daftar jemaah di detail Booking |
+| ✅ | IT-01 | Upload gambar hari Itinerary |
+| ✅ | MN-01 | Pagination Manifest server-side |
+| ✅ | MN-02 | Tombol Print/Export manifest lebih menonjol |
+| ✅ | PL-02 | Upload gambar perlengkapan |
 
-| Status | ID | Judul | File Utama |
-|--------|----|-------|------------|
-| ✅ | KB-02 | Redesign UI Keberangkatan (badge status + progress bar quota) | `Departures.tsx` |
-| ✅ | KB-F01 | Tombol clone/duplikat keberangkatan | `Departures.tsx` + `departures.ts` |
-| ✅ | PL-01 | Pagination + search halaman Perlengkapan | `Equipment.tsx` |
-| ✅ | KB-01 | Tipe kamar dinamis (quad/triple/double/single) | `Departures.tsx` |
-| ✅ | BK-F01 | Filter Booking by status & paket | `Bookings.tsx`, `bookings.ts` |
-| ✅ | BK-F03 | Tampilkan daftar jemaah di detail Booking | `BookingDetailPanel.tsx` |
-| ✅ | IT-01 | Upload gambar hari Itinerary | `Itineraries.tsx`, `uploads.ts` |
-| ✅ | MN-01 | Pagination Manifest server-side | `Manifest.tsx`, `departures.ts` |
-| ✅ | MN-02 | Tombol Print/Export manifest lebih menonjol | `Manifest.tsx` |
-| ✅ | PL-02 | Upload gambar perlengkapan | `Equipment.tsx`, `uploads.ts` |
+### Sprint 3 — Fitur Kritis & Schema DB
+| ✅ | ID | Judul |
+|----|----|-------|
+| ✅ | BK-DB01 | Validasi agentId runtime (bukan FK — circular import) |
+| ✅ | BK-DB02 | Sinkronisasi `remainingQuota` dalam transaksi DB |
+| ✅ | PL-DB01 | Tabel `pilgrim_equipment` di Drizzle + push ke DB |
+| ✅ | PL-F01 | UI assignment perlengkapan ke jemaah per booking |
+| ✅ | PL-F02 | Manajemen stok perlengkapan (totalStock, distributedCount) |
+| ✅ | JM-DB01 | Tabel master `pilgrims` (unique NIK + paspor) |
+| ✅ | JM-F01 | Halaman "Database Jemaah" — semua jemaah + riwayat |
 
----
+### Sprint 4 — Fitur Tambahan & Kualitas
+| ✅ | ID | Judul |
+|----|----|-------|
+| ✅ | BK-03 | Log/history perubahan status booking |
+| ✅ | BK-F02 | Bulk action: konfirmasi/batalkan banyak booking |
+| ✅ | JM-F02 | Flag paspor jemaah hampir expired (badge merah/oranye) |
+| ✅ | JM-DB02 | Relasi jemaah ↔ perlengkapan di detail jemaah |
+| ✅ | MN-F02 | Status check-in jemaah di halaman Manifest |
+| ✅ | MN-DB01 | Snapshot manifest saat PDF dicetak (tabel `manifests`) |
+| ✅ | MN-F01 | QR code verifikasi manifest |
+| ✅ | IT-F01 | Salin template itinerary ke keberangkatan lain |
+| ✅ | IT-F02 | Preview mode itinerary (tampilan jemaah) |
+| ✅ | IT-02 | Standarisasi snake_case response di Itinerary API |
+| ✅ | KB-F02 | Log warning quota hampir penuh setelah booking dibuat |
+| ✅ | PK-02 | Extra Hotels pakai flag `is_active`, tidak hardcode nama |
+| ✅ | PK-F01 | Preview halaman publik paket dari admin |
+| ✅ | PL-F03 | Laporan distribusi perlengkapan (ringkasan + export) |
+| ✅ | PK-01 | Standarisasi camelCase di seluruh API & frontend |
 
-## ✅ SPRINT 3 — Fitur Kritis & Schema DB (SELESAI)
-
-| Status | ID | Judul | Area |
-|--------|----|-------|------|
-| ✅ | BK-DB01 | Validasi agentId runtime (bukan FK — circular import) | `admin/bookings.ts` |
-| ✅ | BK-DB02 | Sinkronisasi `remainingQuota` dalam transaksi DB | `admin/bookings.ts` |
-| ✅ | PL-DB01 | Tabel `pilgrim_equipment` di Drizzle + push ke DB | `schema/pilgrim-equipment.ts` |
-| ✅ | PL-F01 | UI assignment perlengkapan ke jemaah per booking | `PilgrimEquipmentPanel.tsx` |
-| ✅ | PL-F02 | Manajemen stok perlengkapan (totalStock, distributedCount) | `Equipment.tsx`, `schema/masterdata.ts` |
-| ✅ | JM-DB01 | Tabel master `pilgrims` (unique NIK + paspor) | `schema/pilgrims.ts` |
-| ✅ | JM-F01 | Halaman "Database Jemaah" — semua jemaah + riwayat | `PilgrimsDatabase.tsx` |
-
----
-
-## ✅ SPRINT 4 — Fitur Tambahan & Kualitas (93% SELESAI)
-
-| Status | ID | Judul | Area |
-|--------|----|-------|------|
-| ✅ | BK-03 | Log/history perubahan status booking | `BookingDetailPanel.tsx` + schema `bookingStatusLogs` |
-| ✅ | BK-F02 | Bulk action: konfirmasi/batalkan banyak booking | `BookingTable.tsx`, `PATCH /bulk-status` |
-| ✅ | JM-F02 | Flag paspor jemaah hampir expired (badge merah/oranye) | `Pilgrims.tsx` |
-| ✅ | JM-DB02 | Relasi jemaah ↔ perlengkapan di detail jemaah | `GET /pilgrim-equipment?masterPilgrimId=X` |
-| ✅ | MN-F02 | Status check-in jemaah di halaman Manifest | `Manifest.tsx` + LEFT JOIN `check_ins` |
-| ✅ | MN-DB01 | Snapshot manifest saat PDF dicetak (tabel `manifests`) | `schema/manifests.ts` |
-| ✅ | MN-F01 | QR code verifikasi manifest | Sudah ada sejak sprint sebelumnya |
-| ✅ | IT-F01 | Salin template itinerary ke keberangkatan lain | Dialog "Salin" + `POST /:id/copy-to-departure` |
-| ✅ | IT-F02 | Preview mode itinerary (tampilan jemaah) | Toggle di header card `Itineraries.tsx` |
-| ✅ | IT-02 | Standarisasi snake_case response di Itinerary API | PATCH & POST /days |
-| ✅ | KB-F02 | Log warning quota hampir penuh setelah booking dibuat | `admin/bookings.ts` |
-| ✅ | PK-02 | Extra Hotels pakai flag `is_active`, tidak hardcode nama | `Packages.tsx` |
-| ✅ | PK-F01 | Preview halaman publik paket dari admin | Tombol Eye → `/paket/:slug` |
-| ✅ | PL-F03 | Laporan distribusi perlengkapan (ringkasan + export) | `EquipmentReport.tsx`, `/api/admin/equipment-report` |
-| ✅ | PK-01 | Standarisasi camelCase di seluruh API & frontend | GET /departures, /pilgrims-db → camelCase; Departures, BookingTable, Bookings, Agents, Pilgrims, PilgrimsDatabase, PaymentGateway, Accounting, AgentPortal, useAdminNotifications — semua hapus snake_case remapping |
+</details>
 
 ---
 
-## ❌ ANTRIAN PENGERJAAN BERIKUTNYA
-
-> Semua item di bawah belum dikerjakan. Urutkan dari prioritas tertinggi.
+## BACKLOG — STATUS SAAT INI
 
 ---
 
-### 🔴 PRIORITAS 1 — Nama Pemesan Konsisten (Critical)
-**Estimasi: 1–2 hari kerja**
+### ✅ A. Navigasi Langsung ke Manifest per Keberangkatan
+> **Selesai — ditemukan di codebase**
 
-Masalah: Kolom nama pemesan tidak konsisten — booking via `user_id` ambil dari `profiles.name`, booking walk-in ambil dari `booking_pilgrims`, field `pic_name` tidak selalu diisi. Akibatnya ada booking yang nama pemesannya kosong di list.
+| Item | Status | Bukti |
+|------|--------|-------|
+| Tombol "Lihat Manifest" di departure card | ✅ | `Departures.tsx` — `navigate('/admin/manifest?departureId=...')` |
+| Auto-select departure saat buka halaman Manifest | ✅ | `Manifest.tsx` baris 103 — `searchParams.get("departureId")` |
 
-#### F1-DB — Tambah kolom `pemesan_name` + `pemesan_phone` di tabel `bookings`
+---
 
-```sql
-ALTER TABLE bookings 
-  ADD COLUMN IF NOT EXISTS pemesan_name TEXT,
-  ADD COLUMN IF NOT EXISTS pemesan_phone TEXT;
+### ✅ B. Form Booking Admin Terpadu (Unifikasi)
+> **Selesai — `AdminBookingDialog.tsx` sudah ada**
+
+| Item | Status | Bukti |
+|------|--------|-------|
+| Form terpadu 1-N jamaah (`AdminBookingDialog.tsx`) | ✅ | Menggantikan `AdminCreateBookingDialog` + `AdminGroupBookingDialog` |
+| Nama Pemesan wajib diisi di form | ✅ | `AdminBookingDialog.tsx` — field required `pemesanName` |
+| Backend validasi `pemesanName` tidak boleh kosong | ✅ | `admin/bookings.ts` — `if (!pemesanName \|\| !pemesanName.trim()) throw 400` |
+| `AdminGroupBookingDialog.tsx` masih ada (perlu dibersihkan) | 🔄 | File lama masih exist, perlu pastikan tidak dipakai lagi |
+
+---
+
+### 🔄 C. Tambah / Edit Jamaah dari Booking Detail
+> **Backend sebagian ada, UI belum**
+
+| Item | Status | Bukti |
+|------|--------|-------|
+| `POST /admin/bookings/:id/pilgrims` — tambah jamaah | ✅ | `admin/bookings.ts` baris 752 |
+| `PATCH /admin/pilgrims/:id` — edit data jamaah | ❌ | Tidak ditemukan di routes |
+| `DELETE /admin/pilgrims/:id` — hapus jamaah dari booking | ❌ | Tidak ditemukan di routes |
+| Tombol "+ Tambah Jamaah" di `BookingDetailPanel.tsx` | ❌ | Belum ada UI di panel detail booking |
+| `PilgrimDetailDrawer.tsx` editable | ❌ | Masih read-only |
+
+**File yang perlu diubah:**
+- `artifacts/api-server/src/routes/admin/bookings.ts` — tambah PATCH + DELETE pilgrim endpoints
+- `artifacts/umroh-app/src/features/admin/pages/components/BookingDetailPanel.tsx` — tombol "+ Tambah Jamaah" + mini-form
+- `artifacts/umroh-app/src/features/admin/components/PilgrimDetailDrawer.tsx` — jadikan editable
+
+---
+
+### ❌ D. Ringkasan Manifest di Departure Card
+> **Belum ada** — endpoint maupun UI
+
+Tampilkan summary cepat di setiap kartu keberangkatan:
+```
+📋 Manifest: 38 jamaah terkonfirmasi
+   ✅ 30 dokumen lengkap   ⚠️ 8 belum lengkap
+[Lihat Manifest]  [Download PDF]
 ```
 
-Logic pengisian backend:
-- Jika ada `userId` → ambil dari `profiles.name` saat INSERT
-- Jika ada `customerName` → simpan ke `pemesan_name`
-- Fallback: ambil dari `booking_pilgrims` pertama
+**Yang perlu dibuat:**
 
-**Files:**
-- `lib/db/src/schema/bookings.ts` — tambah kolom
-- `artifacts/api-server/src/routes/admin/bookings.ts` — logic insert & select
-- Jalankan `cd lib/db && pnpm drizzle-kit push`
-
-#### F1-UI — Field "Nama Pemesan" wajib diisi di dialog booking
-
-- Field required, tidak bisa kosong
-- Pisahkan konsep Pemesan (yang bayar) vs Jamaah (yang berangkat)
-- Tampilkan `pemesan_name` sebagai kolom utama di `BookingTable`
-
-**Files:**
-- `artifacts/umroh-app/src/features/admin/pages/components/AdminCreateBookingDialog.tsx`
-- `artifacts/umroh-app/src/features/admin/pages/Bookings.tsx`
-
-#### F1-BACKFILL — Script migrasi data lama
-
-- Booking dengan `user_id`: isi `pemesan_name` dari tabel `profiles`
-- Booking tanpa `user_id`: isi dari `booking_pilgrims` pertama
-
----
-
-### 🟠 PRIORITAS 2 — Batch Booking Multi-Jamaah (High)
-**Estimasi: 2–3 hari kerja**
-
-Masalah: Admin harus buka dialog booking berkali-kali untuk grup jamaah. Tidak ada cara input beberapa jamaah sekaligus.
-
-#### F2-BE — Endpoint `POST /api/admin/bookings/batch`
-
-```ts
-// Payload
+Backend — endpoint baru `GET /admin/departures/:id/manifest-summary`:
+```json
 {
-  packageId: string,
-  departureId: string,
-  roomType: "quad" | "triple" | "double" | "single",
-  paymentScheme: "full" | "installment",
-  branchId?: string,
-  agentId?: string,
-  jamaah: Array<{
-    pemesan_name: string,      // required
-    pemesan_email?: string,
-    pemesan_phone?: string,
-    userId?: string,
-  }>
-}
-
-// Response
-{
-  created: Booking[],
-  failed: Array<{ index: number, error: string }>
+  "confirmedPilgrims": 38,
+  "docsComplete": 30,
+  "docsIncomplete": 8
 }
 ```
 
-- Gunakan DB transaction — jika quota tidak cukup untuk semua, rollback semua
-- Quota check: `remaining_quota >= jamaah.length` sebelum insert
-- Generate `booking_code` unik per jamaah
+Frontend — tambah summary block di kartu di `Departures.tsx`
 
-**File:** `artifacts/api-server/src/routes/admin/bookings.ts`
-
-> ⚠️ Catatan: Route `POST /batch` harus didaftarkan **sebelum** `POST /:id` agar Express tidak salah routing.
-
-#### F2-UI — Komponen `AdminBatchBookingDialog.tsx` (multi-step)
-
-- **Step 1**: Pilih paket, keberangkatan, tipe kamar, skema bayar
-- **Step 2**: Dynamic list jamaah — bisa add/remove row. Setiap row: Nama (required), Email, HP, atau pilih user existing. Tampilkan running total + warning jika quota tidak cukup
-- **Step 3**: Preview & konfirmasi ringkasan
-- Submit → `POST /api/admin/bookings/batch`
-- Setelah sukses: tampilkan daftar booking code yang dibuat
-
-**Files:**
-- `artifacts/umroh-app/src/features/admin/pages/components/AdminBatchBookingDialog.tsx` ← baru
-- `artifacts/umroh-app/src/features/admin/pages/Bookings.tsx` — tambah tombol "Booking Rombongan"
+**File:**
+- `artifacts/api-server/src/routes/admin/departures.ts` — endpoint manifest-summary
+- `artifacts/umroh-app/src/features/admin/pages/Departures.tsx` — render summary
 
 ---
 
-### 🟡 PRIORITAS 3 — Navigasi Langsung ke Manifest per Keberangkatan (Medium)
-**Estimasi: 0.5–1 hari kerja**
+### ❌ E. Shortcut Manifest dari Booking Detail + Filter di Halaman Manifest
+> **Belum ada**
 
-Masalah: Admin harus masuk menu Manifest → pilih departure manual. Tidak ada shortcut dari kartu keberangkatan.
+Dua item terkait:
 
-#### F3-NAV — Tombol "Lihat Manifest" di departure card
+**E1 — Link dari BookingDetailPanel ke Manifest keberangkatan:**
+- Tambah link "Lihat semua jamaah keberangkatan ini →" di `BookingDetailPanel.tsx`
+- Mengarah ke `/admin/manifest?departureId={departureId}`
 
-Di `Departures.tsx`, tambah tombol di setiap kartu:
-```
-[📋 Lihat Manifest]  [📥 Download PDF]  [✏️ Edit]  [🗑️ Hapus]
-```
-- Klik → navigate ke `/admin/manifest?departureId=xxx`
+**E2 — Kolom tambahan di tabel Manifest:**
+- **Kode Booking** (clickable → buka detail booking)
+- **Nama Pemesan** (untuk rombongan: nama PIC)
 
-**File:** `artifacts/umroh-app/src/features/admin/pages/Departures.tsx`
-
-#### F3-AUTO — Auto-select departure di halaman Manifest
-
-Di `Manifest.tsx`:
-- Baca query param `?departureId=xxx` saat mount
-- Jika ada → langsung set departure terpilih (skip pilih manual)
-
-**File:** `artifacts/umroh-app/src/features/admin/pages/Manifest.tsx`
+**File:**
+- `artifacts/umroh-app/src/features/admin/pages/components/BookingDetailPanel.tsx`
+- `artifacts/umroh-app/src/features/admin/pages/Manifest.tsx`
 
 ---
 
-### 🟡 PRIORITAS 4 — Ringkasan Manifest di Departure Card (Medium)
-**Estimasi: 0.5 hari kerja**
+### ❌ F. Halaman Jadwal Keberangkatan Publik (`/jadwal`)
+> **Belum ada** — halaman, endpoint, maupun integrasi di navbar/homepage
 
-Tambah summary cepat di kartu keberangkatan:
+Calon jamaah saat ini hanya bisa lihat jadwal dari dalam detail paket. Tidak ada halaman lintas-paket.
+
+**Yang perlu dibuat:**
+
 ```
-📋 Manifest: 28 jamaah confirmed | 2 pending dokumen
+/jadwal — Jadwal Keberangkatan Umroh
+Filter: [Bulan ▼] [Tahun ▼] [Paket ▼]
+Dikelompokkan per bulan, setiap baris ada tombol [Daftar →]
 ```
 
-- Backend: tambah query param `?summary=true` ke `GET /api/admin/departures/:id/manifest-data`
-- Return: `{ totalConfirmed, totalPendingDokumen }`
-- Frontend: tampilkan di departure card bawah quota bar
+**Backend:** `GET /api/public/jadwal?month=&year=&packageId=`
 
-**Files:**
-- `artifacts/api-server/src/routes/admin/departures.ts`
-- `artifacts/umroh-app/src/features/admin/pages/Departures.tsx`
+**Frontend:**
+- `artifacts/umroh-app/src/features/cms/pages/Jadwal.tsx` ← buat baru
+- `artifacts/umroh-app/src/features/cms/pages/Index.tsx` — section "Jadwal Terdekat" + countdown
+- Navbar publik — tambah menu "Jadwal"
+- `App.tsx` — tambah route `/jadwal`
 
 ---
 
-### 🟢 PRIORITAS 5 — Riwayat Cetak Manifest / Audit Trail (Low)
-**Estimasi: 1 hari kerja**
+### ❌ G. Perbaikan Kolom & Filter di Booking List
+> **Belum ada**
 
-Schema `manifests` sudah ada (dibuat di MN-DB01), snapshot disimpan saat PDF di-download. Yang belum ada: **UI untuk melihat riwayat tersebut**.
+Tambahkan ke `BookingTable.tsx` dan `Bookings.tsx`:
+- Kolom **"Jumlah Jamaah"** (dari `paxCount`)
+- Kolom **"Nama Pemesan"** eksplisit (bukan fallback)
+- Filter **"Keberangkatan"** — dropdown pilih tanggal spesifik
+- Badge **"Rombongan"** untuk booking grup
+- Quick action: ikon **👥 Lihat Jamaah** per baris
 
-- Di halaman Manifest atau departure card: tampilkan "Terakhir dicetak: [tanggal]"
-- Tombol "Lihat Riwayat Cetak" → list snapshot manifest (tanggal, total jemaah saat itu)
-- Berguna untuk audit trail jika ada perubahan data pasca-cetak
+---
 
-**Files:**
+### ❌ H. Riwayat Cetak Manifest / Audit Trail
+> **Schema sudah ada, UI belum**
+
+Tabel `manifests` sudah ada dan snapshot tersimpan saat download PDF. Yang belum ada: UI untuk melihat riwayat.
+
+- Tampilkan "Terakhir dicetak: [tanggal]" di halaman Manifest atau departure card
+- Tombol "Lihat Riwayat Cetak" → list snapshot (tanggal, total jamaah saat itu)
+
+**File:**
 - `artifacts/umroh-app/src/features/admin/pages/Manifest.tsx`
 - `artifacts/api-server/src/routes/admin/departures.ts` — GET manifest history per departure
+
+---
+
+### ❌ I. Nama Pemesan — Backfill Data Lama
+> **Kolom ada, data lama belum diisi**
+
+Kolom `pemesan_name` + `pemesan_phone` sudah ada di tabel `bookings`. Form baru sudah mengisinya. Tapi booking lama yang dibuat sebelum form baru mungkin masih kosong.
+
+Script migrasi data:
+- Booking dengan `user_id`: isi `pemesan_name` dari tabel `profiles`
+- Booking tanpa `user_id`: isi dari `booking_pilgrims` pertama (nama jamaah pertama)
+
+**File:** `artifacts/api-server/src/routes/admin/bookings.ts` atau script terpisah
 
 ---
 
 ## URUTAN PENGERJAAN YANG DISARANKAN
 
 ```
-Minggu ini:
-  [P1] Nama pemesan konsisten       ← selesaikan dulu, block P2
-  [P3] Tombol manifest + auto-select ← independen, bisa paralel dengan P1
+Segera (sudah selesai, perlu verifikasi/cleanup):
+  [A] Pastikan AdminBookingDialog.tsx terpasang & dialog lama tidak dipakai
+  [B] Hapus/arsipkan AdminCreateBookingDialog + AdminGroupBookingDialog jika sudah tidak dipakai
 
-Minggu depan:
-  [P2] Batch booking multi-jamaah   ← butuh P1 selesai dulu (field pemesan_name)
-  [P4] Summary manifest di card      ← bisa dikerjakan bersamaan P2
+Minggu ini (nilai tinggi, effort rendah):
+  [C] Tambah/edit jamaah dari booking detail  ← backend setengah jalan, tinggal UI
+  [D] Manifest summary di departure card      ← 1 endpoint + UI kecil
+  [E] Shortcut manifest dari booking detail   ← 1 link + 2 kolom
 
-Nanti (jika ada waktu):
-  [P5] Riwayat cetak manifest        ← low priority, schema sudah siap
-  [PK-01] Standarisasi camelCase     ✅ selesai — semua API & frontend sudah camelCase
+Minggu depan (fitur baru):
+  [F] Halaman jadwal publik /jadwal           ← endpoint baru + halaman baru
+  [G] Perbaikan kolom booking list            ← UI only, data sudah ada
+  [I] Backfill pemesan_name data lama         ← script SQL 1x
+
+Nanti (low priority):
+  [H] Riwayat cetak manifest                 ← schema siap, tinggal UI
 ```
 
 ---
@@ -277,8 +275,9 @@ Nanti (jika ada waktu):
 | Batch booking route order | `POST /batch` harus sebelum `POST /:id` di Express router |
 | Schema push | `cd lib/db && pnpm drizzle-kit push` setelah setiap perubahan schema |
 | camelCase API | Perbaiki per-endpoint saat disentuh, jangan refactor global |
-| `manifests` table | Sudah ada, snapshot tersimpan saat download PDF, UI belum ada |
-| Quota warning | Saat ini hanya `console.warn`, notifikasi in-app belum karena butuh userId admin |
+| `manifests` table | Schema ada, snapshot tersimpan saat download PDF, UI riwayat belum ada |
+| `pemesan_name` | Kolom ada, form baru mengisi, data lama perlu backfill |
+| Form booking | `AdminBookingDialog.tsx` = form terpadu baru; dua file lama masih ada, perlu verifikasi |
 
 ---
 
@@ -294,13 +293,13 @@ packages (Paket Umroh)
          │     │     └── check_ins             [FK ✅]
          │     ├── payment_transactions        [FK ✅]
          │     ├── installment_schedules       [FK ✅]
-         │     └── booking_status_logs         [FK ✅]  ← Sprint 4
-         └── manifests (Snapshot)             [FK ✅]  ← Sprint 4, UI belum
+         │     └── booking_status_logs         [FK ✅]
+         └── manifests (Snapshot)             [FK ✅] ← schema ada, UI riwayat belum
 
-pilgrims (Master Jemaah)                      ← Sprint 3
+pilgrims (Master Jemaah)
    └── booking_pilgrims                       [FK pilgrimId → pilgrims.id]
 
-pilgrim_equipment                             ← Sprint 3
+pilgrim_equipment
    ├── FK: booking_pilgrim_id → booking_pilgrims.id CASCADE
    ├── FK: equipment_id → equipment.id
    └── FK: booking_id → bookings.id CASCADE
@@ -310,4 +309,4 @@ equipment                                     [total_stock ✅, relasi via pilgr
 
 ---
 
-*File ini menggantikan `rencana-perbaikan-operasional.md` dan `RENCANA_PENGEMBANGAN_BOOKING_MANIFEST.md`.*
+*File ini menggantikan `RENCANA_PENGEMBANGAN.md` (versi lama) dan `docs/rencana-pengembangan-booking-keberangkatan.md`.*
