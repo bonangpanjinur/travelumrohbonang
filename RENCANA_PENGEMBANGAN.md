@@ -28,9 +28,9 @@
 
 | ❌ | ID | Judul | Keterangan | File Terdampak |
 |----|----|-------|------------|----------------|
-| ❌ | BKG-F01 | Panel pembayaran di detail booking | Tampilkan ringkasan (sudah bayar / sisa / status lunas), histori pembayaran, tombol "Tambah Pembayaran Manual", tombol "Verifikasi/Tolak" langsung dari panel | `BookingDetailPanel.tsx`, endpoint `GET /api/admin/bookings/:id/payments` sudah ada |
-| ❌ | BKG-F02 | Tampilan kamar + total harga booking | Room data sudah di-fetch tapi tidak dirender — tampilkan tabel breakdown (tipe, qty, harga, subtotal) + total harga keseluruhan | `BookingDetailPanel.tsx` |
-| ❌ | BKG-BUG-05 | `window.confirm()` native perlu diganti modal proper | Ganti dengan Radix `AlertDialog` dengan field alasan/catatan (terutama untuk pembatalan) | `BookingDetailPanel.tsx` |
+| ✅ | BKG-F01 | Panel pembayaran di detail booking | Tampilkan ringkasan (sudah bayar / sisa / status lunas), histori pembayaran, tombol "Tambah Pembayaran Manual", tombol "Verifikasi/Tolak" langsung dari panel | `BookingDetailPanel.tsx`, endpoint `GET /api/admin/bookings/:id/payments` sudah ada |
+| ✅ | BKG-F02 | Tampilan kamar + total harga booking | Room data sudah di-fetch tapi tidak dirender — tampilkan tabel breakdown (tipe, qty, harga, subtotal) + total harga keseluruhan | `BookingDetailPanel.tsx` |
+| ✅ | BKG-BUG-05 | `window.confirm()` native perlu diganti modal proper | Ganti dengan Radix `AlertDialog` dengan field alasan/catatan (terutama untuk pembatalan) | `BookingDetailPanel.tsx` |
 
 #### 🟡 Prioritas Sedang
 
@@ -54,8 +54,8 @@
 
 | ❌ | ID | Judul | Keterangan | File Terdampak |
 |----|----|-------|------------|----------------|
-| ❌ | KB-F03 | Info penerbangan di form keberangkatan | Tambah field: maskapai, nomor penerbangan, bandara keberangkatan, bandara tujuan — krusial untuk manifest airline | `Departures.tsx`, `admin/departures.ts`, schema DB |
-| ❌ | KB-F04 | Tombol "Keuangan" & "Checklist" di departure card | Halaman `DepartureFinance` dan `DepartureChecklist` sudah dibuat tapi tidak bisa diakses dari card | `Departures.tsx` — footer card |
+| ✅ | KB-F03 | Info penerbangan di form keberangkatan | Tambah field: maskapai, nomor penerbangan, bandara keberangkatan, bandara tujuan — krusial untuk manifest airline | `Departures.tsx`, `admin/departures.ts`, schema DB |
+| ✅ | KB-F04 | Tombol "Keuangan" & "Checklist" di departure card | Halaman `DepartureFinance` dan `DepartureChecklist` sudah dibuat tapi tidak bisa diakses dari card | `Departures.tsx` — footer card |
 
 #### 🟡 Prioritas Sedang
 

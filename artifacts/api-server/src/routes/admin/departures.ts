@@ -44,6 +44,11 @@ router.get("/", async (req, res) => {
         remainingQuota: packageDepartures.remainingQuota,
         status: packageDepartures.status,
         muthawifId: packageDepartures.muthawifId,
+        // KB-F03: flight info
+        airlineId: packageDepartures.airlineId,
+        flightNumber: packageDepartures.flightNumber,
+        departureAirportId: packageDepartures.departureAirportId,
+        arrivalAirportId: packageDepartures.arrivalAirportId,
         packageTitle: packages.title,
       })
       .from(packageDepartures)
@@ -116,6 +121,11 @@ router.get("/", async (req, res) => {
         remainingQuota: realRemainingQuota,
         status: dep.status,
         muthawifId: dep.muthawifId ?? null,
+        // KB-F03: flight info
+        airlineId: dep.airlineId ?? null,
+        flightNumber: dep.flightNumber ?? null,
+        departureAirportId: dep.departureAirportId ?? null,
+        arrivalAirportId: dep.arrivalAirportId ?? null,
         package: dep.packageTitle ? { id: dep.packageId, title: dep.packageTitle } : null,
         prices: (pricesByDeparture.get(dep.id) ?? []).map((p) => ({
           id: p.id,
@@ -396,9 +406,13 @@ router.post("/", async (req, res) => {
       prices,
       package_id,       departure_date,  return_date,
       muthawif_id,      quota,           status,
+      // KB-F03: flight info — accept both snake_case and camelCase
+      airline_id, flight_number, departure_airport_id, arrival_airport_id,
       // accept camelCase too in case callers are updated
       packageId: _pkgId, departureDate: _depDate, returnDate: _retDate,
       muthawifId: _mId,
+      airlineId: _airId, flightNumber: _flNum,
+      departureAirportId: _depAp, arrivalAirportId: _arrAp,
     } = req.body;
 
     const resolvedPackageId   = package_id   ?? _pkgId;
@@ -406,6 +420,10 @@ router.post("/", async (req, res) => {
     const resolvedRetDate     = return_date   ?? _retDate ?? null;
     const resolvedMuthawifId  = muthawif_id  ?? _mId ?? null;
     const resolvedQuota       = Number(quota) || 45;
+    const resolvedAirlineId   = airline_id   ?? _airId   ?? null;
+    const resolvedFlightNum   = flight_number ?? _flNum  ?? null;
+    const resolvedDepAirport  = departure_airport_id ?? _depAp ?? null;
+    const resolvedArrAirport  = arrival_airport_id   ?? _arrAp ?? null;
 
     if (!resolvedPackageId)   return res.status(400).json({ error: "package_id diperlukan" });
     if (!resolvedDepDate)     return res.status(400).json({ error: "departure_date diperlukan" });
@@ -423,13 +441,17 @@ router.post("/", async (req, res) => {
         .insert(packageDepartures)
         .values({
           id,
-          packageId:      resolvedPackageId,
-          departureDate:  resolvedDepDate,
-          returnDate:     resolvedRetDate,
-          quota:          resolvedQuota,
-          remainingQuota: resolvedQuota,
-          status:         status ?? "active",
-          muthawifId:     resolvedMuthawifId || null,
+          packageId:           resolvedPackageId,
+          departureDate:       resolvedDepDate,
+          returnDate:          resolvedRetDate,
+          quota:               resolvedQuota,
+          remainingQuota:      resolvedQuota,
+          status:              status ?? "active",
+          muthawifId:          resolvedMuthawifId || null,
+          airlineId:           resolvedAirlineId,
+          flightNumber:        resolvedFlightNum,
+          departureAirportId:  resolvedDepAirport,
+          arrivalAirportId:    resolvedArrAirport,
         })
         .returning();
 
@@ -463,7 +485,11 @@ router.patch("/:id", async (req, res) => {
     const {
       prices,
       package_id, departure_date, return_date, muthawif_id,
+      // KB-F03: flight info snake_case
+      airline_id, flight_number, departure_airport_id, arrival_airport_id,
       packageId: _pkgId, departureDate: _depDate, returnDate: _retDate, muthawifId: _mId,
+      // KB-F03: flight info camelCase
+      airlineId: _airId, flightNumber: _flNum, departureAirportId: _depAp, arrivalAirportId: _arrAp,
       id: _id, createdAt: _ca, // strip immutable fields
       ...rest
     } = req.body;
@@ -476,6 +502,15 @@ router.patch("/:id", async (req, res) => {
     if (muthawif_id  !== undefined) updates.muthawifId     = muthawif_id  || null;
     else if (_mId    !== undefined) updates.muthawifId     = _mId         || null;
     if (rest.quota !== undefined)   updates.quota          = Number(rest.quota);
+    // KB-F03: flight fields
+    if (airline_id          !== undefined) updates.airlineId          = airline_id          ?? _airId ?? null;
+    else if (_airId         !== undefined) updates.airlineId          = _airId              || null;
+    if (flight_number       !== undefined) updates.flightNumber       = flight_number       ?? _flNum ?? null;
+    else if (_flNum         !== undefined) updates.flightNumber       = _flNum              || null;
+    if (departure_airport_id !== undefined) updates.departureAirportId = departure_airport_id ?? _depAp ?? null;
+    else if (_depAp          !== undefined) updates.departureAirportId = _depAp              || null;
+    if (arrival_airport_id   !== undefined) updates.arrivalAirportId   = arrival_airport_id  ?? _arrAp ?? null;
+    else if (_arrAp          !== undefined) updates.arrivalAirportId   = _arrAp              || null;
 
     // Validasi tanggal: jika keduanya ada dalam update, cek langsung.
     // Jika hanya satu yang diupdate, ambil nilai yang ada dari DB.

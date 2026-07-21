@@ -11,6 +11,7 @@ import { useToast } from "@/shared/hooks/use-toast";
 import {
   Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search,
   Images, FileDown, Copy, ArrowRight, Plane, ChevronRight, ClipboardList, RefreshCw, Activity,
+  Wallet, CheckSquare,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -23,6 +24,8 @@ import { useDeleteConfirm } from "@/features/admin/hooks/useDeleteConfirm";
 
 interface Package { id: string; title: string }
 interface Muthawif { id: string; name: string }
+interface Airline { id: string; name: string; code: string | null }
+interface Airport { id: string; name: string; code: string | null; city: string | null }
 interface DeparturePrice { id: string; roomType: string; price: number }
 interface Departure {
   id: string;
@@ -33,6 +36,11 @@ interface Departure {
   remainingQuota: number;
   status: string;
   muthawifId: string | null;
+  // KB-F03
+  airlineId: string | null;
+  flightNumber: string | null;
+  departureAirportId: string | null;
+  arrivalAirportId: string | null;
   package: Package | null;
   prices: DeparturePrice[];
 }
@@ -126,6 +134,8 @@ const AdminDepartures = () => {
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [muthawifs, setMuthawifs] = useState<Muthawif[]>([]);
+  const [airlines, setAirlines] = useState<Airline[]>([]);
+  const [airports, setAirports] = useState<Airport[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Departure | null>(null);
@@ -138,24 +148,31 @@ const AdminDepartures = () => {
   const [form, setForm] = useState<{
     packageId: string; departureDate: string; returnDate: string;
     quota: number; status: string; muthawifId: string; prices: Record<string, number>;
+    // KB-F03: flight info
+    airlineId: string; flightNumber: string; departureAirportId: string; arrivalAirportId: string;
   }>({
     packageId: "", departureDate: "", returnDate: "",
     quota: 45, status: "active", muthawifId: "",
     prices: Object.fromEntries(ROOM_TYPES.map((t) => [t, 0])),
+    airlineId: "", flightNumber: "", departureAirportId: "", arrivalAirportId: "",
   });
 
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
-      const [departuresRes, packagesRes, muthawifRes] = await Promise.all([
+      const [departuresRes, packagesRes, muthawifRes, airlinesRes, airportsRes] = await Promise.all([
         apiFetch<{ data: Departure[] }>("/api/admin/departures"),
         apiFetch<{ data: Package[] }>("/api/packages?active=true"),
         apiFetch<{ data: Muthawif[] }>("/api/admin/masterdata/muthawifs"),
+        apiFetch<Airline[]>("/api/admin/masterdata/airlines").catch(() => [] as Airline[]),
+        apiFetch<Airport[]>("/api/admin/masterdata/airports").catch(() => [] as Airport[]),
       ]);
       setDepartures(departuresRes.data || []);
       setPackages(packagesRes.data || []);
       setMuthawifs(muthawifRes.data || []);
+      setAirlines(airlinesRes || []);
+      setAirports(airportsRes || []);
     } catch (err: any) {
       toast({ title: "Gagal memuat data keberangkatan", description: err?.message ?? "Periksa koneksi atau coba lagi.", variant: "destructive" });
     } finally {
@@ -197,6 +214,10 @@ const AdminDepartures = () => {
       status: dep.status || "active",
       muthawifId: dep.muthawifId || "",
       prices: priceMap,
+      airlineId: dep.airlineId || "",
+      flightNumber: dep.flightNumber || "",
+      departureAirportId: dep.departureAirportId || "",
+      arrivalAirportId: dep.arrivalAirportId || "",
     });
     setIsOpen(true);
   };
@@ -217,6 +238,7 @@ const AdminDepartures = () => {
       packageId: "", departureDate: "", returnDate: "",
       quota: 45, status: "active", muthawifId: "",
       prices: Object.fromEntries(ROOM_TYPES.map((t) => [t, 0])),
+      airlineId: "", flightNumber: "", departureAirportId: "", arrivalAirportId: "",
     });
   };
 
@@ -251,6 +273,19 @@ const AdminDepartures = () => {
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paginatedIds]);
+
+  // Helper: airport display label
+  const airportLabel = (id: string | null) => {
+    if (!id) return "";
+    const ap = airports.find((a) => a.id === id);
+    return ap ? `${ap.code ? ap.code + " - " : ""}${ap.city ?? ap.name}` : id;
+  };
+
+  const airlineLabel = (id: string | null) => {
+    if (!id) return "";
+    const al = airlines.find((a) => a.id === id);
+    return al ? `${al.name}${al.code ? " (" + al.code + ")" : ""}` : id;
+  };
 
   return (
     <div className="space-y-6">
@@ -287,6 +322,7 @@ const AdminDepartures = () => {
                 <DialogTitle>{editing ? "Edit Keberangkatan" : "Tambah Keberangkatan Baru"}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Paket */}
                 <div>
                   <Label>Paket *</Label>
                   <Select value={form.packageId} onValueChange={(val) => setForm({ ...form, packageId: val })}>
@@ -296,6 +332,8 @@ const AdminDepartures = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Tanggal */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Tanggal Berangkat *</Label>
@@ -306,6 +344,8 @@ const AdminDepartures = () => {
                     <Input type="date" value={form.returnDate} min={form.departureDate || undefined} onChange={(e) => setForm({ ...form, returnDate: e.target.value })} className="mt-1" />
                   </div>
                 </div>
+
+                {/* Kuota + Status */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Kuota</Label>
@@ -323,15 +363,84 @@ const AdminDepartures = () => {
                     </Select>
                   </div>
                 </div>
+
+                {/* Muthawif */}
                 <div>
                   <Label>Muthawif</Label>
-                  <Select value={form.muthawifId} onValueChange={(val) => setForm({ ...form, muthawifId: val })}>
+                  <Select value={form.muthawifId || "__none__"} onValueChange={(val) => setForm({ ...form, muthawifId: val === "__none__" ? "" : val })}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih muthawif (opsional)" /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="__none__">— Tidak Ada —</SelectItem>
                       {muthawifs.map((m) => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* KB-F03: Info Penerbangan */}
+                <div className="border-t pt-4">
+                  <Label className="text-base font-semibold flex items-center gap-2 mb-3">
+                    <Plane className="w-4 h-4" /> Info Penerbangan
+                  </Label>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Maskapai</Label>
+                        <Select value={form.airlineId || "__none__"} onValueChange={(val) => setForm({ ...form, airlineId: val === "__none__" ? "" : val })}>
+                          <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih maskapai" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— Tidak Ada —</SelectItem>
+                            {airlines.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.name}{a.code ? ` (${a.code})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Nomor Penerbangan</Label>
+                        <Input
+                          value={form.flightNumber}
+                          onChange={(e) => setForm({ ...form, flightNumber: e.target.value })}
+                          placeholder="Cth: GA-123"
+                          className="mt-1 h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Bandara Keberangkatan</Label>
+                        <Select value={form.departureAirportId || "__none__"} onValueChange={(val) => setForm({ ...form, departureAirportId: val === "__none__" ? "" : val })}>
+                          <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih bandara" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— Tidak Ada —</SelectItem>
+                            {airports.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.code ? `${a.code} - ` : ""}{a.city ?? a.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Bandara Tujuan</Label>
+                        <Select value={form.arrivalAirportId || "__none__"} onValueChange={(val) => setForm({ ...form, arrivalAirportId: val === "__none__" ? "" : val })}>
+                          <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih bandara" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— Tidak Ada —</SelectItem>
+                            {airports.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.code ? `${a.code} - ` : ""}{a.city ?? a.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Harga per Kamar */}
                 <div className="border-t pt-4">
                   <Label className="text-base font-semibold flex items-center gap-2 mb-3">
                     <DollarSign className="w-4 h-4" /> Harga per Tipe Kamar
@@ -351,6 +460,7 @@ const AdminDepartures = () => {
                     ))}
                   </div>
                 </div>
+
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
                   <Button type="submit" className="gradient-gold text-primary">Simpan</Button>
@@ -409,6 +519,18 @@ const AdminDepartures = () => {
                             </>
                           )}
                         </div>
+                        {/* KB-F03: Tampilkan info penerbangan jika ada */}
+                        {(dep.airlineId || dep.flightNumber) && (
+                          <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                            <Plane className="w-3 h-3 shrink-0" />
+                            <span>
+                              {airlineLabel(dep.airlineId)}
+                              {dep.flightNumber ? ` · ${dep.flightNumber}` : ""}
+                              {dep.departureAirportId ? ` · ${airportLabel(dep.departureAirportId)}` : ""}
+                              {dep.arrivalAirportId ? ` → ${airportLabel(dep.arrivalAirportId)}` : ""}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <StatusBadge dep={dep} />
                     </div>
@@ -493,7 +615,7 @@ const AdminDepartures = () => {
                       </Button>
                       <Button
                         variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        title="Sinkronkan Quota (perbaiki hitungan kuota dari data booking aktual)"
+                        title="Sinkronkan Quota"
                         onClick={async () => {
                           try {
                             const result = await apiFetch<{ filled: number; remaining: number }>(`/api/admin/departures/${dep.id}/sync-quota`, { method: "POST" });
@@ -527,6 +649,21 @@ const AdminDepartures = () => {
                       >
                         <Activity className="w-4 h-4" />
                       </Button>
+                      {/* KB-F04: Tombol Keuangan & Checklist */}
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        title="Laporan Keuangan Keberangkatan"
+                        onClick={() => navigate(`/admin/departure-finance?departureId=${dep.id}`)}
+                      >
+                        <Wallet className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        title="Checklist Keberangkatan"
+                        onClick={() => navigate(`/admin/departure-checklist?departureId=${dep.id}`)}
+                      >
+                        <CheckSquare className="w-4 h-4" />
+                      </Button>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button
@@ -558,12 +695,7 @@ const AdminDepartures = () => {
           <GalleryDialogHeader>
             <GalleryDialogTitle>Galeri Foto — {galleryDep?.package?.title}</GalleryDialogTitle>
           </GalleryDialogHeader>
-          {galleryDep && (
-            <DepartureGalleryPanel
-              departureId={galleryDep.id}
-              departureLabel={safeFormatDate(galleryDep.departureDate, "d MMMM yyyy")}
-            />
-          )}
+          {galleryDep && <DepartureGalleryPanel departureId={galleryDep.id} />}
         </GalleryDialogContent>
       </GalleryDialog>
     </div>

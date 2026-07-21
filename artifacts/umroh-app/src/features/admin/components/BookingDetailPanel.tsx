@@ -5,12 +5,18 @@ import {
   Users, UserCheck, DollarSign, FileDown, Building2, UsersRound,
   PhoneCall, History, ExternalLink, Bed, Calendar, Loader2,
   Plus, Trash2, Save, X, CheckCircle2, XCircle, Trophy, ChevronDown,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
 import { fetchInvoiceData, generateInvoiceHTML, openInvoicePrintWindow } from "./InvoiceGenerator";
 import PilgrimDetailDrawer, { type FullPilgrim } from "./PilgrimDetailDrawer";
 import DepartureDetailDrawer from "./DepartureDetailDrawer";
@@ -49,10 +55,8 @@ interface BookingDetailPanelProps {
   status?: string;
   onBranchChange?: () => void;
   onBookingChange?: () => void;
-  // Pemesan
   pemesanName?: string | null;
   pemesanPhone?: string | null;
-  // Group booking
   isGroupBooking?: boolean;
   groupName?: string | null;
   groupPicName?: string | null;
@@ -67,17 +71,58 @@ interface Room {
   subtotal: number;
 }
 
+interface Payment {
+  id: string;
+  type: string;
+  amount: number;
+  paidAt: string;
+  method: string | null;
+  referenceNumber: string | null;
+  notes: string | null;
+  isVoided: boolean;
+}
+
+interface PaymentSummary {
+  totalPrice: number;
+  totalPaid: number;
+  remaining: number;
+  paymentStatus: string;
+  payments: Payment[];
+}
+
 interface NewJamaahForm {
   name: string;
   phone: string;
   gender: string;
 }
 
+interface NewPaymentForm {
+  type: string;
+  amount: string;
+  paidAt: string;
+  method: string;
+  notes: string;
+}
+
 const ROOM_LABELS: Record<string, string> = {
   quad: "Quad", triple: "Triple", double: "Double", single: "Single",
 };
 
+const PAYMENT_TYPE_LABELS: Record<string, string> = {
+  dp: "DP (Uang Muka)",
+  pelunasan: "Pelunasan",
+  cicilan: "Cicilan",
+  manual: "Manual",
+};
+
 const emptyNewJamaah = (): NewJamaahForm => ({ name: "", phone: "", gender: "" });
+const emptyNewPayment = (): NewPaymentForm => ({
+  type: "dp",
+  amount: "",
+  paidAt: new Date().toISOString().split("T")[0],
+  method: "",
+  notes: "",
+});
 
 const BookingDetailPanel = ({
   bookingId, packageId, departureId, departureDate,
@@ -89,6 +134,7 @@ const BookingDetailPanel = ({
 }: BookingDetailPanelProps) => {
   const [pilgrims, setPilgrims] = useState<FullPilgrim[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
   const [commissionRate, setCommissionRate] = useState<number>(0);
   const [picName, setPicName] = useState<string>("-");
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -108,6 +154,21 @@ const BookingDetailPanel = ({
   const [newJamaah, setNewJamaah] = useState<NewJamaahForm>(emptyNewJamaah());
   const [savingJamaah, setSavingJamaah] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+
+  // Payment form
+  const [showAddPayment, setShowAddPayment] = useState(false);
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [newPayment, setNewPayment] = useState<NewPaymentForm>(emptyNewPayment());
+
+  // Confirm dialog (replaces window.confirm)
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean; title: string; description?: string;
+    onConfirm: () => void; destructive?: boolean;
+  }>({ open: false, title: "", onConfirm: () => {} });
+
+  const showConfirm = (
+    title: string, description: string, onConfirm: () => void, destructive = false,
+  ) => setConfirmDialog({ open: true, title, description, onConfirm, destructive });
 
   // Modal/drawer state
   const [selectedPilgrim, setSelectedPilgrim] = useState<FullPilgrim | null>(null);
@@ -141,10 +202,12 @@ const BookingDetailPanel = ({
   const fetchDetails = async () => {
     setLoading(true);
     try {
-      const [detail, logs] = await Promise.allSettled([
+      const [detail, logs, paymentsRes] = await Promise.allSettled([
         apiFetch<any>(`/api/admin/bookings/${bookingId}`),
         apiFetch<any[]>(`/api/admin/bookings/${bookingId}/status-logs`),
+        apiFetch<PaymentSummary>(`/api/admin/bookings/${bookingId}/payments`),
       ]);
+
       if (detail.status === "fulfilled") {
         const d = detail.value;
         setPilgrims(
@@ -173,6 +236,7 @@ const BookingDetailPanel = ({
         );
       }
       if (logs.status === "fulfilled") setStatusLogs(logs.value || []);
+      if (paymentsRes.status === "fulfilled") setPaymentSummary(paymentsRes.value);
 
       if (packageId && picType && picType !== "pusat") {
         apiFetch<any[]>(
@@ -222,37 +286,36 @@ const BookingDetailPanel = ({
   };
 
   // ── Ubah Status Booking ─────────────────────────────────────────────────
-  const handleStatusChange = async (newStatus: string) => {
+  const handleStatusChange = (newStatus: string) => {
     const action = VALID_TRANSITIONS[currentStatus]?.find((t) => t.status === newStatus);
     if (!action) return;
-    const confirm = window.confirm(
-      `${action.label} booking ini?\n\nStatus akan berubah dari "${currentStatus}" → "${newStatus}".`
+    showConfirm(
+      `${action.label} booking ini?`,
+      `Status akan berubah dari "${currentStatus}" → "${newStatus}".`,
+      async () => {
+        setChangingStatus(true);
+        try {
+          await apiFetch(`/api/admin/bookings/${bookingId}/status`, {
+            method: "PATCH",
+            body: JSON.stringify({ status: newStatus }),
+          });
+          toast.success(`Status berhasil diubah ke "${action.label}"`);
+          setCurrentStatus(newStatus);
+          fetchDetails();
+          onBookingChange?.();
+        } catch (e: any) {
+          toast.error(e?.message || "Gagal mengubah status booking");
+        } finally {
+          setChangingStatus(false);
+        }
+      },
+      action.variant === "destructive",
     );
-    if (!confirm) return;
-    setChangingStatus(true);
-    try {
-      await apiFetch(`/api/admin/bookings/${bookingId}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: newStatus }),
-      });
-      toast.success(`Status berhasil diubah ke "${action.label}"`);
-      setCurrentStatus(newStatus);
-      fetchDetails();
-      onBookingChange?.();
-    } catch (e: any) {
-      toast.error(e?.message || "Gagal mengubah status booking");
-    } finally {
-      setChangingStatus(false);
-    }
   };
 
   // ── Tambah jamaah ─────────────────────────────────────────────────────────
-
   const handleAddJamaah = async () => {
-    if (!newJamaah.name.trim()) {
-      toast.error("Nama jamaah wajib diisi");
-      return;
-    }
+    if (!newJamaah.name.trim()) { toast.error("Nama jamaah wajib diisi"); return; }
     setSavingJamaah(true);
     try {
       await apiFetch(`/api/admin/bookings/${bookingId}/pilgrims`, {
@@ -276,24 +339,56 @@ const BookingDetailPanel = ({
   };
 
   // ── Hapus jamaah ──────────────────────────────────────────────────────────
+  const handleRemoveJamaah = (pilgrimId: string, name: string) => {
+    showConfirm(
+      `Hapus jamaah "${name}"?`,
+      "Jamaah akan dihapus permanen dari booking ini. Tindakan ini tidak bisa dibatalkan.",
+      async () => {
+        setRemovingId(pilgrimId);
+        try {
+          await apiFetch(`/api/admin/pilgrims/${pilgrimId}`, { method: "DELETE" });
+          toast.success(`${name} dihapus dari booking`);
+          fetchDetails();
+          onBookingChange?.();
+        } catch (e: any) {
+          toast.error(e?.message || "Gagal menghapus jamaah");
+        } finally {
+          setRemovingId(null);
+        }
+      },
+      true,
+    );
+  };
 
-  const handleRemoveJamaah = async (pilgrimId: string, name: string) => {
-    if (!confirm(`Hapus jamaah "${name}" dari booking ini?`)) return;
-    setRemovingId(pilgrimId);
+  // ── Tambah pembayaran manual ──────────────────────────────────────────────
+  const handleAddPayment = async () => {
+    const amount = parseInt(newPayment.amount.replace(/\D/g, ""));
+    if (!amount || amount <= 0) { toast.error("Jumlah pembayaran wajib diisi"); return; }
+    setSavingPayment(true);
     try {
-      await apiFetch(`/api/admin/pilgrims/${pilgrimId}`, { method: "DELETE" });
-      toast.success(`${name} dihapus dari booking`);
+      await apiFetch(`/api/admin/bookings/${bookingId}/payments`, {
+        method: "POST",
+        body: JSON.stringify({
+          type:     newPayment.type,
+          amount,
+          paidAt:   newPayment.paidAt,
+          method:   newPayment.method || null,
+          notes:    newPayment.notes  || null,
+        }),
+      });
+      toast.success("Pembayaran berhasil dicatat");
+      setNewPayment(emptyNewPayment());
+      setShowAddPayment(false);
       fetchDetails();
       onBookingChange?.();
     } catch (e: any) {
-      toast.error(e?.message || "Gagal menghapus jamaah");
+      toast.error(e?.message || "Gagal mencatat pembayaran");
     } finally {
-      setRemovingId(null);
+      setSavingPayment(false);
     }
   };
 
   // ── Pilgrim updated inline ─────────────────────────────────────────────────
-
   const handlePilgrimUpdated = (updated: FullPilgrim) => {
     setPilgrims((prev) => prev.map((p) => p.id === updated.id ? updated : p));
   };
@@ -313,6 +408,14 @@ const BookingDetailPanel = ({
   };
   const totalCommission = commissionRate * pilgrims.length;
   const isPusat = !picType || picType === "pusat";
+  const totalRoomPrice = rooms.reduce((s, r) => s + r.subtotal, 0);
+
+  // Payment status label
+  const payStatusLabel: Record<string, { label: string; cls: string }> = {
+    paid:    { label: "✓ Lunas",   cls: "text-green-600 bg-green-50 border-green-200" },
+    partial: { label: "DP / Cicil", cls: "text-amber-600 bg-amber-50 border-amber-200" },
+    unpaid:  { label: "Belum Bayar", cls: "text-red-600 bg-red-50 border-red-200" },
+  };
 
   return (
     <div className="p-4 space-y-4">
@@ -335,10 +438,9 @@ const BookingDetailPanel = ({
         </div>
 
         <div className="flex gap-2 flex-wrap">
-          {/* Tombol ubah status — tampil sesuai transisi yang diperbolehkan */}
+          {/* Tombol ubah status */}
           {currentStatus && VALID_TRANSITIONS[currentStatus]?.length > 0 && (
             VALID_TRANSITIONS[currentStatus].length === 1 ? (
-              // Satu opsi — langsung jadi tombol
               <Button
                 size="sm"
                 variant={VALID_TRANSITIONS[currentStatus][0].variant}
@@ -352,7 +454,6 @@ const BookingDetailPanel = ({
                 <span className="ml-1.5">{VALID_TRANSITIONS[currentStatus][0].label}</span>
               </Button>
             ) : (
-              // Lebih dari satu opsi — tampilkan dropdown
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline" disabled={changingStatus}>
@@ -399,7 +500,7 @@ const BookingDetailPanel = ({
         </div>
       </div>
 
-      {/* ── Pemesan info — selalu tampilkan ─────────────────────────────────── */}
+      {/* ── Pemesan info ─────────────────────────────────────────────────────── */}
       {(pemesanName || isGroupBooking) && (
         <div className="p-3 border border-primary/20 bg-primary/5 rounded-lg">
           <h4 className="font-semibold flex items-center gap-2 text-sm mb-2 text-primary">
@@ -471,23 +572,20 @@ const BookingDetailPanel = ({
           </div>
         </div>
 
-        {/* ── Daftar Jemaah — dengan tambah & hapus ───────────────────────── */}
+        {/* ── Daftar Jemaah ─────────────────────────────────────────────────── */}
         <div className="bg-muted/50 rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="font-semibold flex items-center gap-2 text-sm">
               <Users className="w-4 h-4 text-primary" /> Daftar Jemaah ({pilgrims.length})
             </h4>
             <Button
-              size="sm"
-              variant="outline"
-              className="h-7 gap-1.5 text-xs"
+              size="sm" variant="outline" className="h-7 gap-1.5 text-xs"
               onClick={() => { setShowAddJamaah(!showAddJamaah); setNewJamaah(emptyNewJamaah()); }}
             >
               <Plus className="w-3 h-3" /> Tambah
             </Button>
           </div>
 
-          {/* Inline form tambah jamaah */}
           {showAddJamaah && (
             <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-background">
               <p className="text-xs font-semibold text-primary">Jamaah Baru</p>
@@ -507,13 +605,8 @@ const BookingDetailPanel = ({
                     className="h-7 text-xs"
                     type="tel"
                   />
-                  <Select
-                    value={newJamaah.gender}
-                    onValueChange={(v) => setNewJamaah((p) => ({ ...p, gender: v }))}
-                  >
-                    <SelectTrigger className="h-7 text-xs">
-                      <SelectValue placeholder="Kelamin" />
-                    </SelectTrigger>
+                  <Select value={newJamaah.gender} onValueChange={(v) => setNewJamaah((p) => ({ ...p, gender: v }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Kelamin" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="male">Laki-laki</SelectItem>
                       <SelectItem value="female">Perempuan</SelectItem>
@@ -521,24 +614,11 @@ const BookingDetailPanel = ({
                   </Select>
                 </div>
                 <div className="flex gap-1.5 justify-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs gap-1"
-                    onClick={() => setShowAddJamaah(false)}
-                    disabled={savingJamaah}
-                  >
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setShowAddJamaah(false)} disabled={savingJamaah}>
                     <X className="w-3 h-3" /> Batal
                   </Button>
-                  <Button
-                    size="sm"
-                    className="h-7 text-xs gap-1 gradient-gold text-primary"
-                    onClick={handleAddJamaah}
-                    disabled={savingJamaah || !newJamaah.name.trim()}
-                  >
-                    {savingJamaah
-                      ? <Loader2 className="w-3 h-3 animate-spin" />
-                      : <Save className="w-3 h-3" />}
+                  <Button size="sm" className="h-7 text-xs gap-1 gradient-gold text-primary" onClick={handleAddJamaah} disabled={savingJamaah || !newJamaah.name.trim()}>
+                    {savingJamaah ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                     Simpan
                   </Button>
                 </div>
@@ -563,8 +643,7 @@ const BookingDetailPanel = ({
                   </button>
                   {p.gender && (
                     <span className="text-muted-foreground text-xs shrink-0">
-                      {p.gender === "L" || p.gender?.toLowerCase() === "male" || p.gender === "Laki-laki"
-                        ? "L" : "P"}
+                      {p.gender === "L" || p.gender?.toLowerCase() === "male" || p.gender === "Laki-laki" ? "L" : "P"}
                     </span>
                   )}
                   <button
@@ -593,6 +672,182 @@ const BookingDetailPanel = ({
           </div>
         )}
       </div>
+
+      {/* ── BKG-F02: Rincian Kamar & Total Harga ─────────────────────────────── */}
+      {rooms.length > 0 && (
+        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+          <h4 className="font-semibold flex items-center gap-2 text-sm">
+            <Bed className="w-4 h-4 text-primary" /> Rincian Kamar &amp; Harga
+          </h4>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-muted-foreground text-xs border-b border-border">
+                <th className="text-left pb-1.5 font-medium">Tipe Kamar</th>
+                <th className="text-right pb-1.5 font-medium">Qty</th>
+                <th className="text-right pb-1.5 font-medium">Harga/Kamar</th>
+                <th className="text-right pb-1.5 font-medium">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rooms.map((r) => (
+                <tr key={r.id} className="border-b border-border/40 last:border-0">
+                  <td className="py-1.5">{ROOM_LABELS[r.roomType] ?? r.roomType}</td>
+                  <td className="py-1.5 text-right tabular-nums">{r.quantity}</td>
+                  <td className="py-1.5 text-right tabular-nums">Rp {r.price.toLocaleString("id-ID")}</td>
+                  <td className="py-1.5 text-right font-medium tabular-nums">Rp {r.subtotal.toLocaleString("id-ID")}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3} className="pt-2.5 text-sm font-semibold">TOTAL HARGA BOOKING</td>
+                <td className="pt-2.5 text-right font-bold text-primary tabular-nums">
+                  Rp {totalRoomPrice.toLocaleString("id-ID")}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      {/* ── BKG-F01: Panel Pembayaran ─────────────────────────────────────────── */}
+      {paymentSummary && (
+        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="font-semibold flex items-center gap-2 text-sm">
+              <CreditCard className="w-4 h-4 text-primary" /> Pembayaran
+              {paymentSummary.paymentStatus && (
+                <span className={`text-xs px-2 py-0.5 rounded-full border font-normal ${payStatusLabel[paymentSummary.paymentStatus]?.cls ?? ""}`}>
+                  {payStatusLabel[paymentSummary.paymentStatus]?.label ?? paymentSummary.paymentStatus}
+                </span>
+              )}
+            </h4>
+            <Button
+              size="sm" variant="outline" className="h-7 gap-1.5 text-xs"
+              onClick={() => { setShowAddPayment(!showAddPayment); setNewPayment(emptyNewPayment()); }}
+            >
+              <Plus className="w-3 h-3" /> Tambah Pembayaran
+            </Button>
+          </div>
+
+          {/* Ringkasan */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-2.5 bg-background rounded-lg text-center border border-border/60">
+              <p className="text-xs text-muted-foreground mb-0.5">Total Harga</p>
+              <p className="font-semibold text-sm tabular-nums">Rp {paymentSummary.totalPrice.toLocaleString("id-ID")}</p>
+            </div>
+            <div className="p-2.5 bg-background rounded-lg text-center border border-green-200 bg-green-50/50">
+              <p className="text-xs text-muted-foreground mb-0.5">Sudah Dibayar</p>
+              <p className="font-semibold text-sm text-green-600 tabular-nums">Rp {paymentSummary.totalPaid.toLocaleString("id-ID")}</p>
+            </div>
+            <div className={`p-2.5 rounded-lg text-center border ${paymentSummary.remaining > 0 ? "border-amber-200 bg-amber-50/50" : "border-green-200 bg-green-50/50"}`}>
+              <p className="text-xs text-muted-foreground mb-0.5">Sisa Tagihan</p>
+              <p className={`font-semibold text-sm tabular-nums ${paymentSummary.remaining > 0 ? "text-amber-600" : "text-green-600"}`}>
+                {paymentSummary.remaining > 0
+                  ? `Rp ${paymentSummary.remaining.toLocaleString("id-ID")}`
+                  : "✓ Lunas"}
+              </p>
+            </div>
+          </div>
+
+          {/* Form tambah pembayaran */}
+          {showAddPayment && (
+            <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-background">
+              <p className="text-xs font-semibold text-primary">Catat Pembayaran Manual</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Jenis</Label>
+                  <Select value={newPayment.type} onValueChange={(v) => setNewPayment((p) => ({ ...p, type: v }))}>
+                    <SelectTrigger className="h-7 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(PAYMENT_TYPE_LABELS).map(([v, l]) => (
+                        <SelectItem key={v} value={v}>{l}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Jumlah (Rp) *</Label>
+                  <Input
+                    value={newPayment.amount}
+                    onChange={(e) => setNewPayment((p) => ({ ...p, amount: e.target.value }))}
+                    placeholder="0"
+                    className="h-7 text-xs mt-0.5"
+                    type="number"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Tanggal Bayar *</Label>
+                  <Input
+                    value={newPayment.paidAt}
+                    onChange={(e) => setNewPayment((p) => ({ ...p, paidAt: e.target.value }))}
+                    className="h-7 text-xs mt-0.5"
+                    type="date"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Metode</Label>
+                  <Input
+                    value={newPayment.method}
+                    onChange={(e) => setNewPayment((p) => ({ ...p, method: e.target.value }))}
+                    placeholder="Transfer, Tunai…"
+                    className="h-7 text-xs mt-0.5"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Catatan</Label>
+                <Input
+                  value={newPayment.notes}
+                  onChange={(e) => setNewPayment((p) => ({ ...p, notes: e.target.value }))}
+                  placeholder="Opsional"
+                  className="h-7 text-xs mt-0.5"
+                />
+              </div>
+              <div className="flex gap-1.5 justify-end pt-1">
+                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setShowAddPayment(false)} disabled={savingPayment}>
+                  <X className="w-3 h-3" /> Batal
+                </Button>
+                <Button size="sm" className="h-7 text-xs gap-1 gradient-gold text-primary" onClick={handleAddPayment} disabled={savingPayment}>
+                  {savingPayment ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                  Simpan
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Histori pembayaran */}
+          {paymentSummary.payments.filter((p) => !p.isVoided).length === 0 ? (
+            <p className="text-sm text-muted-foreground">Belum ada pembayaran tercatat</p>
+          ) : (
+            <div className="space-y-0 divide-y divide-border/40">
+              {paymentSummary.payments
+                .filter((p) => !p.isVoided)
+                .map((p) => (
+                  <div key={p.id} className="flex items-start justify-between py-2 text-sm">
+                    <div className="space-y-0.5">
+                      <span className="font-medium">
+                        {PAYMENT_TYPE_LABELS[p.type] ?? p.type}
+                      </span>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {p.method && <span>{p.method}</span>}
+                        {p.referenceNumber && <span>#{p.referenceNumber}</span>}
+                        {p.notes && <span className="italic">{p.notes}</span>}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 ml-4">
+                      <p className="font-semibold tabular-nums">Rp {p.amount.toLocaleString("id-ID")}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(p.paidAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Status History ─────────────────────────────────────────────────── */}
       {statusLogs.length > 0 && (
@@ -655,6 +910,33 @@ const BookingDetailPanel = ({
         onOpenChange={setShowChangeDeparture}
         onSuccess={handleBookingChanged}
       />
+
+      {/* ── BKG-BUG-05: AlertDialog (menggantikan window.confirm) ────────────── */}
+      <AlertDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => !open && setConfirmDialog((d) => ({ ...d, open: false }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmDialog.title}</AlertDialogTitle>
+            {confirmDialog.description && (
+              <AlertDialogDescription>{confirmDialog.description}</AlertDialogDescription>
+            )}
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmDialog((d) => ({ ...d, open: false }));
+                confirmDialog.onConfirm();
+              }}
+              className={confirmDialog.destructive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            >
+              Ya, Lanjutkan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

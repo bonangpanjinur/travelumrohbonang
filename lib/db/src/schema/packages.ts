@@ -40,6 +40,11 @@ export const packageDepartures = pgTable("package_departures", {
   remainingQuota: integer("remaining_quota").notNull(),
   status: text("status"),
   muthawifId: text("muthawif_id").references(() => muthawifs.id, { onDelete: "set null" }),
+  // KB-F03: Info penerbangan per keberangkatan
+  airlineId: text("airline_id").references(() => airlines.id, { onDelete: "set null" }),
+  flightNumber: text("flight_number"),
+  departureAirportId: text("departure_airport_id").references(() => airports.id, { onDelete: "set null" }),
+  arrivalAirportId: text("arrival_airport_id").references(() => airports.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_departures_package_id").on(t.packageId),
