@@ -15,7 +15,7 @@ import {
 } from "@/shared/components/ui/select";
 import {
   User, CreditCard, Phone, Mail, Calendar, Globe, Bed,
-  ExternalLink, Pencil, Save, X, Loader2,
+  ExternalLink, Pencil, Save, X, Loader2, PlaneTakeoff, Hash,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -48,7 +48,10 @@ export interface FullPilgrim {
   passportNumber?: string | null;
   passportExpiry?: string | null;
   roomType?: string | null;
+  roomNumber?: string | null;
   nationality?: string | null;
+  seatNumber?: string | null;
+  flightSegment?: string | null;
 }
 
 interface PilgrimDetailDrawerProps {
@@ -214,14 +217,17 @@ const PilgrimDetailDrawer = ({ pilgrim, onClose, onUpdated }: PilgrimDetailDrawe
           {/* View mode */}
           {!editing && (
             <div className="grid grid-cols-2 gap-3">
-              <InfoRow icon={CreditCard} label="NIK"            value={pilgrim.nik} />
-              <InfoRow icon={Globe}      label="No. Passport"   value={pilgrim.passportNumber} />
-              <InfoRow icon={Calendar}   label="Berlaku s/d"    value={formatDate(pilgrim.passportExpiry)} />
-              <InfoRow icon={Calendar}   label="Tgl Lahir"      value={formatDate(pilgrim.birthDate)} />
-              <InfoRow icon={Phone}      label="Telepon"        value={pilgrim.phone} />
-              <InfoRow icon={Mail}       label="Email"          value={pilgrim.email} />
-              <InfoRow icon={Bed}        label="Tipe Kamar"     value={pilgrim.roomType ? (ROOM_LABELS[pilgrim.roomType] || pilgrim.roomType) : null} />
-              <InfoRow icon={Globe}      label="Kewarganegaraan" value={pilgrim.nationality} />
+              <InfoRow icon={CreditCard}     label="NIK"             value={pilgrim.nik} />
+              <InfoRow icon={Globe}          label="No. Passport"    value={pilgrim.passportNumber} />
+              <InfoRow icon={Calendar}       label="Berlaku s/d"     value={formatDate(pilgrim.passportExpiry)} />
+              <InfoRow icon={Calendar}       label="Tgl Lahir"       value={formatDate(pilgrim.birthDate)} />
+              <InfoRow icon={Phone}          label="Telepon"         value={pilgrim.phone} />
+              <InfoRow icon={Mail}           label="Email"           value={pilgrim.email} />
+              <InfoRow icon={Bed}            label="Tipe Kamar"      value={pilgrim.roomType ? (ROOM_LABELS[pilgrim.roomType] || pilgrim.roomType) : null} />
+              <InfoRow icon={Hash}           label="No. Kamar"       value={pilgrim.roomNumber} />
+              <InfoRow icon={Globe}          label="Kewarganegaraan" value={pilgrim.nationality} />
+              <InfoRow icon={PlaneTakeoff}   label="No. Kursi"       value={pilgrim.seatNumber} />
+              <InfoRow icon={PlaneTakeoff}   label="Segmen Penerbangan" value={pilgrim.flightSegment} />
             </div>
           )}
 

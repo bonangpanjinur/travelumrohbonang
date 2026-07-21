@@ -232,7 +232,10 @@ const BookingDetailPanel = ({
             passportNumber: p.passportNumber ?? p.passport_number ?? null,
             passportExpiry: p.passportExpiry ?? p.passport_expiry ?? null,
             roomType: p.roomType ?? p.room_type ?? null,
+            roomNumber: p.roomNumber ?? p.room_number ?? null,
             nationality: p.nationality ?? null,
+            seatNumber: p.seatNumber ?? p.seat_number ?? null,
+            flightSegment: p.flightSegment ?? p.flight_segment ?? null,
           }))
         );
         setRooms(
@@ -248,19 +251,14 @@ const BookingDetailPanel = ({
       if (logs.status === "fulfilled") setStatusLogs(logs.value || []);
       if (paymentsRes.status === "fulfilled") setPaymentSummary(paymentsRes.value);
 
-      if (packageId && picType && picType !== "pusat") {
-        apiFetch<any[]>(
-          `/rest/v1/package_commissions?package_id=eq.${packageId}&pic_type=eq.${picType}&select=commission_amount&limit=1`
-        ).then((rows) => setCommissionRate(Number(rows?.[0]?.commission_amount) || 0))
-          .catch(() => {});
-      }
-
-      if (picId && picType && picType !== "pusat") {
-        const table = picType === "agen" ? "agents" : picType === "cabang" ? "branches" : "profiles";
-        apiFetch<any[]>(`/rest/v1/${table}?id=eq.${picId}&select=name&limit=1`)
-          .then((rows) => setPicName(rows?.[0]?.name || "-"))
-          .catch(() => {});
-      }
+      // Fetch commission rate + PIC name from a dedicated API endpoint
+      // (replaces the old /rest/v1/ direct Supabase calls that required an anon key)
+      apiFetch<{ commissionRate: number; picName: string | null }>(
+        `/api/admin/bookings/${bookingId}/pic-info`
+      ).then((info) => {
+        if (info.commissionRate) setCommissionRate(info.commissionRate);
+        if (info.picName) setPicName(info.picName);
+      }).catch(() => {});
     } catch (e) {
       console.error("[BookingDetailPanel] fetch error", e);
       toast.error("Gagal memuat detail booking");

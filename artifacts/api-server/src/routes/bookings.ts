@@ -214,7 +214,25 @@ router.get("/:id", async (req, res) => {
       .where(eq(bookingRooms.bookingId, id));
 
     const pilgrims = await db
-      .select()
+      .select({
+        id: bookingPilgrims.id,
+        bookingId: bookingPilgrims.bookingId,
+        pilgrimId: bookingPilgrims.pilgrimId,
+        name: bookingPilgrims.name,
+        phone: bookingPilgrims.phone,
+        email: bookingPilgrims.email,
+        gender: bookingPilgrims.gender,
+        nik: bookingPilgrims.nik,
+        birthDate: bookingPilgrims.birthDate,
+        nationality: bookingPilgrims.nationality,
+        passportNumber: bookingPilgrims.passportNumber,
+        passportExpiry: bookingPilgrims.passportExpiry,
+        roomType: bookingPilgrims.roomType,
+        roomNumber: bookingPilgrims.roomNumber,
+        seatNumber: bookingPilgrims.seatNumber,
+        flightSegment: bookingPilgrims.flightSegment,
+        createdAt: bookingPilgrims.createdAt,
+      })
       .from(bookingPilgrims)
       .where(eq(bookingPilgrims.bookingId, id));
 
@@ -264,7 +282,15 @@ router.get("/:id/confirmation.pdf", async (req, res) => {
     }
 
     const rooms = await db.select().from(bookingRooms).where(eq(bookingRooms.bookingId, id));
-    const pilgrims = await db.select().from(bookingPilgrims).where(eq(bookingPilgrims.bookingId, id));
+    const pilgrims = await db
+      .select({
+        id: bookingPilgrims.id,
+        name: bookingPilgrims.name,
+        gender: bookingPilgrims.gender,
+        nik: bookingPilgrims.nik,
+      })
+      .from(bookingPilgrims)
+      .where(eq(bookingPilgrims.bookingId, id));
 
     const pdfBuffer = await generateBookingConfirmationPdf({
       ...row,

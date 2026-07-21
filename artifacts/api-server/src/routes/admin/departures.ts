@@ -137,8 +137,7 @@ router.get("/", async (req, res) => {
 
     res.json({ data: departuresWithPrices, total: departuresWithPrices.length });
   } catch (err) {
-    console.error("[departures] GET / error:", err);
-    res.status(500).json({ error: "Failed to fetch departures" });
+    sendAdminError(res, "GET /api/admin/departures", err);
   }
 });
 

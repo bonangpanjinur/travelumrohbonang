@@ -10,6 +10,7 @@ import {
   siteSettings,
   bookingRooms,
   bookingPilgrims,
+  packageCommissions,
   profiles,
   branches,
   agents,
@@ -282,7 +283,25 @@ router.get("/:id", async (req, res) => {
       .where(eq(bookingRooms.bookingId, id));
 
     const pilgrims = await db
-      .select()
+      .select({
+        id: bookingPilgrims.id,
+        bookingId: bookingPilgrims.bookingId,
+        pilgrimId: bookingPilgrims.pilgrimId,
+        name: bookingPilgrims.name,
+        phone: bookingPilgrims.phone,
+        email: bookingPilgrims.email,
+        gender: bookingPilgrims.gender,
+        nik: bookingPilgrims.nik,
+        birthDate: bookingPilgrims.birthDate,
+        nationality: bookingPilgrims.nationality,
+        passportNumber: bookingPilgrims.passportNumber,
+        passportExpiry: bookingPilgrims.passportExpiry,
+        roomType: bookingPilgrims.roomType,
+        roomNumber: bookingPilgrims.roomNumber,
+        seatNumber: bookingPilgrims.seatNumber,
+        flightSegment: bookingPilgrims.flightSegment,
+        createdAt: bookingPilgrims.createdAt,
+      })
       .from(bookingPilgrims)
       .where(eq(bookingPilgrims.bookingId, id));
 
@@ -1142,6 +1161,72 @@ router.patch("/:id/departure", async (req, res) => {
     res.json({ message: "Keberangkatan berhasil diubah", departureDate: newDep.departureDate });
   } catch (e) {
     sendAdminError(res, "PATCH /api/admin/bookings/:id/departure", e);
+  }
+});
+
+// ── Pic info: commission rate + PIC name ──────────────────────────────────────
+// Replaces the /rest/v1/ direct Supabase calls from the frontend.
+router.get("/:id/pic-info", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [booking] = await db
+      .select({
+        packageId: bookings.packageId,
+        picType: bookings.picType,
+        picId: bookings.picId,
+      })
+      .from(bookings)
+      .where(eq(bookings.id, id))
+      .limit(1);
+
+    if (!booking) {
+      res.status(404).json({ error: "Booking not found" });
+      return;
+    }
+
+    // Commission: first row for this package (commission is per-package, not per-picType)
+    let commissionRate = 0;
+    if (booking.packageId) {
+      const [comm] = await db
+        .select({ commissionAmount: packageCommissions.commissionAmount })
+        .from(packageCommissions)
+        .where(eq(packageCommissions.packageId, booking.packageId))
+        .limit(1);
+      commissionRate = Number(comm?.commissionAmount ?? 0);
+    }
+
+    // PIC name — look up from the correct table based on picType
+    let picName: string | null = null;
+    if (booking.picId && booking.picType && booking.picType !== "pusat") {
+      if (booking.picType === "agen") {
+        const [row] = await db
+          .select({ name: agents.name })
+          .from(agents)
+          .where(eq(agents.id, booking.picId))
+          .limit(1);
+        picName = row?.name ?? null;
+      } else if (booking.picType === "cabang") {
+        const [row] = await db
+          .select({ name: branches.name })
+          .from(branches)
+          .where(eq(branches.id, booking.picId))
+          .limit(1);
+        picName = row?.name ?? null;
+      } else {
+        // karyawan / other → profiles
+        const [row] = await db
+          .select({ name: profiles.name })
+          .from(profiles)
+          .where(eq(profiles.id, booking.picId))
+          .limit(1);
+        picName = row?.name ?? null;
+      }
+    }
+
+    res.json({ commissionRate, picName });
+  } catch (e) {
+    sendAdminError(res, "GET /api/admin/bookings/:id/pic-info", e);
   }
 });
 
