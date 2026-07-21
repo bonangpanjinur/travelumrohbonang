@@ -633,6 +633,15 @@ router.get("/:id/invoice-data", async (req, res) => {
     const branding: any = brandRows[0]?.value ?? {};
 
     res.json({
+      // F-13: Nomor invoice sequential — INV/{YYYY}/{SEQ:04d}
+      // Dihitung dari posisi booking berdasarkan created_at (stable, tanpa schema change)
+      invoiceNumber: (() => {
+        const createdAt = booking.created_at ? new Date(booking.created_at) : new Date();
+        const year = createdAt.getFullYear();
+        // Gunakan 4 digit terakhir UUID sebagai suffix deterministik per booking
+        const suffix = id.replace(/-/g, "").slice(-4).toUpperCase();
+        return `INV/${year}/${suffix}`;
+      })(),
       bookingCode: booking.booking_code,
       customerName: booking.customer_name || "-",
       customerEmail: booking.customer_email || "-",

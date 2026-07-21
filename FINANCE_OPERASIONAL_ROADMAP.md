@@ -20,7 +20,7 @@
 | F-2  | Keuangan Per Keberangkatan (HPP, Margin) | ✅ Selesai |
 | F-3  | Auto-Alert Deadline Lunas (Cron) | ✅ Selesai |
 | F-4  | Biaya Operasional Per Paket | ✅ Selesai |
-| F-5  | Reminder Piutang via WA (Bulk) | 🔲 Belum |
+| F-5  | Reminder Piutang via WA (Bulk) | ✅ Selesai |
 | F-6  | Jurnal Otomatis (Auto-Posting) | 🔲 Belum |
 | F-7  | Chart of Accounts + Buku Besar | 🔲 Belum |
 | F-8  | Laporan Akuntansi Standar (Neraca, L/R, Arus Kas) | 🔲 Belum |
@@ -28,7 +28,7 @@
 | F-10 | Rekonsiliasi Bank (Import Mutasi) | 🔲 Belum |
 | F-11 | Pajak (PPN/PPh) & Faktur Pajak | 🔲 Belum |
 | F-12 | Budget & Proyeksi Cash Flow | 🔲 Belum |
-| F-13 | Nomor Invoice Otomatis per Tenant | 🔲 Belum |
+| F-13 | Nomor Invoice Otomatis per Tenant | ✅ Selesai |
 | F-14 | Multi-Currency Terintegrasi | 🔲 Belum |
 | F-15 | Export ke Software Akuntansi | 🔲 Belum |
 
@@ -48,9 +48,9 @@
 | O-9  | Visa Tracking (Status Pengajuan) | 🔲 Belum |
 | O-10 | Assignment Kursi Pesawat | 🔲 Belum |
 | O-11 | Pre-departure Checklist Otomatis | 🔲 Belum |
-| O-12 | Validasi Kapasitas Kamar + Konflik Gender | 🔲 Belum |
+| O-12 | Validasi Kapasitas Kamar + Konflik Gender | ✅ Selesai |
 | O-13 | Manifest Offline Cache | 🔲 Belum |
-| O-14 | Kode Booking Anti-Collision | 🔲 Belum |
+| O-14 | Kode Booking Anti-Collision | ✅ Selesai |
 
 ---
 

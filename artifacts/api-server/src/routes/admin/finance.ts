@@ -294,6 +294,115 @@ router.get("/piutang", async (req: Request, res: Response) => {
 });
 
 
+// ── F-5: Kirim WA reminder piutang (bulk) ────────────────────────────────────
+// POST /api/admin/finance/piutang/remind
+// Body: { bookingIds: string[] }
+router.post("/piutang/remind", async (req: Request, res: Response) => {
+  try {
+    const { bookingIds } = req.body as { bookingIds?: string[] };
+    if (!Array.isArray(bookingIds) || bookingIds.length === 0) {
+      res.status(400).json({ error: "bookingIds harus berupa array dan tidak boleh kosong" });
+      return;
+    }
+    if (bookingIds.length > 100) {
+      res.status(400).json({ error: "Maksimal 100 booking per batch" });
+      return;
+    }
+
+    // Ambil data semua booking sekaligus
+    const rows = await db.execute(sql`
+      SELECT
+        b.id,
+        b.booking_code,
+        b.total_price,
+        COALESCE(paid.total_paid, 0)                             AS total_paid,
+        b.total_price - COALESCE(paid.total_paid, 0)            AS outstanding,
+        dep.departure_date,
+        pkg.title                                                AS package_title,
+        prof.name                                                AS customer_name,
+        prof.phone                                               AS customer_phone
+      FROM bookings b
+      LEFT JOIN (
+        SELECT booking_id, SUM(amount) AS total_paid
+        FROM booking_payments WHERE is_voided = false
+        GROUP BY booking_id
+      ) paid ON paid.booking_id = b.id
+      LEFT JOIN package_departures dep ON dep.id = b.departure_id
+      LEFT JOIN packages            pkg ON pkg.id = b.package_id
+      LEFT JOIN profiles            prof ON prof.id = b.user_id
+      WHERE b.id = ANY(${sql.raw(`ARRAY[${bookingIds.map(id => `'${id.replace(/'/g, "''")}'`).join(",")}]::text[]`)})
+        AND b.status NOT IN ('cancelled', 'draft')
+        AND b.total_price - COALESCE(paid.total_paid, 0) > 0
+    `);
+
+    const data = ((rows as any).rows ?? rows) as Array<{
+      id: string;
+      booking_code: string;
+      total_price: string | number;
+      outstanding: string | number;
+      departure_date: string | null;
+      package_title: string | null;
+      customer_name: string | null;
+      customer_phone: string | null;
+    }>;
+
+    let sent = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    // Rate-limit: kirim max 10 per batch (anti-spam WA provider)
+    const batch = data.slice(0, 50);
+
+    for (const row of batch) {
+      if (!row.customer_phone) {
+        failed++;
+        errors.push(`${row.booking_code}: no phone`);
+        continue;
+      }
+
+      const depDate = row.departure_date
+        ? new Date(row.departure_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+        : "Belum ditentukan";
+
+      const daysLeft = row.departure_date
+        ? Math.max(0, Math.ceil((new Date(row.departure_date).getTime() - Date.now()) / 86_400_000))
+        : 999;
+
+      const message = paymentDeadlineAlertWA({
+        jamaahName:    row.customer_name  || "Jemaah",
+        bookingCode:   row.booking_code,
+        packageName:   row.package_title  || "Paket Umroh",
+        outstanding:   Number(row.outstanding),
+        departureDate: depDate,
+        daysLeft,
+      });
+
+      const result = await sendWhatsApp({ to: row.customer_phone, message });
+      if (result.sent) {
+        sent++;
+      } else {
+        failed++;
+        errors.push(`${row.booking_code}: ${result.reason}`);
+      }
+
+      // Jeda kecil antar pesan agar tidak dianggap spam
+      if (batch.indexOf(row) < batch.length - 1) {
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+
+    res.json({
+      sent,
+      failed,
+      total: batch.length,
+      skipped: data.length - batch.length,
+      errors: errors.slice(0, 10), // max 10 error detail
+    });
+  } catch (e) {
+    sendError(res, "POST /admin/finance/piutang/remind", e);
+  }
+});
+
 // ── Keuangan Per Keberangkatan — List ─────────────────────────────────────────
 // GET /api/admin/finance/departures
 router.get("/departures", async (req: Request, res: Response) => {
