@@ -4,11 +4,12 @@ import BookingFilters from "@/features/admin/components/BookingFilters";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw, CheckSquare2, Filter } from "lucide-react";
+import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw, CheckSquare2, Filter, Users } from "lucide-react";
 
 interface PackageOption { id: string; title: string; }
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import AdminCreateBookingDialog from "@/features/admin/components/AdminCreateBookingDialog";
+import AdminGroupBookingDialog from "@/features/admin/components/AdminGroupBookingDialog";
 import {
   Pagination,
   PaginationContent,
@@ -36,6 +37,7 @@ const AdminBookings = () => {
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
+  const [groupOpen, setGroupOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [apiError, setApiError] = useState<string | null>(null);
@@ -118,7 +120,9 @@ const AdminBookings = () => {
         package: b.packageTitle ? { title: b.packageTitle } : null,
         departure_id: b.departureId ?? null,
         departure: b.departureDate ? { departure_date: b.departureDate } : null,
-        profile: b.userName || b.userEmail ? { name: b.userName, email: b.userEmail } : null,
+        profile: (b.pemesanName || b.userName || b.userEmail)
+          ? { name: b.pemesanName || b.userName || "-", email: b.pemesanEmail || b.userEmail || "" }
+          : null,
         branch: b.branchName ? { name: b.branchName } : null,
         is_group_booking: b.isGroupBooking ?? false,
         group_name: b.groupName ?? null,
@@ -163,6 +167,9 @@ const AdminBookings = () => {
         <div className="flex flex-wrap gap-2 items-center">
           <Button className="gradient-gold text-primary" onClick={() => setCreateOpen(true)}>
             <Plus className="w-4 h-4 mr-2" /> Tambah Booking
+          </Button>
+          <Button variant="outline" onClick={() => setGroupOpen(true)}>
+            <Users className="w-4 h-4 mr-2" /> Booking Rombongan
           </Button>
           <Button variant="outline" onClick={() => {
             const headers = ["Kode Booking", "Nama", "Email", "Paket", "Total Harga", "Status", "Tanggal"];
@@ -417,6 +424,11 @@ const AdminBookings = () => {
       <AdminCreateBookingDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
+        onSuccess={fetchBookings}
+      />
+      <AdminGroupBookingDialog
+        open={groupOpen}
+        onOpenChange={setGroupOpen}
         onSuccess={fetchBookings}
       />
     </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -98,7 +99,8 @@ function DocStatusBadge({ status }: { status: string | null | undefined }) {
 const MANIFEST_PAGE_SIZE = 50;
 
 const AdminManifest = () => {
-  const [selectedDep, setSelectedDep] = useState<string>("");
+  const [searchParams] = useSearchParams();
+  const [selectedDep, setSelectedDep] = useState<string>(searchParams.get("departureId") ?? "");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(0);

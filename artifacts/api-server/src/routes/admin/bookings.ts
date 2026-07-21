@@ -114,6 +114,8 @@ router.get("/", async (req, res) => {
         OR prof.name  ILIKE ${term}
         OR prof.email ILIKE ${term}
         OR b.pic_name ILIKE ${term}
+        OR b.pemesan_name ILIKE ${term}
+        OR b.group_name ILIKE ${term}
       )`);
     }
     if (branchId && typeof branchId === "string") {
@@ -162,6 +164,9 @@ router.get("/", async (req, res) => {
           b.pic_name            AS "picName",
           b.pic_phone           AS "picPhone",
           b.pic_email           AS "picEmail",
+          COALESCE(b.pemesan_name, b.pic_name, prof.name) AS "pemesanName",
+          COALESCE(b.pemesan_phone, b.pic_phone, prof.phone) AS "pemesanPhone",
+          b.pemesan_email       AS "pemesanEmail",
           pkg.title             AS "packageTitle",
           pkg.slug              AS "packageSlug",
           dep.departure_date    AS "departureDate",
@@ -334,6 +339,11 @@ router.post("/", async (req, res) => {
     const hex = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
     const bookingCode = `BNG-${yymm}-${hex}`;
 
+    // Pemesan name: from explicit pemesanName field, else from customerName
+    const resolvedPemesanName = (req.body.pemesanName || customerName || null) as string | null;
+    const resolvedPemesanPhone = (req.body.pemesanPhone || null) as string | null;
+    const resolvedPemesanEmail = (req.body.pemesanEmail || customerEmail || null) as string | null;
+
     const booking = await db.transaction(async (tx) => {
       const [newBooking] = await tx
         .insert(bookings)
@@ -351,6 +361,10 @@ router.post("/", async (req, res) => {
           userId,
           status: "confirmed",
           picType: "admin",
+          pemesanName: resolvedPemesanName,
+          pemesanPhone: resolvedPemesanPhone,
+          pemesanEmail: resolvedPemesanEmail,
+          paxCount: 1,
           createdAt: new Date(),
         })
         .returning();
@@ -409,6 +423,159 @@ router.post("/", async (req, res) => {
   }
 });
 
+// ── Group Booking — satu booking bersama, berisi banyak jamaah ────────────────
+router.post("/group", async (req, res) => {
+  try {
+    const {
+      packageId,
+      departureId,
+      paymentScheme,
+      notes,
+      branchId,
+      agentId,
+      pemesanName,
+      pemesanPhone,
+      pemesanEmail,
+      groupName,
+      totalPrice,
+      currency,
+      jamaah, // Array<{ name, phone, email, gender, roomType }>
+    } = req.body;
+
+    if (!packageId || !departureId) {
+      res.status(400).json({ error: "packageId dan departureId wajib diisi" });
+      return;
+    }
+    if (!pemesanName || !pemesanName.trim()) {
+      res.status(400).json({ error: "Nama pemesan wajib diisi" });
+      return;
+    }
+    if (!Array.isArray(jamaah) || jamaah.length === 0) {
+      res.status(400).json({ error: "Minimal 1 jamaah harus ditambahkan" });
+      return;
+    }
+    for (let i = 0; i < jamaah.length; i++) {
+      if (!jamaah[i].name || !jamaah[i].name.trim()) {
+        res.status(400).json({ error: `Nama jamaah ke-${i + 1} wajib diisi` });
+        return;
+      }
+      if (!jamaah[i].roomType) {
+        res.status(400).json({ error: `Tipe kamar jamaah ke-${i + 1} wajib dipilih` });
+        return;
+      }
+    }
+
+    // Validate departure quota
+    const [dep] = await db
+      .select({ remainingQuota: packageDepartures.remainingQuota, quota: packageDepartures.quota })
+      .from(packageDepartures)
+      .where(eq(packageDepartures.id, departureId))
+      .limit(1);
+    if (!dep) {
+      res.status(404).json({ error: "Keberangkatan tidak ditemukan" });
+      return;
+    }
+    if (dep.remainingQuota < jamaah.length) {
+      res.status(409).json({
+        error: `Kuota tidak mencukupi. Sisa ${dep.remainingQuota} kursi, butuh ${jamaah.length} kursi.`,
+      });
+      return;
+    }
+
+    // Generate booking code
+    const now = new Date();
+    const yymm = `${now.getFullYear().toString().slice(2)}${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const hex = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
+    const bookingCode = `BNG-${yymm}-${hex}`;
+
+    const booking = await db.transaction(async (tx) => {
+      const [newBooking] = await tx
+        .insert(bookings)
+        .values({
+          id: crypto.randomUUID(),
+          bookingCode,
+          packageId,
+          departureId,
+          totalPrice: Number(totalPrice) || 0,
+          currency: currency || "IDR",
+          paymentScheme: paymentScheme || "full",
+          notes: notes || null,
+          branchId: branchId || null,
+          agentId: agentId || null,
+          status: "confirmed",
+          picType: "admin",
+          isGroupBooking: true,
+          groupName: groupName || null,
+          pemesanName: pemesanName.trim(),
+          pemesanPhone: pemesanPhone || null,
+          pemesanEmail: pemesanEmail || null,
+          picName: pemesanName.trim(),
+          picPhone: pemesanPhone || null,
+          paxCount: jamaah.length,
+          createdAt: now,
+        })
+        .returning();
+
+      // Insert booking_pilgrims for each jamaah
+      for (const j of jamaah) {
+        await tx.insert(bookingPilgrims).values({
+          id: crypto.randomUUID(),
+          bookingId: newBooking.id,
+          name: j.name.trim(),
+          phone: j.phone || null,
+          email: j.email || null,
+          gender: j.gender || null,
+          roomType: j.roomType,
+          createdAt: now,
+        });
+      }
+
+      // Aggregate booking_rooms by room type
+      const roomAgg: Record<string, { count: number; price: number }> = {};
+      for (const j of jamaah) {
+        if (!roomAgg[j.roomType]) roomAgg[j.roomType] = { count: 0, price: Number(j.roomPrice) || 0 };
+        roomAgg[j.roomType].count += 1;
+        if (Number(j.roomPrice) > 0) roomAgg[j.roomType].price = Number(j.roomPrice);
+      }
+      for (const [rt, { count, price }] of Object.entries(roomAgg)) {
+        await tx.insert(bookingRooms).values({
+          id: crypto.randomUUID(),
+          bookingId: newBooking.id,
+          roomType: rt,
+          price: String(price),
+          quantity: count,
+          subtotal: String(price * count),
+          createdAt: now,
+        });
+      }
+
+      // Decrement quota by number of jamaah
+      await tx.execute(sql`
+        UPDATE package_departures
+        SET remaining_quota = GREATEST(0, remaining_quota - ${jamaah.length})
+        WHERE id = ${departureId}
+      `);
+
+      return newBooking;
+    });
+
+    // Quota warning
+    const [depAfter] = await db
+      .select({ remainingQuota: packageDepartures.remainingQuota, quota: packageDepartures.quota })
+      .from(packageDepartures)
+      .where(eq(packageDepartures.id, departureId))
+      .limit(1);
+    if (depAfter && depAfter.remainingQuota <= 5) {
+      console.warn(`[KB-F02] QUOTA WARNING: departure ${departureId} — sisa ${depAfter.remainingQuota}/${depAfter.quota} tempat`);
+    }
+
+    res.status(201).json({ ...booking, jamaahCount: jamaah.length });
+  } catch (e) {
+    console.error("[POST /api/admin/bookings/group]", e);
+    res.status(500).json({ error: "Gagal membuat booking rombongan" });
+  }
+});
+
 router.patch(
   "/:id/status",
   validate(AdminUpdateBookingStatusRequest),
@@ -427,7 +594,7 @@ router.patch(
       };
 
       const [current] = await db
-        .select({ status: bookings.status, departureId: bookings.departureId })
+        .select({ status: bookings.status, departureId: bookings.departureId, paxCount: bookings.paxCount })
         .from(bookings)
         .where(eq(bookings.id, id))
         .limit(1);
@@ -461,11 +628,12 @@ router.patch(
 
         if (!row) return null;
 
-        // Restore quota when booking transitions to cancelled
+        // Restore quota when booking transitions to cancelled (use paxCount for group bookings)
         if (newStatus === "cancelled" && current.status !== "cancelled" && current.departureId) {
+          const seats = current.paxCount ?? 1;
           await tx.execute(sql`
             UPDATE package_departures
-            SET remaining_quota = remaining_quota + 1
+            SET remaining_quota = remaining_quota + ${seats}
             WHERE id = ${current.departureId}
           `);
         }
@@ -539,13 +707,22 @@ router.patch("/bulk-status", async (req, res) => {
     }
 
     const updated = await db.transaction(async (tx) => {
+      // Fetch paxCount + departureId BEFORE updating so we can restore correct quota
+      const preUpdate = await tx
+        .select({ id: bookings.id, departureId: bookings.departureId, paxCount: bookings.paxCount })
+        .from(bookings)
+        .where(inArray(bookings.id, ids));
+
       const rows = await tx
         .update(bookings)
         .set({ status: newStatus })
         .where(inArray(bookings.id, ids))
-        .returning({ id: bookings.id, departureId: bookings.departureId, status: bookings.status });
+        .returning({ id: bookings.id, departureId: bookings.departureId });
 
-      // Log each change + restore quota for cancelled
+      // Build a lookup of paxCount by booking id
+      const paxMap = new Map(preUpdate.map((r) => [r.id, r.paxCount ?? 1]));
+
+      // Log each change + restore quota for cancelled (using actual paxCount)
       for (const row of rows) {
         await tx.insert(bookingStatusLogs).values({
           id: crypto.randomUUID(),
@@ -556,8 +733,9 @@ router.patch("/bulk-status", async (req, res) => {
           notes: "Bulk status update",
         });
         if (newStatus === "cancelled" && row.departureId) {
+          const seats = paxMap.get(row.id) ?? 1;
           await tx.execute(sql`
-            UPDATE package_departures SET remaining_quota = remaining_quota + 1 WHERE id = ${row.departureId}
+            UPDATE package_departures SET remaining_quota = remaining_quota + ${seats} WHERE id = ${row.departureId}
           `);
         }
       }
@@ -740,9 +918,9 @@ router.patch("/:id/departure", async (req, res) => {
       return;
     }
 
-    // Get current booking's departure
+    // Get current booking's departure + paxCount
     const [current] = await db
-      .select({ departureId: bookings.departureId, status: bookings.status })
+      .select({ departureId: bookings.departureId, status: bookings.status, paxCount: bookings.paxCount })
       .from(bookings)
       .where(eq(bookings.id, id))
       .limit(1);
@@ -766,21 +944,22 @@ router.patch("/:id/departure", async (req, res) => {
       res.status(404).json({ error: "Keberangkatan tidak ditemukan" });
       return;
     }
-    if (newDep.remainingQuota <= 0) {
-      res.status(409).json({ error: "Kuota keberangkatan penuh" });
+    const seats = current.paxCount ?? 1;
+    if (newDep.remainingQuota < seats) {
+      res.status(409).json({ error: `Kuota keberangkatan tidak cukup. Sisa ${newDep.remainingQuota} kursi, dibutuhkan ${seats} kursi.` });
       return;
     }
 
     await db.transaction(async (tx: any) => {
-      // Restore quota on the old departure
+      // Restore quota on the old departure (using paxCount for group bookings)
       if (current.departureId && current.departureId !== departureId) {
         await tx.execute(
-          sql`UPDATE package_departures SET remaining_quota = remaining_quota + 1 WHERE id = ${current.departureId}`
+          sql`UPDATE package_departures SET remaining_quota = remaining_quota + ${seats} WHERE id = ${current.departureId}`
         );
       }
       // Consume quota on the new departure
       await tx.execute(
-        sql`UPDATE package_departures SET remaining_quota = GREATEST(0, remaining_quota - 1) WHERE id = ${departureId}`
+        sql`UPDATE package_departures SET remaining_quota = GREATEST(0, remaining_quota - ${seats}) WHERE id = ${departureId}`
       );
       // Update booking
       await tx.update(bookings).set({ departureId }).where(eq(bookings.id, id));

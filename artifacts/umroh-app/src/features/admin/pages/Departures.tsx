@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/shared/hooks/use-toast";
 import {
   Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search,
-  Images, FileDown, Copy, ArrowRight, Plane, ChevronRight,
+  Images, FileDown, Copy, ArrowRight, Plane, ChevronRight, ClipboardList,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -115,6 +116,7 @@ const QuotaBar = ({ dep }: { dep: Departure }) => {
 };
 
 const AdminDepartures = () => {
+  const navigate = useNavigate();
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [muthawifs, setMuthawifs] = useState<Muthawif[]>([]);
@@ -427,6 +429,13 @@ const AdminDepartures = () => {
                         onClick={() => window.open(`/api/admin/departures/${dep.id}/manifest.pdf`, "_blank")}
                       >
                         <FileDown className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        title="Lihat Manifest"
+                        onClick={() => navigate(`/admin/manifest?departureId=${dep.id}`)}
+                      >
+                        <ClipboardList className="w-4 h-4" />
                       </Button>
                     </div>
                     <div className="flex items-center gap-1">

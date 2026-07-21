@@ -27,6 +27,12 @@ export const bookings = pgTable("bookings", {
   picName: text("pic_name"),                // Group coordinator name
   picPhone: text("pic_phone"),              // Group coordinator phone
   picEmail: text("pic_email"),              // Group coordinator email
+  // Pemesan — person who booked (agent, staff, owner); may differ from pilgrims
+  pemesanName: text("pemesan_name"),
+  pemesanPhone: text("pemesan_phone"),
+  pemesanEmail: text("pemesan_email"),
+  // Number of seats consumed by this booking (1 for single, N for group)
+  paxCount: integer("pax_count").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   uniqueIndex("uq_bookings_code").on(t.bookingCode),
