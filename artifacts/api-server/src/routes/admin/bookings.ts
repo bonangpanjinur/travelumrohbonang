@@ -327,11 +327,12 @@ router.post("/", async (req, res) => {
       }
     }
 
-    let bookingCode = `BNG-ADM-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-    const existingCode = await db.select({ id: bookings.id }).from(bookings).where(eq(bookings.bookingCode, bookingCode)).limit(1);
-    if (existingCode.length) {
-      bookingCode = `BNG-ADM-${Date.now().toString(36).toUpperCase()}`;
-    }
+    // O-14: Anti-collision booking code — crypto-random, no Math.random()
+    // Format: BNG-{YYMM}-{8 char hex} — e.g. BNG-2607-A3F2C19E
+    const now = new Date();
+    const yymm = `${now.getFullYear().toString().slice(2)}${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const hex = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
+    const bookingCode = `BNG-${yymm}-${hex}`;
 
     const booking = await db.transaction(async (tx) => {
       const [newBooking] = await tx
@@ -590,7 +591,7 @@ router.get("/:id/invoice-data", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [bookingResult, pilgrimsResult, roomsResult, paymentsResult, brandingResult] =
+    const [bookingResult, pilgrimsResult, roomsResult, paymentsResult, brandingResult, seqResult] =
       await Promise.all([
         db.execute(sql`
           SELECT
@@ -619,6 +620,15 @@ router.get("/:id/invoice-data", async (req, res) => {
           WHERE key = 'branding' AND category = 'general'
           LIMIT 1
         `),
+        // F-13: Hitung urutan booking ini dalam tahun pembuatannya (rank by created_at)
+        db.execute(sql`
+          SELECT COUNT(*) AS seq
+          FROM bookings b2
+          WHERE DATE_PART('year', b2.created_at) = DATE_PART('year', (
+            SELECT created_at FROM bookings WHERE id = ${id}
+          ))
+          AND b2.created_at <= (SELECT created_at FROM bookings WHERE id = ${id})
+        `),
       ]);
 
     const bRows = (bookingResult as any).rows ?? bookingResult;
@@ -632,16 +642,14 @@ router.get("/:id/invoice-data", async (req, res) => {
     const brandRows = (brandingResult as any).rows ?? brandingResult;
     const branding: any = brandRows[0]?.value ?? {};
 
+    // F-13: Nomor invoice sequential — INV/{YYYY}/{SEQ:04d}  e.g. INV/2026/0042
+    const seqRows = (seqResult as any).rows ?? seqResult;
+    const invoiceSeq = Number(seqRows[0]?.seq ?? 1);
+    const invoiceYear = booking.created_at ? new Date(booking.created_at).getFullYear() : new Date().getFullYear();
+    const invoiceNumber = `INV/${invoiceYear}/${String(invoiceSeq).padStart(4, "0")}`;
+
     res.json({
-      // F-13: Nomor invoice sequential — INV/{YYYY}/{SEQ:04d}
-      // Dihitung dari posisi booking berdasarkan created_at (stable, tanpa schema change)
-      invoiceNumber: (() => {
-        const createdAt = booking.created_at ? new Date(booking.created_at) : new Date();
-        const year = createdAt.getFullYear();
-        // Gunakan 4 digit terakhir UUID sebagai suffix deterministik per booking
-        const suffix = id.replace(/-/g, "").slice(-4).toUpperCase();
-        return `INV/${year}/${suffix}`;
-      })(),
+      invoiceNumber,
       bookingCode: booking.booking_code,
       customerName: booking.customer_name || "-",
       customerEmail: booking.customer_email || "-",

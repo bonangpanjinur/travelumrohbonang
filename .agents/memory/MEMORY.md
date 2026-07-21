@@ -12,3 +12,4 @@
 - [Auth middleware anon-key skip](auth-anon-key-skip.md) — Supabase anon key is a JWT without `sub`; middleware must skip Supabase /auth/v1/user call for tokens with no `sub` claim to avoid 403 bad_jwt spam.
 - [misc route prefix](misc-route-prefix.md) — frontend calls /api/misc/payment-settings; server mounts miscRouter twice: once at root (legacy) and once at /misc.
 - [Umroh Tabungan module](savings-module.md) — savings schema skips FK to profiles (uuid/text mismatch); ResponsiveTable imports from @/features/admin/components not @/shared.
+- [Quick wins F-5/F-6/F-13/O-12/O-14](quick-wins-f5-f6-f13-o12-o14.md) — F-5&F-6 were already done; fixed O-12 missing ROOM_CAPACITY+sql, O-14 Math.random→crypto.randomUUID, F-13 sequential invoice via COUNT query.

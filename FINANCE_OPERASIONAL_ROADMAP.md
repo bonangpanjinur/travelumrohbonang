@@ -285,59 +285,35 @@ artifacts/api-server/src/routes/admin/chats.ts
 
 ---
 
-### F-5 — Reminder Piutang via WA (Bulk)
+### F-5 — Reminder Piutang via WA (Bulk) ✅ Selesai
 
-**Prioritas: Tinggi | Estimasi: 0.5 hari**
+**Implementasi:**
+- `POST /api/admin/finance/piutang/remind` — body: `{ bookingIds: string[] }`
+- Batch limit 100 ID, proses 50 per batch dengan delay 300ms anti-spam
+- Pakai template `paymentDeadlineAlertWA` dari `lib/whatsapp/src/templates.ts`
+- Return: `{ sent, failed, total, skipped, errors }`
 
-**Kondisi saat ini:**
-- Tombol "Kirim Reminder" di `Piutang.tsx` sudah ada (bulk select)
-- Endpoint `POST /api/admin/finance/piutang/remind` **belum dibuat**
-
-**Rencana backend:**
-```typescript
-// POST /api/admin/finance/piutang/remind
-// Body: { bookingIds: string[] }
-// Per bookingId:
-//   1. Ambil data booking + kontak jemaah
-//   2. Hitung outstanding
-//   3. Kirim WA via waNotifications.paymentReminder(...)
-//   4. Log ke notifications tabel
-// Return: { sent: number, failed: number, errors: [...] }
 ```
-
-**File yang perlu dibuat/diubah:**
-```
-artifacts/api-server/src/routes/admin/finance.ts   ← tambah endpoint remind
-lib/whatsapp/src/templates.ts                       ← pastikan template ada
+artifacts/api-server/src/routes/admin/finance.ts   ← endpoint baris 300-404
 ```
 
 ---
 
-### F-6 — Jurnal Otomatis (Auto-Posting ke Ledger)
+### F-6 — Jurnal Otomatis (Auto-Posting ke Ledger) ✅ Selesai
 
-**Prioritas: Tinggi | Estimasi: 2 hari**
+**Implementasi:**
+- `artifacts/api-server/src/lib/autoJournal.ts` — 7 fungsi idempoten (referenceNumber unik per event)
+- Hook sudah terpasang di: `payments.ts` (verify), `refunds.ts` (approve/refunded), `agents.ts` (withdrawal), `installments.ts` (paid), savings routes (deposit/used)
 
-**Gap saat ini:** Semua transaksi keuangan (payment verify, refund, komisi) tidak otomatis membuat entri jurnal di `financial_transactions`. Akuntansi saat ini 100% manual entry.
-
-**Rencana:**
-
-Buat service `autoJournal.ts` yang dipanggil dari event-event berikut:
-
-| Event | Debit | Kredit |
-|---|---|---|
-| Payment verified | Kas / Bank | Pendapatan Umroh |
-| Refund approved | Beban Refund | Kas / Bank |
-| Komisi disetujui | Beban Komisi Agen | Hutang Komisi |
-| Withdrawal komisi diproses | Hutang Komisi | Kas / Bank |
-| DP received | Kas | Uang Muka Jemaah |
-
-**File yang perlu dibuat/diubah:**
-```
-artifacts/api-server/src/lib/autoJournal.ts        ← service baru
-artifacts/api-server/src/routes/admin/payments.ts  ← hook verify → autoJournal
-artifacts/api-server/src/routes/admin/refunds.ts   ← hook approve → autoJournal
-artifacts/api-server/src/routes/admin/agents.ts    ← hook withdrawal → autoJournal
-```
+| Fungsi | Event |
+|---|---|
+| `journalPaymentVerified` | Bukti bayar manual diverifikasi |
+| `journalInstallmentPaid` | Cicilan dibayar |
+| `journalRefundApproved` | Refund disetujui |
+| `journalRefundProcessed` | Refund dicairkan |
+| `journalCommissionWithdrawal` | Withdrawal komisi agen |
+| `journalSavingsDeposit` | Setoran tabungan |
+| `journalSavingsUsed` | Tabungan dipakai untuk booking |
 
 ---
 
@@ -505,21 +481,16 @@ CREATE TABLE bank_mutations (
 
 ---
 
-### F-13 — Nomor Invoice Otomatis per Tenant
+### F-13 — Nomor Invoice Otomatis per Tenant ✅ Selesai
 
-**Prioritas: Sedang | Estimasi: 0.5 hari**
+**Implementasi:**
+- Format: `INV/{YYYY}/{SEQ:04d}` — contoh: `INV/2026/0042`
+- Sequence dihitung on-the-fly: COUNT bookings dalam tahun yang sama dengan created_at ≤ booking ini (stabil, tanpa schema change)
+- Response `GET /api/admin/bookings/:id/invoice-data` sudah mengembalikan `invoiceNumber`
 
-**Gap saat ini:** `GET /api/admin/bookings/:id/invoice-data` ada tapi tidak ada penomoran sequential.
-
-**Rencana:**
-```sql
--- Tambah ke bookings atau tabel terpisah
-ALTER TABLE bookings ADD COLUMN invoice_number TEXT UNIQUE;
--- Format: INV/{YEAR}/{TENANT_CODE}/{SEQUENCE}  misal: INV/2026/UMP/0042
 ```
-
-- Generator nomor invoice sequential per tenant
-- Template invoice berbranding: logo, nama tenant, alamat, NPWP
+artifacts/api-server/src/routes/admin/bookings.ts  ← invoice-data endpoint
+```
 
 ---
 
@@ -667,18 +638,17 @@ CREATE TABLE departure_checklists (
 
 ---
 
-### O-12 — Validasi Kapasitas Kamar + Konflik Gender
+### O-12 — Validasi Kapasitas Kamar + Konflik Gender ✅ Selesai
 
-**Prioritas: Sedang | Estimasi: 0.5 hari**
+**Implementasi:**
+- Konstanta `ROOM_CAPACITY = { single:1, double:2, triple:3, quad:4 }` di backend
+- `PATCH /pilgrims/:id` — validasi kapasitas & gender sebelum update individual
+- `POST /:departureId/bulk` — pre-validasi seluruh batch sebelum apply; return `409` dengan list error detail
+- Import `sql` dari `@workspace/db` sudah diperbaiki (bug missing import sebelumnya)
 
-**Gap saat ini:**
-- `RoomAssignment.tsx` tidak validasi kapasitas (misal Quad = max 4 orang)
-- Tidak ada warning jika 1 nomor kamar diisi jamaah pria + wanita
-
-**Rencana:**
-- Tambah validasi di backend `room-assignment.ts`: cek jumlah jamaah per room number vs kapasitas room type
-- Warning di frontend jika ada konflik gender dalam 1 kamar
-- Batas kapasitas: Quad=4, Triple=3, Double=2, Single=1
+```
+artifacts/api-server/src/routes/admin/room-assignment.ts
+```
 
 ---
 
@@ -696,16 +666,16 @@ CREATE TABLE departure_checklists (
 
 ---
 
-### O-14 — Kode Booking Anti-Collision
+### O-14 — Kode Booking Anti-Collision ✅ Selesai
 
-**Prioritas: Rendah | Estimasi: 0.5 hari**
+**Implementasi:**
+- Ganti `Math.random()` dengan `crypto.randomUUID()` (cryptographically secure, collision-free)
+- Format: `BNG-{YYMM}-{8 hex uppercase}` — contoh: `BNG-2607-A3F2C19E`
+- Tidak perlu retry karena UUID sudah collision-free secara kriptografis
 
-**Gap saat ini:** `POST /api/admin/bookings` menggunakan `Math.random()` untuk generate kode booking — berpotensi collision meski ada fallback retry.
-
-**Rencana:**
-- Ganti dengan format deterministik: `{PREFIX}-{YEAR}{MONTH}-{SEQUENCE}` misal: `UMP-2607-0042`
-- Sequence counter per tenant (atomic increment di DB)
-- Atau gunakan nanoid dengan panjang cukup (12 karakter, alphanumeric uppercase)
+```
+artifacts/api-server/src/routes/admin/bookings.ts  ← POST / handler baris ~330
+```
 
 ---
 

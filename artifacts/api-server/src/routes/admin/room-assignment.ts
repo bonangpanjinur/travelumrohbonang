@@ -1,5 +1,13 @@
 import { Router } from "express";
-import { db, bookingPilgrims, bookings, packageDepartures, packages, eq, desc, and, asc } from "@workspace/db";
+import { db, bookingPilgrims, bookings, packageDepartures, packages, eq, desc, and, asc, sql } from "@workspace/db";
+
+/** O-12: Kapasitas maksimum per tipe kamar */
+const ROOM_CAPACITY: Record<string, number> = {
+  single: 1,
+  double: 2,
+  triple: 3,
+  quad: 4,
+};
 
 const router = Router();
 
