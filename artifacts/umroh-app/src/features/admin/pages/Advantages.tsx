@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Pencil, Trash2, Award } from "lucide-react";
 import { toast } from "sonner";
 
-interface Advantage { id: string; title: string; icon: string | null; sort_order: number | null; is_active: boolean | null; }
+interface Advantage { id: string; title: string; icon: string | null; sortOrder: number | null; isActive: boolean | null; }
 
 const emptyForm = { title: "", icon: "check-circle", sort_order: 0, is_active: true };
 
@@ -23,35 +23,45 @@ const AdminAdvantages = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
 
-  const fetch = async () => {
-    const { data } = await supabase.from("advantages").select("*").order("sort_order");
-    setItems(data || []);
-    setLoading(false);
+  const fetchItems = async () => {
+    try {
+      const res = await apiFetch<{ data: Advantage[] }>("/api/admin/content/advantages");
+      setItems(res.data || []);
+    } catch (err: any) {
+      toast.error(err.message || "Gagal memuat data");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => { fetchItems(); }, []);
 
   const handleSave = async () => {
     if (!form.title) { toast.error("Judul wajib diisi"); return; }
     const payload = { title: form.title, icon: form.icon, sort_order: form.sort_order, is_active: form.is_active };
-    if (editId) {
-      const { error } = await supabase.from("advantages").update(payload).eq("id", editId);
-      if (error) { toast.error(error.message); return; }
-      toast.success("Keunggulan diperbarui");
-    } else {
-      const { error } = await supabase.from("advantages").insert(payload);
-      if (error) { toast.error(error.message); return; }
-      toast.success("Keunggulan ditambahkan");
+    try {
+      if (editId) {
+        await apiFetch(`/api/admin/content/advantages/${editId}`, { method: "PATCH", body: JSON.stringify(payload) });
+        toast.success("Keunggulan diperbarui");
+      } else {
+        await apiFetch("/api/admin/content/advantages", { method: "POST", body: JSON.stringify(payload) });
+        toast.success("Keunggulan ditambahkan");
+      }
+      setDialogOpen(false); setEditId(null); setForm(emptyForm); fetchItems();
+    } catch (err: any) {
+      toast.error(err.message || "Gagal menyimpan");
     }
-    setDialogOpen(false); setEditId(null); setForm(emptyForm); fetch();
   };
 
-  const handleEdit = (a: Advantage) => { setEditId(a.id); setForm({ title: a.title, icon: a.icon || "check-circle", sort_order: a.sort_order || 0, is_active: a.is_active ?? true }); setDialogOpen(true); };
+  const handleEdit = (a: Advantage) => { setEditId(a.id); setForm({ title: a.title, icon: a.icon || "check-circle", sort_order: a.sortOrder || 0, is_active: a.isActive ?? true }); setDialogOpen(true); };
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("advantages").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Dihapus");
-    fetch();
+    try {
+      await apiFetch(`/api/admin/content/advantages/${id}`, { method: "DELETE" });
+      toast.success("Dihapus");
+      fetchItems();
+    } catch (err: any) {
+      toast.error(err.message || "Gagal menghapus");
+    }
   };
 
   return (
@@ -76,12 +86,13 @@ const AdminAdvantages = () => {
         <Table>
           <TableHeader><TableRow><TableHead>Judul</TableHead><TableHead>Icon</TableHead><TableHead>Urutan</TableHead><TableHead>Status</TableHead><TableHead className="w-24">Aksi</TableHead></TableRow></TableHeader>
           <TableBody>
-            {items.map(a => (
+            {loading && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Memuat...</TableCell></TableRow>}
+            {!loading && items.map(a => (
               <TableRow key={a.id}>
                 <TableCell className="font-medium">{a.title}</TableCell>
                 <TableCell className="font-mono text-sm">{a.icon}</TableCell>
-                <TableCell>{a.sort_order}</TableCell>
-                <TableCell><Badge variant={a.is_active ? "default" : "secondary"}>{a.is_active ? "Aktif" : "Nonaktif"}</Badge></TableCell>
+                <TableCell>{a.sortOrder}</TableCell>
+                <TableCell><Badge variant={a.isActive ? "default" : "secondary"}>{a.isActive ? "Aktif" : "Nonaktif"}</Badge></TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(a)}><Pencil className="h-4 w-4" /></Button>
@@ -93,7 +104,7 @@ const AdminAdvantages = () => {
                 </TableCell>
               </TableRow>
             ))}
-            {items.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Belum ada data</TableCell></TableRow>}
+            {!loading && items.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Belum ada data</TableCell></TableRow>}
           </TableBody>
         </Table>
       </CardContent></Card>

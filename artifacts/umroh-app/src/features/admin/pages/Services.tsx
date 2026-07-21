@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Pencil, Trash2, Wrench } from "lucide-react";
 import { toast } from "sonner";
 
-interface Service { id: string; title: string; description: string | null; icon: string; sort_order: number | null; is_active: boolean | null; }
+interface Service { id: string; title: string; description: string | null; icon: string; sortOrder: number | null; isActive: boolean | null; }
 
 const emptyForm = { title: "", description: "", icon: "star", sort_order: 0, is_active: true };
 
@@ -24,8 +24,12 @@ const AdminServices = () => {
   const [form, setForm] = useState(emptyForm);
 
   const fetchData = async () => {
-    const { data } = await supabase.from("services").select("*").order("sort_order");
-    setItems(data || []);
+    try {
+      const res = await apiFetch<{ data: Service[] }>("/api/admin/content/services");
+      setItems(res.data || []);
+    } catch (err: any) {
+      toast.error(err.message || "Gagal memuat data");
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -33,20 +37,30 @@ const AdminServices = () => {
   const handleSave = async () => {
     if (!form.title) { toast.error("Judul wajib diisi"); return; }
     const payload = { title: form.title, description: form.description || null, icon: form.icon, sort_order: form.sort_order, is_active: form.is_active };
-    if (editId) {
-      const { error } = await supabase.from("services").update(payload).eq("id", editId);
-      if (error) { toast.error(error.message); return; }
-      toast.success("Layanan diperbarui");
-    } else {
-      const { error } = await supabase.from("services").insert(payload);
-      if (error) { toast.error(error.message); return; }
-      toast.success("Layanan ditambahkan");
+    try {
+      if (editId) {
+        await apiFetch(`/api/admin/content/services/${editId}`, { method: "PATCH", body: JSON.stringify(payload) });
+        toast.success("Layanan diperbarui");
+      } else {
+        await apiFetch("/api/admin/content/services", { method: "POST", body: JSON.stringify(payload) });
+        toast.success("Layanan ditambahkan");
+      }
+      setDialogOpen(false); setEditId(null); setForm(emptyForm); fetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Gagal menyimpan");
     }
-    setDialogOpen(false); setEditId(null); setForm(emptyForm); fetchData();
   };
 
-  const handleEdit = (s: Service) => { setEditId(s.id); setForm({ title: s.title, description: s.description || "", icon: s.icon, sort_order: s.sort_order || 0, is_active: s.is_active ?? true }); setDialogOpen(true); };
-  const handleDelete = async (id: string) => { await supabase.from("services").delete().eq("id", id); toast.success("Dihapus"); fetchData(); };
+  const handleEdit = (s: Service) => { setEditId(s.id); setForm({ title: s.title, description: s.description || "", icon: s.icon, sort_order: s.sortOrder || 0, is_active: s.isActive ?? true }); setDialogOpen(true); };
+  const handleDelete = async (id: string) => {
+    try {
+      await apiFetch(`/api/admin/content/services/${id}`, { method: "DELETE" });
+      toast.success("Dihapus");
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Gagal menghapus");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -78,8 +92,8 @@ const AdminServices = () => {
                 <TableCell className="font-medium">{s.title}</TableCell>
                 <TableCell className="text-muted-foreground text-sm max-w-xs truncate">{s.description || "-"}</TableCell>
                 <TableCell className="font-mono text-sm">{s.icon}</TableCell>
-                <TableCell>{s.sort_order}</TableCell>
-                <TableCell><Badge variant={s.is_active ? "default" : "secondary"}>{s.is_active ? "Aktif" : "Nonaktif"}</Badge></TableCell>
+                <TableCell>{s.sortOrder}</TableCell>
+                <TableCell><Badge variant={s.isActive ? "default" : "secondary"}>{s.isActive ? "Aktif" : "Nonaktif"}</Badge></TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(s)}><Pencil className="h-4 w-4" /></Button>

@@ -644,91 +644,84 @@ router.get("/:id/readiness", async (req, res) => {
   try {
     const departureId = req.params.id;
 
-    // Departure + package info
-    const [dep] = await db
-      .select({
-        id: packageDepartures.id,
-        departureDate: packageDepartures.departureDate,
-        returnDate: packageDepartures.returnDate,
-        quota: packageDepartures.quota,
-        packageTitle: packages.title,
-      })
-      .from(packageDepartures)
-      .leftJoin(packages, eq(packageDepartures.packageId, packages.id))
-      .where(eq(packageDepartures.id, departureId))
-      .limit(1);
+    // Departure + package info and active bookings — run in parallel
+    const [[dep], depBookings] = await Promise.all([
+      db
+        .select({
+          id: packageDepartures.id,
+          departureDate: packageDepartures.departureDate,
+          returnDate: packageDepartures.returnDate,
+          quota: packageDepartures.quota,
+          packageTitle: packages.title,
+        })
+        .from(packageDepartures)
+        .leftJoin(packages, eq(packageDepartures.packageId, packages.id))
+        .where(eq(packageDepartures.id, departureId))
+        .limit(1),
+      db
+        .select({ id: bookings.id, status: bookings.status, totalPrice: bookings.totalPrice })
+        .from(bookings)
+        .where(and(eq(bookings.departureId, departureId), ne(bookings.status, "cancelled"))),
+    ]);
 
     if (!dep) return res.status(404).json({ error: "Departure not found" });
 
-    // All non-cancelled bookings for this departure
-    const depBookings = await db
-      .select({ id: bookings.id, status: bookings.status, totalPrice: bookings.totalPrice })
-      .from(bookings)
-      .where(and(eq(bookings.departureId, departureId), ne(bookings.status, "cancelled")));
-
     const bookingIds = depBookings.map((b) => b.id);
 
-    // Jemaah + seat stats
-    let totalJemaah = 0, seatAssigned = 0;
-    if (bookingIds.length) {
-      const pRows = await db
-        .select({ id: bookingPilgrims.id, seatNumber: bookingPilgrims.seatNumber })
-        .from(bookingPilgrims)
-        .where(inArray(bookingPilgrims.bookingId, bookingIds));
-      totalJemaah = pRows.length;
-      seatAssigned = pRows.filter((p) => !!p.seatNumber).length;
-    }
-
-    // Payment stats — lunas = paid/confirmed, sisanya belum
+    // Payment stats (no DB needed)
     const paid = depBookings.filter((b) => ["paid", "confirmed", "completed"].includes(b.status ?? "")).length;
     const unpaid = depBookings.length - paid;
 
-    // Document stats — count unique pilgrims with all required docs verified
-    let docComplete = 0, docIncomplete = 0;
-    const DOC_TYPES = ["paspor", "visa", "vaksin"];
-    if (bookingIds.length) {
-      const allPilgrims = await db
-        .select({ id: bookingPilgrims.id })
-        .from(bookingPilgrims)
-        .where(inArray(bookingPilgrims.bookingId, bookingIds));
-      const pilgrimIds = allPilgrims.map((p) => p.id);
-      if (pilgrimIds.length) {
-        const docs = await db
-          .select({ pilgrimId: pilgrimDocuments.pilgrimId, documentType: pilgrimDocuments.documentType, status: pilgrimDocuments.status })
-          .from(pilgrimDocuments)
-          .where(and(inArray(pilgrimDocuments.pilgrimId, pilgrimIds), inArray(pilgrimDocuments.documentType, DOC_TYPES)));
-        for (const p of allPilgrims) {
-          const pDocs = docs.filter((d) => d.pilgrimId === p.id);
-          const complete = DOC_TYPES.every((dt) => pDocs.some((d) => d.documentType === dt && d.status === "verified"));
-          complete ? docComplete++ : docIncomplete++;
-        }
-      }
-    }
-
-    // Check-in stats
-    let checkInDone = 0;
-    if (bookingIds.length) {
-      const ciRows = await db
-        .select({ id: checkIns.id })
-        .from(checkIns)
-        .where(eq(checkIns.departureId, departureId));
-      checkInDone = ciRows.length;
-    }
-
-    // Days until departure
+    // Days until departure (no DB needed)
     const today = new Date();
     const dDate = dep.departureDate ? new Date(dep.departureDate) : null;
     const daysUntil = dDate ? Math.ceil((dDate.getTime() - today.getTime()) / 86_400_000) : null;
 
+    if (!bookingIds.length) {
+      return res.json({
+        departure: { id: dep.id, departureDate: dep.departureDate, returnDate: dep.returnDate, quota: dep.quota, packageTitle: dep.packageTitle, daysUntil },
+        jemaah: { total: 0, bookings: 0 },
+        payment: { total: 0, paid: 0, unpaid: 0 },
+        documents: { total: 0, complete: 0, incomplete: 0 },
+        seats: { total: 0, assigned: 0, unassigned: 0 },
+        checkIn: { total: 0, done: 0, pending: 0 },
+      });
+    }
+
+    // Run all remaining queries in parallel
+    const [pRows, ciRows] = await Promise.all([
+      db
+        .select({ id: bookingPilgrims.id, seatNumber: bookingPilgrims.seatNumber })
+        .from(bookingPilgrims)
+        .where(inArray(bookingPilgrims.bookingId, bookingIds)),
+      db
+        .select({ id: checkIns.id })
+        .from(checkIns)
+        .where(eq(checkIns.departureId, departureId)),
+    ]);
+
+    const totalJemaah = pRows.length;
+    const seatAssigned = pRows.filter((p) => !!p.seatNumber).length;
+    const checkInDone = ciRows.length;
+
+    // Document stats — fetch docs for all pilgrims in one query
+    const DOC_TYPES = ["paspor", "visa", "vaksin"];
+    let docComplete = 0, docIncomplete = 0;
+    const pilgrimIds = pRows.map((p) => p.id);
+    if (pilgrimIds.length) {
+      const docs = await db
+        .select({ pilgrimId: pilgrimDocuments.pilgrimId, documentType: pilgrimDocuments.documentType, status: pilgrimDocuments.status })
+        .from(pilgrimDocuments)
+        .where(and(inArray(pilgrimDocuments.pilgrimId, pilgrimIds), inArray(pilgrimDocuments.documentType, DOC_TYPES)));
+      for (const p of pRows) {
+        const pDocs = docs.filter((d) => d.pilgrimId === p.id);
+        const complete = DOC_TYPES.every((dt) => pDocs.some((d) => d.documentType === dt && d.status === "verified"));
+        complete ? docComplete++ : docIncomplete++;
+      }
+    }
+
     res.json({
-      departure: {
-        id: dep.id,
-        departureDate: dep.departureDate,
-        returnDate: dep.returnDate,
-        quota: dep.quota,
-        packageTitle: dep.packageTitle,
-        daysUntil,
-      },
+      departure: { id: dep.id, departureDate: dep.departureDate, returnDate: dep.returnDate, quota: dep.quota, packageTitle: dep.packageTitle, daysUntil },
       jemaah: { total: totalJemaah, bookings: depBookings.length },
       payment: { total: depBookings.length, paid, unpaid },
       documents: { total: totalJemaah, complete: docComplete, incomplete: docIncomplete },

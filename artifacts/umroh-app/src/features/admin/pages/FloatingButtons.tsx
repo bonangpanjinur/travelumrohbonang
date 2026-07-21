@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Switch } from "@/shared/components/ui/switch";
@@ -28,8 +28,8 @@ interface FloatingButton {
   label: string;
   url: string | null;
   icon: string | null;
-  is_active: boolean;
-  sort_order: number;
+  isActive: boolean;
+  sortOrder: number;
 }
 
 const iconMap: Record<string, React.ElementType> = {
@@ -63,28 +63,18 @@ const AdminFloatingButtons = () => {
   const { data: buttons = [], isLoading } = useQuery({
     queryKey: ["admin-floating-buttons"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("floating_buttons")
-        .select("*")
-        .order("sort_order", { ascending: true });
-      if (error) throw error;
-      return data as FloatingButton[];
+      const res = await apiFetch<{ data: FloatingButton[] }>("/api/admin/content/floating-buttons");
+      return (res.data || []).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     },
   });
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof form & { id?: string }) => {
+      const payload = { platform: data.platform, label: data.label, url: data.url, icon: data.icon };
       if (data.id) {
-        const { error } = await supabase
-          .from("floating_buttons")
-          .update({ platform: data.platform, label: data.label, url: data.url, icon: data.icon })
-          .eq("id", data.id);
-        if (error) throw error;
+        await apiFetch(`/api/admin/content/floating-buttons/${data.id}`, { method: "PATCH", body: JSON.stringify(payload) });
       } else {
-        const { error } = await supabase
-          .from("floating_buttons")
-          .insert({ platform: data.platform, label: data.label, url: data.url, icon: data.icon, sort_order: buttons.length });
-        if (error) throw error;
+        await apiFetch("/api/admin/content/floating-buttons", { method: "POST", body: JSON.stringify({ ...payload, sort_order: buttons.length }) });
       }
     },
     onSuccess: () => {
@@ -97,8 +87,7 @@ const AdminFloatingButtons = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("floating_buttons").delete().eq("id", id);
-      if (error) throw error;
+      await apiFetch(`/api/admin/content/floating-buttons/${id}`, { method: "DELETE" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-floating-buttons"] });
@@ -106,17 +95,18 @@ const AdminFloatingButtons = () => {
       setDeleteDialogOpen(false);
       setDeletingButton(null);
     },
+    onError: () => toast.error("Gagal menghapus"),
   });
 
   const toggleMutation = useMutation({
-    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase.from("floating_buttons").update({ is_active }).eq("id", id);
-      if (error) throw error;
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      await apiFetch(`/api/admin/content/floating-buttons/${id}`, { method: "PATCH", body: JSON.stringify({ is_active: isActive }) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-floating-buttons"] });
       toast.success("Status diperbarui");
     },
+    onError: () => toast.error("Gagal mengubah status"),
   });
 
   const openCreate = () => {
@@ -189,7 +179,7 @@ const AdminFloatingButtons = () => {
             const config = platformConfig[btn.platform];
 
             return (
-              <Card key={btn.id} className={`transition-opacity ${btn.is_active ? "" : "opacity-50"}`}>
+              <Card key={btn.id} className={`transition-opacity ${btn.isActive ? "" : "opacity-50"}`}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -199,13 +189,13 @@ const AdminFloatingButtons = () => {
                       <div className="min-w-0">
                         <CardTitle className="text-base truncate">{btn.label}</CardTitle>
                         <CardDescription className="text-xs">
-                          {config?.name || btn.platform} · {btn.is_active ? "Aktif" : "Nonaktif"}
+                          {config?.name || btn.platform} · {btn.isActive ? "Aktif" : "Nonaktif"}
                         </CardDescription>
                       </div>
                     </div>
                     <Switch
-                      checked={btn.is_active}
-                      onCheckedChange={(checked) => toggleMutation.mutate({ id: btn.id, is_active: checked })}
+                      checked={btn.isActive}
+                      onCheckedChange={(checked) => toggleMutation.mutate({ id: btn.id, isActive: checked })}
                     />
                   </div>
                 </CardHeader>
@@ -239,46 +229,48 @@ const AdminFloatingButtons = () => {
       )}
 
       {/* Create / Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); else setDialogOpen(true); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingButton ? "Edit Floating Button" : "Tambah Floating Button"}</DialogTitle>
+            <DialogTitle>{editingButton ? "Edit" : "Tambah"} Floating Button</DialogTitle>
             <DialogDescription>
-              {editingButton ? "Perbarui detail tombol floating." : "Tambahkan tombol baru untuk ditampilkan di website."}
+              {editingButton ? "Perbarui informasi tombol floating." : "Tambahkan tombol floating baru ke website Anda."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
+          <div className="space-y-4">
+            <div>
               <Label>Platform</Label>
               <Select value={form.platform} onValueChange={handlePlatformChange}>
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Pilih platform" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(platformConfig).map(([key, val]) => (
-                    <SelectItem key={key} value={key}>{val.name}</SelectItem>
+                  {Object.entries(platformConfig).map(([key, cfg]) => (
+                    <SelectItem key={key} value={key}>{cfg.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div>
               <Label>Label</Label>
               <Input
+                className="mt-1"
                 value={form.label}
-                onChange={(e) => setForm((p) => ({ ...p, label: e.target.value }))}
-                placeholder="Contoh: Chat WhatsApp"
+                onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
+                placeholder="Contoh: Hubungi Kami"
               />
             </div>
-            <div className="space-y-2">
+            <div>
               <Label>URL</Label>
               <Input
+                className="mt-1"
                 value={form.url}
-                onChange={(e) => setForm((p) => ({ ...p, url: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
                 placeholder={platformConfig[form.platform]?.placeholder || "https://..."}
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-2">
             <Button variant="outline" onClick={closeDialog}>Batal</Button>
             <Button onClick={handleSubmit} disabled={saveMutation.isPending}>
               {saveMutation.isPending ? "Menyimpan..." : "Simpan"}

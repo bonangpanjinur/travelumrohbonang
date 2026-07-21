@@ -242,6 +242,7 @@ router.get("/:id", async (req, res) => {
         createdAt: bookings.createdAt,
         picType: bookings.picType,
         picId: bookings.picId,
+        isGroupBooking: bookings.isGroupBooking,
         packageTitle: packages.title,
         packageSlug: packages.slug,
         departureDate: packageDepartures.departureDate,
@@ -287,8 +288,8 @@ router.get("/:id", async (req, res) => {
       pilgrims,
       user: user ?? null,
     });
-  } catch {
-    res.status(500).json({ error: "Failed to fetch booking" });
+  } catch (err) {
+    sendAdminError(res, "GET /api/admin/bookings/:id", err);
   }
 });
 
