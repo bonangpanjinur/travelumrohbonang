@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/shared/hooks/use-toast";
 import {
   Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search,
-  Images, FileDown, Copy, ArrowRight, Plane, ChevronRight, ClipboardList,
+  Images, FileDown, Copy, ArrowRight, Plane, ChevronRight, ClipboardList, RefreshCw,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -422,6 +422,21 @@ const AdminDepartures = () => {
                         }}
                       >
                         <Copy className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        title="Sinkronkan Quota (perbaiki hitungan kuota dari data booking aktual)"
+                        onClick={async () => {
+                          try {
+                            const result = await apiFetch(`/api/admin/departures/${dep.id}/sync-quota`, { method: "POST" });
+                            toast({ title: `Quota disinkronkan: ${result.filled} booking aktif, sisa ${result.remaining} kursi` });
+                            fetchData();
+                          } catch (err: any) {
+                            toast({ title: "Gagal sinkronisasi quota", description: err?.message, variant: "destructive" });
+                          }
+                        }}
+                      >
+                        <RefreshCw className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"

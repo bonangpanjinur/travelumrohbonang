@@ -15,7 +15,10 @@ import {
   eq,
   and,
   gte,
+  ne,
   inArray,
+  sql,
+  count,
 } from "@workspace/db";
 import { generateManifestPdf } from "../../lib/pdf/manifest";
 
@@ -54,6 +57,29 @@ router.get("/", async (req, res) => {
       : await baseQuery.orderBy(packageDepartures.departureDate);
 
     const departureIds = data.map((dep: any) => dep.id);
+
+    // Hitung booking aktif (non-cancelled) per keberangkatan secara real-time
+    // agar remaining_quota tidak bergantung pada kolom stored yang bisa tidak sinkron.
+    const filledCountMap = new Map<string, number>();
+    if (departureIds.length) {
+      const counts = await db
+        .select({
+          departureId: bookings.departureId,
+          filled: count(bookings.id),
+        })
+        .from(bookings)
+        .where(
+          and(
+            inArray(bookings.departureId, departureIds),
+            ne(bookings.status, "cancelled"),
+          ),
+        )
+        .groupBy(bookings.departureId);
+      for (const row of counts) {
+        if (row.departureId) filledCountMap.set(row.departureId, Number(row.filled));
+      }
+    }
+
     const allPrices = departureIds.length
       ? await db
           .select({
@@ -74,22 +100,26 @@ router.get("/", async (req, res) => {
     }
 
     // Shape the response to match the snake_case + nested format the frontend expects.
-    const departuresWithPrices = data.map((dep: any) => ({
-      id: dep.id,
-      package_id: dep.packageId,
-      departure_date: dep.departureDate,
-      return_date: dep.returnDate ?? null,
-      quota: dep.quota,
-      remaining_quota: dep.remainingQuota,
-      status: dep.status,
-      muthawif_id: dep.muthawifId ?? null,
-      package: dep.packageTitle ? { id: dep.packageId, title: dep.packageTitle } : null,
-      prices: (pricesByDeparture.get(dep.id) ?? []).map((p) => ({
-        id: p.id,
-        room_type: p.roomType,
-        price: Number(p.price),
-      })),
-    }));
+    const departuresWithPrices = data.map((dep: any) => {
+      const filled = filledCountMap.get(dep.id) ?? 0;
+      const realRemainingQuota = Math.max(0, (dep.quota ?? 0) - filled);
+      return {
+        id: dep.id,
+        package_id: dep.packageId,
+        departure_date: dep.departureDate,
+        return_date: dep.returnDate ?? null,
+        quota: dep.quota,
+        remaining_quota: realRemainingQuota,
+        status: dep.status,
+        muthawif_id: dep.muthawifId ?? null,
+        package: dep.packageTitle ? { id: dep.packageId, title: dep.packageTitle } : null,
+        prices: (pricesByDeparture.get(dep.id) ?? []).map((p) => ({
+          id: p.id,
+          room_type: p.roomType,
+          price: Number(p.price),
+        })),
+      };
+    });
 
     res.json({ data: departuresWithPrices, total: departuresWithPrices.length });
   } catch (err) {
@@ -559,6 +589,49 @@ router.post("/:id/clone", async (req, res) => {
   } catch (err) {
     console.error("[departures] clone failed:", err);
     res.status(500).json({ error: "Failed to clone departure" });
+  }
+});
+
+/**
+ * POST /api/admin/departures/:id/sync-quota
+ * Recalculate remaining_quota dari COUNT booking aktif, perbaiki nilai stored di DB.
+ * Gunakan ini untuk memperbaiki data yang tidak sinkron.
+ */
+router.post("/:id/sync-quota", async (req, res) => {
+  try {
+    const departureId = req.params.id;
+
+    const [dep] = await db
+      .select({ id: packageDepartures.id, quota: packageDepartures.quota })
+      .from(packageDepartures)
+      .where(eq(packageDepartures.id, departureId))
+      .limit(1);
+
+    if (!dep) return res.status(404).json({ error: "Departure not found" });
+
+    const [{ filled }] = await db
+      .select({ filled: count(bookings.id) })
+      .from(bookings)
+      .where(and(
+        eq(bookings.departureId, departureId),
+        ne(bookings.status, "cancelled"),
+      ));
+
+    const realFilled = Number(filled);
+    const newRemaining = Math.max(0, (dep.quota ?? 0) - realFilled);
+    const newStatus = newRemaining === 0 ? "penuh" : "active";
+
+    const [updated] = await db
+      .update(packageDepartures)
+      .set({ remainingQuota: newRemaining, status: newStatus })
+      .where(eq(packageDepartures.id, departureId))
+      .returning();
+
+    console.log(`[sync-quota] departure ${departureId}: quota=${dep.quota}, filled=${realFilled}, remaining=${newRemaining}`);
+    res.json({ quota: dep.quota, filled: realFilled, remaining: newRemaining, status: newStatus });
+  } catch (err) {
+    console.error("[departures] sync-quota error:", err);
+    res.status(500).json({ error: "Failed to sync quota" });
   }
 });
 

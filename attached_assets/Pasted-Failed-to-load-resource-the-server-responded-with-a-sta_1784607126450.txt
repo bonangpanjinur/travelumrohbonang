@@ -1,0 +1,152 @@
+Failed to load resource: the server responded with a status of 401 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?status=all&search=&branchId=__all__&packageId=__all__&limit=20&offset=0:1  Failed to load resource: the server responded with a status of 503 ()
+index-B1gfO2IY.js:440 Error: Failed query: 
+        SELECT
+          b.id,
+          b.booking_code        AS "bookingCode",
+          b.user_id             AS "userId",
+          b.package_id          AS "packageId",
+          b.departure_id        AS "departureId",
+          b.branch_id           AS "branchId",
+          b.status,
+          b.total_price         AS "totalPrice",
+          b.currency,
+          b.payment_scheme      AS "paymentScheme",
+          b.notes,
+          b.created_at          AS "createdAt",
+          b.pic_type            AS "picType",
+          b.pic_id              AS "picId",
+          COALESCE(b.is_group_booking, false) AS "isGroupBooking",
+          b.group_name          AS "groupName",
+          b.pic_name            AS "picName",
+          b.pic_phone           AS "picPhone",
+          b.pic_email           AS "picEmail",
+          COALESCE(b.pemesan_name, b.pic_name, prof.name) AS "pemesanName",
+          COALESCE(b.pemesan_phone, b.pic_phone, prof.phone) AS "pemesanPhone",
+          b.pemesan_email       AS "pemesanEmail",
+          pkg.title             AS "packageTitle",
+          pkg.slug              AS "packageSlug",
+          dep.departure_date    AS "departureDate",
+          prof.name             AS "userName",
+          prof.email            AS "userEmail",
+          br.name               AS "branchName"
+        FROM bookings b
+        LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
+        LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
+        LEFT JOIN profiles           prof ON prof.id = b.user_id
+        LEFT JOIN branches           br   ON br.id   = b.branch_id
+        
+        ORDER BY b.created_at DESC
+        LIMIT $1
+        OFFSET $2
+      
+params: 20,0 — Kolom belum ada di database production. Jalankan drizzle-kit push ke Supabase production atau tambahkan kolom yang hilang via SQL: ALTER TABLE ... ADD COLUMN ...
+    at je (index-B1gfO2IY.js:39:78958)
+    at async q (index-B1gfO2IY.js:440:120339)
+q @ index-B1gfO2IY.js:440
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/pilgrims-db?limit=50&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/pilgrims-db?limit=50&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/departures/67261e43-f8d3-4290-b8d6-20fd3330dddf/manifest-data?limit=50&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/departures/67261e43-f8d3-4290-b8d6-20fd3330dddf/manifest-data?limit=50&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/departures/67261e43-f8d3-4290-b8d6-20fd3330dddf/manifest-data?limit=50&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?status=all&search=&branchId=__all__&packageId=__all__&limit=20&offset=0:1  Failed to load resource: the server responded with a status of 503 ()
+index-B1gfO2IY.js:440 Error: Failed query: 
+        SELECT
+          b.id,
+          b.booking_code        AS "bookingCode",
+          b.user_id             AS "userId",
+          b.package_id          AS "packageId",
+          b.departure_id        AS "departureId",
+          b.branch_id           AS "branchId",
+          b.status,
+          b.total_price         AS "totalPrice",
+          b.currency,
+          b.payment_scheme      AS "paymentScheme",
+          b.notes,
+          b.created_at          AS "createdAt",
+          b.pic_type            AS "picType",
+          b.pic_id              AS "picId",
+          COALESCE(b.is_group_booking, false) AS "isGroupBooking",
+          b.group_name          AS "groupName",
+          b.pic_name            AS "picName",
+          b.pic_phone           AS "picPhone",
+          b.pic_email           AS "picEmail",
+          COALESCE(b.pemesan_name, b.pic_name, prof.name) AS "pemesanName",
+          COALESCE(b.pemesan_phone, b.pic_phone, prof.phone) AS "pemesanPhone",
+          b.pemesan_email       AS "pemesanEmail",
+          pkg.title             AS "packageTitle",
+          pkg.slug              AS "packageSlug",
+          dep.departure_date    AS "departureDate",
+          prof.name             AS "userName",
+          prof.email            AS "userEmail",
+          br.name               AS "branchName"
+        FROM bookings b
+        LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
+        LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
+        LEFT JOIN profiles           prof ON prof.id = b.user_id
+        LEFT JOIN branches           br   ON br.id   = b.branch_id
+        
+        ORDER BY b.created_at DESC
+        LIMIT $1
+        OFFSET $2
+      
+params: 20,0 — Kolom belum ada di database production. Jalankan drizzle-kit push ke Supabase production atau tambahkan kolom yang hilang via SQL: ALTER TABLE ... ADD COLUMN ...
+    at je (index-B1gfO2IY.js:39:78958)
+    at async q (index-B1gfO2IY.js:440:120339)
+q @ index-B1gfO2IY.js:440
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
