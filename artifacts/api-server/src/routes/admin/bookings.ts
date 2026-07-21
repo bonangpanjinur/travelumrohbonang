@@ -591,6 +591,7 @@ router.patch(
       // ── State-machine validation ───────────────────────────────────────────
       // Prevent illegal transitions (e.g. cancelled → completed).
       const VALID_TRANSITIONS: Record<string, string[]> = {
+        draft:     ["confirmed", "cancelled"],  // draft bisa langsung dikonfirmasi atau dibatalkan
         pending:   ["confirmed", "cancelled"],
         confirmed: ["completed", "cancelled"],
         completed: [],   // terminal — tidak bisa balik

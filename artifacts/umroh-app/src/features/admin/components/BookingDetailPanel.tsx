@@ -4,12 +4,13 @@ import { apiFetch } from "@/shared/lib/apiClient";
 import {
   Users, UserCheck, DollarSign, FileDown, Building2, UsersRound,
   PhoneCall, History, ExternalLink, Bed, Calendar, Loader2,
-  Plus, Trash2, Save, X,
+  Plus, Trash2, Save, X, CheckCircle2, XCircle, Trophy, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { fetchInvoiceData, generateInvoiceHTML, openInvoicePrintWindow } from "./InvoiceGenerator";
 import PilgrimDetailDrawer, { type FullPilgrim } from "./PilgrimDetailDrawer";
 import DepartureDetailDrawer from "./DepartureDetailDrawer";
@@ -20,6 +21,22 @@ import { toast } from "sonner";
 
 interface Branch { id: string; name: string; }
 
+// Status transitions yang diperbolehkan (mirror dari backend state machine)
+const VALID_TRANSITIONS: Record<string, { status: string; label: string; icon: React.ReactNode; variant: "default" | "destructive" | "outline" }[]> = {
+  draft: [
+    { status: "confirmed", label: "Konfirmasi", icon: <CheckCircle2 className="w-3.5 h-3.5" />, variant: "default" },
+    { status: "cancelled", label: "Batalkan", icon: <XCircle className="w-3.5 h-3.5" />, variant: "destructive" },
+  ],
+  pending: [
+    { status: "confirmed", label: "Konfirmasi", icon: <CheckCircle2 className="w-3.5 h-3.5" />, variant: "default" },
+    { status: "cancelled", label: "Batalkan", icon: <XCircle className="w-3.5 h-3.5" />, variant: "destructive" },
+  ],
+  confirmed: [
+    { status: "completed", label: "Tandai Selesai", icon: <Trophy className="w-3.5 h-3.5" />, variant: "default" },
+    { status: "cancelled", label: "Batalkan", icon: <XCircle className="w-3.5 h-3.5" />, variant: "destructive" },
+  ],
+};
+
 interface BookingDetailPanelProps {
   bookingId: string;
   packageId: string | null;
@@ -29,6 +46,7 @@ interface BookingDetailPanelProps {
   picId: string | null;
   packageTitle: string;
   branchId?: string | null;
+  status?: string;
   onBranchChange?: () => void;
   onBookingChange?: () => void;
   // Pemesan
@@ -64,6 +82,7 @@ const emptyNewJamaah = (): NewJamaahForm => ({ name: "", phone: "", gender: "" }
 const BookingDetailPanel = ({
   bookingId, packageId, departureId, departureDate,
   picType, picId, packageTitle, branchId,
+  status: initialStatus,
   onBranchChange, onBookingChange,
   pemesanName, pemesanPhone,
   isGroupBooking, groupName, groupPicName, groupPicPhone,
@@ -77,6 +96,8 @@ const BookingDetailPanel = ({
   const [savingBranch, setSavingBranch] = useState(false);
   const [loading, setLoading] = useState(true);
   const [printingInvoice, setPrintingInvoice] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<string>(initialStatus || "");
+  const [changingStatus, setChangingStatus] = useState(false);
   const [statusLogs, setStatusLogs] = useState<Array<{
     id: string; fromStatus: string | null; toStatus: string;
     changedBy: string | null; notes: string | null; createdAt: string;
@@ -200,6 +221,31 @@ const BookingDetailPanel = ({
     onBranchChange?.();
   };
 
+  // ── Ubah Status Booking ─────────────────────────────────────────────────
+  const handleStatusChange = async (newStatus: string) => {
+    const action = VALID_TRANSITIONS[currentStatus]?.find((t) => t.status === newStatus);
+    if (!action) return;
+    const confirm = window.confirm(
+      `${action.label} booking ini?\n\nStatus akan berubah dari "${currentStatus}" → "${newStatus}".`
+    );
+    if (!confirm) return;
+    setChangingStatus(true);
+    try {
+      await apiFetch(`/api/admin/bookings/${bookingId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      toast.success(`Status berhasil diubah ke "${action.label}"`);
+      setCurrentStatus(newStatus);
+      fetchDetails();
+      onBookingChange?.();
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal mengubah status booking");
+    } finally {
+      setChangingStatus(false);
+    }
+  };
+
   // ── Tambah jamaah ─────────────────────────────────────────────────────────
 
   const handleAddJamaah = async () => {
@@ -289,6 +335,50 @@ const BookingDetailPanel = ({
         </div>
 
         <div className="flex gap-2 flex-wrap">
+          {/* Tombol ubah status — tampil sesuai transisi yang diperbolehkan */}
+          {currentStatus && VALID_TRANSITIONS[currentStatus]?.length > 0 && (
+            VALID_TRANSITIONS[currentStatus].length === 1 ? (
+              // Satu opsi — langsung jadi tombol
+              <Button
+                size="sm"
+                variant={VALID_TRANSITIONS[currentStatus][0].variant}
+                onClick={() => handleStatusChange(VALID_TRANSITIONS[currentStatus][0].status)}
+                disabled={changingStatus}
+                className={VALID_TRANSITIONS[currentStatus][0].variant === "default" ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+              >
+                {changingStatus
+                  ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  : VALID_TRANSITIONS[currentStatus][0].icon}
+                <span className="ml-1.5">{VALID_TRANSITIONS[currentStatus][0].label}</span>
+              </Button>
+            ) : (
+              // Lebih dari satu opsi — tampilkan dropdown
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" disabled={changingStatus}>
+                    {changingStatus
+                      ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      : <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />}
+                    Ubah Status
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {VALID_TRANSITIONS[currentStatus].map((t) => (
+                    <DropdownMenuItem
+                      key={t.status}
+                      onClick={() => handleStatusChange(t.status)}
+                      className={t.variant === "destructive" ? "text-destructive focus:text-destructive" : ""}
+                    >
+                      {t.icon}
+                      <span className="ml-2">{t.label}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )
+          )}
+
           <Button size="sm" variant="outline" onClick={() => setShowChangeRoom(true)}>
             <Bed className="w-3.5 h-3.5 mr-1.5" /> Ubah Kamar
           </Button>

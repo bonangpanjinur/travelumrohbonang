@@ -14,6 +14,9 @@ const BookingFilters = ({ filter, onFilterChange }: BookingFiltersProps) => {
       <SelectContent>
         <SelectItem value="all">Semua Status</SelectItem>
         <SelectItem value="draft">Draft</SelectItem>
+        <SelectItem value="pending">Pending</SelectItem>
+        <SelectItem value="confirmed">Terkonfirmasi</SelectItem>
+        <SelectItem value="completed">Selesai</SelectItem>
         <SelectItem value="waiting_payment">Menunggu Pembayaran</SelectItem>
         <SelectItem value="paid">Lunas</SelectItem>
         <SelectItem value="cancelled">Dibatalkan</SelectItem>
