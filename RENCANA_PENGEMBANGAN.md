@@ -6,6 +6,93 @@
 
 ---
 
+## ANALISIS FITUR — BOOKING & KEBERANGKATAN
+
+> Hasil analisis mendalam tanggal 21 Juli 2026.  
+> Inspeksi langsung komponen: `BookingDetailPanel.tsx`, `BookingTable.tsx`, `BookingFilters.tsx`, `Bookings.tsx`, `Departures.tsx`, `DepartureDetailDrawer.tsx`, `InvoiceGenerator.ts`, `admin/bookings.ts`, `admin/departures.ts`.
+
+### Bug yang Sudah Diperbaiki (21 Juli 2026)
+
+| ✅ | ID | Judul | File |
+|----|----|-------|------|
+| ✅ | BKG-BUG-01 | Draft → Confirmed selalu gagal (state machine tidak daftarkan `draft`) | `admin/bookings.ts` |
+| ✅ | BKG-BUG-02 | Status `pending`, `confirmed`, `completed` tampil sebagai kode mentah di badge | `BookingStatusBadge.tsx` |
+| ✅ | BKG-BUG-03 | Tidak ada tombol ubah status individual di detail panel (hanya bulk action) | `BookingDetailPanel.tsx` |
+| ✅ | BKG-BUG-04 | Filter status hanya 4 opsi, tidak include `pending`/`confirmed`/`completed` | `BookingFilters.tsx` |
+
+---
+
+### Sprint Berikutnya — Booking
+
+#### 🔴 Prioritas Tinggi
+
+| ❌ | ID | Judul | Keterangan | File Terdampak |
+|----|----|-------|------------|----------------|
+| ❌ | BKG-F01 | Panel pembayaran di detail booking | Tampilkan ringkasan (sudah bayar / sisa / status lunas), histori pembayaran, tombol "Tambah Pembayaran Manual", tombol "Verifikasi/Tolak" langsung dari panel | `BookingDetailPanel.tsx`, endpoint `GET /api/admin/bookings/:id/payments` sudah ada |
+| ❌ | BKG-F02 | Tampilan kamar + total harga booking | Room data sudah di-fetch tapi tidak dirender — tampilkan tabel breakdown (tipe, qty, harga, subtotal) + total harga keseluruhan | `BookingDetailPanel.tsx` |
+| ❌ | BKG-BUG-05 | `window.confirm()` native perlu diganti modal proper | Ganti dengan Radix `AlertDialog` dengan field alasan/catatan (terutama untuk pembatalan) | `BookingDetailPanel.tsx` |
+
+#### 🟡 Prioritas Sedang
+
+| ❌ | ID | Judul | Keterangan | File Terdampak |
+|----|----|-------|------------|----------------|
+| ❌ | BKG-F03 | Catatan/Notes booking | Backend punya kolom `notes` di tabel `bookings`, tapi tidak ada UI untuk lihat/edit dari admin | `BookingDetailPanel.tsx` |
+| ❌ | BKG-F04 | Kolom tambahan di tabel booking | Tambah: status pembayaran (Lunas/Belum/DP), jumlah jamaah, nomor HP pemesan | `BookingTable.tsx` |
+
+#### 🟢 Prioritas Rendah
+
+| ❌ | ID | Judul | Keterangan | File Terdampak |
+|----|----|-------|------------|----------------|
+| ❌ | BKG-F05 | Bulk action tambahan | Pindah keberangkatan massal, assign cabang massal, export hanya yang dicentang | `Bookings.tsx`, backend `bulk-*` endpoints |
+| ❌ | BKG-F06 | Shortcut aksi cepat dari baris tabel | Tombol aksi langsung di row (WA/telpon pemesan, konfirmasi) tanpa harus expand detail | `BookingTable.tsx` |
+
+---
+
+### Sprint Berikutnya — Jadwal Keberangkatan
+
+#### 🔴 Prioritas Tinggi
+
+| ❌ | ID | Judul | Keterangan | File Terdampak |
+|----|----|-------|------------|----------------|
+| ❌ | KB-F03 | Info penerbangan di form keberangkatan | Tambah field: maskapai, nomor penerbangan, bandara keberangkatan, bandara tujuan — krusial untuk manifest airline | `Departures.tsx`, `admin/departures.ts`, schema DB |
+| ❌ | KB-F04 | Tombol "Keuangan" & "Checklist" di departure card | Halaman `DepartureFinance` dan `DepartureChecklist` sudah dibuat tapi tidak bisa diakses dari card | `Departures.tsx` — footer card |
+
+#### 🟡 Prioritas Sedang
+
+| ❌ | ID | Judul | Keterangan | File Terdampak |
+|----|----|-------|------------|----------------|
+| ❌ | KB-F05 | DepartureDetailDrawer lebih lengkap | Saat ini hanya tampil nama paket + tanggal + quota. Tambah: muthawif, harga per kamar, jumlah jamaah terdaftar, link manifest/readiness | `DepartureDetailDrawer.tsx` |
+| ❌ | KB-F06 | Master data Muthawif | Endpoint `/api/admin/masterdata/muthawifs` ada tapi halaman manajemen muthawif belum ada/placeholder | Perlu halaman baru |
+
+#### 🟢 Prioritas Rendah
+
+| ❌ | ID | Judul | Keterangan | File Terdampak |
+|----|----|-------|------------|----------------|
+| ❌ | KB-F07 | Status "Draft" untuk keberangkatan | Form saat ini hanya: `active / closed / penuh`. Tambah `draft` untuk keberangkatan yang belum dipublikasikan | `Departures.tsx`, `admin/departures.ts` |
+| ❌ | KB-F08 | Manifest history dengan snapshot versi | "Riwayat Cetak" tampil timestamp & nama, belum tampil perbedaan versi manifest | `Manifest.tsx` |
+
+---
+
+### Ringkasan Gap Analisis
+
+```
+BOOKING
+  Panel Pembayaran di Detail    ❌ Belum ada (backend sudah ada)
+  Tampilan Kamar + Total Harga  ❌ Data di-fetch, tapi tidak dirender
+  Modal Konfirmasi Status       ❌ Masih pakai window.confirm() native
+  Catatan/Notes Booking         ❌ Kolom DB ada, UI belum
+  Kolom Tabel Tambahan          ❌ Status bayar, jml jamaah, HP pemesan
+
+KEBERANGKATAN
+  Info Penerbangan di Form      ❌ Tidak ada field airline/flight number
+  Tombol Finance & Checklist    ❌ Halaman ada tapi tidak ada link dari card
+  DepartureDetailDrawer         🔄 Ada tapi terlalu minimalis
+  Master Data Muthawif          🔄 Endpoint ada, UI belum
+  Status Draft Keberangkatan    ❌ Belum ada
+```
+
+---
+
 ## Legend Status
 
 | Ikon | Arti |
