@@ -317,7 +317,7 @@ router.get("/:id", async (req, res) => {
       .limit(1);
 
     // Compute paymentStatus for the detail page
-    const [payRes] = await db.execute(sql`
+    const payRes = await db.execute(sql`
       SELECT CASE
         WHEN ${booking.totalPrice} > 0 AND COALESCE(SUM(pt.amount), 0) >= ${booking.totalPrice} THEN 'paid'
         WHEN COALESCE(SUM(pt.amount), 0) > 0 THEN 'partial'
@@ -325,7 +325,7 @@ router.get("/:id", async (req, res) => {
       FROM booking_payments pt
       WHERE pt.booking_id = ${id} AND pt.is_voided = false
     `);
-    const paymentStatus = ((payRes as any).rows ?? [payRes])[0]?.paymentStatus ?? "unpaid";
+    const paymentStatus = (payRes.rows[0] as any)?.paymentStatus ?? "unpaid";
 
     res.json({
       ...BookingWithDetailsSchema.parse(booking),

@@ -28,14 +28,15 @@ router.get("/", async (req, res) => {
     : sql``;
 
   try {
-    const [countRow] = await db.execute<{ total: string }>(sql`
+    const countResult = await db.execute<{ total: string }>(sql`
       SELECT COUNT(*)::int AS total
       FROM booking_pilgrims bp
       JOIN bookings b ON b.id = bp.booking_id
       WHERE 1=1 ${searchCond}
     `);
+    const countRow = countResult.rows[0];
 
-    const rows = await db.execute<Record<string, any>>(sql`
+    const rowsResult = await db.execute<Record<string, any>>(sql`
       SELECT
         bp.id,
         bp.booking_id       AS "bookingId",
@@ -64,7 +65,7 @@ router.get("/", async (req, res) => {
       LIMIT ${lim} OFFSET ${off}
     `);
 
-    res.json({ data: rows, total: Number(countRow?.total ?? 0) });
+    res.json({ data: rowsResult.rows, total: Number(countRow?.total ?? 0) });
   } catch (e) {
     console.error("[pilgrims-db GET /]", e);
     res.status(500).json({ error: "Failed to fetch pilgrims database" });
