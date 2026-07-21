@@ -5,7 +5,7 @@ import {
   Users, UserCheck, DollarSign, FileDown, Building2, UsersRound,
   PhoneCall, History, ExternalLink, Bed, Calendar, Loader2,
   Plus, Trash2, Save, X, CheckCircle2, XCircle, Trophy, ChevronDown,
-  CreditCard,
+  CreditCard, FileText, Pencil,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -160,6 +160,11 @@ const BookingDetailPanel = ({
   const [savingPayment, setSavingPayment] = useState(false);
   const [newPayment, setNewPayment] = useState<NewPaymentForm>(emptyNewPayment());
 
+  // BKG-F03: Notes
+  const [notes, setNotes] = useState<string>("");
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
+
   // Confirm dialog (replaces window.confirm)
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean; title: string; description?: string;
@@ -210,6 +215,7 @@ const BookingDetailPanel = ({
 
       if (detail.status === "fulfilled") {
         const d = detail.value;
+        setNotes(d.notes ?? "");
         setPilgrims(
           (d.pilgrims || []).map((p: any) => ({
             id: p.id,
@@ -385,6 +391,23 @@ const BookingDetailPanel = ({
       toast.error(e?.message || "Gagal mencatat pembayaran");
     } finally {
       setSavingPayment(false);
+    }
+  };
+
+  // ── BKG-F03: Simpan catatan booking ──────────────────────────────────────
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      await apiFetch(`/api/admin/bookings/${bookingId}/notes`, {
+        method: "PATCH",
+        body: JSON.stringify({ notes: notes.trim() || null }),
+      });
+      toast.success("Catatan berhasil disimpan");
+      setEditingNotes(false);
+    } catch {
+      toast.error("Gagal menyimpan catatan");
+    } finally {
+      setSavingNotes(false);
     }
   };
 
@@ -670,6 +693,46 @@ const BookingDetailPanel = ({
               pilgrims={pilgrims.map((p) => ({ id: p.id, name: p.name }))}
             />
           </div>
+        )}
+      </div>
+
+      {/* ── BKG-F03: Catatan / Notes ──────────────────────────────────────────── */}
+      <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold flex items-center gap-2 text-sm">
+            <FileText className="w-4 h-4 text-primary" /> Catatan
+          </h4>
+          {!editingNotes ? (
+            <Button
+              size="sm" variant="ghost" className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setEditingNotes(true)}
+            >
+              <Pencil className="w-3 h-3" /> Edit
+            </Button>
+          ) : (
+            <div className="flex gap-1">
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingNotes(false)} disabled={savingNotes}>
+                <X className="w-3 h-3" />
+              </Button>
+              <Button size="sm" className="h-7 text-xs gap-1" onClick={handleSaveNotes} disabled={savingNotes}>
+                {savingNotes ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                Simpan
+              </Button>
+            </div>
+          )}
+        </div>
+        {editingNotes ? (
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Tulis catatan internal untuk booking ini…"
+            rows={3}
+            className="w-full text-sm rounded-md border border-input bg-background px-3 py-2 resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        ) : (
+          <p className={`text-sm ${notes ? "text-foreground" : "text-muted-foreground italic"}`}>
+            {notes || "Tidak ada catatan"}
+          </p>
         )}
       </div>
 

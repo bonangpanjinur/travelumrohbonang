@@ -2,7 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Checkbox } from "@/shared/components/ui/checkbox";
-import { Eye, EyeOff, UsersRound } from "lucide-react";
+import { Eye, EyeOff, UsersRound, Phone, Users, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import BookingStatusBadge from "./BookingStatusBadge";
@@ -31,6 +31,10 @@ interface Booking {
   departure: { departureDate: string } | null;
   profile: { name: string; email: string } | null;
   branch: { name: string } | null;
+  // BKG-F04: kolom tambahan
+  pilgrimsCount?: number | null;
+  paymentStatus?: string | null;
+  pemesanPhone?: string | null;
 }
 
 interface BookingTableProps {
@@ -190,6 +194,7 @@ const BookingTable = ({
                 <TableHead>Paket</TableHead>
                 <TableHead>Keberangkatan</TableHead>
                 <TableHead>Total</TableHead>
+                <TableHead>Status Bayar</TableHead>
                 <TableHead>Cabang</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
@@ -223,6 +228,11 @@ const BookingTable = ({
                             : "Grup"}
                         </Badge>
                       )}
+                      {(b.pilgrimsCount ?? 0) > 0 && (
+                        <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-0.5">
+                          <Users className="w-2.5 h-2.5" />{b.pilgrimsCount} jemaah
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="font-semibold">{b.profile?.name || "-"}</div>
@@ -230,7 +240,14 @@ const BookingTable = ({
                     </TableCell>
                     <TableCell className="text-sm">
                       {b.picName ? (
-                        <span>{b.picName}</span>
+                        <div>
+                          <div>{b.picName}</div>
+                          {b.pemesanPhone && (
+                            <div className="text-xs text-muted-foreground flex items-center gap-0.5 mt-0.5">
+                              <Phone className="w-2.5 h-2.5" />{b.pemesanPhone}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -266,6 +283,17 @@ const BookingTable = ({
                     <TableCell className="font-semibold">
                       Rp {b.totalPrice.toLocaleString("id-ID")}
                     </TableCell>
+                    <TableCell>
+                      {b.paymentStatus === "paid" && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-medium">✓ Lunas</span>
+                      )}
+                      {b.paymentStatus === "partial" && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium">DP/Cicil</span>
+                      )}
+                      {(!b.paymentStatus || b.paymentStatus === "unpaid") && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 font-medium">Belum</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm">
                       {b.branch?.name || <span className="text-muted-foreground">—</span>}
                     </TableCell>
@@ -273,25 +301,45 @@ const BookingTable = ({
                       <BookingStatusBadge status={b.status} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onToggleExpand(b.id)}
-                      >
-                        {expandedId === b.id ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
+                      <div className="flex items-center justify-end gap-0.5">
+                        {/* BKG-F06: Shortcut aksi cepat */}
+                        {b.pemesanPhone && (
+                          <Button
+                            variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-green-600"
+                            title={`WhatsApp ${b.picName || b.pemesanPhone}`}
+                            asChild
+                          >
+                            <a
+                              href={`https://wa.me/${b.pemesanPhone.replace(/\D/g, "")}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MessageCircle className="w-3.5 h-3.5" />
+                            </a>
+                          </Button>
                         )}
-                        <span className="ml-1">Detail</span>
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => onToggleExpand(b.id)}
+                        >
+                          {expandedId === b.id ? (
+                            <EyeOff className="w-3.5 h-3.5" />
+                          ) : (
+                            <Eye className="w-3.5 h-3.5" />
+                          )}
+                          <span className="ml-1">Detail</span>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
 
                   {expandedId === b.id && (
                     <TableRow key={`${b.id}-detail`}>
                       <TableCell
-                        colSpan={onSelectionChange ? 10 : 9}
+                        colSpan={onSelectionChange ? 11 : 10}
                         className="bg-muted/30 p-0"
                       >
                         <BookingDetailPanel

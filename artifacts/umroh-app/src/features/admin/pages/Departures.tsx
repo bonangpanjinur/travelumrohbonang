@@ -65,10 +65,17 @@ const validPrices = (prices: DeparturePrice[]) =>
   prices.filter((p) => ROOM_TYPES.includes(p.roomType) && p.price > 0);
 
 const StatusBadge = ({ dep }: { dep: Departure }) => {
-  const isFull = dep.remainingQuota === 0 || dep.status === "penuh";
-  const isAlmostFull = !isFull && dep.quota > 0 && dep.remainingQuota / dep.quota <= 0.2;
+  const isDraft = dep.status === "draft";
+  const isFull = !isDraft && (dep.remainingQuota === 0 || dep.status === "penuh");
+  const isAlmostFull = !isDraft && !isFull && dep.quota > 0 && dep.remainingQuota / dep.quota <= 0.2;
   const isClosed = dep.status === "closed";
 
+  if (isDraft) return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-300">
+      <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+      Draft
+    </span>
+  );
   if (isFull) return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
       <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
@@ -356,6 +363,7 @@ const AdminDepartures = () => {
                     <Select value={form.status} onValueChange={(val) => setForm({ ...form, status: val })}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
                         <SelectItem value="active">Aktif</SelectItem>
                         <SelectItem value="closed">Ditutup</SelectItem>
                         <SelectItem value="penuh">Penuh</SelectItem>

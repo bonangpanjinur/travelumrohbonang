@@ -175,7 +175,14 @@ router.get("/", async (req, res) => {
           dep.departure_date    AS "departureDate",
           prof.name             AS "userName",
           prof.email            AS "userEmail",
-          br.name               AS "branchName"
+          br.name               AS "branchName",
+          (SELECT COUNT(*)::int FROM booking_pilgrims bp WHERE bp.booking_id = b.id) AS "pilgrimsCount",
+          (SELECT CASE
+            WHEN b.total_price > 0 AND COALESCE(SUM(pt.amount), 0) >= b.total_price THEN 'paid'
+            WHEN COALESCE(SUM(pt.amount), 0) > 0 THEN 'partial'
+            ELSE 'unpaid' END
+           FROM booking_payments pt WHERE pt.booking_id = b.id AND pt.is_voided = false
+          ) AS "paymentStatus"
         FROM bookings b
         LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
         LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
@@ -874,6 +881,22 @@ router.patch("/:id/branch", async (req, res) => {
   } catch (e) {
     console.error("[PATCH /api/admin/bookings/:id/branch]", e);
     res.status(500).json({ error: "Failed to update branch" });
+  }
+});
+
+// BKG-F03: Update catatan/notes booking
+router.patch("/:id/notes", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { notes } = req.body as { notes?: string | null };
+    await db
+      .update(bookings)
+      .set({ notes: notes ?? null })
+      .where(eq(bookings.id, id));
+    res.status(204).end();
+  } catch (e) {
+    console.error("[PATCH /api/admin/bookings/:id/notes]", e);
+    res.status(500).json({ error: "Failed to update notes" });
   }
 });
 

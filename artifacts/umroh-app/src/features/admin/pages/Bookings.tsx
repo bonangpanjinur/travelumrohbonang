@@ -138,6 +138,10 @@ const AdminBookings = () => {
         groupName: b.groupName ?? null,
         picName: b.picName ?? null,
         picPhone: b.picPhone ?? null,
+        // BKG-F04: kolom tambahan
+        pilgrimsCount: b.pilgrimsCount ?? null,
+        paymentStatus: b.paymentStatus ?? null,
+        pemesanPhone: b.pemesanPhone ?? null,
       }));
       setBookings(mapped);
       setTotalCount(res.total || 0);
