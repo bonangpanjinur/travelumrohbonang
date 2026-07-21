@@ -133,6 +133,7 @@ import FinancialReports from "./features/admin/pages/FinancialReports";
 import VisaTracking from "./features/admin/pages/VisaTracking";
 import SeatAssignment from "./features/admin/pages/SeatAssignment";
 import DepartureChecklist from "./features/admin/pages/DepartureChecklist";
+import DepartureReadiness from "./features/admin/pages/DepartureReadiness";
 import EquipmentDistribution from "./features/admin/pages/EquipmentDistribution";
 import BankReconciliation from "./features/admin/pages/BankReconciliation";
 import { useEffect } from "react";
@@ -292,6 +293,8 @@ const AppContent = () => {
           <Route path="seat-assignment" element={<SeatAssignment />} />
           {/* O-11: Pre-departure Checklist */}
           <Route path="departure-checklist" element={<DepartureChecklist />} />
+          {/* Dashboard Kesiapan Keberangkatan */}
+          <Route path="departure-readiness" element={<DepartureReadiness />} />
         </Route>
       </Route>
 

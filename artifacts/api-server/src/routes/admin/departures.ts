@@ -11,7 +11,10 @@ import {
   muthawifs,
   bookings,
   bookingPilgrims,
+  bookingPayments,
+  checkIns,
   pilgrimDocuments,
+  profiles,
   eq,
   and,
   gte,
@@ -21,6 +24,7 @@ import {
   count,
 } from "@workspace/db";
 import { generateManifestPdf } from "../../lib/pdf/manifest";
+import { sendAdminError } from "../../lib/adminApiError";
 
 // mergeParams: true so req.params.packageId from parent router is accessible here
 const router = Router({ mergeParams: true });
@@ -632,6 +636,183 @@ router.post("/:id/sync-quota", async (req, res) => {
   } catch (err) {
     console.error("[departures] sync-quota error:", err);
     res.status(500).json({ error: "Failed to sync quota" });
+  }
+});
+
+// ── GET /:id/readiness — dashboard kesiapan per keberangkatan ─────────────────
+router.get("/:id/readiness", async (req, res) => {
+  try {
+    const departureId = req.params.id;
+
+    // Departure + package info
+    const [dep] = await db
+      .select({
+        id: packageDepartures.id,
+        departureDate: packageDepartures.departureDate,
+        returnDate: packageDepartures.returnDate,
+        quota: packageDepartures.quota,
+        packageTitle: packages.title,
+      })
+      .from(packageDepartures)
+      .leftJoin(packages, eq(packageDepartures.packageId, packages.id))
+      .where(eq(packageDepartures.id, departureId))
+      .limit(1);
+
+    if (!dep) return res.status(404).json({ error: "Departure not found" });
+
+    // All non-cancelled bookings for this departure
+    const depBookings = await db
+      .select({ id: bookings.id, status: bookings.status, totalPrice: bookings.totalPrice })
+      .from(bookings)
+      .where(and(eq(bookings.departureId, departureId), ne(bookings.status, "cancelled")));
+
+    const bookingIds = depBookings.map((b) => b.id);
+
+    // Jemaah + seat stats
+    let totalJemaah = 0, seatAssigned = 0;
+    if (bookingIds.length) {
+      const pRows = await db
+        .select({ id: bookingPilgrims.id, seatNumber: bookingPilgrims.seatNumber })
+        .from(bookingPilgrims)
+        .where(inArray(bookingPilgrims.bookingId, bookingIds));
+      totalJemaah = pRows.length;
+      seatAssigned = pRows.filter((p) => !!p.seatNumber).length;
+    }
+
+    // Payment stats — lunas = paid/confirmed, sisanya belum
+    const paid = depBookings.filter((b) => ["paid", "confirmed", "completed"].includes(b.status ?? "")).length;
+    const unpaid = depBookings.length - paid;
+
+    // Document stats — count unique pilgrims with all required docs verified
+    let docComplete = 0, docIncomplete = 0;
+    const DOC_TYPES = ["paspor", "visa", "vaksin"];
+    if (bookingIds.length) {
+      const allPilgrims = await db
+        .select({ id: bookingPilgrims.id })
+        .from(bookingPilgrims)
+        .where(inArray(bookingPilgrims.bookingId, bookingIds));
+      const pilgrimIds = allPilgrims.map((p) => p.id);
+      if (pilgrimIds.length) {
+        const docs = await db
+          .select({ pilgrimId: pilgrimDocuments.pilgrimId, documentType: pilgrimDocuments.documentType, status: pilgrimDocuments.status })
+          .from(pilgrimDocuments)
+          .where(and(inArray(pilgrimDocuments.pilgrimId, pilgrimIds), inArray(pilgrimDocuments.documentType, DOC_TYPES)));
+        for (const p of allPilgrims) {
+          const pDocs = docs.filter((d) => d.pilgrimId === p.id);
+          const complete = DOC_TYPES.every((dt) => pDocs.some((d) => d.documentType === dt && d.status === "verified"));
+          complete ? docComplete++ : docIncomplete++;
+        }
+      }
+    }
+
+    // Check-in stats
+    let checkInDone = 0;
+    if (bookingIds.length) {
+      const ciRows = await db
+        .select({ id: checkIns.id })
+        .from(checkIns)
+        .where(eq(checkIns.departureId, departureId));
+      checkInDone = ciRows.length;
+    }
+
+    // Days until departure
+    const today = new Date();
+    const dDate = dep.departureDate ? new Date(dep.departureDate) : null;
+    const daysUntil = dDate ? Math.ceil((dDate.getTime() - today.getTime()) / 86_400_000) : null;
+
+    res.json({
+      departure: {
+        id: dep.id,
+        departureDate: dep.departureDate,
+        returnDate: dep.returnDate,
+        quota: dep.quota,
+        packageTitle: dep.packageTitle,
+        daysUntil,
+      },
+      jemaah: { total: totalJemaah, bookings: depBookings.length },
+      payment: { total: depBookings.length, paid, unpaid },
+      documents: { total: totalJemaah, complete: docComplete, incomplete: docIncomplete },
+      seats: { total: totalJemaah, assigned: seatAssigned, unassigned: totalJemaah - seatAssigned },
+      checkIn: { total: totalJemaah, done: checkInDone, pending: Math.max(0, totalJemaah - checkInDone) },
+    });
+  } catch (err) {
+    sendAdminError(res, "GET /api/admin/departures/:id/readiness", err);
+  }
+});
+
+// ── POST /:id/blast — kirim notifikasi massal ke semua jemaah ─────────────────
+router.post("/:id/blast", async (req, res) => {
+  try {
+    const departureId = req.params.id;
+    const { message, channel = "both" } = req.body as { message: string; channel?: "wa" | "email" | "both" };
+
+    if (!message?.trim()) return res.status(400).json({ error: "message required" });
+
+    // Get departure + package info
+    const [dep] = await db
+      .select({ departureDate: packageDepartures.departureDate, packageTitle: packages.title })
+      .from(packageDepartures)
+      .leftJoin(packages, eq(packageDepartures.packageId, packages.id))
+      .where(eq(packageDepartures.id, departureId))
+      .limit(1);
+    if (!dep) return res.status(404).json({ error: "Departure not found" });
+
+    // Get all active bookings with user profiles
+    const rows = await db
+      .select({
+        bookingCode: bookings.bookingCode,
+        userId: bookings.userId,
+        pemesanName: bookings.pemesanName,
+        pemesanPhone: bookings.pemesanPhone,
+        pemesanEmail: bookings.pemesanEmail,
+        profileName: profiles.name,
+        profilePhone: profiles.phone,
+        profileEmail: profiles.email,
+      })
+      .from(bookings)
+      .leftJoin(profiles, eq(profiles.id, bookings.userId))
+      .where(and(eq(bookings.departureId, departureId), ne(bookings.status, "cancelled")));
+
+    const depDateStr = dep.departureDate
+      ? new Intl.DateTimeFormat("id-ID", { day: "2-digit", month: "long", year: "numeric", timeZone: "Asia/Jakarta" })
+          .format(new Date(dep.departureDate))
+      : "-";
+
+    let sentWa = 0, sentEmail = 0, failedWa = 0, failedEmail = 0;
+
+    const { sendWhatsApp } = await import("@workspace/whatsapp");
+    const { Resend } = await import("resend");
+    const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+
+    for (const row of rows) {
+      const phone = row.pemesanPhone || row.profilePhone;
+      const email = row.pemesanEmail || row.profileEmail;
+      const name = row.pemesanName || row.profileName || "Jamaah";
+
+      const waBody = `Halo *${name}*,\n\n${message}\n\n📅 Paket: *${dep.packageTitle ?? "Umroh"}*\nTanggal: *${depDateStr}*\nKode Booking: *${row.bookingCode}*\n\n_Tim ${process.env.EMAIL_FROM_NAME ?? "UmrohPlus"}_`;
+
+      if ((channel === "wa" || channel === "both") && phone) {
+        try {
+          await sendWhatsApp(phone, waBody);
+          sentWa++;
+        } catch { failedWa++; }
+      }
+      if ((channel === "email" || channel === "both") && email && resend) {
+        try {
+          await resend.emails.send({
+            from: `${process.env.EMAIL_FROM_NAME ?? "UmrohPlus"} <${process.env.EMAIL_FROM ?? "noreply@example.com"}>`,
+            to: email,
+            subject: `Informasi Keberangkatan — ${dep.packageTitle ?? "Umroh"}`,
+            text: `Halo ${name},\n\n${message}\n\nPaket: ${dep.packageTitle}\nTanggal: ${depDateStr}\nKode Booking: ${row.bookingCode}`,
+          });
+          sentEmail++;
+        } catch { failedEmail++; }
+      }
+    }
+
+    res.json({ ok: true, total: rows.length, sentWa, sentEmail, failedWa, failedEmail });
+  } catch (err) {
+    sendAdminError(res, "POST /api/admin/departures/:id/blast", err);
   }
 });
 

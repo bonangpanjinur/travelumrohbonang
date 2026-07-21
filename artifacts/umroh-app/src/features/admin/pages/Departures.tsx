@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/shared/hooks/use-toast";
 import {
   Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search,
-  Images, FileDown, Copy, ArrowRight, Plane, ChevronRight, ClipboardList, RefreshCw,
+  Images, FileDown, Copy, ArrowRight, Plane, ChevronRight, ClipboardList, RefreshCw, Activity,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -451,6 +451,13 @@ const AdminDepartures = () => {
                         onClick={() => navigate(`/admin/manifest?departureId=${dep.id}`)}
                       >
                         <ClipboardList className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        title="Dashboard Kesiapan"
+                        onClick={() => navigate(`/admin/departure-readiness?departureId=${dep.id}`)}
+                      >
+                        <Activity className="w-4 h-4" />
                       </Button>
                     </div>
                     <div className="flex items-center gap-1">

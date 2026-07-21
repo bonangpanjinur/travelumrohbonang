@@ -132,6 +132,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Distribusi Perlengkapan", labelKey: "menu.equipment_distribution", href: "/admin/equipment-distribution", icon: Backpack, roles: SUPER_ADMIN_ADMIN, featureId: "equipment" },
       { label: "Tracking Visa", labelKey: "menu.visa_tracking", href: "/admin/visa-tracking", icon: FileCheck, roles: OPERATIONAL },
       { label: "Assignment Kursi", labelKey: "menu.seat_assignment", href: "/admin/seat-assignment", icon: ClipboardList, roles: OPERATIONAL },
+      { label: "Kesiapan Keberangkatan", labelKey: "menu.departure_readiness", href: "/admin/departure-readiness", icon: Activity, roles: OPERATIONAL },
       { label: "Checklist Keberangkatan", labelKey: "menu.departure_checklist", href: "/admin/departure-checklist", icon: ClipboardList, roles: ALL_STAFF },
     ],
   },
