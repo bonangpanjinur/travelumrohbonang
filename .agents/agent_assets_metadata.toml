@@ -6,3 +6,9 @@ id = "Krl64dBitZsewGJ9MxOVK"
 uri = "file://docs/rencana-perbaikan-operasional.md"
 type = "text"
 title = "Rencana Perbaikan Menu Operasional"
+
+[[outputs]]
+id = "SoAnjnO0uJXfjhc2-lF2N"
+uri = "file://supabase-migration.sql"
+type = "unspecified"
+title = "supabase-migration.sql — Migration SQL untuk Production"
