@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, agents, agentCommissions, agentWithdrawals, affiliateClicks, userRoles, eq, desc } from "@workspace/db";
 import { requireSuperAdmin } from "../../middlewares/requireAdmin";
+import { journalCommissionWithdrawal } from "../../lib/autoJournal";
 
 const router = Router();
 
@@ -108,6 +109,15 @@ router.patch("/withdrawals/:id", async (req, res) => {
       adminNotes?: string;
       proofUrl?: string;
     };
+    const adminId = (req as any).user?.id as string | undefined;
+
+    // Ambil data withdrawal sebelum update (untuk jurnal)
+    const [before] = await db
+      .select({ agentId: agentWithdrawals.agentId, amount: agentWithdrawals.amount, status: agentWithdrawals.status })
+      .from(agentWithdrawals)
+      .where(eq(agentWithdrawals.id, req.params.id))
+      .limit(1);
+
     const [data] = await db
       .update(agentWithdrawals)
       .set({
@@ -121,6 +131,17 @@ router.patch("/withdrawals/:id", async (req, res) => {
       .where(eq(agentWithdrawals.id, req.params.id))
       .returning();
     if (!data) return res.status(404).json({ error: "Withdrawal not found" });
+
+    // F-6: Auto-posting jurnal komisi withdrawal (fire-and-forget)
+    if (status === "paid" && before?.status !== "paid" && before?.agentId && before?.amount != null) {
+      void journalCommissionWithdrawal({
+        agentId:      before.agentId,
+        amount:       Number(before.amount),
+        withdrawalId: req.params.id,
+        adminId,
+      });
+    }
+
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to update withdrawal" });

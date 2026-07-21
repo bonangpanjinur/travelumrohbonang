@@ -21,7 +21,7 @@
 | F-3  | Auto-Alert Deadline Lunas (Cron) | ✅ Selesai |
 | F-4  | Biaya Operasional Per Paket | ✅ Selesai |
 | F-5  | Reminder Piutang via WA (Bulk) | ✅ Selesai |
-| F-6  | Jurnal Otomatis (Auto-Posting) | 🔲 Belum |
+| F-6  | Jurnal Otomatis (Auto-Posting) | ✅ Selesai |
 | F-7  | Chart of Accounts + Buku Besar | 🔲 Belum |
 | F-8  | Laporan Akuntansi Standar (Neraca, L/R, Arus Kas) | 🔲 Belum |
 | F-9  | HPP Otomatis dari Biaya Aktual | 🔲 Belum |

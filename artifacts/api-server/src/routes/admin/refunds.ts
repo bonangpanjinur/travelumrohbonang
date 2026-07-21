@@ -7,6 +7,7 @@ import {
   desc,
 } from "@workspace/db";
 import { sendAdminError, isTableMissing } from "../../lib/adminApiError";
+import { journalRefundApproved, journalRefundProcessed } from "../../lib/autoJournal";
 
 const router = Router();
 
@@ -46,7 +47,20 @@ router.patch("/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const { status, adminNotes, processedBy } = req.body;
+    const adminId = (req as any).user?.id as string | undefined;
     const now = new Date();
+
+    // Ambil data refund sebelum update (butuh amount & bookingId untuk jurnal)
+    const [before] = await db
+      .select({
+        bookingId: refundRequests.bookingId,
+        amount:    refundRequests.amount,
+        status:    refundRequests.status,
+      })
+      .from(refundRequests)
+      .where(eq(refundRequests.id, id))
+      .limit(1);
+
     const [updated] = await db
       .update(refundRequests)
       .set({
@@ -60,6 +74,26 @@ router.patch("/:id", async (req, res) => {
       })
       .where(eq(refundRequests.id, id))
       .returning();
+
+    // F-6: Auto-posting jurnal keuangan (fire-and-forget — jangan block response)
+    if (before?.bookingId && before?.amount != null) {
+      if (status === "approved" && before.status !== "approved") {
+        void journalRefundApproved({
+          bookingId: before.bookingId,
+          amount:    Number(before.amount),
+          refundId:  id,
+          adminId,
+        });
+      } else if (status === "refunded" && before.status !== "refunded") {
+        void journalRefundProcessed({
+          bookingId: before.bookingId,
+          amount:    Number(before.amount),
+          refundId:  id,
+          adminId,
+        });
+      }
+    }
+
     res.json(updated);
   } catch (e) {
     sendAdminError(res, "PATCH /api/admin/refunds/:id", e);

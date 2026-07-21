@@ -25,6 +25,7 @@ import {
   recordFinancialTransaction,
   createNotification,
 } from "../../lib/paymentSync";
+import { journalPaymentVerified } from "../../lib/autoJournal";
 import { emailNotifications } from "../../lib/notifications/emailNotifications";
 import { waNotifications } from "../../lib/notifications/waNotifications";
 
@@ -136,14 +137,12 @@ router.post("/bulk-verify", async (req, res) => {
 
         const { paymentStatus } = await computePaymentStatus(payment.bookingId);
         await syncBookingStatus(payment.bookingId, paymentStatus);
-        await recordFinancialTransaction({
+        // F-6: idempotent via journalPaymentVerified
+        await journalPaymentVerified({
           bookingId: payment.bookingId,
-          amount: payment.amount,
-          type: "income",
-          category: "booking_payment",
-          description: `Bulk verified by admin (${id})`,
-          referenceNumber: ref,
-          recordedBy: adminId,
+          amount:    payment.amount,
+          paymentId: id,
+          adminId,
         });
 
         results.push({ id, ok: true });
@@ -237,15 +236,12 @@ router.patch("/verify/:id", async (req, res) => {
       await computePaymentStatus(payment.bookingId);
     await syncBookingStatus(payment.bookingId, paymentStatus);
 
-    // 4. Record financial transaction.
-    await recordFinancialTransaction({
+    // 4. Record financial transaction (via autoJournal — idempotent).
+    await journalPaymentVerified({
       bookingId: payment.bookingId,
-      amount: payment.amount,
-      type: "income",
-      category: "booking_payment",
-      description: `Manual payment verified by admin (${id})`,
-      referenceNumber: `manual-${id}`,
-      recordedBy: adminId,
+      amount:    payment.amount,
+      paymentId: id,
+      adminId,
     });
 
     // 5. In-app notification — fetch userId from booking.
