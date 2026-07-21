@@ -115,6 +115,12 @@ const QuotaBar = ({ dep }: { dep: Departure }) => {
   );
 };
 
+interface ManifestSummary {
+  confirmedPilgrims: number;
+  docsComplete: number;
+  docsIncomplete: number;
+}
+
 const AdminDepartures = () => {
   const navigate = useNavigate();
   const [departures, setDepartures] = useState<Departure[]>([]);
@@ -125,6 +131,7 @@ const AdminDepartures = () => {
   const [editing, setEditing] = useState<Departure | null>(null);
   const [search, setSearch] = useState("");
   const [galleryDep, setGalleryDep] = useState<Departure | null>(null);
+  const [manifestSummaries, setManifestSummaries] = useState<Record<string, ManifestSummary>>({});
   const { toast } = useToast();
   const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
 
@@ -218,6 +225,32 @@ const AdminDepartures = () => {
   );
   const { page, setPage, totalPages, totalCount, paginatedItems, pageSize, resetPage } = useAdminPagination(filteredDepartures, 9);
   useEffect(() => { resetPage(); }, [search]);
+
+  // Fetch manifest summaries whenever visible cards change
+  const paginatedIds = paginatedItems.map((d) => d.id).join(",");
+  useEffect(() => {
+    if (!paginatedItems.length) return;
+    let cancelled = false;
+    const fetchSummaries = async () => {
+      const results = await Promise.allSettled(
+        paginatedItems.map((dep) =>
+          apiFetch<ManifestSummary>(`/api/admin/departures/${dep.id}/manifest-summary`)
+            .then((data) => ({ id: dep.id, data }))
+        )
+      );
+      if (cancelled) return;
+      setManifestSummaries((prev) => {
+        const next = { ...prev };
+        for (const r of results) {
+          if (r.status === "fulfilled") next[r.value.id] = r.value.data;
+        }
+        return next;
+      });
+    };
+    fetchSummaries();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paginatedIds]);
 
   return (
     <div className="space-y-6">
@@ -385,6 +418,29 @@ const AdminDepartures = () => {
                   <div className="px-5 py-4 space-y-4">
                     {/* Quota */}
                     <QuotaBar dep={dep} />
+
+                    {/* Manifest Summary */}
+                    {manifestSummaries[dep.id] && (
+                      <div className="text-xs border border-border/60 rounded-lg p-2.5 bg-muted/20">
+                        <div className="flex items-center gap-1.5 text-muted-foreground font-medium mb-1.5">
+                          <ClipboardList className="w-3.5 h-3.5" /> Manifest
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 text-center">
+                          <div>
+                            <p className="font-semibold text-foreground">{manifestSummaries[dep.id].confirmedPilgrims}</p>
+                            <p className="text-muted-foreground text-[10px]">Terdaftar</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-green-600">{manifestSummaries[dep.id].docsComplete}</p>
+                            <p className="text-muted-foreground text-[10px]">Dok ✓</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-amber-600">{manifestSummaries[dep.id].docsIncomplete}</p>
+                            <p className="text-muted-foreground text-[10px]">Belum</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Prices */}
                     {prices.length > 0 ? (

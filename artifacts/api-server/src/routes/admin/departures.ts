@@ -816,6 +816,75 @@ router.post("/:id/blast", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/departures/:id/manifest-summary
+ * Quick summary: confirmed pilgrims + doc completion counts
+ */
+router.get("/:id/manifest-summary", async (req, res) => {
+  try {
+    const departureId = req.params.id as string;
+
+    const [confirmedResult] = await db
+      .select({ total: count(bookingPilgrims.id) })
+      .from(bookingPilgrims)
+      .innerJoin(bookings, eq(bookingPilgrims.bookingId, bookings.id))
+      .where(
+        and(
+          eq(bookings.departureId, departureId),
+          inArray(bookings.status, ["paid", "confirmed", "processing", "completed"]),
+        ),
+      );
+    const confirmedPilgrims = Number(confirmedResult?.total ?? 0);
+
+    const docsResult = await db.execute(sql`
+      SELECT COUNT(DISTINCT bp.id)::int AS complete_count
+      FROM booking_pilgrims bp
+      JOIN bookings b ON b.id = bp.booking_id
+      WHERE b.departure_id = ${departureId}
+        AND b.status IN ('paid','confirmed','processing','completed')
+        AND (
+          SELECT COUNT(*) FROM pilgrim_documents pd
+          WHERE pd.pilgrim_id = bp.id
+            AND pd.document_type IN ('paspor','visa','vaksin')
+            AND pd.status = 'verified'
+        ) >= 3
+    `);
+    const docsComplete = Number(((docsResult as any).rows ?? docsResult)[0]?.complete_count ?? 0);
+
+    res.json({
+      confirmedPilgrims,
+      docsComplete,
+      docsIncomplete: Math.max(0, confirmedPilgrims - docsComplete),
+    });
+  } catch (err) {
+    console.error("[departures] manifest-summary error:", err);
+    res.status(500).json({ error: "Failed to fetch manifest summary" });
+  }
+});
+
+/**
+ * GET /api/admin/departures/:id/manifest-history
+ * List of manifest print snapshots for audit trail
+ */
+router.get("/:id/manifest-history", async (req, res) => {
+  try {
+    const departureId = req.params.id as string;
+    const history = await db
+      .select({
+        id: manifests.id,
+        printedAt: manifests.printedAt,
+        printedBy: manifests.printedBy,
+      })
+      .from(manifests)
+      .where(eq(manifests.departureId, departureId))
+      .orderBy(manifests.printedAt);
+    res.json({ history });
+  } catch (err) {
+    console.error("[departures] manifest-history error:", err);
+    res.status(500).json({ error: "Failed to fetch manifest history" });
+  }
+});
+
 router.delete("/:id", async (req, res) => {
   try {
     await db.delete(departurePrices).where(eq(departurePrices.departureId, req.params.id));

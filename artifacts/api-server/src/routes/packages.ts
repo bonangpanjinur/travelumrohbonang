@@ -16,6 +16,7 @@ import {
   asc,
   desc,
   sql,
+  inArray,
 } from "@workspace/db";
 import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../lib/supabaseEnv";
 import { shouldUseSupabaseHttp } from "../lib/dbFlags";
@@ -412,6 +413,85 @@ router.get("/reviews/:packageId", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("[packages] failed to fetch reviews:", err);
     res.status(500).json({ error: "Failed to fetch reviews" });
+  }
+});
+
+/**
+ * GET /api/packages/jadwal
+ * Public list of upcoming departures grouped by month, with package info and lowest price.
+ * Query params: month (1-12), year (YYYY), packageId
+ */
+router.get("/jadwal", async (req, res) => {
+  try {
+    const { month, year, packageId: pkgIdFilter } = req.query as Record<string, string | undefined>;
+
+    const conditions: any[] = [
+      sql`${packageDepartures.status} != 'closed'`,
+      sql`${packageDepartures.departureDate} >= CURRENT_DATE`,
+    ];
+    if (pkgIdFilter) conditions.push(eq(packageDepartures.packageId, pkgIdFilter));
+    if (year) conditions.push(sql`EXTRACT(YEAR FROM ${packageDepartures.departureDate}) = ${Number(year)}`);
+    if (month) conditions.push(sql`EXTRACT(MONTH FROM ${packageDepartures.departureDate}) = ${Number(month)}`);
+
+    const rows = await db
+      .select({
+        id: packageDepartures.id,
+        departureDate: packageDepartures.departureDate,
+        returnDate: packageDepartures.returnDate,
+        quota: packageDepartures.quota,
+        remainingQuota: packageDepartures.remainingQuota,
+        status: packageDepartures.status,
+        packageId: packages.id,
+        packageTitle: packages.title,
+        packageSlug: packages.slug,
+        packageDuration: packages.durationDays,
+      })
+      .from(packageDepartures)
+      .innerJoin(packages, eq(packageDepartures.packageId, packages.id))
+      .where(and(...conditions))
+      .orderBy(asc(packageDepartures.departureDate))
+      .limit(200);
+
+    // Fetch lowest price per departure
+    const depIds = rows.map((r) => r.id);
+    const prices = depIds.length
+      ? await db
+          .select({
+            departureId: departurePrices.departureId,
+            price: departurePrices.price,
+          })
+          .from(departurePrices)
+          .where(inArray(departurePrices.departureId, depIds))
+      : [];
+
+    const priceMap = new Map<string, number>();
+    for (const p of prices) {
+      const cur = priceMap.get(p.departureId);
+      if (cur === undefined || Number(p.price) < cur) {
+        priceMap.set(p.departureId, Number(p.price));
+      }
+    }
+
+    const data = rows.map((r) => ({
+      id: r.id,
+      departureDate: r.departureDate,
+      returnDate: r.returnDate,
+      quota: r.quota,
+      remainingQuota: r.remainingQuota,
+      status: r.status,
+      package: {
+        id: r.packageId,
+        title: r.packageTitle,
+        slug: r.packageSlug,
+        durationDays: r.packageDuration,
+      },
+      lowestPrice: priceMap.get(r.id) ?? null,
+    }));
+
+    res.json({ data, total: data.length });
+  } catch (err) {
+    console.error("[packages] jadwal error:", err);
+    res.status(500).json({ error: "Failed to fetch jadwal" });
   }
 });
 

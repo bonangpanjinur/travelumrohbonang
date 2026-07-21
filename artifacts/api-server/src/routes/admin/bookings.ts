@@ -96,7 +96,7 @@ router.get("/export.xlsx", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const { status, userId, search, branchId, packageId, limit, offset, startDate, endDate } = req.query;
+    const { status, userId, search, branchId, packageId, departureId: departureIdFilter, limit, offset, startDate, endDate } = req.query;
 
     // Build WHERE conditions with Drizzle sql template (parameterised, injection-safe)
     const conditions: ReturnType<typeof sql>[] = [];
@@ -127,6 +127,9 @@ router.get("/", async (req, res) => {
     }
     if (packageId && typeof packageId === "string" && packageId !== "__all__") {
       conditions.push(sql`b.package_id = ${packageId}`);
+    }
+    if (departureIdFilter && typeof departureIdFilter === "string" && departureIdFilter !== "__all_dep__") {
+      conditions.push(sql`b.departure_id = ${departureIdFilter}`);
     }
     if (startDate && typeof startDate === "string") {
       conditions.push(sql`dep.departure_date >= ${startDate}`);
@@ -746,6 +749,45 @@ router.patch("/bulk-status", async (req, res) => {
   } catch (e) {
     console.error("[PATCH /api/admin/bookings/bulk-status]", e);
     res.status(500).json({ error: "Failed to bulk update status" });
+  }
+});
+
+/**
+ * POST /api/admin/bookings/backfill-pemesan
+ * One-time: fill pemesan_name from profiles or first booking_pilgrim for bookings where it is null.
+ */
+router.post("/backfill-pemesan", async (req, res) => {
+  try {
+    const withUser = await db.execute(sql`
+      UPDATE bookings b
+      SET pemesan_name = p.name,
+          pemesan_phone = COALESCE(b.pemesan_phone, p.phone)
+      FROM profiles p
+      WHERE b.user_id::text = p.id::text
+        AND (b.pemesan_name IS NULL OR TRIM(b.pemesan_name) = '')
+        AND p.name IS NOT NULL AND TRIM(p.name) != ''
+    `);
+
+    const walkIn = await db.execute(sql`
+      UPDATE bookings b
+      SET pemesan_name = bp.name,
+          pemesan_phone = COALESCE(b.pemesan_phone, bp.phone)
+      FROM (
+        SELECT DISTINCT ON (booking_id) booking_id, name, phone
+        FROM booking_pilgrims
+        ORDER BY booking_id, created_at ASC
+      ) bp
+      WHERE b.id = bp.booking_id
+        AND (b.pemesan_name IS NULL OR TRIM(b.pemesan_name) = '')
+        AND bp.name IS NOT NULL AND TRIM(bp.name) != ''
+    `);
+
+    const count1 = (withUser as any).rowCount ?? 0;
+    const count2 = (walkIn as any).rowCount ?? 0;
+    res.json({ ok: true, updatedFromProfile: count1, updatedFromPilgrim: count2, total: count1 + count2 });
+  } catch (err) {
+    console.error("[bookings] backfill-pemesan error:", err);
+    res.status(500).json({ error: "Failed to backfill pemesan names" });
   }
 });
 

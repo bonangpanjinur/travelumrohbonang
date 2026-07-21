@@ -185,6 +185,7 @@ const BookingTable = ({
                 )}
                 <TableHead>Kode</TableHead>
                 <TableHead>Nama</TableHead>
+                <TableHead>Pemesan</TableHead>
                 <TableHead>Paket</TableHead>
                 <TableHead>Keberangkatan</TableHead>
                 <TableHead>Total</TableHead>
@@ -225,6 +226,13 @@ const BookingTable = ({
                     <TableCell>
                       <div className="font-semibold">{b.profile?.name || "-"}</div>
                       <div className="text-xs text-muted-foreground">{b.profile?.email}</div>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {b.picName ? (
+                        <span>{b.picName}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>{b.package?.title || "-"}</TableCell>
 
@@ -282,7 +290,7 @@ const BookingTable = ({
                   {expandedId === b.id && (
                     <TableRow key={`${b.id}-detail`}>
                       <TableCell
-                        colSpan={onSelectionChange ? 9 : 8}
+                        colSpan={onSelectionChange ? 10 : 9}
                         className="bg-muted/30 p-0"
                       >
                         <BookingDetailPanel

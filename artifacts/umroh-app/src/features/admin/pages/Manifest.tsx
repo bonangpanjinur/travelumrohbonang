@@ -7,7 +7,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Input } from "@/shared/components/ui/input";
-import { Printer, Users, Plane, Calendar, Download, Search, UsersRound, FileText } from "lucide-react";
+import { Printer, Users, Plane, Calendar, Download, Search, UsersRound, FileText, History } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
@@ -104,6 +104,7 @@ const AdminManifest = () => {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Debounce search — tunggu 400ms setelah user berhenti mengetik
   useEffect(() => {
@@ -139,6 +140,16 @@ const AdminManifest = () => {
     placeholderData: (prev) => prev, // keep previous page while fetching next
   });
 
+  const { data: historyData } = useQuery({
+    queryKey: ["manifest-history", selectedDep],
+    queryFn: () =>
+      apiFetch<{ history: Array<{ id: string; printedAt: string | null; printedBy: string | null }> }>(
+        `/api/admin/departures/${selectedDep}/manifest-history`
+      ),
+    enabled: !!selectedDep,
+    select: (r) => r.history,
+  });
+
   const departures = departuresRes ?? [];
   const pilgrims = manifest?.pilgrims ?? [];
   const departure = manifest?.departure;
@@ -152,13 +163,14 @@ const AdminManifest = () => {
 
   const handleExportCsv = () => {
     const headers = [
-      "No", "Booking", "Nama", "Gender", "Tgl Lahir", "Kewarganegaraan",
+      "No", "Booking", "Nama Pemesan", "Nama", "Gender", "Tgl Lahir", "Kewarganegaraan",
       "No. Paspor", "Exp. Paspor", "No. HP", "Tipe Kamar", "No. Kamar",
       "Rombongan", "NIK",
     ];
     const rows = pilgrims.map((p, i) => [
       String(page * MANIFEST_PAGE_SIZE + i + 1),
       p.bookingCode,
+      p.picName ?? "-",
       p.name,
       genderLabel(p.gender),
       fmtDate(p.birthDate),
@@ -202,9 +214,35 @@ const AdminManifest = () => {
             <Button size="sm" onClick={handlePrint} className="gradient-gold text-primary">
               <Printer className="h-4 w-4 mr-2" /> Cetak Manifest
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowHistory((v) => !v)}>
+              <History className="h-4 w-4 mr-2" /> Riwayat Cetak
+            </Button>
           </div>
         )}
       </div>
+
+      {/* Manifest print history panel */}
+      {showHistory && selectedDep && (
+        <div className="mb-4 border rounded-lg p-3 bg-muted/30 print:hidden">
+          <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+            <History className="w-4 h-4" /> Riwayat Cetak Manifest
+          </h3>
+          {!historyData || historyData.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Belum ada riwayat cetak manifest untuk keberangkatan ini.</p>
+          ) : (
+            <div className="space-y-1">
+              {historyData.map((h, idx) => (
+                <div key={h.id ?? idx} className="flex items-center justify-between text-xs py-1 border-b border-border/40 last:border-0">
+                  <span className="text-muted-foreground">
+                    {h.printedAt ? new Date(h.printedAt).toLocaleString("id-ID") : "-"}
+                  </span>
+                  {h.printedBy && <span className="text-muted-foreground">oleh {h.printedBy}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Departure selector */}
       <div className="mb-6 print:hidden">
@@ -326,6 +364,7 @@ const AdminManifest = () => {
               <TableRow>
                 <TableHead className="w-10">No</TableHead>
                 <TableHead>Booking</TableHead>
+                <TableHead>Pemesan</TableHead>
                 <TableHead>Nama Lengkap</TableHead>
                 <TableHead className="w-8">L/P</TableHead>
                 <TableHead>Tgl Lahir</TableHead>
@@ -377,6 +416,7 @@ const AdminManifest = () => {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{row.picName ?? "-"}</TableCell>
                     <TableCell className="font-medium">{row.name}</TableCell>
                     <TableCell>{genderLabel(row.gender)}</TableCell>
                     <TableCell className="text-sm whitespace-nowrap">{fmtDate(row.birthDate)}</TableCell>

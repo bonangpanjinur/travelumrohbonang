@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/shared/lib/apiClient";
 import {
   Users, UserCheck, DollarSign, FileDown, Building2, UsersRound,
@@ -251,6 +252,8 @@ const BookingDetailPanel = ({
     setPilgrims((prev) => prev.map((p) => p.id === updated.id ? updated : p));
   };
 
+  const navigate = useNavigate();
+
   if (loading) {
     return (
       <div className="p-4 flex justify-center">
@@ -298,6 +301,11 @@ const BookingDetailPanel = ({
               : <FileDown className="w-3.5 h-3.5 mr-1.5" />}
             Cetak Invoice
           </Button>
+          {departureId && (
+            <Button size="sm" variant="outline" onClick={() => navigate(`/admin/manifest?departureId=${departureId}`)}>
+              <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Lihat Manifest
+            </Button>
+          )}
         </div>
       </div>
 

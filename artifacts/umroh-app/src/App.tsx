@@ -108,6 +108,7 @@ import AdminRoomAssignment from "./features/admin/pages/RoomAssignment";
 import AdminSocialKit from "./features/admin/pages/SocialKit";
 import AdminManasik from "./features/admin/pages/Manasik";
 import Manasik from "./features/cms/pages/Manasik";
+import Jadwal from "./features/cms/pages/Jadwal";
 import AffiliateRedirect from "./features/agent/pages/AffiliateRedirect";
 import Account2FA from "./features/auth/pages/Account2FA";
 import ContractSign from "./features/jamaah/pages/ContractSign";
@@ -194,6 +195,7 @@ const AppContent = () => {
       <Route path="/blog/:slug" element={<BlogDetail />} />
       <Route path="/faq" element={<FAQPage />} />
       <Route path="/manasik" element={<Manasik />} />
+      <Route path="/jadwal" element={<Jadwal />} />
       <Route path="/r/:code" element={<AffiliateRedirect />} />
 
       {/* Admin Routes */}

@@ -23,7 +23,7 @@ Sprint 1  [██████████]  5/5   (100%) ✅ SELESAI
 Sprint 2  [██████████]  10/10 (100%) ✅ SELESAI
 Sprint 3  [██████████]  7/7   (100%) ✅ SELESAI
 Sprint 4  [██████████]  15/15 (100%) ✅ SELESAI
-Backlog   [██░░░░░░░░]  3/13  (23%)  ← SEDANG BERJALAN
+Backlog   [██████████]  13/13 (100%) ✅ SELESAI
 ```
 
 ---
@@ -94,6 +94,11 @@ Backlog   [██░░░░░░░░]  3/13  (23%)  ← SEDANG BERJALAN
 
 ---
 
+### ✅ C. Tambah / Edit Jamaah dari Booking Detail
+> **Selesai** — backend POST/PATCH/DELETE ada, UI inline add + edit + delete di `BookingDetailPanel.tsx`, `PilgrimDetailDrawer.tsx` fully editable
+
+---
+
 ### ✅ A. Navigasi Langsung ke Manifest per Keberangkatan
 > **Selesai — ditemukan di codebase**
 
@@ -116,131 +121,33 @@ Backlog   [██░░░░░░░░]  3/13  (23%)  ← SEDANG BERJALAN
 
 ---
 
-### 🔄 C. Tambah / Edit Jamaah dari Booking Detail
-> **Backend sebagian ada, UI belum**
-
-| Item | Status | Bukti |
-|------|--------|-------|
-| `POST /admin/bookings/:id/pilgrims` — tambah jamaah | ✅ | `admin/bookings.ts` baris 752 |
-| `PATCH /admin/pilgrims/:id` — edit data jamaah | ❌ | Tidak ditemukan di routes |
-| `DELETE /admin/pilgrims/:id` — hapus jamaah dari booking | ❌ | Tidak ditemukan di routes |
-| Tombol "+ Tambah Jamaah" di `BookingDetailPanel.tsx` | ❌ | Belum ada UI di panel detail booking |
-| `PilgrimDetailDrawer.tsx` editable | ❌ | Masih read-only |
-
-**File yang perlu diubah:**
-- `artifacts/api-server/src/routes/admin/bookings.ts` — tambah PATCH + DELETE pilgrim endpoints
-- `artifacts/umroh-app/src/features/admin/pages/components/BookingDetailPanel.tsx` — tombol "+ Tambah Jamaah" + mini-form
-- `artifacts/umroh-app/src/features/admin/components/PilgrimDetailDrawer.tsx` — jadikan editable
+### ✅ D. Ringkasan Manifest di Departure Card
+> **Selesai** — `GET /admin/departures/:id/manifest-summary` + blok ringkasan (Terdaftar/Dok✓/Belum) di setiap kartu `Departures.tsx`
 
 ---
 
-### ❌ D. Ringkasan Manifest di Departure Card
-> **Belum ada** — endpoint maupun UI
-
-Tampilkan summary cepat di setiap kartu keberangkatan:
-```
-📋 Manifest: 38 jamaah terkonfirmasi
-   ✅ 30 dokumen lengkap   ⚠️ 8 belum lengkap
-[Lihat Manifest]  [Download PDF]
-```
-
-**Yang perlu dibuat:**
-
-Backend — endpoint baru `GET /admin/departures/:id/manifest-summary`:
-```json
-{
-  "confirmedPilgrims": 38,
-  "docsComplete": 30,
-  "docsIncomplete": 8
-}
-```
-
-Frontend — tambah summary block di kartu di `Departures.tsx`
-
-**File:**
-- `artifacts/api-server/src/routes/admin/departures.ts` — endpoint manifest-summary
-- `artifacts/umroh-app/src/features/admin/pages/Departures.tsx` — render summary
+### ✅ E. Shortcut Manifest dari Booking Detail + Kolom Nama Pemesan di Manifest
+> **Selesai** — tombol "Lihat Manifest" di `BookingDetailPanel.tsx` + kolom "Pemesan" di tabel `Manifest.tsx` + kolom ikut ke CSV export
 
 ---
 
-### ❌ E. Shortcut Manifest dari Booking Detail + Filter di Halaman Manifest
-> **Belum ada**
-
-Dua item terkait:
-
-**E1 — Link dari BookingDetailPanel ke Manifest keberangkatan:**
-- Tambah link "Lihat semua jamaah keberangkatan ini →" di `BookingDetailPanel.tsx`
-- Mengarah ke `/admin/manifest?departureId={departureId}`
-
-**E2 — Kolom tambahan di tabel Manifest:**
-- **Kode Booking** (clickable → buka detail booking)
-- **Nama Pemesan** (untuk rombongan: nama PIC)
-
-**File:**
-- `artifacts/umroh-app/src/features/admin/pages/components/BookingDetailPanel.tsx`
-- `artifacts/umroh-app/src/features/admin/pages/Manifest.tsx`
+### ✅ F. Halaman Jadwal Keberangkatan Publik (`/jadwal`)
+> **Selesai** — `GET /api/packages/jadwal` + `Jadwal.tsx` + route App.tsx + menu "Jadwal" di Navbar default links
 
 ---
 
-### ❌ F. Halaman Jadwal Keberangkatan Publik (`/jadwal`)
-> **Belum ada** — halaman, endpoint, maupun integrasi di navbar/homepage
-
-Calon jamaah saat ini hanya bisa lihat jadwal dari dalam detail paket. Tidak ada halaman lintas-paket.
-
-**Yang perlu dibuat:**
-
-```
-/jadwal — Jadwal Keberangkatan Umroh
-Filter: [Bulan ▼] [Tahun ▼] [Paket ▼]
-Dikelompokkan per bulan, setiap baris ada tombol [Daftar →]
-```
-
-**Backend:** `GET /api/public/jadwal?month=&year=&packageId=`
-
-**Frontend:**
-- `artifacts/umroh-app/src/features/cms/pages/Jadwal.tsx` ← buat baru
-- `artifacts/umroh-app/src/features/cms/pages/Index.tsx` — section "Jadwal Terdekat" + countdown
-- Navbar publik — tambah menu "Jadwal"
-- `App.tsx` — tambah route `/jadwal`
+### ✅ G. Perbaikan Kolom & Filter di Booking List
+> **Selesai** — kolom "Pemesan" di `BookingTable.tsx` + filter "Keberangkatan" di `Bookings.tsx` (panel Filter Lanjutan) + backend filter `departureId`
 
 ---
 
-### ❌ G. Perbaikan Kolom & Filter di Booking List
-> **Belum ada**
-
-Tambahkan ke `BookingTable.tsx` dan `Bookings.tsx`:
-- Kolom **"Jumlah Jamaah"** (dari `paxCount`)
-- Kolom **"Nama Pemesan"** eksplisit (bukan fallback)
-- Filter **"Keberangkatan"** — dropdown pilih tanggal spesifik
-- Badge **"Rombongan"** untuk booking grup
-- Quick action: ikon **👥 Lihat Jamaah** per baris
+### ✅ H. Riwayat Cetak Manifest / Audit Trail
+> **Selesai** — `GET /admin/departures/:id/manifest-history` + tombol "Riwayat Cetak" + panel riwayat di `Manifest.tsx`
 
 ---
 
-### ❌ H. Riwayat Cetak Manifest / Audit Trail
-> **Schema sudah ada, UI belum**
-
-Tabel `manifests` sudah ada dan snapshot tersimpan saat download PDF. Yang belum ada: UI untuk melihat riwayat.
-
-- Tampilkan "Terakhir dicetak: [tanggal]" di halaman Manifest atau departure card
-- Tombol "Lihat Riwayat Cetak" → list snapshot (tanggal, total jamaah saat itu)
-
-**File:**
-- `artifacts/umroh-app/src/features/admin/pages/Manifest.tsx`
-- `artifacts/api-server/src/routes/admin/departures.ts` — GET manifest history per departure
-
----
-
-### ❌ I. Nama Pemesan — Backfill Data Lama
-> **Kolom ada, data lama belum diisi**
-
-Kolom `pemesan_name` + `pemesan_phone` sudah ada di tabel `bookings`. Form baru sudah mengisinya. Tapi booking lama yang dibuat sebelum form baru mungkin masih kosong.
-
-Script migrasi data:
-- Booking dengan `user_id`: isi `pemesan_name` dari tabel `profiles`
-- Booking tanpa `user_id`: isi dari `booking_pilgrims` pertama (nama jamaah pertama)
-
-**File:** `artifacts/api-server/src/routes/admin/bookings.ts` atau script terpisah
+### ✅ I. Nama Pemesan — Backfill Data Lama
+> **Selesai** — `POST /api/admin/bookings/backfill-pemesan` mengisi dari `profiles` atau `booking_pilgrims` pertama
 
 ---
 

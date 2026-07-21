@@ -30,6 +30,8 @@ const AdminBookings = () => {
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState("__all__");
   const [packageFilter, setPackageFilter] = useState("__all__");
+  const [departureFilter, setDepartureFilter] = useState("__all_dep__");
+  const [departureOptions, setDepartureOptions] = useState<Array<{ id: string; packageTitle: string | null; departureDate: string }>>([]);
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [packageOptions, setPackageOptions] = useState<PackageOption[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -58,13 +60,14 @@ const AdminBookings = () => {
   };
 
   const hasActiveFilters =
-    filter !== "all" || search !== "" || branchFilter !== "__all__" || packageFilter !== "__all__" || startDate !== "" || endDate !== "";
+    filter !== "all" || search !== "" || branchFilter !== "__all__" || packageFilter !== "__all__" || startDate !== "" || endDate !== "" || departureFilter !== "__all_dep__";
 
   const resetFilters = () => {
     setFilter("all");
     setSearch("");
     setBranchFilter("__all__");
     setPackageFilter("__all__");
+    setDepartureFilter("__all_dep__");
     setStartDate("");
     setEndDate("");
   };
@@ -83,6 +86,13 @@ const AdminBookings = () => {
     apiFetch<{ data: PackageOption[] }>("/api/admin/packages").then((res) => {
       setPackageOptions((res.data || []).map((p: any) => ({ id: p.id, title: p.title })));
     }).catch(() => { /* filter paket opsional */ });
+    apiFetch<{ data: Array<{ id: string; packageTitle?: string; package?: { title: string }; departureDate: string }> }>("/api/admin/departures")
+      .then((res) => setDepartureOptions((res.data || []).map((d) => ({
+        id: d.id,
+        packageTitle: d.package?.title ?? d.packageTitle ?? null,
+        departureDate: d.departureDate,
+      }))))
+      .catch(() => { /* filter keberangkatan opsional */ });
   }, []);
 
   // Filter berubah → reset ke halaman pertama dan fetch ulang.
@@ -91,7 +101,8 @@ const AdminBookings = () => {
   useEffect(() => {
     setPage(0);
     fetchBookings(0);
-  }, [filter, search, branchFilter, packageFilter, startDate, endDate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, search, branchFilter, packageFilter, departureFilter, startDate, endDate]);
 
   const fetchBookings = async (pageOverride?: number) => {
     const currentPage = pageOverride ?? page;
@@ -102,6 +113,7 @@ const AdminBookings = () => {
       const isoStart = startDate ? new Date(startDate).toISOString().slice(0, 10) : "";
       const isoEnd = endDate ? new Date(endDate).toISOString().slice(0, 10) : "";
       let url = `/api/admin/bookings?status=${filter}&search=${encodeURIComponent(search.trim())}&branchId=${branchFilter}&packageId=${packageFilter}&limit=${PAGE_SIZE}&offset=${offset}`;
+      if (departureFilter !== "__all_dep__") url += `&departureId=${departureFilter}`;
       if (isoStart) url += `&startDate=${isoStart}`;
       if (isoEnd) url += `&endDate=${isoEnd}`;
       const res = await apiFetch<{ data: any[]; total: number }>(url);
@@ -251,6 +263,26 @@ const AdminBookings = () => {
                 <SelectItem value="__all__">Semua Paket</SelectItem>
                 {packageOptions.map((pkg) => (
                   <SelectItem key={pkg.id} value={pkg.id}>{pkg.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Keberangkatan */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Keberangkatan</label>
+            <Select value={departureFilter} onValueChange={setDepartureFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Semua Keberangkatan" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all_dep__">Semua Keberangkatan</SelectItem>
+                {departureOptions.map((dep) => (
+                  <SelectItem key={dep.id} value={dep.id}>
+                    {dep.packageTitle ?? "Paket"} — {dep.departureDate
+                      ? new Date(dep.departureDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                      : "-"}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
