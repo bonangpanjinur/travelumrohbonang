@@ -177,6 +177,7 @@ router.get("/", async (req, res) => {
           prof.email            AS "userEmail",
           br.name               AS "branchName",
           (SELECT COUNT(*)::int FROM booking_pilgrims bp WHERE bp.booking_id = b.id) AS "pilgrimsCount",
+          (SELECT bp.name FROM booking_pilgrims bp WHERE bp.booking_id = b.id ORDER BY bp.created_at LIMIT 1) AS "firstJamaahName",
           (SELECT CASE
             WHEN b.total_price > 0 AND COALESCE(SUM(pt.amount), 0) >= b.total_price THEN 'paid'
             WHEN COALESCE(SUM(pt.amount), 0) > 0 THEN 'partial'
@@ -253,13 +254,20 @@ router.get("/:id", async (req, res) => {
         packageTitle: packages.title,
         packageSlug: packages.slug,
         departureDate: packageDepartures.departureDate,
+        // Extra fields for detail page
+        picName: bookings.picName,
+        picPhone: bookings.picPhone,
+        picEmail: bookings.picEmail,
+        pemesanName: bookings.pemesanName,
+        pemesanPhone: bookings.pemesanPhone,
+        pemesanEmail: bookings.pemesanEmail,
+        groupName: bookings.groupName,
+        branchName: branches.name,
       })
       .from(bookings)
       .leftJoin(packages, eq(bookings.packageId, packages.id))
-      .leftJoin(
-        packageDepartures,
-        eq(bookings.departureId, packageDepartures.id),
-      )
+      .leftJoin(packageDepartures, eq(bookings.departureId, packageDepartures.id))
+      .leftJoin(branches, eq(bookings.branchId, branches.id))
       .where(eq(bookings.id, id))
       .limit(1);
 
@@ -289,8 +297,29 @@ router.get("/:id", async (req, res) => {
       .where(eq(profiles.id, booking.userId ?? ""))
       .limit(1);
 
+    // Compute paymentStatus for the detail page
+    const [payRes] = await db.execute(sql`
+      SELECT CASE
+        WHEN ${booking.totalPrice} > 0 AND COALESCE(SUM(pt.amount), 0) >= ${booking.totalPrice} THEN 'paid'
+        WHEN COALESCE(SUM(pt.amount), 0) > 0 THEN 'partial'
+        ELSE 'unpaid' END AS "paymentStatus"
+      FROM booking_payments pt
+      WHERE pt.booking_id = ${id} AND pt.is_voided = false
+    `);
+    const paymentStatus = ((payRes as any).rows ?? [payRes])[0]?.paymentStatus ?? "unpaid";
+
     res.json({
       ...BookingWithDetailsSchema.parse(booking),
+      // Extra fields not in schema — passed through explicitly
+      picName: booking.picName ?? null,
+      picPhone: booking.picPhone ?? null,
+      picEmail: booking.picEmail ?? null,
+      pemesanName: booking.pemesanName ?? null,
+      pemesanPhone: booking.pemesanPhone ?? null,
+      pemesanEmail: booking.pemesanEmail ?? null,
+      groupName: booking.groupName ?? null,
+      branchName: booking.branchName ?? null,
+      paymentStatus,
       rooms,
       pilgrims,
       user: user ?? null,

@@ -61,6 +61,9 @@ interface BookingDetailPanelProps {
   groupName?: string | null;
   groupPicName?: string | null;
   groupPicPhone?: string | null;
+  /** When true, hides the top action bar (status change, room, departure, invoice buttons).
+   *  Use this when rendering inside BookingDetailPage which has its own action header. */
+  standalone?: boolean;
 }
 
 interface Room {
@@ -131,6 +134,7 @@ const BookingDetailPanel = ({
   onBranchChange, onBookingChange,
   pemesanName, pemesanPhone,
   isGroupBooking, groupName, groupPicName, groupPicPhone,
+  standalone = false,
 }: BookingDetailPanelProps) => {
   const [pilgrims, setPilgrims] = useState<FullPilgrim[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -442,8 +446,8 @@ const BookingDetailPanel = ({
 
   return (
     <div className="p-4 space-y-4">
-      {/* ── Top actions bar ───────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      {/* ── Top actions bar — hidden in standalone (page) mode ────────────── */}
+      {!standalone && (<div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           <Building2 className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-medium">Cabang:</span>
@@ -521,7 +525,7 @@ const BookingDetailPanel = ({
             </Button>
           )}
         </div>
-      </div>
+      </div>)}
 
       {/* ── Pemesan info ─────────────────────────────────────────────────────── */}
       {(pemesanName || isGroupBooking) && (

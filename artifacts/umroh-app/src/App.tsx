@@ -41,6 +41,7 @@ import AdminDashboard from "./features/admin/pages/Dashboard";
 import AdminPackages from "./features/admin/pages/Packages";
 import AdminDepartures from "./features/admin/pages/Departures";
 import AdminBookings from "./features/admin/pages/Bookings";
+import AdminBookingDetail from "./features/admin/pages/BookingDetailPage";
 import AdminPayments from "./features/admin/pages/Payments";
 import AdminItineraries from "./features/admin/pages/Itineraries";
 import AdminReports from "./features/admin/pages/Reports";
@@ -206,6 +207,7 @@ const AppContent = () => {
           <Route path="departures" element={<AdminDepartures />} />
           <Route path="itineraries" element={<AdminItineraries />} />
           <Route path="bookings" element={<AdminBookings />} />
+          <Route path="bookings/:bookingId" element={<AdminBookingDetail />} />
           <Route path="payments" element={<AdminPayments />} />
           <Route path="reports" element={<AdminReports />} />
           <Route path="analytics" element={<AdminAnalyticsDashboard />} />

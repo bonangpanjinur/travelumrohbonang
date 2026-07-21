@@ -34,7 +34,6 @@ const AdminBookings = () => {
   const [departureOptions, setDepartureOptions] = useState<Array<{ id: string; packageTitle: string | null; departureDate: string }>>([]);
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [packageOptions, setPackageOptions] = useState<PackageOption[]>([]);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [bookingOpen, setBookingOpen] = useState(false);
@@ -138,10 +137,10 @@ const AdminBookings = () => {
         groupName: b.groupName ?? null,
         picName: b.picName ?? null,
         picPhone: b.picPhone ?? null,
-        // BKG-F04: kolom tambahan
         pilgrimsCount: b.pilgrimsCount ?? null,
         paymentStatus: b.paymentStatus ?? null,
         pemesanPhone: b.pemesanPhone ?? null,
+        firstJamaahName: b.firstJamaahName ?? null,
       }));
       setBookings(mapped);
       setTotalCount(res.total || 0);
@@ -160,10 +159,6 @@ const AdminBookings = () => {
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
     fetchBookings(newPage);
-  };
-
-  const handleToggleExpand = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
   };
 
   return (
@@ -396,8 +391,6 @@ const AdminBookings = () => {
         <>
           <BookingTable
             bookings={bookings}
-            expandedId={expandedId}
-            onToggleExpand={handleToggleExpand}
             onRefresh={fetchBookings}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
