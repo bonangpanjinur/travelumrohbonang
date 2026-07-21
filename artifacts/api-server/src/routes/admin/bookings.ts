@@ -749,6 +749,75 @@ router.patch("/bulk-status", async (req, res) => {
   }
 });
 
+// ── POST /:id/pilgrims — tambah jamaah ke booking yang sudah ada ──────────────
+router.post("/:id/pilgrims", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, phone, gender } = req.body;
+
+    if (!name || !name.trim()) {
+      res.status(400).json({ error: "Nama jamaah wajib diisi" });
+      return;
+    }
+
+    // Verify booking exists
+    const [booking] = await db
+      .select({ id: bookings.id, departureId: bookings.departureId, paxCount: bookings.paxCount })
+      .from(bookings)
+      .where(eq(bookings.id, id))
+      .limit(1);
+    if (!booking) {
+      res.status(404).json({ error: "Booking tidak ditemukan" });
+      return;
+    }
+
+    // Check departure quota
+    if (booking.departureId) {
+      const [dep] = await db
+        .select({ remainingQuota: packageDepartures.remainingQuota })
+        .from(packageDepartures)
+        .where(eq(packageDepartures.id, booking.departureId))
+        .limit(1);
+      if (dep && dep.remainingQuota <= 0) {
+        res.status(409).json({ error: "Kuota keberangkatan penuh" });
+        return;
+      }
+    }
+
+    const pilgrim = await db.transaction(async (tx) => {
+      const [newPilgrim] = await tx.insert(bookingPilgrims).values({
+        id: crypto.randomUUID(),
+        bookingId: id,
+        name: name.trim(),
+        phone: phone?.trim() || null,
+        gender: gender || null,
+        createdAt: new Date(),
+      }).returning();
+
+      // Update paxCount on booking
+      await tx.execute(sql`
+        UPDATE bookings SET pax_count = COALESCE(pax_count, 0) + 1 WHERE id = ${id}
+      `);
+
+      // Decrement quota
+      if (booking.departureId) {
+        await tx.execute(sql`
+          UPDATE package_departures
+          SET remaining_quota = GREATEST(0, remaining_quota - 1)
+          WHERE id = ${booking.departureId}
+        `);
+      }
+
+      return newPilgrim;
+    });
+
+    res.status(201).json(pilgrim);
+  } catch (e) {
+    console.error("[POST /api/admin/bookings/:id/pilgrims]", e);
+    res.status(500).json({ error: "Gagal menambahkan jamaah" });
+  }
+});
+
 router.patch("/:id/branch", async (req, res) => {
   try {
     const id = req.params.id;

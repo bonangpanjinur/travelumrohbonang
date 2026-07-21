@@ -317,6 +317,22 @@ router.get("/check-ins", async (req: any, res) => {
   }
 });
 
+// ── DELETE /:id — hapus jamaah dari booking ──────────────────────────────────
+router.delete("/:id", async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const [deleted] = await db
+      .delete(bookingPilgrims)
+      .where(eq(bookingPilgrims.id, id))
+      .returning({ id: bookingPilgrims.id, bookingId: bookingPilgrims.bookingId });
+    if (!deleted) return res.status(404).json({ error: "Jamaah tidak ditemukan" });
+    res.json({ deleted: deleted.id });
+  } catch (error) {
+    console.error("[DELETE /admin/pilgrims/:id]", error);
+    res.status(500).json({ error: "Gagal menghapus jamaah" });
+  }
+});
+
 router.post("/check-in", async (req: any, res) => {
   try {
     const { pilgrimId, departureId, bookingId, location, notes } = req.body;

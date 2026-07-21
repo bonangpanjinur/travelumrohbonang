@@ -4,12 +4,11 @@ import BookingFilters from "@/features/admin/components/BookingFilters";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw, CheckSquare2, Filter, Users } from "lucide-react";
+import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw, CheckSquare2, Filter } from "lucide-react";
 
 interface PackageOption { id: string; title: string; }
 import { exportToCsv } from "@/shared/lib/exportCsv";
-import AdminCreateBookingDialog from "@/features/admin/components/AdminCreateBookingDialog";
-import AdminGroupBookingDialog from "@/features/admin/components/AdminGroupBookingDialog";
+import AdminBookingDialog from "@/features/admin/components/AdminBookingDialog";
 import {
   Pagination,
   PaginationContent,
@@ -36,8 +35,7 @@ const AdminBookings = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [groupOpen, setGroupOpen] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [apiError, setApiError] = useState<string | null>(null);
@@ -165,11 +163,8 @@ const AdminBookings = () => {
           )}
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          <Button className="gradient-gold text-primary" onClick={() => setCreateOpen(true)}>
+          <Button className="gradient-gold text-primary" onClick={() => setBookingOpen(true)}>
             <Plus className="w-4 h-4 mr-2" /> Tambah Booking
-          </Button>
-          <Button variant="outline" onClick={() => setGroupOpen(true)}>
-            <Users className="w-4 h-4 mr-2" /> Booking Rombongan
           </Button>
           <Button variant="outline" onClick={() => {
             const headers = ["Kode Booking", "Nama", "Email", "Paket", "Total Harga", "Status", "Tanggal"];
@@ -421,15 +416,10 @@ const AdminBookings = () => {
         </>
       )}
 
-      <AdminCreateBookingDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onSuccess={fetchBookings}
-      />
-      <AdminGroupBookingDialog
-        open={groupOpen}
-        onOpenChange={setGroupOpen}
-        onSuccess={fetchBookings}
+      <AdminBookingDialog
+        open={bookingOpen}
+        onOpenChange={setBookingOpen}
+        onSuccess={() => fetchBookings(0)}
       />
     </div>
   );
