@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { apiFetch } from "@/shared/lib/apiClient";
 import {
   AlertTriangle, Clock, CheckCircle2, RefreshCw,
@@ -297,9 +297,8 @@ const Piutang = () => {
                   const isExp  = expandedId === item.id;
 
                   return (
-                    <>
+                    <Fragment key={item.id}>
                       <TableRow
-                        key={item.id}
                         className={`cursor-pointer ${isExp ? "border-b-0" : ""}`}
                         onClick={() => setExpandedId(isExp ? null : item.id)}
                       >
@@ -439,7 +438,7 @@ const Piutang = () => {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </TableBody>

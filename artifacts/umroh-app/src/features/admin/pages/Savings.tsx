@@ -153,7 +153,7 @@ export default function AdminSavings() {
   const processRefund = async () => {
     if (!refundDialog) return;
     const amt = Number(refundAmount);
-    if (!amt || amt <= 0) return toast({ title: "Jumlah tidak valid", variant: "destructive" });
+    if (!amt || amt <= 0) { toast({ title: "Jumlah tidak valid", variant: "destructive" }); return; }
     setActing(true);
     try {
       await apiFetch(`/api/admin/savings/${refundDialog.id}/refund`, {

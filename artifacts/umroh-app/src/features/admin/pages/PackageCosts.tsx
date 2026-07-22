@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { Badge } from "@/shared/components/ui/badge";
 import { Switch } from "@/shared/components/ui/switch";
-import { Calculator, Plus, Trash2, TrendingUp, Wallet, Percent, Filter, Pencil, Download } from "lucide-react";
+import { Calculator, Plus, Trash2, TrendingUp, Wallet, Percent, Filter, Pencil, Download, CircleDashed, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import { toast } from "sonner";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
@@ -53,6 +53,9 @@ interface Cost {
   is_per_pax: boolean;
   is_active: boolean;
   notes: string | null;
+  actual_amount: number | null;
+  invoice_reference: string | null;
+  paid_at: string | null;
 }
 
 const fmtIDR = (n: number) => `Rp ${Math.round(n).toLocaleString("id-ID")}`;
@@ -107,6 +110,9 @@ export default function AdminPackageCosts() {
     is_per_pax: c.isPerPax,
     is_active: c.isActive,
     notes: c.notes,
+    actual_amount: c.actualAmount ?? c.actual_amount ?? null,
+    invoice_reference: c.invoiceReference ?? c.invoice_reference ?? null,
+    paid_at: c.paidAt ?? c.paid_at ?? null,
   });
 
   const mapPkgOpt = (p: any): PkgOpt => ({
@@ -268,13 +274,16 @@ export default function AdminPackageCosts() {
   const visibleCosts = useMemo(() => costs.filter((c) => showInactive || c.is_active !== false), [costs, showInactive]);
 
   const totals = useMemo(() => {
-    let perPax = 0, fixed = 0;
+    let perPax = 0, fixed = 0, budgetedTotal = 0, actualTotal = 0, missingActualCount = 0;
     for (const c of visibleCosts) {
       if (c.is_active === false) continue;
       const idrAmt = toIDR(Number(c.unit_cost || 0), c.currency_code) * Number(c.qty || 0);
       if (c.is_per_pax) perPax += idrAmt; else fixed += idrAmt;
+      budgetedTotal += idrAmt;
+      if (c.actual_amount != null) actualTotal += c.actual_amount;
+      else missingActualCount += 1;
     }
-    return { perPax, fixed };
+    return { perPax, fixed, budgetedTotal, actualTotal, missingActualCount };
   }, [visibleCosts, currencies]);
 
   const profitNet = useMemo(() => {

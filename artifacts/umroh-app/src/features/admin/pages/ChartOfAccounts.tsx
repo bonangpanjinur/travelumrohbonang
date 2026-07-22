@@ -103,7 +103,7 @@ export default function ChartOfAccounts() {
   const grouped = Object.entries(TYPE_LABELS).map(([type, label]) => ({
     type, label,
     items: filtered.filter((a) => a.type === type),
-  })).filter((g) => g.items.length > 0 || filterType === type || filterType === "all");
+  })).filter((g) => g.items.length > 0 || filterType === g.type || filterType === "all");
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">

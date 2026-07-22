@@ -186,7 +186,7 @@ export default function DepartureFinance() {
     setLoadingList(true);
     setError(null);
     try {
-      const json = await apiFetch("/api/admin/finance/departures");
+      const json = await apiFetch("/api/admin/finance/departures") as any;
       setDepartures(json.data ?? []);
       // auto-select first
       if (!selectedId && json.data?.length > 0) {
@@ -205,7 +205,7 @@ export default function DepartureFinance() {
     setLoadingDetail(true);
     setError(null);
     try {
-      const json = await apiFetch(`/api/admin/finance/departure/${id}`);
+      const json = await apiFetch(`/api/admin/finance/departure/${id}`) as any;
       setDetail(json);
     } catch {
       setError("Gagal memuat detail keuangan keberangkatan.");

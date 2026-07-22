@@ -158,7 +158,7 @@ export default function MySavings() {
   const submitDeposit = async () => {
     if (!selected) return;
     const amt = Number(depositAmount);
-    if (!amt || amt <= 0) return toast.error("Jumlah setoran tidak valid");
+    if (!amt || amt <= 0) { toast.error("Jumlah setoran tidak valid"); return; }
     setDepositing(true);
     try {
       await apiFetch(`/api/savings/${selected.id}/deposit`, {
