@@ -23,12 +23,42 @@ const NotificationBell = () => {
     markAllAsRead 
   } = useNotifications();
 
+  const getNotificationLink = (notification: Notification): string => {
+    // If booking_id is set, prefer the payment page
+    if (notification.booking_id) {
+      return `/booking/payment/${notification.booking_id}`;
+    }
+    // Infer destination from notification title keywords
+    const title = (notification.title || "").toLowerCase();
+    const type  = (notification.type  || "").toLowerCase();
+    if (
+      title.includes("tabungan") ||
+      title.includes("setoran") ||
+      type  === "savings"
+    ) return "/tabungan";
+    if (
+      title.includes("dokumen") ||
+      type  === "document"
+    ) return "/my-documents";
+    if (
+      title.includes("cicilan") ||
+      title.includes("pembayaran") ||
+      title.includes("pelunasan") ||
+      title.includes("bukti") ||
+      title.includes("lunas") ||
+      type  === "dp_reminder" ||
+      type  === "full_reminder" ||
+      type  === "overdue"
+    ) return "/my-bookings";
+    // Default — booking list is the most relevant catch-all
+    return "/my-bookings";
+  };
+
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
-    if (notification.booking_id) {
-      navigate(`/booking/payment/${notification.booking_id}`);
-      setIsOpen(false);
-    }
+    const link = getNotificationLink(notification);
+    navigate(link);
+    setIsOpen(false);
   };
 
   if (!user) return null;

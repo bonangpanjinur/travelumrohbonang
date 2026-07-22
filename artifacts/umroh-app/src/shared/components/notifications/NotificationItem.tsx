@@ -1,4 +1,4 @@
-import { Bell, AlertCircle, Clock, CreditCard } from "lucide-react";
+import { Bell, AlertCircle, Clock, CreditCard, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { type Notification } from "@/shared/hooks/useNotifications";
@@ -25,11 +25,11 @@ const NotificationItem = ({ notification, onClick }: NotificationItemProps) => {
   return (
     <button
       onClick={() => onClick(notification)}
-      className={`w-full p-4 text-left hover:bg-muted/50 transition-colors ${
+      className={`w-full p-4 text-left hover:bg-muted/50 transition-colors cursor-pointer group ${
         !notification.is_read ? "bg-gold/5" : ""
       }`}
     >
-      <div className="flex gap-3">
+      <div className="flex gap-3 items-start">
         <div className="flex-shrink-0 mt-0.5">
           {getIcon(notification.type)}
         </div>
@@ -51,9 +51,12 @@ const NotificationItem = ({ notification, onClick }: NotificationItemProps) => {
             })}
           </p>
         </div>
-        {!notification.is_read && (
-          <div className="w-2 h-2 rounded-full bg-gold flex-shrink-0 mt-1.5" />
-        )}
+        <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+          {!notification.is_read && (
+            <div className="w-2 h-2 rounded-full bg-gold" />
+          )}
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+        </div>
       </div>
     </button>
   );
