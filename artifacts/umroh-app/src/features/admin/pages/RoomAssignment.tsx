@@ -57,18 +57,23 @@ const AdminRoomAssignment = () => {
     queryKey: ["room-assignment-pilgrims", selectedDeparture],
     queryFn: () => apiFetch<PilgrimRow[]>(`/api/admin/room-assignment/${selectedDeparture}/pilgrims`),
     enabled: !!selectedDeparture,
+    // Prevent auto-refetch from overwriting in-progress edits
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
   });
 
-  // Sync local room state whenever server data changes
+  // Sync local room state whenever server data changes,
+  // but skip sync if the user has unsaved edits (avoids race-condition overwrite)
   useEffect(() => {
     if (!pilgrims.length) return;
+    if (dirty) return; // don't overwrite ongoing edits
     const init: Record<string, { roomType: string; roomNumber: string }> = {};
     pilgrims.forEach((p) => {
       init[p.pilgrimId] = { roomType: p.roomType ?? "", roomNumber: p.roomNumber ?? "" };
     });
     setLocalRooms(init);
     setDirty(false);
-  }, [pilgrims]);
+  }, [pilgrims]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const bulkMutation = useMutation({
     mutationFn: async () => {

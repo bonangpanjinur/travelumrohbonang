@@ -127,20 +127,20 @@ Menu Operasional (19 item) sekarang mengikuti alur kerja yang logis:
 
 ### Sprint +1 — Medium (B-04 s/d B-07)
 
-| Task | File | Estimasi |
-|------|------|----------|
-| Ganti `window.confirm` → `DeleteAlertDialog` (B-04) | 2 file | 1 jam |
-| Upload file Manasik (B-05) | `AdminManasik.tsx` | 3 jam |
-| Threshold visa configurable (B-06) | `VisaTracking.tsx` | 1 jam |
-| Pilihan penerbangan di Seat Assignment (B-07) | `SeatAssignment.tsx` | 3 jam |
+| Task | File | Status |
+|------|------|--------|
+| Ganti `window.confirm` → `DeleteAlertDialog` (B-04) | `IncidentManagement.tsx`, `DepartureChecklist.tsx` | ✅ SELESAI |
+| Upload file Manasik (B-05) | `Manasik.tsx` + `uploads.ts` | ✅ SELESAI |
+| Threshold visa configurable (B-06) | `VisaTracking.tsx` | ✅ SELESAI |
+| Pilihan penerbangan di Seat Assignment (B-07) | `SeatAssignment.tsx` | ✅ SELESAI |
 
 ### Backlog — Low (B-08, B-09, B-10)
 
-| Task | File | Estimasi |
-|------|------|----------|
-| Type-safe response parsing (B-08) | `EquipmentDistribution.tsx` | 1 jam |
-| Race condition room assignment (B-09) | `AdminRoomAssignment.tsx` | 2 jam |
-| Pagination equipment report (B-10) | `AdminEquipmentReport.tsx` | 2 jam |
+| Task | File | Status |
+|------|------|--------|
+| Type-safe response parsing (B-08) | `EquipmentDistribution.tsx` | ✅ SELESAI |
+| Race condition room assignment (B-09) | `RoomAssignment.tsx` | ✅ SELESAI |
+| Pagination equipment report (B-10) | `EquipmentReport.tsx` | ✅ SELESAI |
 
 ---
 

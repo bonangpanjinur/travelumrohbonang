@@ -19,6 +19,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Badge } from "@/shared/components/ui/badge";
+import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type Severity = "low" | "medium" | "high" | "critical";
@@ -114,6 +115,9 @@ const AdminIncidentManagement = () => {
     handledBy: "",
   });
   const [createLoading, setCreateLoading] = useState(false);
+
+  // Delete dialog
+  const [deleteTarget, setDeleteTarget] = useState<Incident | null>(null);
 
   // Update status dialog
   const [updateOpen, setUpdateOpen] = useState(false);
@@ -264,18 +268,18 @@ const AdminIncidentManagement = () => {
   };
 
   // ── Delete ─────────────────────────────────────────────────────────────
-  const handleDelete = async (incident: Incident) => {
-    if (
-      !window.confirm(
-        `Hapus insiden "${incident.title}"? Tindakan ini tidak dapat dibatalkan.`
-      )
-    )
-      return;
+  const handleDelete = (incident: Incident) => {
+    setDeleteTarget(incident);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await apiFetch(`/api/admin/incident-reports/${incident.id}`, {
+      await apiFetch(`/api/admin/incident-reports/${deleteTarget.id}`, {
         method: "DELETE",
       });
       toast.success("Insiden berhasil dihapus");
+      setDeleteTarget(null);
       fetchIncidents();
     } catch (err: any) {
       toast.error("Gagal menghapus insiden", { description: err?.message });
@@ -738,6 +742,15 @@ const AdminIncidentManagement = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteAlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title={`Hapus insiden "${deleteTarget?.title}"?`}
+        description="Laporan insiden ini akan dihapus permanen dan tidak dapat dikembalikan."
+      />
     </div>
   );
 };

@@ -44,7 +44,10 @@ export default function EquipmentDistribution() {
 
   const { data: departures = [] } = useQuery<Departure[]>({
     queryKey: ["departures-list"],
-    queryFn: () => apiFetch<any>("/api/admin/departures?limit=100").then((r) => r.data ?? r),
+    queryFn: () =>
+      apiFetch<{ data: Departure[] } | Departure[]>("/api/admin/departures?limit=100").then((r) =>
+        Array.isArray(r) ? r : (r as { data: Departure[] }).data ?? []
+      ),
   });
 
   const { data: result, isLoading } = useQuery<DistributionResult>({

@@ -44,9 +44,12 @@ const STATUS_COLOR: Record<string, string> = {
   returned:    "bg-green-100 text-green-800 border-green-300",
 };
 
+const PAGE_SIZE = 20;
+
 const AdminEquipmentReport = () => {
   const [search, setSearch] = useState("");
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const { data: summary = [], isLoading } = useQuery<ReportRow[]>({
     queryKey: ["equipment-report"],
@@ -65,6 +68,10 @@ const AdminEquipmentReport = () => {
     r.itemName.toLowerCase().includes(search.toLowerCase()) ||
     (r.category ?? "").toLowerCase().includes(search.toLowerCase()),
   );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleExportSummary = () => {
     exportToCsv("laporan-perlengkapan", 
@@ -146,7 +153,7 @@ const AdminEquipmentReport = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((row) => (
+                {paginated.map((row) => (
                   <TableRow
                     key={row.itemId}
                     className={selectedItemId === row.itemId ? "bg-primary/5" : ""}
@@ -182,6 +189,36 @@ const AdminEquipmentReport = () => {
                 ))}
               </TableBody>
             </Table>
+          </div>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-2 px-1">
+          <span className="text-xs text-muted-foreground">
+            Menampilkan {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} dari {filtered.length} item
+          </span>
+          <div className="flex gap-1">
+            <Button variant="outline" size="sm" disabled={currentPage === 1}
+              onClick={() => setPage((p) => p - 1)}>Prev</Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+              .reduce<(number | "…")[]>((acc, p) => {
+                if (acc.length && (p as number) - (acc[acc.length - 1] as number) > 1) acc.push("…");
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, i) =>
+                p === "…" ? (
+                  <span key={`ellipsis-${i}`} className="px-2 py-1 text-xs text-muted-foreground">…</span>
+                ) : (
+                  <Button key={p} variant={currentPage === p ? "default" : "outline"} size="sm"
+                    onClick={() => setPage(p as number)}>{p}</Button>
+                )
+              )}
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages}
+              onClick={() => setPage((p) => p + 1)}>Next</Button>
           </div>
         </div>
       )}

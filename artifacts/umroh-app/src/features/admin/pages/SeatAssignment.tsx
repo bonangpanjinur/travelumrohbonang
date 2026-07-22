@@ -66,7 +66,8 @@ const PLANE_CONFIGS: Record<PlaneLayout, PlaneConfig> = {
   wide:   { layout: "wide",   rows: 40, columns: ["A", "B", null, "C", "D", "E", "F", null, "G", "H"] },
 };
 
-const SEGMENTS = ["GO", "RETURN", "GO-1", "GO-2", "RETURN-1", "RETURN-2"];
+// SEGMENTS kept for reference; active segments are computed from user's flight config
+const ALL_SEGMENTS = ["GO", "GO-1", "GO-2", "GO-3", "RETURN", "RETURN-1", "RETURN-2", "RETURN-3"];
 
 // ─── Seat cell component ──────────────────────────────────────────────────────
 
@@ -125,6 +126,9 @@ export default function SeatAssignment() {
   const [segment, setSegment] = useState("GO");
   const [planeLayout, setPlaneLayout] = useState<PlaneLayout>("narrow");
   const [customRows, setCustomRows] = useState<number | null>(null);
+  // Flight count config: how many GO and RETURN flights for this departure
+  const [goCount, setGoCount] = useState(1);
+  const [returnCount, setReturnCount] = useState(1);
 
   // draft: { pilgrimId -> seatNumber } for current segment
   // We store per-segment so switching tabs keeps edits
@@ -136,6 +140,19 @@ export default function SeatAssignment() {
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
+
+  // Compute which segment tabs to show based on flight count config
+  const activeSegments = [
+    ...(goCount === 1 ? ["GO"] : Array.from({ length: goCount }, (_, i) => `GO-${i + 1}`)),
+    ...(returnCount === 1 ? ["RETURN"] : Array.from({ length: returnCount }, (_, i) => `RETURN-${i + 1}`)),
+  ];
+
+  // If current segment is not in activeSegments, reset to first
+  const effectiveSegment = activeSegments.includes(segment) ? segment : activeSegments[0];
+  if (effectiveSegment !== segment) {
+    // use requestAnimationFrame to avoid setState during render
+    setTimeout(() => setSegment(effectiveSegment), 0);
+  }
 
   // ── Data fetching ─────────────────────────────────────────────────────────
 
@@ -449,6 +466,29 @@ export default function SeatAssignment() {
                 className="w-24 h-8 text-sm"
               />
             </div>
+            {/* Flight count config — B-07 fix */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Penerbangan Pergi</label>
+              <Select value={String(goCount)} onValueChange={(v) => { setGoCount(Number(v)); setDrafts({}); setSelectedPilgrimId(null); }}>
+                <SelectTrigger className="w-32 h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 penerbangan (GO)</SelectItem>
+                  <SelectItem value="2">2 penerbangan (GO-1/2)</SelectItem>
+                  <SelectItem value="3">3 penerbangan (GO-1/2/3)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Penerbangan Pulang</label>
+              <Select value={String(returnCount)} onValueChange={(v) => { setReturnCount(Number(v)); setDrafts({}); setSelectedPilgrimId(null); }}>
+                <SelectTrigger className="w-32 h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 penerbangan (RETURN)</SelectItem>
+                  <SelectItem value="2">2 penerbangan (RETURN-1/2)</SelectItem>
+                  <SelectItem value="3">3 penerbangan (RETURN-1/2/3)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <p className="text-xs text-muted-foreground">
               Total kursi: {rows * cfg.columns.filter(Boolean).length}
             </p>
@@ -492,9 +532,9 @@ export default function SeatAssignment() {
           )}
 
           {/* Segment tabs */}
-          <Tabs value={segment} onValueChange={(v) => { setSegment(v); setSelectedPilgrimId(null); }}>
+          <Tabs value={effectiveSegment} onValueChange={(v) => { setSegment(v); setSelectedPilgrimId(null); }}>
             <TabsList>
-              {SEGMENTS.map((s) => {
+              {activeSegments.map((s) => {
                 const d = drafts[s];
                 const count = d ? Object.keys(d).length : 0;
                 return (

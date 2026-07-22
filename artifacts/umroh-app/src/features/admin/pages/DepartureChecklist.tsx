@@ -15,6 +15,7 @@ import { Progress } from "@/shared/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/shared/components/ui/dialog";
 import { toast } from "sonner";
 import { ClipboardList, Wand2, Plus, Trash2 } from "lucide-react";
+import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 
 interface ChecklistItem {
   id: string; departureId: string; hMinus: number;
@@ -51,6 +52,7 @@ export default function DepartureChecklist() {
   const [departureId, setDepartureId] = useState("all");
   const [addDialog, setAddDialog] = useState(false);
   const [addForm, setAddForm] = useState({ item: "", hMinus: 0, category: "", notes: "" });
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const { data: departures = [] } = useQuery<Departure[]>({
     queryKey: ["departures-list"],
@@ -213,7 +215,7 @@ export default function DepartureChecklist() {
                           </div>
                         </div>
                         <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive flex-shrink-0"
-                          onClick={() => { if (confirm("Hapus item ini?")) deleteMutation.mutate(item.id); }}>
+                          onClick={() => setDeleteTargetId(item.id)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -225,6 +227,15 @@ export default function DepartureChecklist() {
           })}
         </>
       )}
+
+      {/* Delete Confirmation */}
+      <DeleteAlertDialog
+        open={!!deleteTargetId}
+        onOpenChange={(o) => !o && setDeleteTargetId(null)}
+        onConfirm={() => { if (deleteTargetId) deleteMutation.mutate(deleteTargetId); setDeleteTargetId(null); }}
+        title="Hapus item checklist?"
+        description="Item checklist ini akan dihapus permanen."
+      />
 
       {/* Add Item Dialog */}
       <Dialog open={addDialog} onOpenChange={setAddDialog}>

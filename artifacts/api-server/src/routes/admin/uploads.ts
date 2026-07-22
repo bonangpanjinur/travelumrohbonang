@@ -28,9 +28,14 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
   fileFilter: (_req, file, cb) => {
-    const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const allowed = [
+      "image/jpeg", "image/png", "image/webp", "image/gif",
+      "application/pdf",
+      "video/mp4", "video/webm", "video/ogg",
+      "application/epub+zip",
+    ];
     cb(null, allowed.includes(file.mimetype));
   },
 });
@@ -52,6 +57,24 @@ router.post("/image", upload.single("file"), async (req: any, res) => {
   } catch (err) {
     console.error("[uploads] upload error:", err);
     return res.status(500).json({ error: "Gagal upload gambar" });
+  }
+});
+
+/**
+ * POST /api/admin/uploads/file
+ * Endpoint generik — terima PDF, video, gambar, epub.
+ * Returns { url } — URL yang bisa diakses lewat /api/admin/uploads/files/:filename
+ */
+router.post("/file", upload.single("file"), async (req: any, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "File tidak diterima atau format tidak didukung (PDF/MP4/WebM/JPG/PNG/EPUB)" });
+    }
+    const url = `/api/admin/uploads/files/${req.file.filename}`;
+    return res.json({ url, filename: req.file.filename, size: req.file.size, mimetype: req.file.mimetype });
+  } catch (err) {
+    console.error("[uploads] upload error:", err);
+    return res.status(500).json({ error: "Gagal upload file" });
   }
 });
 

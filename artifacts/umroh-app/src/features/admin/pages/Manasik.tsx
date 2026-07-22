@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
@@ -9,7 +9,7 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/shared/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, BookOpen, FileText, Video, Book } from "lucide-react";
+import { Plus, Pencil, Trash2, BookOpen, FileText, Video, Book, Upload, X } from "lucide-react";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 
 type Material = {
@@ -37,6 +37,8 @@ const AdminManasik = () => {
     sort_order: 0,
     is_active: true,
   });
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     try {
@@ -44,6 +46,29 @@ const AdminManasik = () => {
       setList(data || []);
     } catch (error: any) {
       toast.error(error.message);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/admin/uploads/file", { method: "POST", body: fd });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Gagal upload file");
+      }
+      const { url } = await res.json();
+      setForm((f) => ({ ...f, file_url: url }));
+      toast.success("File berhasil diupload");
+    } catch (err: any) {
+      toast.error(err.message || "Gagal upload file");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
   };
 
@@ -162,7 +187,38 @@ const AdminManasik = () => {
               </div>
               <div className="space-y-1.5"><Label>Urutan</Label><Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })} /></div>
             </div>
-            <div className="space-y-1.5"><Label>URL File / Video</Label><Input value={form.file_url} onChange={(e) => setForm({ ...form, file_url: e.target.value })} placeholder="https://..." /></div>
+            <div className="space-y-1.5">
+              <Label>File / URL</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={form.file_url}
+                  onChange={(e) => setForm({ ...form, file_url: e.target.value })}
+                  placeholder="https://... atau upload file di bawah"
+                  className="flex-1"
+                />
+                {form.file_url && (
+                  <Button type="button" size="icon" variant="ghost" title="Hapus URL"
+                    onClick={() => setForm((f) => ({ ...f, file_url: "" }))}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".pdf,.mp4,.webm,.ogg,.epub,application/pdf,video/*"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+                <Button type="button" variant="outline" size="sm" disabled={uploading}
+                  onClick={() => fileRef.current?.click()}>
+                  <Upload className="w-3.5 h-3.5 mr-1.5" />
+                  {uploading ? "Mengupload..." : "Upload File (PDF/Video)"}
+                </Button>
+                <span className="text-xs text-muted-foreground">Maks 50 MB</span>
+              </div>
+            </div>
             <div className="space-y-1.5"><Label>URL Thumbnail (opsional)</Label><Input value={form.thumbnail_url} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} /></div>
             <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /><Label>Aktif</Label></div>
           </div>

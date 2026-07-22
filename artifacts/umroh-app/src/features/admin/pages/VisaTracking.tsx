@@ -44,6 +44,7 @@ export default function VisaTracking() {
   const [editVisa, setEditVisa] = useState<VisaApp | null>(null);
   const [editForm, setEditForm] = useState<Partial<VisaApp>>({});
   const [bulkStatus, setBulkStatus] = useState("");
+  const [warningDays, setWarningDays] = useState(90);
 
   const { data: departures = [] } = useQuery<Departure[]>({
     queryKey: ["departures-list"],
@@ -93,8 +94,7 @@ export default function VisaTracking() {
 
   const openEdit = (v: VisaApp) => { setEditVisa(v); setEditForm(v); };
 
-  // Expiry warning: visa expiring within 90 days before departure
-  const today = new Date();
+  const today = new Date(); // eslint-disable-line @typescript-eslint/no-unused-vars
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -106,7 +106,7 @@ export default function VisaTracking() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-center">
         <Select value={departureId} onValueChange={setDepartureId}>
           <SelectTrigger className="w-56"><SelectValue placeholder="Semua Keberangkatan" /></SelectTrigger>
           <SelectContent>
@@ -126,6 +126,19 @@ export default function VisaTracking() {
           </SelectContent>
         </Select>
         <Input placeholder="Cari nama / kode booking..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-56" />
+        {/* Configurable expiry warning threshold */}
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Peringatan expired dalam</span>
+          <Input
+            type="number"
+            min={1}
+            max={365}
+            value={warningDays}
+            onChange={(e) => setWarningDays(Math.max(1, Number(e.target.value) || 90))}
+            className="w-20 h-8 text-sm text-center"
+          />
+          <span className="text-xs text-muted-foreground">hari</span>
+        </div>
       </div>
 
       {/* Bulk Actions */}
@@ -191,7 +204,7 @@ export default function VisaTracking() {
                     </td></tr>
                   ) : visas.map((v) => {
                     const cfg = STATUS_CONFIG[v.status] ?? { label: v.status, color: "bg-gray-100 text-gray-700" };
-                    const expiring = v.expiryDate && new Date(v.expiryDate) < new Date(Date.now() + 90 * 86400000);
+                    const expiring = v.expiryDate && new Date(v.expiryDate) < new Date(Date.now() + warningDays * 86400000);
                     return (
                       <tr key={v.id} className="border-b last:border-0 hover:bg-muted/20">
                         <td className="py-2 px-4">
