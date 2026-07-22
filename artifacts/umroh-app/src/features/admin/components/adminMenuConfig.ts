@@ -53,6 +53,12 @@ import {
   PiggyBank,
   TrendingDown,
   Scale,
+  // ── Operasional icons (ditambah untuk hilangkan duplikat) ──────────────────
+  Truck,
+  PackageCheck,
+  Armchair,
+  ListChecks,
+  IdCard,
   type LucideIcon
 
 } from "lucide-react";
@@ -114,26 +120,31 @@ export const menuGroups: MenuGroup[] = [
     labelKey: "menu.group.operations",
     icon: Package,
     items: [
+      // ── 1. Setup Paket ────────────────────────────────────────────────────────
       { label: "Paket", labelKey: "menu.packages", href: "/admin/packages", icon: Package, roles: ALL_STAFF },
       { label: "Jadwal Keberangkatan", labelKey: "menu.departures", href: "/admin/departures", icon: Calendar, roles: ALL_STAFF },
       { label: "Itinerary Perjalanan", labelKey: "menu.itineraries", href: "/admin/itineraries", icon: MapPin, roles: ALL_STAFF },
+      // ── 2. Booking & Jemaah ───────────────────────────────────────────────────
       { label: "Booking", labelKey: "menu.bookings", href: "/admin/bookings", icon: Ticket, roles: OPERATIONAL, featureId: "bookings" },
       { label: "Jemaah per Booking", labelKey: "menu.pilgrims", href: "/admin/pilgrims", icon: Users, roles: ALL_STAFF, featureId: "jamaah" },
       { label: "Data Induk Jemaah", labelKey: "menu.pilgrims_db", href: "/admin/pilgrims-db", icon: Database, roles: ALL_STAFF, featureId: "jamaah" },
-      { label: "Manifest Keberangkatan", labelKey: "menu.manifest", href: "/admin/manifest", icon: ClipboardList, roles: ALL_STAFF, featureId: "jamaah" },
-      { label: "Penempatan Kamar", labelKey: "menu.room_assignment", href: "/admin/room-assignment", icon: BedDouble, roles: ALL_STAFF, featureId: "room_assignment" },
-      { label: "Check-In Keberangkatan", labelKey: "menu.checkin_qr", href: "/admin/check-in", icon: ShieldCheck, roles: ALL_STAFF, featureId: "check_in" },
-      { label: "Perlengkapan Manasik", labelKey: "menu.manasik_kit", href: "/admin/manasik", icon: BookOpen, roles: SUPER_ADMIN_ADMIN, featureId: "equipment" },
+      // ── 3. Dokumen & Visa ─────────────────────────────────────────────────────
       { label: "Dokumen Jemaah", labelKey: "menu.pilgrim_documents", href: "/admin/documents", icon: FileCheck, roles: OPERATIONAL, featureId: "documents" },
       { label: "Tracking Dokumen", labelKey: "menu.document_tracking", href: "/admin/document-tracking", icon: BarChart2, roles: ALL_STAFF, featureId: "documents" },
-      { label: "Laporan Perlengkapan", labelKey: "menu.equipment_report", href: "/admin/equipment-report", icon: Backpack, roles: ALL_STAFF, featureId: "equipment" },
-      { label: "Laporan Insiden", labelKey: "menu.incident_management", href: "/admin/incident-management", icon: AlertTriangle, roles: OPERATIONAL, featureId: "incident_management" },
-      // ── O-8/9/10/11 ───────────────────────────────────────────────────────────
-      { label: "Distribusi Perlengkapan", labelKey: "menu.equipment_distribution", href: "/admin/equipment-distribution", icon: Backpack, roles: SUPER_ADMIN_ADMIN, featureId: "equipment" },
-      { label: "Tracking Visa", labelKey: "menu.visa_tracking", href: "/admin/visa-tracking", icon: FileCheck, roles: OPERATIONAL },
-      { label: "Assignment Kursi", labelKey: "menu.seat_assignment", href: "/admin/seat-assignment", icon: ClipboardList, roles: OPERATIONAL },
+      { label: "Tracking Visa", labelKey: "menu.visa_tracking", href: "/admin/visa-tracking", icon: IdCard, roles: OPERATIONAL },
+      // ── 4. Perlengkapan ───────────────────────────────────────────────────────
+      { label: "Materi Manasik", labelKey: "menu.manasik_kit", href: "/admin/manasik", icon: BookOpen, roles: SUPER_ADMIN_ADMIN, featureId: "equipment" },
+      { label: "Distribusi Perlengkapan", labelKey: "menu.equipment_distribution", href: "/admin/equipment-distribution", icon: Truck, roles: SUPER_ADMIN_ADMIN, featureId: "equipment" },
+      // ── 5. Persiapan Keberangkatan ────────────────────────────────────────────
+      { label: "Penempatan Kamar", labelKey: "menu.room_assignment", href: "/admin/room-assignment", icon: BedDouble, roles: ALL_STAFF, featureId: "room_assignment" },
+      { label: "Assignment Kursi", labelKey: "menu.seat_assignment", href: "/admin/seat-assignment", icon: Armchair, roles: OPERATIONAL },
+      { label: "Manifest Keberangkatan", labelKey: "menu.manifest", href: "/admin/manifest", icon: ClipboardList, roles: ALL_STAFF, featureId: "jamaah" },
+      { label: "Checklist Keberangkatan", labelKey: "menu.departure_checklist", href: "/admin/departure-checklist", icon: ListChecks, roles: ALL_STAFF },
       { label: "Kesiapan Keberangkatan", labelKey: "menu.departure_readiness", href: "/admin/departure-readiness", icon: Activity, roles: OPERATIONAL },
-      { label: "Checklist Keberangkatan", labelKey: "menu.departure_checklist", href: "/admin/departure-checklist", icon: ClipboardList, roles: ALL_STAFF },
+      { label: "Check-In Keberangkatan", labelKey: "menu.checkin_qr", href: "/admin/check-in", icon: ShieldCheck, roles: ALL_STAFF, featureId: "check_in" },
+      // ── 6. Laporan Operasional ────────────────────────────────────────────────
+      { label: "Laporan Perlengkapan", labelKey: "menu.equipment_report", href: "/admin/equipment-report", icon: PackageCheck, roles: ALL_STAFF, featureId: "equipment" },
+      { label: "Laporan Insiden", labelKey: "menu.incident_management", href: "/admin/incident-management", icon: AlertTriangle, roles: OPERATIONAL, featureId: "incident_management" },
     ],
   },
   {
