@@ -1116,9 +1116,15 @@ const AdminSettings = () => {
                         : "border-border hover:border-primary/50"
                     )}
                   >
-                    <div className="w-10 h-10 mx-auto mb-2 rounded-full gradient-gold flex items-center justify-center">
-                      <span className="font-display font-bold text-sm text-primary">U</span>
-                    </div>
+                    {branding.logo_url ? (
+                      <img src={branding.logo_url} alt="logo" className="w-10 h-10 mx-auto mb-2 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 mx-auto mb-2 rounded-full gradient-gold flex items-center justify-center">
+                        <span className="font-display font-bold text-sm text-primary">
+                          {(branding.company_name || "?")[0].toUpperCase()}
+                        </span>
+                      </div>
+                    )}
                     <span className="text-sm font-medium">Logo Saja</span>
                   </button>
 
@@ -1133,8 +1139,12 @@ const AdminSettings = () => {
                     )}
                   >
                     <div className="mb-2">
-                      <span className="font-display text-lg font-bold">UmrohPlus</span>
-                      <span className="block text-[10px] text-muted-foreground tracking-widest uppercase">Travel</span>
+                      <span className="font-display text-lg font-bold truncate block max-w-[100px] mx-auto">
+                        {branding.company_name || "Nama"}
+                      </span>
+                      <span className="block text-[10px] text-muted-foreground tracking-widest uppercase truncate max-w-[100px] mx-auto">
+                        {branding.tagline || "Tagline"}
+                      </span>
                     </div>
                     <span className="text-sm font-medium">Teks Saja</span>
                   </button>
@@ -1150,12 +1160,22 @@ const AdminSettings = () => {
                     )}
                   >
                     <div className="flex items-center justify-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center">
-                        <span className="font-display font-bold text-xs text-primary">U</span>
-                      </div>
-                      <div className="text-left">
-                        <span className="font-display text-sm font-bold block leading-tight">UmrohPlus</span>
-                        <span className="text-[8px] text-muted-foreground tracking-widest uppercase">Travel</span>
+                      {branding.logo_url ? (
+                        <img src={branding.logo_url} alt="logo" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center flex-shrink-0">
+                          <span className="font-display font-bold text-xs text-primary">
+                            {(branding.company_name || "?")[0].toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="text-left overflow-hidden">
+                        <span className="font-display text-sm font-bold block leading-tight truncate max-w-[70px]">
+                          {branding.company_name || "Nama"}
+                        </span>
+                        <span className="text-[8px] text-muted-foreground tracking-widest uppercase truncate max-w-[70px] block">
+                          {branding.tagline || "Tagline"}
+                        </span>
                       </div>
                     </div>
                     <span className="text-sm font-medium">Logo + Teks</span>
