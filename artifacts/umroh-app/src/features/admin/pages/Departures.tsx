@@ -172,14 +172,14 @@ const AdminDepartures = () => {
         apiFetch<{ data: Departure[] }>("/api/admin/departures"),
         apiFetch<{ data: Package[] }>("/api/packages?active=true"),
         apiFetch<{ data: Muthawif[] }>("/api/admin/masterdata/muthawifs"),
-        apiFetch<Airline[]>("/api/admin/masterdata/airlines").catch(() => [] as Airline[]),
-        apiFetch<Airport[]>("/api/admin/masterdata/airports").catch(() => [] as Airport[]),
+        apiFetch<{ data: Airline[] }>("/api/admin/masterdata/airlines").catch(() => ({ data: [] as Airline[] })),
+        apiFetch<{ data: Airport[] }>("/api/admin/masterdata/airports").catch(() => ({ data: [] as Airport[] })),
       ]);
       setDepartures(departuresRes.data || []);
       setPackages(packagesRes.data || []);
       setMuthawifs(muthawifRes.data || []);
-      setAirlines(airlinesRes || []);
-      setAirports(airportsRes || []);
+      setAirlines(airlinesRes.data || []);
+      setAirports(airportsRes.data || []);
     } catch (err: any) {
       toast({ title: "Gagal memuat data keberangkatan", description: err?.message ?? "Periksa koneksi atau coba lagi.", variant: "destructive" });
     } finally {
@@ -703,7 +703,12 @@ const AdminDepartures = () => {
           <GalleryDialogHeader>
             <GalleryDialogTitle>Galeri Foto — {galleryDep?.package?.title}</GalleryDialogTitle>
           </GalleryDialogHeader>
-          {galleryDep && <DepartureGalleryPanel departureId={galleryDep.id} />}
+          {galleryDep && (
+            <DepartureGalleryPanel
+              departureId={galleryDep.id}
+              departureLabel={`${galleryDep.package?.title ?? "-"} · ${safeFormatDate(galleryDep.departureDate, "d MMM yyyy")}`}
+            />
+          )}
         </GalleryDialogContent>
       </GalleryDialog>
     </div>
