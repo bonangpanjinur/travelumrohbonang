@@ -137,7 +137,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Distribusi Perlengkapan", labelKey: "menu.equipment_distribution", href: "/admin/equipment-distribution", icon: Truck, roles: SUPER_ADMIN_ADMIN, featureId: "equipment" },
       // ── 5. Persiapan Keberangkatan ────────────────────────────────────────────
       { label: "Penempatan Kamar", labelKey: "menu.room_assignment", href: "/admin/room-assignment", icon: BedDouble, roles: ALL_STAFF, featureId: "room_assignment" },
-      { label: "Assignment Kursi", labelKey: "menu.seat_assignment", href: "/admin/seat-assignment", icon: Armchair, roles: OPERATIONAL },
+      { label: "Penempatan Kursi", labelKey: "menu.seat_assignment", href: "/admin/seat-assignment", icon: Armchair, roles: OPERATIONAL },
       { label: "Manifest Keberangkatan", labelKey: "menu.manifest", href: "/admin/manifest", icon: ClipboardList, roles: ALL_STAFF, featureId: "jamaah" },
       { label: "Checklist Keberangkatan", labelKey: "menu.departure_checklist", href: "/admin/departure-checklist", icon: ListChecks, roles: ALL_STAFF },
       { label: "Kesiapan Keberangkatan", labelKey: "menu.departure_readiness", href: "/admin/departure-readiness", icon: Activity, roles: OPERATIONAL },
