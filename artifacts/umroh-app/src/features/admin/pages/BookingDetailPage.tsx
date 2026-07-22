@@ -303,9 +303,24 @@ const BookingDetailPage = () => {
             </Button>
             <Button
               size="sm" variant="outline"
-              onClick={() => {
-                const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-                window.open(`${base}/api/admin/bookings/${booking.id}/passport-recommendation`, "_blank");
+              onClick={async () => {
+                try {
+                  const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+                  const res = await fetch(
+                    `${base}/api/admin/bookings/${booking.id}/passport-recommendation`,
+                    { credentials: "include" },
+                  );
+                  if (!res.ok) throw new Error("Gagal generate surat");
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `surat-rekomendasi-paspor-${booking.bookingCode}.pdf`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch (e: any) {
+                  toast.error(e?.message || "Gagal generate surat rekomendasi");
+                }
               }}
             >
               <FileDown className="w-3.5 h-3.5 mr-1.5" /> Surat Rekomendasi Paspor
