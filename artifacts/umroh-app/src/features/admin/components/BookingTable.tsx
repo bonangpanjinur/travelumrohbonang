@@ -82,7 +82,7 @@ const BookingTable = ({
     catch { return d; }
   };
 
-  const goToDetail = (id: string) => navigate(`/admin/bookings/${id}`);
+  const goToDetail = (_id: string, code: string) => navigate(`/admin/bookings/${code}`);
 
   // ── Mobile ────────────────────────────────────────────────────────────────
   if (isMobile) {
@@ -123,7 +123,7 @@ const BookingTable = ({
                   <span className="font-semibold">Rp {b.totalPrice.toLocaleString("id-ID")}</span>
                 </MobileCardRow>
                 <div className="flex gap-2 pt-2 border-t border-border">
-                  <Button variant="default" size="sm" className="flex-1 gap-1" onClick={() => goToDetail(b.id)}>
+                  <Button variant="default" size="sm" className="flex-1 gap-1" onClick={() => goToDetail(b.id, b.bookingCode)}>
                     Detail <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
                 </div>
@@ -177,7 +177,7 @@ const BookingTable = ({
                     )}
 
                     {/* Kode */}
-                    <TableCell className="font-mono text-sm" onClick={() => goToDetail(b.id)}>
+                    <TableCell className="font-mono text-sm" onClick={() => goToDetail(b.id, b.bookingCode)}>
                       <div>{b.bookingCode}</div>
                       {b.isGroupBooking && (
                         <Badge variant="outline" className="mt-1 text-[10px] border-gold/40 text-gold px-1 py-0 gap-1">
@@ -193,7 +193,7 @@ const BookingTable = ({
                     </TableCell>
 
                     {/* Jemaah — primary: nama jemaah pertama, secondary: pemesan akun */}
-                    <TableCell onClick={() => goToDetail(b.id)}>
+                    <TableCell onClick={() => goToDetail(b.id, b.bookingCode)}>
                       {b.firstJamaahName ? (
                         <div>
                           <div className="font-semibold">{b.firstJamaahName}</div>
@@ -216,7 +216,7 @@ const BookingTable = ({
                     </TableCell>
 
                     {/* Diinput Oleh — role badge + nama */}
-                    <TableCell className="text-sm" onClick={() => goToDetail(b.id)}>
+                    <TableCell className="text-sm" onClick={() => goToDetail(b.id, b.bookingCode)}>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`text-xs px-1.5 py-0.5 rounded border font-semibold whitespace-nowrap ${badge.cls}`}>
                           {badge.label}
@@ -234,7 +234,7 @@ const BookingTable = ({
                     </TableCell>
 
                     {/* Paket */}
-                    <TableCell onClick={() => goToDetail(b.id)}>{b.package?.title || "-"}</TableCell>
+                    <TableCell onClick={() => goToDetail(b.id, b.bookingCode)}>{b.package?.title || "-"}</TableCell>
 
                     {/* Keberangkatan */}
                     <TableCell>
@@ -256,12 +256,12 @@ const BookingTable = ({
                     </TableCell>
 
                     {/* Total */}
-                    <TableCell className="font-semibold tabular-nums" onClick={() => goToDetail(b.id)}>
+                    <TableCell className="font-semibold tabular-nums" onClick={() => goToDetail(b.id, b.bookingCode)}>
                       Rp {b.totalPrice.toLocaleString("id-ID")}
                     </TableCell>
 
                     {/* Status Bayar */}
-                    <TableCell onClick={() => goToDetail(b.id)}>
+                    <TableCell onClick={() => goToDetail(b.id, b.bookingCode)}>
                       {b.paymentStatus === "paid" && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-medium">✓ Lunas</span>
                       )}
@@ -274,12 +274,12 @@ const BookingTable = ({
                     </TableCell>
 
                     {/* Cabang */}
-                    <TableCell className="text-sm" onClick={() => goToDetail(b.id)}>
+                    <TableCell className="text-sm" onClick={() => goToDetail(b.id, b.bookingCode)}>
                       {b.branch?.name || <span className="text-muted-foreground">—</span>}
                     </TableCell>
 
                     {/* Status */}
-                    <TableCell onClick={() => goToDetail(b.id)}>
+                    <TableCell onClick={() => goToDetail(b.id, b.bookingCode)}>
                       <BookingStatusBadge status={b.status} />
                     </TableCell>
 
@@ -301,7 +301,7 @@ const BookingTable = ({
                           variant="default"
                           size="sm"
                           className="h-7 text-xs gap-1"
-                          onClick={(e) => { e.stopPropagation(); goToDetail(b.id); }}
+                          onClick={(e) => { e.stopPropagation(); goToDetail(b.id, b.bookingCode); }}
                         >
                           Detail <ArrowRight className="w-3 h-3" />
                         </Button>

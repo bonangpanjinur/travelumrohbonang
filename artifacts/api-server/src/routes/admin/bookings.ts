@@ -16,6 +16,7 @@ import {
   agents,
   eq,
   and,
+  or,
   ilike,
   isNull,
   inArray,
@@ -269,7 +270,7 @@ router.get("/:id", async (req, res) => {
       .leftJoin(packages, eq(bookings.packageId, packages.id))
       .leftJoin(packageDepartures, eq(bookings.departureId, packageDepartures.id))
       .leftJoin(branches, eq(bookings.branchId, branches.id))
-      .where(eq(bookings.id, id))
+      .where(or(eq(bookings.id, id), eq(bookings.bookingCode, id.toUpperCase())))
       .limit(1);
 
     if (!booking) {
