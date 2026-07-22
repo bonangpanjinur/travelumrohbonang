@@ -42,6 +42,7 @@ const SEO = ({
   const [gscToken, setGscToken] = useState<string | null>(null);
   const [bingToken, setBingToken] = useState<string | null>(null);
   const [defaultSuffix, setDefaultSuffix] = useState<string>("");
+  const [siteTitle, setSiteTitle] = useState<string>("");
   const { tenant } = useTenant();
   const pathnameForOverride =
     typeof window !== "undefined" ? window.location.pathname : "/";
@@ -80,10 +81,12 @@ const SEO = ({
         gsc_verification?: string;
         bing_verification?: string;
         default_title_suffix?: string;
+        site_title?: string;
       } | null) ?? null;
       if (v?.gsc_verification && !tenantGsc) setGscToken(v.gsc_verification);
       if (v?.bing_verification) setBingToken(v.bing_verification);
       if (v?.default_title_suffix) setDefaultSuffix(v.default_title_suffix);
+      if (v?.site_title) setSiteTitle(v.site_title);
     };
     fetchGsc();
   }, [tenant]);
@@ -93,9 +96,11 @@ const SEO = ({
   const effectiveDescription = override?.description || description;
   const effectiveNoIndex = override?.noindex ?? noIndex;
   const suffix = defaultSuffix || siteName;
+  // siteTitle from SEO settings is the admin-configured full default title
+  // (e.g. "Vins Tour Travel - Perjalanan Terbaik Menuju Baitullah")
   const fullTitle = effectiveTitle
     ? `${effectiveTitle} | ${suffix}`
-    : `${siteName} - ${branding.tagline}`;
+    : (siteTitle || `${siteName} - ${branding.tagline}`);
 
   // Tenant-aware origin: each domain self-canonicals so search engines don't
   // merge ranking signals across the main brand and white-label tenants.
