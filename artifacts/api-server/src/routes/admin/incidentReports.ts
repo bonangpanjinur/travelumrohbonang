@@ -20,6 +20,7 @@ import {
   ilike,
   or,
 } from "@workspace/db";
+import { sendAdminError } from "../../lib/adminApiError";
 
 const router = Router();
 
@@ -71,8 +72,7 @@ router.get("/", async (req: any, res) => {
 
     res.json(rows);
   } catch (e) {
-    console.error("[incident-reports GET /]", e);
-    res.status(500).json({ error: "Failed to fetch incident reports" });
+    sendAdminError(res, "GET /api/admin/incident-reports", e);
   }
 });
 
@@ -110,8 +110,7 @@ router.post("/", async (req: any, res) => {
 
     res.status(201).json(row);
   } catch (e) {
-    console.error("[incident-reports POST /]", e);
-    res.status(500).json({ error: "Failed to create incident report" });
+    sendAdminError(res, "POST /api/admin/incident-reports", e);
   }
 });
 
@@ -152,8 +151,7 @@ router.patch("/:id", async (req: any, res) => {
     }
     res.json(row);
   } catch (e) {
-    console.error("[incident-reports PATCH /:id]", e);
-    res.status(500).json({ error: "Failed to update incident report" });
+    sendAdminError(res, "PATCH /api/admin/incident-reports/:id", e);
   }
 });
 
@@ -171,8 +169,7 @@ router.delete("/:id", async (req, res) => {
     }
     res.json({ deleted: true });
   } catch (e) {
-    console.error("[incident-reports DELETE /:id]", e);
-    res.status(500).json({ error: "Failed to delete incident report" });
+    sendAdminError(res, "DELETE /api/admin/incident-reports/:id", e);
   }
 });
 
