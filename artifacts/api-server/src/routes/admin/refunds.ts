@@ -11,6 +11,38 @@ import { journalRefundApproved, journalRefundProcessed } from "../../lib/autoJou
 
 const router = Router();
 
+// ── POST / — admin membuat refund request untuk booking ──────────────────────
+router.post("/", async (req, res) => {
+  try {
+    const { bookingId, reason, amount, bankName, bankAccount, accountHolder } = req.body;
+    if (!bookingId || !reason || !amount) {
+      return res.status(400).json({ error: "bookingId, reason, dan amount wajib diisi" });
+    }
+    const [booking] = await db
+      .select({ id: bookings.id, userId: bookings.userId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+    if (!booking) return res.status(404).json({ error: "Booking tidak ditemukan" });
+
+    const [refund] = await db.insert(refundRequests).values({
+      id: crypto.randomUUID(),
+      bookingId,
+      userId: booking.userId ?? null,
+      reason,
+      amount: Number(amount),
+      bankName: bankName ?? null,
+      bankAccount: bankAccount ?? null,
+      accountHolder: accountHolder ?? null,
+      status: "pending",
+      createdAt: new Date(),
+    }).returning();
+    res.status(201).json(refund);
+  } catch (e) {
+    sendAdminError(res, "POST /api/admin/refunds", e);
+  }
+});
+
 router.get("/", async (req, res) => {
   try {
     const data = await db

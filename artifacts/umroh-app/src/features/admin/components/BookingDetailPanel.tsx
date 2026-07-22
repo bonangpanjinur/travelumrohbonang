@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/shared/lib/apiClient";
 import {
@@ -6,6 +6,7 @@ import {
   PhoneCall, History, ExternalLink, Bed, Calendar, Loader2,
   Plus, Trash2, Save, X, CheckCircle2, XCircle, Trophy, ChevronDown,
   CreditCard, FileText, Pencil, Search, AlertCircle, Globe,
+  Upload, Ban, RotateCcw, CalendarDays,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -23,6 +24,7 @@ import DepartureDetailDrawer from "./DepartureDetailDrawer";
 import ChangeRoomModal from "./ChangeRoomModal";
 import ChangeDepartureModal from "./ChangeDepartureModal";
 import PilgrimEquipmentPanel from "./PilgrimEquipmentPanel";
+import PilgrimDocumentPanel from "./PilgrimDocumentPanel";
 import { toast } from "sonner";
 
 interface Branch { id: string; name: string; }
@@ -186,6 +188,24 @@ const BookingDetailPanel = ({
   // Jamaah search/filter
   const [jamaahSearch, setJamaahSearch] = useState("");
 
+  // Import CSV
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  const [importingCsv, setImportingCsv] = useState(false);
+
+  // Void payment
+  const [voidingPaymentId, setVoidingPaymentId] = useState<string | null>(null);
+
+  // Refund modal
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundForm, setRefundForm] = useState({ reason: "", amount: "", bankName: "", bankAccount: "", accountHolder: "" });
+  const [savingRefund, setSavingRefund] = useState(false);
+
+  // Installment schedule
+  const [installments, setInstallments] = useState<Array<{
+    id: string; installmentNumber: number; dueDate: string;
+    amount: number; status: string; paidAt: string | null;
+  }>>([]);
+
   // Payment form
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
@@ -277,6 +297,18 @@ const BookingDetailPanel = ({
       }
       if (logs.status === "fulfilled") setStatusLogs(logs.value || []);
       if (paymentsRes.status === "fulfilled") setPaymentSummary(paymentsRes.value);
+
+      // Fetch installment schedule
+      apiFetch<{ data: any[] }>(`/api/admin/installments?bookingId=${bookingId}`)
+        .then((r) => setInstallments((r?.data ?? []).map((s: any) => ({
+          id: s.id,
+          installmentNumber: s.installmentNumber,
+          dueDate: s.dueDate,
+          amount: Number(s.amount),
+          status: s.status,
+          paidAt: s.paidAt ?? null,
+        }))))
+        .catch(() => {});
 
       // Fetch commission rate + PIC name from a dedicated API endpoint
       // (replaces the old /rest/v1/ direct Supabase calls that required an anon key)
@@ -443,6 +475,104 @@ const BookingDetailPanel = ({
       toast.error("Gagal menyimpan catatan");
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  // ── Void pembayaran ───────────────────────────────────────────────────────
+  const handleVoidPayment = (paymentId: string, amount: number) => {
+    showConfirm(
+      "Batalkan pembayaran ini?",
+      `Pembayaran Rp ${amount.toLocaleString("id-ID")} akan dibatalkan (void). Tindakan ini tidak dapat diurungkan.`,
+      async () => {
+        setVoidingPaymentId(paymentId);
+        try {
+          await apiFetch(`/api/admin/bookings/${bookingId}/payments/${paymentId}`, { method: "DELETE" });
+          toast.success("Pembayaran berhasil dibatalkan");
+          fetchDetails();
+          onBookingChange?.();
+        } catch (e: any) {
+          toast.error(e?.message || "Gagal membatalkan pembayaran");
+        } finally {
+          setVoidingPaymentId(null);
+        }
+      },
+      true,
+    );
+  };
+
+  // ── Submit refund request ──────────────────────────────────────────────────
+  const handleRefundSubmit = async () => {
+    const amount = parseInt(refundForm.amount.replace(/\D/g, ""));
+    if (!refundForm.reason.trim() || !amount) {
+      toast.error("Alasan dan jumlah refund wajib diisi");
+      return;
+    }
+    setSavingRefund(true);
+    try {
+      await apiFetch("/api/admin/refunds", {
+        method: "POST",
+        body: JSON.stringify({
+          bookingId,
+          reason:         refundForm.reason.trim(),
+          amount,
+          bankName:       refundForm.bankName.trim()       || null,
+          bankAccount:    refundForm.bankAccount.trim()    || null,
+          accountHolder:  refundForm.accountHolder.trim()  || null,
+        }),
+      });
+      toast.success("Permintaan refund berhasil dibuat");
+      setShowRefundModal(false);
+      setRefundForm({ reason: "", amount: "", bankName: "", bankAccount: "", accountHolder: "" });
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal membuat permintaan refund");
+    } finally {
+      setSavingRefund(false);
+    }
+  };
+
+  // ── Import jemaah dari CSV ─────────────────────────────────────────────────
+  const handleCsvImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setImportingCsv(true);
+    try {
+      const Papa = (await import("papaparse")).default;
+      const result = await new Promise<any>((resolve, reject) => {
+        Papa.parse(file, {
+          header: true, skipEmptyLines: true,
+          complete: resolve, error: reject,
+        });
+      });
+      const rows = (result.data as any[]).filter((r: any) => r.name?.trim());
+      if (rows.length === 0) { toast.error("Tidak ada data valid di file CSV"); return; }
+      const results = await Promise.allSettled(
+        rows.map((r: any) =>
+          apiFetch(`/api/admin/bookings/${bookingId}/pilgrims`, {
+            method: "POST",
+            body: JSON.stringify({
+              name:           r.name?.trim(),
+              phone:          r.phone?.trim()          || null,
+              gender:         r.gender?.trim()         || null,
+              email:          r.email?.trim()          || null,
+              nik:            r.nik?.trim()            || null,
+              birthDate:      r.birthDate?.trim()      || r.birth_date?.trim() || null,
+              nationality:    r.nationality?.trim()    || null,
+              passportNumber: r.passportNumber?.trim() || r.passport_number?.trim() || null,
+              passportExpiry: r.passportExpiry?.trim() || r.passport_expiry?.trim() || null,
+            }),
+          })
+        )
+      );
+      const ok = results.filter((r) => r.status === "fulfilled").length;
+      const fail = results.length - ok;
+      toast.success(`${ok} jemaah berhasil diimport${fail ? `, ${fail} gagal` : ""}`);
+      fetchDetails();
+      onBookingChange?.();
+    } catch {
+      toast.error("Gagal membaca file CSV");
+    } finally {
+      setImportingCsv(false);
     }
   };
 
@@ -632,16 +762,32 @@ const BookingDetailPanel = ({
 
         {/* ── Daftar Jemaah ─────────────────────────────────────────────────── */}
         <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+          {/* hidden CSV input */}
+          <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleCsvImport} />
+
           <div className="flex items-center justify-between">
             <h4 className="font-semibold flex items-center gap-2 text-sm">
               <Users className="w-4 h-4 text-primary" /> Daftar Jemaah ({pilgrims.length})
             </h4>
-            <Button
-              size="sm" variant="outline" className="h-7 gap-1.5 text-xs"
-              onClick={() => { setShowAddJamaah(!showAddJamaah); setNewJamaah(emptyNewJamaah()); setJamaahSearch(""); }}
-            >
-              <Plus className="w-3 h-3" /> Tambah
-            </Button>
+            <div className="flex gap-1.5">
+              <Button
+                size="sm" variant="outline" className="h-7 gap-1.5 text-xs"
+                onClick={() => csvInputRef.current?.click()}
+                disabled={importingCsv}
+                title="Import jemaah dari CSV"
+              >
+                {importingCsv
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : <Upload className="w-3 h-3" />}
+                CSV
+              </Button>
+              <Button
+                size="sm" variant="outline" className="h-7 gap-1.5 text-xs"
+                onClick={() => { setShowAddJamaah(!showAddJamaah); setNewJamaah(emptyNewJamaah()); setJamaahSearch(""); }}
+              >
+                <Plus className="w-3 h-3" /> Tambah
+              </Button>
+            </div>
           </div>
 
           {/* ── Form tambah jamaah lengkap ─────────────────────────────────── */}
@@ -1024,6 +1170,17 @@ const BookingDetailPanel = ({
             </div>
           )}
 
+          {/* Tombol Refund */}
+          <div className="flex justify-end">
+            <Button
+              size="sm" variant="outline"
+              className="h-7 gap-1.5 text-xs text-red-600 border-red-200 hover:bg-red-50"
+              onClick={() => setShowRefundModal(true)}
+            >
+              <RotateCcw className="w-3 h-3" /> Ajukan Refund
+            </Button>
+          </div>
+
           {/* Histori pembayaran */}
           {paymentSummary.payments.filter((p) => !p.isVoided).length === 0 ? (
             <p className="text-sm text-muted-foreground">Belum ada pembayaran tercatat</p>
@@ -1032,8 +1189,8 @@ const BookingDetailPanel = ({
               {paymentSummary.payments
                 .filter((p) => !p.isVoided)
                 .map((p) => (
-                  <div key={p.id} className="flex items-start justify-between py-2 text-sm">
-                    <div className="space-y-0.5">
+                  <div key={p.id} className="flex items-start justify-between py-2 text-sm group">
+                    <div className="space-y-0.5 flex-1 min-w-0">
                       <span className="font-medium">
                         {PAYMENT_TYPE_LABELS[p.type] ?? p.type}
                       </span>
@@ -1043,16 +1200,97 @@ const BookingDetailPanel = ({
                         {p.notes && <span className="italic">{p.notes}</span>}
                       </div>
                     </div>
-                    <div className="text-right shrink-0 ml-4">
-                      <p className="font-semibold tabular-nums">Rp {p.amount.toLocaleString("id-ID")}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(p.paidAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                      </p>
+                    <div className="text-right shrink-0 ml-4 flex items-center gap-2">
+                      <div>
+                        <p className="font-semibold tabular-nums">Rp {p.amount.toLocaleString("id-ID")}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(p.paidAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleVoidPayment(p.id, p.amount)}
+                        disabled={voidingPaymentId === p.id}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
+                        title="Void / batalkan pembayaran ini"
+                      >
+                        {voidingPaymentId === p.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Ban className="w-3.5 h-3.5" />}
+                      </button>
                     </div>
                   </div>
                 ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Feature 5: Jadwal Cicilan ─────────────────────────────────────── */}
+      {installments.length > 0 && (() => {
+        const INSTL_STATUS: Record<string, { label: string; cls: string }> = {
+          paid:      { label: "Lunas",    cls: "text-green-600 bg-green-50 border-green-200" },
+          overdue:   { label: "Terlambat",cls: "text-red-600   bg-red-50   border-red-200"   },
+          pending:   { label: "Menunggu", cls: "text-amber-600 bg-amber-50 border-amber-200" },
+          cancelled: { label: "Batal",    cls: "text-gray-400  bg-gray-50  border-gray-200"  },
+        };
+        return (
+          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+            <h4 className="font-semibold flex items-center gap-2 text-sm">
+              <CalendarDays className="w-4 h-4 text-primary" /> Jadwal Cicilan ({installments.length})
+            </h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border">
+                    <th className="text-left pb-1.5 font-medium">Cicilan</th>
+                    <th className="text-left pb-1.5 font-medium">Jatuh Tempo</th>
+                    <th className="text-right pb-1.5 font-medium">Jumlah</th>
+                    <th className="text-center pb-1.5 font-medium">Status</th>
+                    <th className="text-left pb-1.5 font-medium">Dibayar</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {installments.map((ins) => {
+                    const cfg = INSTL_STATUS[ins.status] ?? INSTL_STATUS.pending;
+                    return (
+                      <tr key={ins.id}>
+                        <td className="py-1.5 font-medium">#{ins.installmentNumber}</td>
+                        <td className="py-1.5 text-muted-foreground">
+                          {new Date(ins.dueDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        </td>
+                        <td className="py-1.5 text-right tabular-nums font-medium">
+                          Rp {ins.amount.toLocaleString("id-ID")}
+                        </td>
+                        <td className="py-1.5 text-center">
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-medium ${cfg.cls}`}>
+                            {cfg.label}
+                          </span>
+                        </td>
+                        <td className="py-1.5 text-muted-foreground">
+                          {ins.paidAt
+                            ? new Date(ins.paidAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })
+                            : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Feature 6: Dokumen Jemaah ─────────────────────────────────────── */}
+      {pilgrims.length > 0 && (
+        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+          <h4 className="font-semibold flex items-center gap-2 text-sm">
+            <FileText className="w-4 h-4 text-primary" /> Dokumen Jemaah
+          </h4>
+          <PilgrimDocumentPanel
+            bookingId={bookingId}
+            pilgrims={pilgrims.map((p) => ({ id: p.id, name: p.name }))}
+          />
         </div>
       )}
 
@@ -1117,6 +1355,89 @@ const BookingDetailPanel = ({
         onOpenChange={setShowChangeDeparture}
         onSuccess={handleBookingChanged}
       />
+
+      {/* ── Feature 8: Refund Modal ───────────────────────────────────────── */}
+      {showRefundModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-background rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold flex items-center gap-2">
+                <RotateCcw className="w-4 h-4 text-red-500" /> Ajukan Permintaan Refund
+              </h3>
+              <button onClick={() => setShowRefundModal(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Alasan Refund *</Label>
+                <textarea
+                  value={refundForm.reason}
+                  onChange={(e) => setRefundForm((f) => ({ ...f, reason: e.target.value }))}
+                  placeholder="Jelaskan alasan pembatalan / refund…"
+                  rows={3}
+                  className="w-full mt-0.5 text-sm rounded-md border border-input bg-background px-3 py-2 resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Jumlah Refund (Rp) *</Label>
+                <Input
+                  value={refundForm.amount}
+                  onChange={(e) => setRefundForm((f) => ({ ...f, amount: e.target.value }))}
+                  placeholder="0"
+                  className="h-8 text-sm mt-0.5"
+                  type="number"
+                  min="0"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Nama Bank</Label>
+                  <Input
+                    value={refundForm.bankName}
+                    onChange={(e) => setRefundForm((f) => ({ ...f, bankName: e.target.value }))}
+                    placeholder="BCA, Mandiri…"
+                    className="h-8 text-sm mt-0.5"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">No. Rekening</Label>
+                  <Input
+                    value={refundForm.bankAccount}
+                    onChange={(e) => setRefundForm((f) => ({ ...f, bankAccount: e.target.value }))}
+                    placeholder="0123456789"
+                    className="h-8 text-sm mt-0.5"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Nama Pemilik Rekening</Label>
+                <Input
+                  value={refundForm.accountHolder}
+                  onChange={(e) => setRefundForm((f) => ({ ...f, accountHolder: e.target.value }))}
+                  placeholder="Sesuai buku tabungan"
+                  className="h-8 text-sm mt-0.5"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-1">
+              <Button variant="outline" onClick={() => setShowRefundModal(false)} disabled={savingRefund}>
+                Batal
+              </Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white gap-1.5"
+                onClick={handleRefundSubmit}
+                disabled={savingRefund || !refundForm.reason.trim() || !refundForm.amount}
+              >
+                {savingRefund ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                Kirim Permintaan
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── BKG-BUG-05: AlertDialog (menggantikan window.confirm) ────────────── */}
       <AlertDialog
