@@ -128,6 +128,7 @@ interface NewPaymentForm {
   paidAt: string;
   method: string;
   notes: string;
+  proofUrl?: string;
 }
 
 const ROOM_LABELS: Record<string, string> = {
@@ -151,6 +152,7 @@ const emptyNewPayment = (): NewPaymentForm => ({
   paidAt: new Date().toISOString().split("T")[0],
   method: "",
   notes: "",
+  proofUrl: undefined,
 });
 
 const BookingDetailPanel = ({
@@ -210,6 +212,8 @@ const BookingDetailPanel = ({
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
   const [newPayment, setNewPayment] = useState<NewPaymentForm>(emptyNewPayment());
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const proofInputRef = useRef<HTMLInputElement>(null);
 
   // BKG-F03: Notes
   const [notes, setNotes] = useState<string>("");
@@ -433,6 +437,30 @@ const BookingDetailPanel = ({
     );
   };
 
+  // ── Upload bukti pembayaran ───────────────────────────────────────────────
+  const handleProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadingProof(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const uploadRes = await fetch(
+        (import.meta.env.BASE_URL ?? "").replace(/\/$/, "") + "/api/admin/payments/upload-proof",
+        { method: "POST", body: fd, credentials: "include" },
+      );
+      if (!uploadRes.ok) throw new Error((await uploadRes.json())?.error ?? "Upload gagal");
+      const { url } = await uploadRes.json();
+      setNewPayment((p) => ({ ...p, proofUrl: url }));
+      toast.success("Bukti pembayaran berhasil diupload");
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal upload bukti pembayaran");
+    } finally {
+      setUploadingProof(false);
+    }
+  };
+
   // ── Tambah pembayaran manual ──────────────────────────────────────────────
   const handleAddPayment = async () => {
     const amount = parseInt(newPayment.amount.replace(/\D/g, ""));
@@ -445,8 +473,9 @@ const BookingDetailPanel = ({
           type:     newPayment.type,
           amount,
           paidAt:   newPayment.paidAt,
-          method:   newPayment.method || null,
-          notes:    newPayment.notes  || null,
+          method:   newPayment.method || undefined,
+          notes:    newPayment.notes  || undefined,
+          proofUrl: newPayment.proofUrl || undefined,
         }),
       });
       toast.success("Pembayaran berhasil dicatat");
@@ -1157,6 +1186,45 @@ const BookingDetailPanel = ({
                   placeholder="Opsional"
                   className="h-7 text-xs mt-0.5"
                 />
+              </div>
+              {/* Bukti Pembayaran */}
+              <div>
+                <Label className="text-xs">Bukti Pembayaran</Label>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <input
+                    ref={proofInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    className="hidden"
+                    onChange={handleProofUpload}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => proofInputRef.current?.click()}
+                    disabled={uploadingProof || savingPayment}
+                  >
+                    {uploadingProof
+                      ? <Loader2 className="w-3 h-3 animate-spin" />
+                      : <Upload className="w-3 h-3" />}
+                    {uploadingProof ? "Mengupload…" : "Upload Bukti"}
+                  </Button>
+                  {newPayment.proofUrl && (
+                    <a
+                      href={(import.meta.env.BASE_URL ?? "").replace(/\/$/, "") + newPayment.proofUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-primary underline truncate max-w-[140px]"
+                    >
+                      Lihat bukti ↗
+                    </a>
+                  )}
+                  {!newPayment.proofUrl && (
+                    <span className="text-xs text-muted-foreground">JPG/PNG/PDF, maks 15MB</span>
+                  )}
+                </div>
               </div>
               <div className="flex gap-1.5 justify-end pt-1">
                 <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setShowAddPayment(false)} disabled={savingPayment}>

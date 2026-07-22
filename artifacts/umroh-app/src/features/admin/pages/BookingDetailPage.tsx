@@ -301,6 +301,15 @@ const BookingDetailPage = () => {
               {printingInvoice ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5 mr-1.5" />}
               Cetak Invoice
             </Button>
+            <Button
+              size="sm" variant="outline"
+              onClick={() => {
+                const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+                window.open(`${base}/api/admin/bookings/${booking.id}/passport-recommendation`, "_blank");
+              }}
+            >
+              <FileDown className="w-3.5 h-3.5 mr-1.5" /> Surat Rekomendasi Paspor
+            </Button>
             {booking.departureId && (
               <Button size="sm" variant="outline" onClick={() => navigate(`/admin/manifest?departureId=${booking.departureId}`)}>
                 <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Lihat Manifest

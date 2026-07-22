@@ -23,6 +23,7 @@ import {
   desc,
   sql,
 } from "@workspace/db";
+import { generatePassportRecommendationPdf } from "../../lib/pdf/passportRecommendation";
 import {
   BookingListResponse,
   BookingWithDetailsSchema,
@@ -1334,6 +1335,76 @@ router.get("/:id/pic-info", async (req, res) => {
     res.json({ commissionRate, picName });
   } catch (e) {
     sendAdminError(res, "GET /api/admin/bookings/:id/pic-info", e);
+  }
+});
+
+// ── GET /:id/passport-recommendation — Surat Rekomendasi Pembuatan Paspor ─────
+router.get("/:id/passport-recommendation", async (req, res) => {
+  try {
+    const id = req.params.id as string;
+
+    // Fetch booking
+    const [booking] = await db
+      .select({
+        id: bookings.id,
+        bookingCode: bookings.bookingCode,
+        packageTitle: packages.title,
+        departureDate: packageDepartures.departureDate,
+        branchName: branches.name,
+      })
+      .from(bookings)
+      .leftJoin(packages, eq(bookings.packageId, packages.id))
+      .leftJoin(packageDepartures, eq(bookings.departureId, packageDepartures.id))
+      .leftJoin(branches, eq(bookings.branchId, branches.id))
+      .where(or(eq(bookings.id, id), eq(bookings.bookingCode, id.toUpperCase())))
+      .limit(1);
+
+    if (!booking) {
+      res.status(404).json({ error: "Booking not found" });
+      return;
+    }
+
+    // Fetch pilgrims
+    const pilgrims = await db
+      .select({
+        name: bookingPilgrims.name,
+        nik: bookingPilgrims.nik,
+        birthDate: bookingPilgrims.birthDate,
+        gender: bookingPilgrims.gender,
+      })
+      .from(bookingPilgrims)
+      .where(eq(bookingPilgrims.bookingId, booking.id));
+
+    // Fetch tenant branding
+    const brandingRow = await db
+      .select({ key: siteSettings.key, value: siteSettings.value })
+      .from(siteSettings)
+      .where(inArray(siteSettings.key, ["company_name", "company_city"]));
+
+    const branding = Object.fromEntries(brandingRow.map((r) => [r.key, r.value]));
+
+    const pdfBuffer = await generatePassportRecommendationPdf({
+      bookingCode: booking.bookingCode,
+      packageTitle: booking.packageTitle,
+      departureDate: booking.departureDate,
+      pilgrims: pilgrims.map((p) => ({
+        name: p.name,
+        nik: p.nik ?? null,
+        birthDate: p.birthDate ? String(p.birthDate) : null,
+        gender: p.gender ?? null,
+      })),
+      tenantName: branding.company_name ?? "UmrohPlus",
+      city: branding.company_city ?? "Jakarta",
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="surat-rekomendasi-paspor-${booking.bookingCode}.pdf"`,
+    );
+    res.send(pdfBuffer);
+  } catch (e) {
+    sendAdminError(res, "GET /api/admin/bookings/:id/passport-recommendation", e);
   }
 });
 

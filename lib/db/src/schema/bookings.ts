@@ -133,6 +133,7 @@ export const bookingPayments = pgTable("booking_payments", {
   method: text("method"),
   referenceNumber: text("reference_number"),
   notes: text("notes"),
+  proofUrl: text("proof_url"),
   recordedBy: text("recorded_by"),
   isVoided: boolean("is_voided").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }),

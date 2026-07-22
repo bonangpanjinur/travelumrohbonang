@@ -1,4 +1,7 @@
 import { Router } from "express";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
 import {
   db,
   bookings,
@@ -29,7 +32,59 @@ import { journalPaymentVerified } from "../../lib/autoJournal";
 import { emailNotifications } from "../../lib/notifications/emailNotifications";
 import { waNotifications } from "../../lib/notifications/waNotifications";
 
+// ── Multer setup for payment proof uploads ────────────────────────────────────
+function getProofUploadDir(): string {
+  const dir =
+    process.env.VERCEL === "1" || process.cwd().startsWith("/var/task")
+      ? "/tmp/uploads/payment-proofs"
+      : path.join(process.cwd(), "uploads", "payment-proofs");
+  try { fs.mkdirSync(dir, { recursive: true }); } catch {}
+  return dir;
+}
+
+const proofStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, getProofUploadDir()),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || ".bin";
+    cb(null, `${Date.now()}-${crypto.randomUUID().slice(0, 8)}${ext}`);
+  },
+});
+
+const proofUpload = multer({
+  storage: proofStorage,
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    cb(null, allowed.includes(file.mimetype));
+  },
+});
+
 const router = Router({ mergeParams: true });
+
+// ── POST /upload-proof — upload bukti pembayaran ──────────────────────────────
+router.post("/upload-proof", proofUpload.single("file"), async (req: any, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "File tidak diterima atau format tidak didukung (JPG/PNG/PDF)" });
+    }
+    const url = `/api/admin/payments/proof-files/${req.file.filename}`;
+    return res.json({ url, filename: req.file.filename, size: req.file.size });
+  } catch (err) {
+    console.error("[admin/payments] upload-proof error:", err);
+    return res.status(500).json({ error: "Gagal upload bukti pembayaran" });
+  }
+});
+
+// ── GET /proof-files/:filename — serve uploaded proof files ──────────────────
+router.get("/proof-files/:filename", (req: any, res) => {
+  const { filename } = req.params;
+  if (!filename || filename.includes("..") || filename.includes("/")) {
+    return res.status(400).json({ error: "Invalid filename" });
+  }
+  const filePath = path.join(getProofUploadDir(), filename);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File not found" });
+  return res.sendFile(filePath);
+});
 
 router.get("/all", async (req, res) => {
   try {
@@ -404,6 +459,7 @@ router.post("/", validate(AdminRecordPaymentRequest), async (req, res) => {
         method: body.method ?? null,
         referenceNumber: body.referenceNumber ?? null,
         notes: body.notes ?? null,
+        proofUrl: body.proofUrl ?? null,
         recordedBy: adminId ?? null,
         isVoided: false,
         createdAt: new Date(),

@@ -54,9 +54,10 @@ export const AdminRecordPaymentRequest = z.object({
   type: z.enum(["dp", "installment", "settlement"]),
   amount: z.number().int().positive(),
   paidAt: z.string().min(1),
-  method: z.string().optional(),
-  referenceNumber: z.string().optional(),
-  notes: z.string().optional(),
+  method: z.string().nullable().optional(),
+  referenceNumber: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  proofUrl: z.string().nullable().optional(),
 });
 
 export const AdminUpdatePaymentRequest = AdminRecordPaymentRequest.partial();
@@ -72,6 +73,7 @@ export const BookingPaymentSchema = z.object({
   method: z.string().nullable().optional(),
   referenceNumber: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  proofUrl: z.string().nullable().optional(),
   recordedBy: z.string().nullable().optional(),
   isVoided: z.boolean(),
   createdAt: z.union([z.string(), z.date()]).nullable().optional().transform((v) =>
