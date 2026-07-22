@@ -23,8 +23,8 @@ interface BrandingSettings {
 }
 
 const defaultBranding: BrandingSettings = {
-  company_name: "UmrohPlus",
-  tagline: "Travel & Tours",
+  company_name: "Vins Tour Travel",
+  tagline: "Perjalanan Terbaik Menuju Baitullah",
 };
 
 const SEO = ({
