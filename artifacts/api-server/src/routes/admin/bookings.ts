@@ -306,16 +306,18 @@ router.get("/:id", async (req, res) => {
       .from(bookingPilgrims)
       .where(eq(bookingPilgrims.bookingId, id));
 
-    const [user] = await db
-      .select({
-        id: profiles.id,
-        name: profiles.name,
-        email: profiles.email,
-        phone: profiles.phone,
-      })
-      .from(profiles)
-      .where(eq(profiles.id, booking.userId ?? ""))
-      .limit(1);
+    const [user] = booking.userId
+      ? await db
+          .select({
+            id: profiles.id,
+            name: profiles.name,
+            email: profiles.email,
+            phone: profiles.phone,
+          })
+          .from(profiles)
+          .where(eq(profiles.id, booking.userId))
+          .limit(1)
+      : [];
 
     // Compute paymentStatus for the detail page
     const payRes = await db.execute(sql`
