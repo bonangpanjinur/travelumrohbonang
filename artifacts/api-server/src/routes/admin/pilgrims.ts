@@ -32,6 +32,7 @@ const PILGRIM_WRITABLE_FIELDS = [
   "passportNumber",
   "passportExpiry",
   "roomType",
+  "notes",
 ] as const;
 
 function pickPilgrimFields(body: unknown): Record<string, unknown> {

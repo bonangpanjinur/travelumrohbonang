@@ -11,6 +11,7 @@ import {
   bookingRooms,
   bookingPilgrims,
   packageCommissions,
+  agentCommissions,
   profiles,
   branches,
   agents,
@@ -1332,7 +1333,22 @@ router.get("/:id/pic-info", async (req, res) => {
       }
     }
 
-    res.json({ commissionRate, picName });
+    // Commission payout status from agent_commissions
+    let agentCommission: { id: string; status: string; amount: number } | null = null;
+    if (booking.picType === "agen" && booking.picId) {
+      const [commEntry] = await db
+        .select({
+          id: agentCommissions.id,
+          status: agentCommissions.status,
+          amount: agentCommissions.amount,
+        })
+        .from(agentCommissions)
+        .where(eq(agentCommissions.bookingId, id))
+        .limit(1);
+      agentCommission = commEntry ?? null;
+    }
+
+    res.json({ commissionRate, picName, agentCommission });
   } catch (e) {
     sendAdminError(res, "GET /api/admin/bookings/:id/pic-info", e);
   }

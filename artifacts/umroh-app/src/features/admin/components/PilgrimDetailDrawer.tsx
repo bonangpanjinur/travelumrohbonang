@@ -15,7 +15,7 @@ import {
 } from "@/shared/components/ui/select";
 import {
   User, CreditCard, Phone, Mail, Calendar, Globe, Bed,
-  ExternalLink, Pencil, Save, X, Loader2, PlaneTakeoff, Hash,
+  ExternalLink, Pencil, Save, X, Loader2, PlaneTakeoff, Hash, StickyNote,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -52,6 +52,7 @@ export interface FullPilgrim {
   nationality?: string | null;
   seatNumber?: string | null;
   flightSegment?: string | null;
+  notes?: string | null;
 }
 
 interface PilgrimDetailDrawerProps {
@@ -97,6 +98,7 @@ const PilgrimDetailDrawer = ({ pilgrim, onClose, onUpdated }: PilgrimDetailDrawe
   const [editPassportNumber, setEditPassportNumber] = useState("");
   const [editPassportExpiry, setEditPassportExpiry] = useState("");
   const [editNationality,    setEditNationality]    = useState("");
+  const [editNotes,          setEditNotes]          = useState("");
 
   if (!pilgrim) return null;
 
@@ -119,6 +121,7 @@ const PilgrimDetailDrawer = ({ pilgrim, onClose, onUpdated }: PilgrimDetailDrawe
     setEditPassportNumber(pilgrim.passportNumber || "");
     setEditPassportExpiry(pilgrim.passportExpiry ? pilgrim.passportExpiry.slice(0, 10) : "");
     setEditNationality(pilgrim.nationality || "");
+    setEditNotes(pilgrim.notes || "");
     setEditing(true);
   };
 
@@ -139,6 +142,7 @@ const PilgrimDetailDrawer = ({ pilgrim, onClose, onUpdated }: PilgrimDetailDrawe
         passportNumber: editPassportNumber.trim() || null,
         passportExpiry: editPassportExpiry || null,
         nationality:    editNationality.trim() || null,
+        notes:          editNotes.trim() || null,
       };
       await apiFetch(`/api/admin/pilgrims/${pilgrim.id}`, {
         method: "PATCH",
@@ -152,6 +156,7 @@ const PilgrimDetailDrawer = ({ pilgrim, onClose, onUpdated }: PilgrimDetailDrawe
         gender: editGender,
         birthDate: editBirthDate || null,
         passportExpiry: editPassportExpiry || null,
+        notes: editNotes.trim() || null,
       });
     } catch (e: any) {
       toast({ title: "Gagal menyimpan", description: e?.message, variant: "destructive" });
@@ -228,6 +233,15 @@ const PilgrimDetailDrawer = ({ pilgrim, onClose, onUpdated }: PilgrimDetailDrawe
               <InfoRow icon={Globe}          label="Kewarganegaraan" value={pilgrim.nationality} />
               <InfoRow icon={PlaneTakeoff}   label="No. Kursi"       value={pilgrim.seatNumber} />
               <InfoRow icon={PlaneTakeoff}   label="Segmen Penerbangan" value={pilgrim.flightSegment} />
+            </div>
+          )}
+          {/* Notes — full width, shown separately */}
+          {!editing && pilgrim.notes && (
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-1">
+              <p className="text-xs text-amber-700 font-medium flex items-center gap-1">
+                <StickyNote className="w-3 h-3" /> Catatan Internal
+              </p>
+              <p className="text-sm text-amber-900 whitespace-pre-wrap">{pilgrim.notes}</p>
             </div>
           )}
 
@@ -321,6 +335,17 @@ const PilgrimDetailDrawer = ({ pilgrim, onClose, onUpdated }: PilgrimDetailDrawe
                     className="h-8 text-sm"
                   />
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs flex items-center gap-1">
+                  <StickyNote className="w-3 h-3" /> Catatan Internal
+                </Label>
+                <textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Contoh: butuh kursi roda, alergi seafood, mahram dengan Bapak Ahmad…"
+                  className="w-full min-h-[72px] rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                />
               </div>
             </div>
           )}

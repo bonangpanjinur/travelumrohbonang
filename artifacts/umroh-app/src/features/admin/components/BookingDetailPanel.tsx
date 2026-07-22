@@ -169,6 +169,7 @@ const BookingDetailPanel = ({
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
   const [commissionRate, setCommissionRate] = useState<number>(0);
   const [picName, setPicName] = useState<string>("-");
+  const [agentCommission, setAgentCommission] = useState<{ id: string; status: string; amount: number } | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>(branchId || "none");
   const [savingBranch, setSavingBranch] = useState(false);
@@ -287,6 +288,7 @@ const BookingDetailPanel = ({
             nationality: p.nationality ?? null,
             seatNumber: p.seatNumber ?? p.seat_number ?? null,
             flightSegment: p.flightSegment ?? p.flight_segment ?? null,
+            notes: p.notes ?? null,
           }))
         );
         setRooms(
@@ -314,13 +316,13 @@ const BookingDetailPanel = ({
         }))))
         .catch(() => {});
 
-      // Fetch commission rate + PIC name from a dedicated API endpoint
-      // (replaces the old /rest/v1/ direct Supabase calls that required an anon key)
-      apiFetch<{ commissionRate: number; picName: string | null }>(
+      // Fetch commission rate + PIC name + agent commission status
+      apiFetch<{ commissionRate: number; picName: string | null; agentCommission: { id: string; status: string; amount: number } | null }>(
         `/api/admin/bookings/${bookingId}/pic-info`
       ).then((info) => {
         if (info.commissionRate) setCommissionRate(info.commissionRate);
         if (info.picName) setPicName(info.picName);
+        if (info.agentCommission !== undefined) setAgentCommission(info.agentCommission);
       }).catch(() => {});
     } catch (e) {
       console.error("[BookingDetailPanel] fetch error", e);
@@ -784,6 +786,30 @@ const BookingDetailPanel = ({
                   <span className="font-semibold">TOTAL KOMISI</span>
                   <span className="font-bold text-primary">Rp {totalCommission.toLocaleString("id-ID")}</span>
                 </div>
+                {/* Status pembayaran komisi */}
+                <div className="flex justify-between items-center pt-1">
+                  <span className="text-muted-foreground text-xs">Status Komisi</span>
+                  {agentCommission ? (
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                      agentCommission.status === "paid"
+                        ? "bg-green-50 text-green-700 border-green-200"
+                        : agentCommission.status === "approved"
+                        ? "bg-blue-50 text-blue-700 border-blue-200"
+                        : "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}>
+                      {agentCommission.status === "paid" ? "✓ Sudah Dibayar"
+                        : agentCommission.status === "approved" ? "Disetujui"
+                        : "Belum Dibayar"}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground italic">Belum dicatat</span>
+                  )}
+                </div>
+                {agentCommission && agentCommission.status !== "paid" && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Komisi sebesar Rp {(agentCommission.amount || totalCommission).toLocaleString("id-ID")} belum dibayarkan ke agen.
+                  </p>
+                )}
               </>
             )}
           </div>
@@ -984,6 +1010,14 @@ const BookingDetailPanel = ({
                       {p.gender && (
                         <span className="text-muted-foreground text-xs shrink-0">
                           {p.gender === "L" || p.gender?.toLowerCase() === "male" || p.gender === "Laki-laki" ? "L" : "P"}
+                        </span>
+                      )}
+                      {p.notes && (
+                        <span
+                          className="text-amber-500 shrink-0"
+                          title={`Catatan: ${p.notes}`}
+                        >
+                          <FileText className="w-3 h-3" />
                         </span>
                       )}
                       <button

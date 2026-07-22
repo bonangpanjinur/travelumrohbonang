@@ -74,6 +74,7 @@ export const bookingPilgrims = pgTable("booking_pilgrims", {
   // O-10: Seat Assignment — kursi pesawat per jemaah
   seatNumber: text("seat_number"),       // misal: 14A
   flightSegment: text("flight_segment"), // misal: MH-1234 (GO) / SV-7654 (RETURN)
+  notes: text("notes"),                  // catatan internal per jemaah
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_booking_pilgrims_booking_id").on(t.bookingId),
