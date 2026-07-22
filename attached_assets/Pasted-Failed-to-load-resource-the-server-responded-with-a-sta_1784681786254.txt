@@ -1,0 +1,16 @@
+Failed to load resource: the server responded with a status of 401 ()
+/api/admin/departures:1  Failed to load resource: the server responded with a status of 503 ()
+index-Ddl6Xwl4.js:444 [itineraries] departures fetch error: Error: Failed query: select "package_departures"."id", "package_departures"."package_id", "package_departures"."departure_date", "package_departures"."return_date", "package_departures"."quota", "package_departures"."remaining_quota", "package_departures"."status", "package_departures"."muthawif_id", "package_departures"."airline_id", "package_departures"."flight_number", "package_departures"."departure_airport_id", "package_departures"."arrival_airport_id", "packages"."title" from "package_departures" left join "packages" on "package_departures"."package_id" = "packages"."id" order by "package_departures"."departure_date"
+params:  — Kolom belum ada di database production. Jalankan drizzle-kit push ke Supabase production atau tambahkan kolom yang hilang via SQL: ALTER TABLE ... ADD COLUMN ...
+    at ye (index-Ddl6Xwl4.js:39:78958)
+    at async Promise.allSettled (index 1)
+    at async ce (index-Ddl6Xwl4.js:444:43638)
+ce @ index-Ddl6Xwl4.js:444
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/departures:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/packages:1  Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/departures:1  Failed to load resource: the server responded with a status of 503 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
