@@ -1103,6 +1103,100 @@ router.patch("/:id/room", async (req, res) => {
 });
 
 // ── Change departure date ─────────────────────────────────────────────────────
+/**
+ * PATCH /api/admin/bookings/bulk-departure
+ * Pindah banyak booking ke keberangkatan lain sekaligus (BKG-F05)
+ */
+router.patch("/bulk-departure", async (req, res) => {
+  try {
+    const { ids, departureId } = req.body as { ids: string[]; departureId: string };
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json({ error: "ids wajib diisi" });
+      return;
+    }
+    if (!departureId) {
+      res.status(400).json({ error: "departureId wajib diisi" });
+      return;
+    }
+
+    // Validasi keberangkatan tujuan
+    const [newDep] = await db
+      .select({ remainingQuota: packageDepartures.remainingQuota, departureDate: packageDepartures.departureDate })
+      .from(packageDepartures)
+      .where(eq(packageDepartures.id, departureId))
+      .limit(1);
+
+    if (!newDep) {
+      res.status(404).json({ error: "Keberangkatan tidak ditemukan" });
+      return;
+    }
+
+    // Ambil data booking saat ini
+    const currentBookings = await db
+      .select({ id: bookings.id, departureId: bookings.departureId, paxCount: bookings.paxCount })
+      .from(bookings)
+      .where(inArray(bookings.id, ids));
+
+    if (currentBookings.length === 0) {
+      res.status(404).json({ error: "Tidak ada booking yang ditemukan" });
+      return;
+    }
+
+    // Hanya booking yang BENAR-BENAR berpindah (departure saat ini ≠ tujuan)
+    const movingBookings = currentBookings.filter((b) => b.departureId !== departureId);
+    const movingSeats = movingBookings.reduce((sum, b) => sum + (b.paxCount ?? 1), 0);
+
+    // Validasi kuota hanya untuk kursi yang akan benar-benar masuk ke departure tujuan
+    if (movingSeats > 0 && newDep.remainingQuota < movingSeats) {
+      res.status(409).json({
+        error: `Kuota keberangkatan tidak cukup. Sisa ${newDep.remainingQuota} kursi, dibutuhkan ${movingSeats} kursi untuk ${movingBookings.length} booking yang dipindah.`,
+      });
+      return;
+    }
+
+    await db.transaction(async (tx: any) => {
+      if (movingSeats > 0) {
+        // Kembalikan kuota per keberangkatan lama (hanya booking yang berpindah)
+        const oldDepMap = new Map<string, number>();
+        for (const b of movingBookings) {
+          if (b.departureId) {
+            const seats = b.paxCount ?? 1;
+            oldDepMap.set(b.departureId, (oldDepMap.get(b.departureId) ?? 0) + seats);
+          }
+        }
+        for (const [oldDepId, seats] of oldDepMap) {
+          await tx.execute(
+            sql`UPDATE package_departures SET remaining_quota = remaining_quota + ${seats} WHERE id = ${oldDepId}`
+          );
+        }
+        // Kurangi kuota keberangkatan baru — hanya kursi yang benar-benar pindah
+        await tx.execute(
+          sql`UPDATE package_departures SET remaining_quota = GREATEST(0, remaining_quota - ${movingSeats}) WHERE id = ${departureId}`
+        );
+      }
+      // Update semua booking (termasuk yang sudah di tujuan — idempoten)
+      await tx.update(bookings).set({ departureId }).where(inArray(bookings.id, ids));
+      // Audit log hanya untuk yang benar-benar berpindah
+      if (movingBookings.length > 0) {
+        const logs = movingBookings.map((b) => ({
+          id: crypto.randomUUID(),
+          bookingId: b.id,
+          fromStatus: null,
+          toStatus: "departure_changed",
+          changedBy: (req as any).user?.id ?? "admin-bulk",
+          notes: `[Bulk] Keberangkatan diubah ke ${newDep.departureDate}`,
+        }));
+        await tx.insert(bookingStatusLogs).values(logs);
+      }
+    });
+
+    res.json({ message: "Keberangkatan berhasil diubah", updated: currentBookings.length, departureDate: newDep.departureDate });
+  } catch (e) {
+    sendAdminError(res, "PATCH /api/admin/bookings/bulk-departure", e);
+  }
+});
+
 router.patch("/:id/departure", async (req, res) => {
   try {
     const { id } = req.params;

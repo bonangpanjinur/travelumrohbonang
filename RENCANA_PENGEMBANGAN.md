@@ -14,26 +14,15 @@ Sprint 2  [██████████]  10/10 (100%) ✅ SELESAI
 Sprint 3  [██████████]  7/7   (100%) ✅ SELESAI
 Sprint 4  [██████████]  15/15 (100%) ✅ SELESAI
 Backlog   [██████████]  13/13 (100%) ✅ SELESAI
-Booking   [████████░░]  6/8   (75%)  🔄 2 item tersisa
-Keberangkatan [██████░░] 6/8  (75%)  🔄 2 item tersisa
+Booking   [██████████]  8/8   (100%) ✅ SELESAI
+Keberangkatan [██████████] 8/8 (100%) ✅ SELESAI
 ```
 
 ---
 
 ## YANG MASIH TERSISA ❌
 
-### Booking
-
-| ID | Judul | Keterangan | File Terdampak |
-|----|-------|------------|----------------|
-| BKG-F05 | Bulk action tambahan | Pindah keberangkatan massal, export hanya yang dicentang | `Bookings.tsx`, backend endpoint baru |
-
-### Jadwal Keberangkatan
-
-| ID | Judul | Keterangan | File Terdampak |
-|----|-------|------------|----------------|
-| KB-F06 | Master data Muthawif | Endpoint `/api/admin/masterdata/muthawifs` ada, halaman UI belum ada | Halaman baru + route |
-| KB-F08 | Manifest history versi | Riwayat cetak tampil timestamp saja, belum ada diff/snapshot versi | `Manifest.tsx` |
+> **Tidak ada lagi item yang tersisa. Semua fitur sudah selesai diimplementasikan.**
 
 ---
 
@@ -57,7 +46,7 @@ Keberangkatan [██████░░] 6/8  (75%)  🔄 2 item tersisa
 | ✅ BKG-F02 | Tampilan kamar + breakdown total harga |
 | ✅ BKG-F03 | Catatan/Notes booking — UI view + inline edit + `PATCH /:id/notes` |
 | ✅ BKG-F04 | Kolom tambahan di tabel: Status Bayar, jumlah jemaah, HP pemesan |
-| ❌ BKG-F05 | Bulk action tambahan (belum) |
+| ✅ BKG-F05 | Bulk action tambahan (pindah keberangkatan massal + export dipilih) |
 | ✅ BKG-F06 | Shortcut WhatsApp langsung di baris tabel |
 
 ### Fitur Keberangkatan (6/8 Selesai)
@@ -67,9 +56,9 @@ Keberangkatan [██████░░] 6/8  (75%)  🔄 2 item tersisa
 | ✅ KB-F03 | Info penerbangan di form (maskapai, nomor penerbangan, bandara keberangkatan/tujuan) |
 | ✅ KB-F04 | Tombol "Keuangan" & "Checklist" di departure card |
 | ✅ KB-F05 | DepartureDetailDrawer: muthawif, penerbangan, harga kamar, ringkasan manifest, quick links |
-| ❌ KB-F06 | Master data Muthawif — halaman UI (belum) |
+| ✅ KB-F06 | Master data Muthawif — halaman UI (`Muthawifs.tsx` + route `/admin/muthawifs`) |
 | ✅ KB-F07 | Status "Draft" di form keberangkatan + StatusBadge (badge abu-abu) |
-| ❌ KB-F08 | Manifest history dengan diff/snapshot versi (belum) |
+| ✅ KB-F08 | Manifest history dengan diff/snapshot versi (snapshot penuh + delta badge + detail) |
 
 ### Backlog A–I (Semua Selesai)
 

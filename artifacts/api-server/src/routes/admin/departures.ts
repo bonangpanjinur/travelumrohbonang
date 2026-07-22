@@ -390,6 +390,15 @@ router.get("/:id/manifest.pdf", async (req, res) => {
         packageTitle: departure.packageTitle,
         departureDate: departure.departureDate,
         pilgrimCount: pilgrims.length,
+        pilgrims: pilgrims.map((p) => ({
+          id: p.id,
+          bookingCode: bookingCodeById.get(p.bookingId) ?? "-",
+          name: p.name,
+          gender: p.gender,
+          passportNumber: p.passportNumber,
+          roomType: p.roomType,
+          nik: p.nik,
+        })),
       }),
     }).catch((err: any) => console.error("[MN-DB01] Failed to save manifest snapshot:", err));
   } catch (err) {
@@ -901,14 +910,75 @@ router.get("/:id/manifest-history", async (req, res) => {
         id: manifests.id,
         printedAt: manifests.printedAt,
         printedBy: manifests.printedBy,
+        totalPilgrims: manifests.totalPilgrims,
+        snapshotJson: manifests.snapshotJson,
       })
       .from(manifests)
       .where(eq(manifests.departureId, departureId))
       .orderBy(manifests.printedAt);
-    res.json({ history });
+    // Indicate whether each snapshot has full pilgrim data (KB-F08)
+    const mapped = history.map((h) => {
+      let hasPilgrimData = false;
+      try {
+        const parsed = h.snapshotJson ? JSON.parse(h.snapshotJson) : null;
+        hasPilgrimData = Array.isArray(parsed?.pilgrims) && parsed.pilgrims.length > 0;
+      } catch { /* ignore */ }
+      return {
+        id: h.id,
+        printedAt: h.printedAt,
+        printedBy: h.printedBy,
+        totalPilgrims: h.totalPilgrims,
+        hasPilgrimData,
+      };
+    });
+    res.json({ history: mapped });
   } catch (err) {
     console.error("[departures] manifest-history error:", err);
     res.status(500).json({ error: "Failed to fetch manifest history" });
+  }
+});
+
+/**
+ * GET /api/admin/departures/:id/manifest-history/:snapshotId
+ * Detail satu snapshot manifest — termasuk daftar jemaah (KB-F08)
+ */
+router.get("/:id/manifest-history/:snapshotId", async (req, res) => {
+  try {
+    const { snapshotId } = req.params;
+    const [row] = await db
+      .select({
+        id: manifests.id,
+        printedAt: manifests.printedAt,
+        printedBy: manifests.printedBy,
+        totalPilgrims: manifests.totalPilgrims,
+        snapshotJson: manifests.snapshotJson,
+      })
+      .from(manifests)
+      .where(eq(manifests.id, snapshotId))
+      .limit(1);
+
+    if (!row) {
+      res.status(404).json({ error: "Snapshot tidak ditemukan" });
+      return;
+    }
+
+    let parsed: any = {};
+    try { parsed = row.snapshotJson ? JSON.parse(row.snapshotJson) : {}; } catch { /* ignore */ }
+
+    res.json({
+      snapshot: {
+        id: row.id,
+        printedAt: row.printedAt,
+        printedBy: row.printedBy,
+        totalPilgrims: row.totalPilgrims,
+        pilgrims: parsed.pilgrims ?? [],
+        packageTitle: parsed.packageTitle ?? null,
+        departureDate: parsed.departureDate ?? null,
+      },
+    });
+  } catch (err) {
+    console.error("[departures] manifest-history detail error:", err);
+    res.status(500).json({ error: "Failed to fetch manifest snapshot" });
   }
 });
 

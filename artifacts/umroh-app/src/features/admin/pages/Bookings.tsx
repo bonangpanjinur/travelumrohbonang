@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import BookingTable, { type Booking } from "@/features/admin/components/BookingTable";
 import BookingFilters from "@/features/admin/components/BookingFilters";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw, CheckSquare2, Filter } from "lucide-react";
+import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw, CheckSquare2, Filter, ArrowRightLeft } from "lucide-react";
+import BulkChangeDepartureModal from "@/features/admin/components/BulkChangeDepartureModal";
 
 interface PackageOption { id: string; title: string; }
 import { exportToCsv } from "@/shared/lib/exportCsv";
@@ -42,6 +43,31 @@ const AdminBookings = () => {
   const [apiError, setApiError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [showBulkDepartureModal, setShowBulkDepartureModal] = useState(false);
+
+  // Jika semua booking yang dipilih berasal dari paket yang sama, gunakan packageId-nya
+  // supaya modal hanya menampilkan keberangkatan paket tersebut.
+  const selectedPackageId = useMemo(() => {
+    if (selectedIds.length === 0) return null;
+    const selected = bookings.filter((b) => selectedIds.includes(b.id));
+    const pkgIds = [...new Set(selected.map((b) => b.packageId).filter(Boolean))];
+    return pkgIds.length === 1 ? (pkgIds[0] as string) : null;
+  }, [selectedIds, bookings]);
+
+  const handleExportSelected = () => {
+    const selected = bookings.filter((b) => selectedIds.includes(b.id));
+    const headers = ["Kode Booking", "Nama", "Email", "Paket", "Total Harga", "Status", "Tanggal"];
+    const rows = selected.map((b) => [
+      b.bookingCode,
+      b.profile?.name || "-",
+      b.profile?.email || "-",
+      b.package?.title || "-",
+      String(b.totalPrice),
+      b.status || "draft",
+      b.createdAt ? new Date(b.createdAt).toISOString().slice(0, 10) : "",
+    ]);
+    exportToCsv(`bookings-selected-${selected.length}`, headers, rows);
+  };
 
   const handleBulkStatus = async (status: "confirmed" | "cancelled") => {
     if (selectedIds.length === 0) return;
@@ -332,10 +358,10 @@ const AdminBookings = () => {
 
       {/* ── Bulk Action Bar ─────────────────────────────────────────────────── */}
       {selectedIds.length > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+        <div className="flex flex-wrap items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
           <CheckSquare2 className="w-4 h-4 text-primary shrink-0" />
           <span className="text-sm font-medium">{selectedIds.length} booking dipilih</span>
-          <div className="flex gap-2 ml-auto">
+          <div className="flex flex-wrap gap-2 ml-auto">
             <button
               onClick={() => handleBulkStatus("confirmed")}
               className="px-3 py-1.5 text-xs font-medium rounded bg-green-600 text-white hover:bg-green-700 transition-colors"
@@ -347,6 +373,22 @@ const AdminBookings = () => {
               className="px-3 py-1.5 text-xs font-medium rounded bg-destructive text-white hover:bg-destructive/90 transition-colors"
             >
               Batalkan Semua
+            </button>
+            {/* BKG-F05: Pindah keberangkatan massal */}
+            <button
+              onClick={() => setShowBulkDepartureModal(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5" />
+              Pindah Keberangkatan
+            </button>
+            {/* BKG-F05: Export hanya yang dicentang */}
+            <button
+              onClick={handleExportSelected}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded border border-border bg-background hover:bg-muted transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export Dipilih
             </button>
             <button
               onClick={() => setSelectedIds([])}
@@ -449,6 +491,15 @@ const AdminBookings = () => {
         open={bookingOpen}
         onOpenChange={setBookingOpen}
         onSuccess={() => fetchBookings(0)}
+      />
+
+      {/* BKG-F05: Pindah keberangkatan massal */}
+      <BulkChangeDepartureModal
+        open={showBulkDepartureModal}
+        onOpenChange={setShowBulkDepartureModal}
+        bookingIds={selectedIds}
+        packageId={selectedPackageId}
+        onSuccess={() => { setSelectedIds([]); fetchBookings(0); }}
       />
     </div>
   );

@@ -7,7 +7,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Input } from "@/shared/components/ui/input";
-import { Printer, Users, Plane, Calendar, Download, Search, UsersRound, FileText, History } from "lucide-react";
+import { Printer, Users, Plane, Calendar, Download, Search, UsersRound, FileText, History, ChevronDown, ChevronUp, Plus, Minus } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
@@ -105,6 +105,7 @@ const AdminManifest = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
+  const [expandedSnapshotId, setExpandedSnapshotId] = useState<string | null>(null);
 
   // Debounce search — tunggu 400ms setelah user berhenti mengetik
   useEffect(() => {
@@ -143,11 +144,34 @@ const AdminManifest = () => {
   const { data: historyData } = useQuery({
     queryKey: ["manifest-history", selectedDep],
     queryFn: () =>
-      apiFetch<{ history: Array<{ id: string; printedAt: string | null; printedBy: string | null }> }>(
-        `/api/admin/departures/${selectedDep}/manifest-history`
-      ),
+      apiFetch<{
+        history: Array<{
+          id: string;
+          printedAt: string | null;
+          printedBy: string | null;
+          totalPilgrims: number;
+          hasPilgrimData: boolean;
+        }>;
+      }>(`/api/admin/departures/${selectedDep}/manifest-history`),
     enabled: !!selectedDep,
     select: (r) => r.history,
+  });
+
+  // KB-F08: Detail snapshot yang sedang di-expand
+  const { data: snapshotDetail } = useQuery({
+    queryKey: ["manifest-snapshot-detail", expandedSnapshotId],
+    queryFn: () =>
+      apiFetch<{
+        snapshot: {
+          id: string;
+          printedAt: string | null;
+          printedBy: string | null;
+          totalPilgrims: number;
+          pilgrims: Array<{ id: string; bookingCode: string; name: string; gender: string | null; passportNumber: string | null; roomType: string | null }>;
+        };
+      }>(`/api/admin/departures/${selectedDep}/manifest-history/${expandedSnapshotId}`),
+    enabled: !!expandedSnapshotId && !!selectedDep,
+    select: (r) => r.snapshot,
   });
 
   const departures = departuresRes ?? [];
@@ -221,7 +245,7 @@ const AdminManifest = () => {
         )}
       </div>
 
-      {/* Manifest print history panel */}
+      {/* Manifest print history panel — KB-F08: dengan diff/snapshot versi */}
       {showHistory && selectedDep && (
         <div className="mb-4 border rounded-lg p-3 bg-muted/30 print:hidden">
           <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
@@ -231,14 +255,88 @@ const AdminManifest = () => {
             <p className="text-xs text-muted-foreground">Belum ada riwayat cetak manifest untuk keberangkatan ini.</p>
           ) : (
             <div className="space-y-1">
-              {historyData.map((h, idx) => (
-                <div key={h.id ?? idx} className="flex items-center justify-between text-xs py-1 border-b border-border/40 last:border-0">
-                  <span className="text-muted-foreground">
-                    {h.printedAt ? new Date(h.printedAt).toLocaleString("id-ID") : "-"}
-                  </span>
-                  {h.printedBy && <span className="text-muted-foreground">oleh {h.printedBy}</span>}
-                </div>
-              ))}
+              {historyData.map((h, idx) => {
+                // Hitung diff dari versi sebelumnya (jika ada)
+                const prev = historyData[idx - 1];
+                const deltaCount = prev != null ? h.totalPilgrims - prev.totalPilgrims : null;
+                const isExpanded = expandedSnapshotId === h.id;
+
+                return (
+                  <div key={h.id ?? idx} className="border-b border-border/40 last:border-0">
+                    <div className="flex items-center gap-2 py-1.5 text-xs">
+                      <span className="text-muted-foreground min-w-[140px]">
+                        {h.printedAt ? new Date(h.printedAt).toLocaleString("id-ID") : "-"}
+                      </span>
+                      <span className="text-muted-foreground flex-1">
+                        {h.printedBy ? `oleh ${h.printedBy}` : ""}
+                      </span>
+                      <span className="font-medium text-foreground">{h.totalPilgrims} jemaah</span>
+                      {/* Delta badge vs versi sebelumnya */}
+                      {deltaCount !== null && deltaCount !== 0 && (
+                        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                          deltaCount > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                        }`}>
+                          {deltaCount > 0 ? <Plus className="w-2.5 h-2.5" /> : <Minus className="w-2.5 h-2.5" />}
+                          {Math.abs(deltaCount)}
+                        </span>
+                      )}
+                      {/* Tombol lihat detail snapshot */}
+                      {h.hasPilgrimData && (
+                        <button
+                          onClick={() => setExpandedSnapshotId(isExpanded ? null : h.id)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-medium hover:bg-muted transition-colors"
+                        >
+                          {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          {isExpanded ? "Tutup" : "Detail"}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Expanded snapshot detail dengan diff */}
+                    {isExpanded && (
+                      <div className="pb-2 pl-2">
+                        {snapshotDetail?.id === h.id ? (
+                          <div className="space-y-1">
+                            {/* Diff: tampilkan jemaah yang hilang vs versi sblmnya jika ada */}
+                            {snapshotDetail.pilgrims.length === 0 ? (
+                              <p className="text-xs text-muted-foreground italic">Tidak ada data jemaah dalam snapshot ini.</p>
+                            ) : (
+                              <div className="overflow-auto max-h-48">
+                                <table className="w-full text-[11px]">
+                                  <thead>
+                                    <tr className="text-muted-foreground border-b">
+                                      <th className="text-left py-1 pr-2 font-medium">No</th>
+                                      <th className="text-left py-1 pr-2 font-medium">Kode Booking</th>
+                                      <th className="text-left py-1 pr-2 font-medium">Nama</th>
+                                      <th className="text-left py-1 pr-2 font-medium">L/P</th>
+                                      <th className="text-left py-1 pr-2 font-medium">Paspor</th>
+                                      <th className="text-left py-1 font-medium">Kamar</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {snapshotDetail.pilgrims.map((p, i) => (
+                                      <tr key={p.id} className="border-b border-border/30 last:border-0">
+                                        <td className="py-0.5 pr-2 text-muted-foreground">{i + 1}</td>
+                                        <td className="py-0.5 pr-2 font-mono">{p.bookingCode}</td>
+                                        <td className="py-0.5 pr-2 font-medium">{p.name}</td>
+                                        <td className="py-0.5 pr-2">{p.gender === "male" ? "L" : p.gender === "female" ? "P" : "-"}</td>
+                                        <td className="py-0.5 pr-2 font-mono">{p.passportNumber ?? "-"}</td>
+                                        <td className="py-0.5 capitalize">{p.roomType ?? "-"}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground py-1">Memuat detail snapshot...</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
