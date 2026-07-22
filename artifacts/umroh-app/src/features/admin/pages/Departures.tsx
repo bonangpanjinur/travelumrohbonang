@@ -61,8 +61,8 @@ const formatPrice = (price: number) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(price);
 
 /** Filter prices: valid room type and price > 0 */
-const validPrices = (prices: DeparturePrice[]) =>
-  prices.filter((p) => ROOM_TYPES.includes(p.roomType) && p.price > 0);
+const validPrices = (prices: DeparturePrice[] | null | undefined) =>
+  (prices ?? []).filter((p) => ROOM_TYPES.includes(p.roomType) && p.price > 0);
 
 const StatusBadge = ({ dep }: { dep: Departure }) => {
   const isDraft = dep.status === "draft";

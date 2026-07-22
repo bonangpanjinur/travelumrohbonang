@@ -74,8 +74,8 @@ const AdminCheckIn = () => {
   const [departures, setDepartures] = useState<Departure[]>([]);
 
   useEffect(() => {
-    apiFetch<Departure[]>("/api/admin/departures")
-      .then((data) => setDepartures(data || []))
+    apiFetch<{ data: Departure[] }>("/api/admin/departures")
+      .then((res) => setDepartures(res?.data ?? []))
       .catch(() => toast.error("Gagal memuat keberangkatan"));
   }, []);
 
