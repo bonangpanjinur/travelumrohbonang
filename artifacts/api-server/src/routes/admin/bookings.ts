@@ -492,6 +492,7 @@ router.post("/group", async (req, res) => {
       notes,
       branchId,
       agentId,
+      userId,
       pemesanName,
       pemesanPhone,
       pemesanEmail,
@@ -555,6 +556,7 @@ router.post("/group", async (req, res) => {
           bookingCode,
           packageId,
           departureId,
+          userId: userId || null,
           totalPrice: Number(totalPrice) || 0,
           currency: currency || "IDR",
           paymentScheme: paymentScheme || "full",
@@ -966,8 +968,9 @@ router.get("/:id/invoice-data", async (req, res) => {
             b.booking_code, b.total_price, b.status, b.created_at,
             pkg.title      AS package_title,
             dep.departure_date,
-            prof.name      AS customer_name,
-            prof.email     AS customer_email
+            COALESCE(b.pemesan_name, prof.name) AS customer_name,
+            COALESCE(b.pemesan_email, prof.email) AS customer_email,
+            COALESCE(b.pemesan_phone, b.pic_phone) AS customer_phone
           FROM bookings b
           LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
           LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
@@ -1021,6 +1024,7 @@ router.get("/:id/invoice-data", async (req, res) => {
       bookingCode: booking.booking_code,
       customerName: booking.customer_name || "-",
       customerEmail: booking.customer_email || "-",
+      customerPhone: booking.customer_phone || null,
       packageTitle: booking.package_title || "-",
       departureDate: booking.departure_date || null,
       totalPrice: Number(booking.total_price) || 0,

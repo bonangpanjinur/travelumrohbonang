@@ -6,6 +6,7 @@
  */
 import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/shared/lib/apiClient";
+import { useAuth } from "@/shared/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -77,6 +78,7 @@ interface DraftData extends Record<string, unknown> {
   pemesanName: string;
   pemesanPhone: string;
   pemesanEmail: string;
+  pemesanUserId: string;
   groupName: string;
   jamaah: JamaahRow[];
   __step: Step;
@@ -85,7 +87,7 @@ interface DraftData extends Record<string, unknown> {
 const EMPTY_DRAFT: DraftData = {
   packageId: "", departureId: "", paymentScheme: "full",
   branchId: "", agentId: "", notes: "",
-  pemesanName: "", pemesanPhone: "", pemesanEmail: "", groupName: "",
+  pemesanName: "", pemesanPhone: "", pemesanEmail: "", pemesanUserId: "", groupName: "",
   jamaah: [emptyJamaah()],
   __step: 1,
 };
@@ -102,6 +104,7 @@ interface Props {
 
 const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [step, setStep] = useState<Step>(1);
   const [saving, setSaving] = useState(false);
 
@@ -117,17 +120,18 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
   const [profileLoading, setProfileLoading] = useState(false);
 
   // Form state — lifted from draft
-  const [packageId,     setPackageId]     = useState("");
-  const [departureId,   setDepartureId]   = useState("");
-  const [paymentScheme, setPaymentScheme] = useState("full");
-  const [branchId,      setBranchId]      = useState("");
-  const [agentId,       setAgentId]       = useState("");
-  const [notes,         setNotes]         = useState("");
-  const [pemesanName,   setPemesanName]   = useState("");
-  const [pemesanPhone,  setPemesanPhone]  = useState("");
-  const [pemesanEmail,  setPemesanEmail]  = useState("");
-  const [groupName,     setGroupName]     = useState("");
-  const [jamaah,        setJamaah]        = useState<JamaahRow[]>([emptyJamaah()]);
+  const [packageId,      setPackageId]      = useState("");
+  const [departureId,    setDepartureId]    = useState("");
+  const [paymentScheme,  setPaymentScheme]  = useState("full");
+  const [branchId,       setBranchId]       = useState("");
+  const [agentId,        setAgentId]        = useState("");
+  const [notes,          setNotes]          = useState("");
+  const [pemesanName,    setPemesanName]    = useState("");
+  const [pemesanPhone,   setPemesanPhone]   = useState("");
+  const [pemesanEmail,   setPemesanEmail]   = useState("");
+  const [pemesanUserId,  setPemesanUserId]  = useState("");
+  const [groupName,      setGroupName]      = useState("");
+  const [jamaah,         setJamaah]         = useState<JamaahRow[]>([emptyJamaah()]);
 
   const selectedDeparture = departures.find((d) => d.id === departureId);
 
@@ -135,7 +139,7 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
 
   const draftValue: DraftData = {
     packageId, departureId, paymentScheme, branchId, agentId, notes,
-    pemesanName, pemesanPhone, pemesanEmail, groupName, jamaah,
+    pemesanName, pemesanPhone, pemesanEmail, pemesanUserId, groupName, jamaah,
     __step: step,
   };
 
@@ -146,7 +150,8 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
     setPaymentScheme(saved.paymentScheme); setBranchId(saved.branchId);
     setAgentId(saved.agentId); setNotes(saved.notes);
     setPemesanName(saved.pemesanName); setPemesanPhone(saved.pemesanPhone);
-    setPemesanEmail(saved.pemesanEmail); setGroupName(saved.groupName);
+    setPemesanEmail(saved.pemesanEmail); setPemesanUserId(saved.pemesanUserId || "");
+    setGroupName(saved.groupName);
     setJamaah(saved.jamaah?.length ? saved.jamaah : [emptyJamaah()]);
     setStep(saved.__step);
   }, []);
@@ -176,6 +181,42 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
     }).catch(() => {});
   }, [open]);
 
+  // ── Auto-fill pemesan dari akun yang sedang login ──────────────────────────
+  // Hanya diisi otomatis saat form baru dibuka (pemesanName masih kosong).
+
+  useEffect(() => {
+    if (!open || !user || pemesanName) return;
+    const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "";
+    const email = user.email || "";
+    if (!displayName && !email) return;
+
+    // Coba cari profil lengkap (termasuk nomor HP) via search
+    const query = email || displayName;
+    apiFetch<{ data: Profile[] }>(`/api/admin/users?search=${encodeURIComponent(query)}`)
+      .then(({ data }) => {
+        const match = data?.find((p) => p.email === email) ?? data?.[0];
+        if (match) {
+          setPemesanName(match.name || displayName);
+          setPemesanPhone(match.phone || "");
+          setPemesanEmail(match.email || email);
+          setPemesanUserId(match.id);
+          setProfileSearch(match.name || displayName);
+        } else if (displayName || email) {
+          setPemesanName(displayName || email);
+          setPemesanEmail(email);
+          setProfileSearch(displayName || email);
+        }
+      })
+      .catch(() => {
+        if (displayName || email) {
+          setPemesanName(displayName || email);
+          setPemesanEmail(email);
+          setProfileSearch(displayName || email);
+        }
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user]);
+
   useEffect(() => {
     if (!packageId) { setDepartures([]); setDepartureId(""); return; }
     apiFetch<{ data: any[] }>(`/api/admin/packages/${packageId}/departures?status=active&minQuota=1`)
@@ -201,7 +242,7 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
     setStep(1);
     setPackageId(""); setDepartureId(""); setPaymentScheme("full");
     setBranchId(""); setAgentId(""); setNotes("");
-    setPemesanName(""); setPemesanPhone(""); setPemesanEmail(""); setGroupName("");
+    setPemesanName(""); setPemesanPhone(""); setPemesanEmail(""); setPemesanUserId(""); setGroupName("");
     setJamaah([emptyJamaah()]);
     setProfileSearch(""); setProfileResults([]);
     clearDraft();
@@ -213,6 +254,7 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
     setPemesanName(p.name);
     setPemesanPhone(p.phone || "");
     setPemesanEmail(p.email || "");
+    setPemesanUserId(p.id);
     setProfileSearch(p.name);
     setProfileResults([]);
   };
@@ -257,6 +299,7 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
           notes: notes.trim() || null,
           branchId: branchId || null,
           agentId: agentId || null,
+          userId: pemesanUserId || null,
           pemesanName: pemesanName.trim(),
           pemesanPhone: pemesanPhone.trim() || null,
           pemesanEmail: pemesanEmail.trim() || null,
