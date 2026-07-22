@@ -386,12 +386,12 @@ const AdminManifest = () => {
                 const origin = typeof window !== "undefined" ? window.location.origin : "";
                 const qrPayload = JSON.stringify({
                   v: 1,
-                  pid: row.id,
-                  dep: selectedDep,
+                  pilgrim_id: row.id,
+                  departure_id: selectedDep,
                   bc: row.bookingCode,
                   name: row.name,
                   pp: row.passportNumber ?? null,
-                  url: `${origin}/manifest/checkin?pid=${row.id}&dep=${selectedDep}`,
+                  url: `${origin}/manifest/checkin?pilgrim_id=${row.id}&dep=${selectedDep}`,
                 });
                 // Nomor urut global (bukan per halaman)
                 const globalIndex = page * MANIFEST_PAGE_SIZE + i + 1;

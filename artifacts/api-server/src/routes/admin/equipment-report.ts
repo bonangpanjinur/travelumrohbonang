@@ -43,11 +43,9 @@ router.get("/detail", async (req, res) => {
         pe.id             AS "assignmentId",
         pe.status,
         pe.distributed_at AS "distributedAt",
-        -- returned_at / size / quantity are not yet in the DB schema;
-        -- return NULL / defaults so the frontend renders gracefully.
-        NULL::timestamptz  AS "returnedAt",
-        NULL::text         AS "size",
-        1::int             AS "quantity",
+        pe.returned_at    AS "returnedAt",
+        pe.size           AS "size",
+        pe.quantity       AS "quantity",
         pe.notes,
         bp.name           AS "pilgrimName",
         b.booking_code    AS "bookingCode",

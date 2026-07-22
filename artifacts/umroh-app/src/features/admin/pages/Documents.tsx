@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -67,58 +67,27 @@ const Documents = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [expandedPilgrims, setExpandedPilgrims] = useState<Set<string>>(new Set());
-  const [uploadDialog, setUploadDialog] = useState<{ open: boolean; pilgrimId: string; docType: string } | null>(null);
+  const [uploadDialog, setUploadDialog] = useState<{ open: boolean; pilgrimId: string; bookingId: string | null; docType: string } | null>(null);
   const [verifyDialog, setVerifyDialog] = useState<{ open: boolean; doc: DocRecord } | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadExpiry, setUploadExpiry] = useState("");
   const [rejectNotes, setRejectNotes] = useState("");
   const [uploading, setUploading] = useState(false);
 
-  // Fetch pilgrims with their documents
+  // Fetch pilgrims with their documents via API (B-03 fix: replaces broken Supabase nested select)
   const { data: pilgrims = [], isLoading } = useQuery({
     queryKey: ["pilgrim-documents", search, statusFilter],
     queryFn: async () => {
-      // Get pilgrims with booking info
-      let pilgrimQuery = supabase
-        .from("booking_pilgrims")
-        .select("*, bookings(booking_code, packages(title))")
-        .order("created_at", { ascending: false });
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      const result = await apiFetch<PilgrimWithDocs[]>(
+        `/api/admin/pilgrim-documents/pilgrims?${params}`,
+      );
 
-      if (search) {
-        pilgrimQuery = pilgrimQuery.or(`name.ilike.%${search}%,passport_number.ilike.%${search}%`);
-      }
-
-      const { data: pilgrimData, error: pilgrimError } = await pilgrimQuery;
-      if (pilgrimError) throw pilgrimError;
-
-      // Get all documents
-      const pilgrimIds = (pilgrimData || []).map((p: any) => p.id);
-      let docsData: any[] = [];
-      if (pilgrimIds.length > 0) {
-        const { data, error } = await supabase
-          .from("pilgrim_documents")
-          .select("*")
-          .in("pilgrim_id", pilgrimIds);
-        if (error) throw error;
-        docsData = data || [];
-      }
-
-      // Map pilgrims with docs
-      const result: PilgrimWithDocs[] = (pilgrimData || []).map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        passport_number: p.passport_number,
-        passport_expiry: p.passport_expiry,
-        booking_id: p.booking_id,
-        booking_code: p.bookings?.booking_code,
-        package_title: p.bookings?.packages?.title,
-        documents: docsData.filter((d: any) => d.pilgrim_id === p.id),
-      }));
-
-      // Filter by document status
+      // Client-side status filter
       if (statusFilter === "incomplete") {
         return result.filter(p => {
-          const uploadedTypes = p.documents.filter(d => d.status !== "belum_upload").map(d => d.doc_type);
+          const uploadedTypes = p.documents.filter(d => d.status !== "pending").map(d => d.doc_type);
           return DOC_TYPES.some(dt => !uploadedTypes.includes(dt.value));
         });
       }
@@ -129,65 +98,40 @@ const Documents = () => {
         );
       }
       if (statusFilter === "verified") {
-        return result.filter(p => {
-          const requiredDocs = ["paspor", "ktp", "foto"];
-          return requiredDocs.every(dt => p.documents.some(d => d.doc_type === dt && d.status === "verified"));
-        });
+        const requiredDocs = ["paspor", "ktp", "foto"];
+        return result.filter(p =>
+          requiredDocs.every(dt => p.documents.some(d => d.doc_type === dt && d.status === "verified"))
+        );
       }
 
       return result;
     },
   });
 
-  // Upload document mutation
+  // Upload document mutation — file goes to /api/admin/pilgrim-documents/upload, record saved via PUT
   const uploadMutation = useMutation({
-    mutationFn: async ({ pilgrimId, docType, file, expiryDate }: {
-      pilgrimId: string; docType: string; file: File; expiryDate?: string;
+    mutationFn: async ({ pilgrimId, bookingId, docType, file }: {
+      pilgrimId: string; bookingId: string | null; docType: string; file: File; expiryDate?: string;
     }) => {
-      const fileExt = file.name.split(".").pop();
-      const filePath = `${pilgrimId}/${docType}_${Date.now()}.${fileExt}`;
+      // 1. Upload file to server storage
+      const formData = new FormData();
+      formData.append("file", file);
+      const { url } = await apiFetch<{ url: string }>(
+        "/api/admin/pilgrim-documents/upload",
+        { method: "POST", body: formData },
+      );
 
-      const { error: uploadError } = await supabase.storage
-        .from("pilgrim-documents")
-        .upload(filePath, file);
-      if (uploadError) throw uploadError;
-
-      // pilgrim-documents is PRIVATE; persist only the storage path. View
-      // actions generate short-lived signed URLs and log access.
-      const publicUrl = filePath;
-
-      // Check if doc record exists
-      const { data: existing } = await supabase
-        .from("pilgrim_documents")
-        .select("id")
-        .eq("pilgrim_id", pilgrimId)
-        .eq("doc_type", docType)
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from("pilgrim_documents")
-          .update({
-            file_url: publicUrl,
-            file_name: file.name,
-            status: "uploaded",
-            expiry_date: expiryDate || null,
-          })
-          .eq("id", existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("pilgrim_documents")
-          .insert({
-            pilgrim_id: pilgrimId,
-            doc_type: docType,
-            file_url: publicUrl,
-            file_name: file.name,
-            status: "uploaded",
-            expiry_date: expiryDate || null,
-          });
-        if (error) throw error;
-      }
+      // 2. Upsert document record
+      await apiFetch("/api/admin/pilgrim-documents", {
+        method: "PUT",
+        body: JSON.stringify({
+          pilgrimId,
+          bookingId: bookingId || undefined,
+          documentType: docType,
+          fileUrl: url,
+          status: "submitted",
+        }),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pilgrim-documents"] });
@@ -202,15 +146,10 @@ const Documents = () => {
   // Verify/reject mutation
   const verifyMutation = useMutation({
     mutationFn: async ({ docId, status, notes }: { docId: string; status: string; notes?: string }) => {
-      const { error } = await supabase
-        .from("pilgrim_documents")
-        .update({
-          status,
-          notes: notes || null,
-          verified_at: new Date().toISOString(),
-        })
-        .eq("id", docId);
-      if (error) throw error;
+      await apiFetch(`/api/admin/pilgrim-documents/${docId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, notes }),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pilgrim-documents"] });
@@ -221,27 +160,14 @@ const Documents = () => {
     onError: (e: any) => toast.error("Gagal update: " + e.message),
   });
 
-  // Initialize documents for a pilgrim
+  // Initialize document placeholders for a pilgrim
   const initDocsMutation = useMutation({
-    mutationFn: async (pilgrimId: string) => {
-      const { data: existing } = await supabase
-        .from("pilgrim_documents")
-        .select("doc_type")
-        .eq("pilgrim_id", pilgrimId);
-
-      const existingTypes = (existing || []).map((d: any) => d.doc_type);
-      const missing = DOC_TYPES.filter(dt => !existingTypes.includes(dt.value));
-
-      if (missing.length > 0) {
-        const { error } = await supabase
-          .from("pilgrim_documents")
-          .insert(missing.map(dt => ({
-            pilgrim_id: pilgrimId,
-            doc_type: dt.value,
-            status: "belum_upload",
-          })));
-        if (error) throw error;
-      }
+    mutationFn: async ({ pilgrimId, bookingId }: { pilgrimId: string; bookingId: string | null }) => {
+      if (!bookingId) return;
+      await apiFetch(`/api/admin/pilgrim-documents/init-pilgrim/${pilgrimId}`, {
+        method: "POST",
+        body: JSON.stringify({ bookingId }),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pilgrim-documents"] });
@@ -366,7 +292,7 @@ const Documents = () => {
                   onClick={() => {
                     togglePilgrim(pilgrim.id);
                     if (!isExpanded && pilgrim.documents.length === 0) {
-                      initDocsMutation.mutate(pilgrim.id);
+                      initDocsMutation.mutate({ pilgrimId: pilgrim.id, bookingId: pilgrim.booking_id });
                     }
                   }}
                   className="w-full p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors text-left"
@@ -470,7 +396,7 @@ const Documents = () => {
                               <TableCell className="text-right">
                                 <div className="flex gap-1 justify-end">
                                   <Button size="sm" variant="outline"
-                                    onClick={() => setUploadDialog({ open: true, pilgrimId: pilgrim.id, docType: dt.value })}>
+                                    onClick={() => setUploadDialog({ open: true, pilgrimId: pilgrim.id, bookingId: pilgrim.booking_id, docType: dt.value })}>
                                     <Upload className="w-3 h-3 mr-1" />Upload
                                   </Button>
                                   {doc && doc.status === "uploaded" && (
@@ -522,6 +448,7 @@ const Documents = () => {
                 setUploading(true);
                 uploadMutation.mutate({
                   pilgrimId: uploadDialog.pilgrimId,
+                  bookingId: uploadDialog.bookingId,
                   docType: uploadDialog.docType,
                   file: uploadFile,
                   expiryDate: uploadExpiry || undefined,

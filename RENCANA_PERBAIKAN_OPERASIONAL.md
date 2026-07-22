@@ -119,11 +119,11 @@ Menu Operasional (19 item) sekarang mengikuti alur kerja yang logis:
 
 ### Sprint Berikutnya — Critical & High (B-01, B-02, B-03)
 
-| Task | File | Estimasi |
-|------|------|----------|
-| Fix QR key mismatch (B-01) | `CheckIn.tsx` + `Manifest.tsx` | 1 jam |
-| Migrasi DB kolom equipment (B-02) | `lib/db/schema` + Drizzle push | 2 jam |
-| Fix relasi query Documents.tsx (B-03) | `AdminDocuments.tsx` | 2 jam |
+| Task | File | Status |
+|------|------|--------|
+| Fix QR key mismatch (B-01) | `Manifest.tsx` | ✅ SELESAI |
+| Migrasi DB kolom equipment (B-02) | `lib/db/schema/pilgrim-equipment.ts` + drizzle push | ✅ SELESAI |
+| Fix relasi query Documents.tsx (B-03) | `Documents.tsx` + new API endpoint | ✅ SELESAI |
 
 ### Sprint +1 — Medium (B-04 s/d B-07)
 

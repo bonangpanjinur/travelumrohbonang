@@ -4,7 +4,7 @@
  * tanpa batasan kepemilikan (admin bypass).
  */
 import { Router } from "express";
-import { db, pilgrimDocuments, eq, and } from "@workspace/db";
+import { db, pilgrimDocuments, bookingPilgrims, bookings, packages, eq, and, inArray } from "@workspace/db";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
@@ -61,6 +61,148 @@ router.get("/files/:filename", (req: any, res) => {
   const filePath = path.join(getUploadDir(), req.params.filename);
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File tidak ditemukan" });
   res.sendFile(filePath);
+});
+
+/**
+ * GET /api/admin/pilgrim-documents/pilgrims
+ * Mengembalikan semua jemaah beserta info booking, paket, dan dokumen mereka.
+ * Query params: search (nama/paspor), status (filter client-side)
+ */
+router.get("/pilgrims", async (req: any, res) => {
+  try {
+    const { search } = req.query as Record<string, string | undefined>;
+
+    // Join booking_pilgrims → bookings → packages
+    const pilgrimRows = await db
+      .select({
+        id: bookingPilgrims.id,
+        name: bookingPilgrims.name,
+        passport_number: bookingPilgrims.passportNumber,
+        passport_expiry: bookingPilgrims.passportExpiry,
+        booking_id: bookingPilgrims.bookingId,
+        booking_code: bookings.bookingCode,
+        package_title: packages.title,
+      })
+      .from(bookingPilgrims)
+      .leftJoin(bookings, eq(bookingPilgrims.bookingId, bookings.id))
+      .leftJoin(packages, eq(bookings.packageId, packages.id))
+      .orderBy(bookingPilgrims.createdAt);
+
+    // Apply search filter
+    const filtered = search
+      ? pilgrimRows.filter(
+          (p) =>
+            p.name?.toLowerCase().includes(search.toLowerCase()) ||
+            p.passport_number?.toLowerCase().includes(search.toLowerCase()),
+        )
+      : pilgrimRows;
+
+    const pilgrimIds = filtered.map((p) => p.id);
+
+    // Batch-fetch documents for all filtered pilgrims
+    let docRows: any[] = [];
+    if (pilgrimIds.length > 0) {
+      const raw = await db
+        .select()
+        .from(pilgrimDocuments)
+        .where(inArray(pilgrimDocuments.pilgrimId, pilgrimIds));
+
+      // Map to frontend-compatible snake_case shape
+      docRows = raw.map((d) => ({
+        id: d.id,
+        pilgrim_id: d.pilgrimId,
+        doc_type: d.documentType,
+        file_url: d.fileUrl,
+        file_name: null, // not stored in schema
+        status: d.status,
+        expiry_date: null, // not stored in schema
+        notes: d.notes,
+        verified_by: d.verifiedBy,
+        verified_at: d.verifiedAt,
+        created_at: d.createdAt,
+        updated_at: null,
+      }));
+    }
+
+    // Attach documents to each pilgrim
+    const result = filtered.map((p) => ({
+      ...p,
+      documents: docRows.filter((d) => d.pilgrim_id === p.id),
+    }));
+
+    return res.json(result);
+  } catch (err) {
+    console.error("[pilgrim-documents] GET /pilgrims error:", err);
+    return res.status(500).json({ error: "Gagal memuat data jemaah" });
+  }
+});
+
+/**
+ * POST /api/admin/pilgrim-documents/init-pilgrim/:pilgrimId
+ * Buat placeholder dokumen (status: pending) untuk semua tipe dokumen
+ * yang belum ada untuk jemaah ini.
+ * Body: { bookingId }
+ */
+router.post("/init-pilgrim/:pilgrimId", async (req: any, res) => {
+  const { pilgrimId } = req.params;
+  const { bookingId } = req.body as Record<string, string | undefined>;
+  if (!bookingId) return res.status(400).json({ error: "bookingId diperlukan" });
+
+  const DOC_TYPES = ["paspor", "visa", "ktp", "foto", "surat_mahram", "lainnya"];
+
+  try {
+    const existing = await db
+      .select({ documentType: pilgrimDocuments.documentType })
+      .from(pilgrimDocuments)
+      .where(eq(pilgrimDocuments.pilgrimId, pilgrimId));
+
+    const existingTypes = existing.map((d) => d.documentType);
+    const missing = DOC_TYPES.filter((t) => !existingTypes.includes(t));
+
+    if (missing.length > 0) {
+      await db.insert(pilgrimDocuments).values(
+        missing.map((t) => ({
+          id: crypto.randomUUID(),
+          pilgrimId,
+          bookingId,
+          documentType: t,
+          status: "pending",
+          createdAt: new Date(),
+        })),
+      );
+    }
+
+    return res.json({ message: "Dokumen diinisialisasi", count: missing.length });
+  } catch (err) {
+    console.error("[pilgrim-documents] POST /init-pilgrim error:", err);
+    return res.status(500).json({ error: "Gagal inisialisasi dokumen" });
+  }
+});
+
+/**
+ * PATCH /api/admin/pilgrim-documents/:docId
+ * Update status dokumen (verified / rejected) beserta catatan.
+ * Body: { status, notes? }
+ */
+router.patch("/:docId", async (req: any, res) => {
+  const { status, notes } = req.body as Record<string, string | undefined>;
+  if (!status) return res.status(400).json({ error: "status diperlukan" });
+  try {
+    const [updated] = await db
+      .update(pilgrimDocuments)
+      .set({
+        status: status as any,
+        notes: notes || null,
+        verifiedAt: new Date(),
+      })
+      .where(eq(pilgrimDocuments.id, req.params.docId))
+      .returning();
+    if (!updated) return res.status(404).json({ error: "Dokumen tidak ditemukan" });
+    return res.json({ message: "Status diperbarui", doc: updated });
+  } catch (err) {
+    console.error("[pilgrim-documents] PATCH error:", err);
+    return res.status(500).json({ error: "Gagal update dokumen" });
+  }
 });
 
 /** GET /api/admin/pilgrim-documents?pilgrimId=:id */
