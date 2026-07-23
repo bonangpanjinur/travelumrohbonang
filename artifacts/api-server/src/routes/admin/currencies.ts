@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db, currencies, eq } from "@workspace/db";
+import { syncExchangeRates } from "../../lib/exchangeRateCron";
 
 const router = Router();
 
@@ -42,6 +43,39 @@ router.delete("/:id", async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete currency" });
+  }
+});
+
+/**
+ * F-14: Sinkronisasi kurs otomatis dari Open Exchange Rates API.
+ * Dapat dipanggil manual dari halaman admin Mata Uang.
+ *
+ * Returns 200 when at least one currency was updated (partial errors tolerated).
+ * Returns 502 when the upstream fetch itself failed (zero updates possible).
+ */
+router.post("/sync-rates", async (req, res) => {
+  try {
+    const result = await syncExchangeRates();
+
+    // If no currencies were updated AND there are errors, the sync failed entirely.
+    if (result.updated === 0 && result.errors.length > 0) {
+      res.status(502).json({
+        success: false,
+        updated: 0,
+        errors: result.errors,
+        message: "Sinkronisasi kurs gagal — tidak ada data yang berhasil diperbarui",
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      updated: result.updated,
+      errors: result.errors,
+      syncedAt: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message ?? "Gagal sinkronisasi kurs" });
   }
 });
 

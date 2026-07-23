@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/shared/components/ui/badge";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 import { toast } from "@/shared/hooks/use-toast";
-import { Coins, Plus, Pencil, Trash2 } from "lucide-react";
+import { Coins, Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
 import { useCurrency, type Currency } from "@/shared/hooks/useCurrency";
 
 const empty = { code: "", name: "", symbol: "", rateToIdr: 1, isDefault: false, isActive: true };
@@ -23,12 +23,14 @@ const AdminCurrencies = () => {
   const [editing, setEditing] = useState<Currency | null>(null);
   const [form, setForm] = useState<any>(empty);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const data = await apiFetch<any[]>("/api/admin/currencies");
-      setItems((data || []).map((c) => ({
+      const mapped = (data || []).map((c) => ({
         id: c.id,
         code: c.code,
         name: c.name,
@@ -36,7 +38,17 @@ const AdminCurrencies = () => {
         rate_to_idr: c.rateToIdr,
         is_default: c.isDefault,
         is_active: c.isActive,
-      })));
+        rate_updated_at: c.rateUpdatedAt ?? null,
+      }));
+      setItems(mapped);
+
+      // Ambil timestamp sync terakhir dari semua non-IDR currencies
+      const synced = mapped
+        .filter((c) => c.code !== "IDR" && c.rate_updated_at)
+        .map((c) => new Date(c.rate_updated_at!).getTime());
+      if (synced.length > 0) {
+        setLastSyncedAt(new Date(Math.max(...synced)).toISOString());
+      }
     } catch (e: any) {
       toast({ title: "Gagal memuat", description: e.message, variant: "destructive" });
     } finally {
@@ -78,7 +90,6 @@ const AdminCurrencies = () => {
           body: JSON.stringify(payload),
         });
       }
-      
       toast({ title: editing ? "Mata uang diperbarui" : "Mata uang ditambahkan" });
       setOpen(false);
       await fetchData();
@@ -101,6 +112,45 @@ const AdminCurrencies = () => {
     }
   };
 
+  const handleSyncRates = async () => {
+    setSyncing(true);
+    try {
+      const result = await apiFetch<{ success: boolean; updated: number; errors: string[]; syncedAt?: string; message?: string }>(
+        "/api/admin/currencies/sync-rates",
+        { method: "POST" }
+      );
+      if (!result.success) {
+        toast({
+          title: "Sinkronisasi kurs gagal",
+          description: result.message ?? result.errors?.slice(0, 2).join(", "),
+          variant: "destructive",
+        });
+        return;
+      }
+      const errMsg = result.errors?.length > 0
+        ? ` (${result.errors.length} gagal: ${result.errors.slice(0, 2).join(", ")})`
+        : "";
+      toast({
+        title: `Kurs berhasil diperbarui — ${result.updated} mata uang`,
+        description: `Data dari Open Exchange Rates API${errMsg}`,
+      });
+      if (result.syncedAt) setLastSyncedAt(result.syncedAt);
+      await fetchData();
+      await refresh();
+    } catch (e: any) {
+      toast({ title: "Gagal sinkronisasi kurs", description: e.message, variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const fmtDate = (iso: string) =>
+    new Intl.DateTimeFormat("id-ID", {
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+      timeZone: "Asia/Jakarta",
+    }).format(new Date(iso));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -108,8 +158,21 @@ const AdminCurrencies = () => {
           <h1 className="text-3xl font-bold tracking-tight">Mata Uang</h1>
           <p className="text-muted-foreground mt-1">Kelola mata uang dan kurs konversi ke IDR.</p>
         </div>
-        <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" />Tambah</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleSyncRates} disabled={syncing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Memperbarui..." : "Perbarui Kurs"}
+          </Button>
+          <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" />Tambah</Button>
+        </div>
       </div>
+
+      {lastSyncedAt && (
+        <p className="text-sm text-muted-foreground">
+          Kurs terakhir diperbarui: <span className="font-medium">{fmtDate(lastSyncedAt)}</span> WIB
+          {" "}· Sumber: Open Exchange Rates · Otomatis setiap hari 06:00 WIB
+        </p>
+      )}
 
       <Card>
         <CardHeader>
@@ -127,6 +190,7 @@ const AdminCurrencies = () => {
                     <TableHead>Nama</TableHead>
                     <TableHead>Simbol</TableHead>
                     <TableHead>1 unit = IDR</TableHead>
+                    <TableHead>Terakhir Update Kurs</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
@@ -138,6 +202,14 @@ const AdminCurrencies = () => {
                       <TableCell>{c.name}</TableCell>
                       <TableCell>{c.symbol}</TableCell>
                       <TableCell>{new Intl.NumberFormat("id-ID").format(c.rate_to_idr)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {c.code === "IDR"
+                          ? "—"
+                          : c.rate_updated_at
+                          ? fmtDate(c.rate_updated_at)
+                          : <span className="italic">Belum disinkronkan</span>
+                        }
+                      </TableCell>
                       <TableCell className="space-x-1">
                         {c.is_default && <Badge variant="default">Default</Badge>}
                         {c.is_active ? <Badge variant="secondary">Aktif</Badge> : <Badge variant="outline">Nonaktif</Badge>}
@@ -178,7 +250,7 @@ const AdminCurrencies = () => {
             <div>
               <Label>1 unit = ... IDR</Label>
               <Input type="number" step="0.01" value={form.rateToIdr} onChange={(e) => setForm({ ...form, rateToIdr: Number(e.target.value) })} />
-              <p className="text-xs text-muted-foreground mt-1">Contoh: untuk USD isi sekitar 15800</p>
+              <p className="text-xs text-muted-foreground mt-1">Contoh: untuk USD isi sekitar 16000. Atau klik "Perbarui Kurs" untuk mengisi otomatis.</p>
             </div>
             <div className="flex items-center justify-between">
               <Label>Mata uang default</Label>

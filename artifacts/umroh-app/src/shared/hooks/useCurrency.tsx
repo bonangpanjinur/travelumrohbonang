@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 
 export interface Currency {
   id: string;
@@ -9,6 +9,7 @@ export interface Currency {
   rate_to_idr: number;
   is_default: boolean;
   is_active: boolean;
+  rate_updated_at?: string | null;
 }
 
 interface CurrencyContextType {
@@ -28,17 +29,29 @@ export const CurrencyProvider = ({ children }: { children: ReactNode }) => {
   const [current, setCurrent] = useState<Currency | null>(null);
 
   const refresh = useCallback(async () => {
-    const { data } = await supabase
-      .from("currencies")
-      .select("*")
-      .eq("is_active", true)
-      .order("is_default", { ascending: false })
-      .order("code");
-    const list = (data || []) as Currency[];
-    setCurrencies(list);
-    const stored = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
-    const picked = list.find((c) => c.code === stored) || list.find((c) => c.is_default) || list[0] || null;
-    setCurrent(picked);
+    try {
+      // Use public /api/currencies (miscRouter, no auth) so CurrencyProvider
+      // works for all users — public, jamaah, and admin alike.
+      const data = await apiFetch<any[]>("/api/currencies");
+      const list: Currency[] = (data || [])
+        .sort((a: any, b: any) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0) || a.code.localeCompare(b.code))
+        .map((c: any) => ({
+          id: c.id,
+          code: c.code,
+          name: c.name,
+          symbol: c.symbol,
+          rate_to_idr: c.rateToIdr ?? 1,
+          is_default: c.isDefault ?? false,
+          is_active: c.isActive ?? true,
+          rate_updated_at: c.rateUpdatedAt ?? null,
+        }));
+      setCurrencies(list);
+      const stored = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+      const picked = list.find((c) => c.code === stored) || list.find((c) => c.is_default) || list[0] || null;
+      setCurrent(picked);
+    } catch {
+      // silently fail — non-critical for public pages
+    }
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);

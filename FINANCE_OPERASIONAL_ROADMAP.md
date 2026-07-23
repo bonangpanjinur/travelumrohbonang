@@ -29,7 +29,7 @@
 | F-11 | Pajak (PPN/PPh) & Faktur Pajak | 🔲 Belum |
 | F-12 | Budget & Proyeksi Cash Flow | ✅ Selesai |
 | F-13 | Nomor Invoice Otomatis per Tenant | ✅ Selesai |
-| F-14 | Multi-Currency Terintegrasi | 🔲 Belum |
+| F-14 | Multi-Currency Terintegrasi | ✅ Selesai |
 | F-15 | Export ke Software Akuntansi | ✅ Selesai |
 
 ### Modul Operasional
@@ -425,14 +425,28 @@ artifacts/api-server/src/routes/admin/bookings.ts  ← invoice-data endpoint
 
 ---
 
-### F-14 — Multi-Currency Terintegrasi
+### F-14 — Multi-Currency Terintegrasi ✅ Selesai
 
-**Prioritas: Rendah | Estimasi: 2 hari**
+**Verifikasi 23 Juli 2026:** Sudah diimplementasi penuh.
 
-- Tabel `currencies` sudah ada, belum dipakai di transaksi
-- Tambah `currency_code` + `exchange_rate` ke `bookings` dan `package_costs`
-- Kurs otomatis via Bank Indonesia API (daily update)
-- Laporan dalam IDR + tampilan harga asli mata uang asing
+**Implementasi:**
+- Kolom `exchange_rate` (snapshot kurs saat booking) ditambah ke tabel `bookings`
+- Kolom `rate_updated_at` ditambah ke tabel `currencies` untuk tracking kapan kurs terakhir diperbarui
+- `POST /api/admin/currencies/sync-rates` — sinkronisasi kurs dari Open Exchange Rates API (gratis, tanpa API key); mengembalikan `{ updated, errors, syncedAt }`
+- Cron harian 06:00 WIB: `startExchangeRateCron()` — auto-update `rate_to_idr` + `rate_updated_at` untuk semua mata uang aktif (kecuali IDR)
+- Booking create (single & group): otomatis snapshot `exchangeRate` dari DB saat booking dibuat
+- `useCurrency` hook: migrasi dari Supabase direct → `apiFetch("/api/admin/currencies")` agar konsisten dengan pola CMS
+- Halaman admin Mata Uang: tombol "Perbarui Kurs" (trigger manual sync), kolom "Terakhir Update Kurs", info sumber data + jadwal otomatis
+
+```
+lib/db/src/schema/masterdata.ts                       ← rateUpdatedAt di currencies
+lib/db/src/schema/bookings.ts                         ← exchangeRate di bookings
+artifacts/api-server/src/lib/exchangeRateCron.ts      ← cron + syncExchangeRates()
+artifacts/api-server/src/routes/admin/currencies.ts   ← POST /sync-rates
+artifacts/api-server/src/index.ts                     ← startExchangeRateCron()
+artifacts/umroh-app/src/shared/hooks/useCurrency.tsx  ← apiFetch (bukan supabase direct)
+artifacts/umroh-app/src/features/admin/pages/Currencies.tsx ← sync button + last updated
+```
 
 ---
 

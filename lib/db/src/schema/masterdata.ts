@@ -102,6 +102,7 @@ export const currencies = pgTable("currencies", {
   isDefault: boolean("is_default").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }),
+  rateUpdatedAt: timestamp("rate_updated_at", { withTimezone: true }),
 }, (t) => [
   uniqueIndex("uq_currencies_code").on(t.code),
 ]);

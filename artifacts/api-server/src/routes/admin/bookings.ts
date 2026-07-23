@@ -15,6 +15,7 @@ import {
   profiles,
   branches,
   agents,
+  currencies,
   eq,
   and,
   or,
@@ -404,6 +405,18 @@ router.post("/", async (req, res) => {
     const hex = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
     const bookingCode = `BNG-${yymm}-${hex}`;
 
+    // F-14: Snapshot exchange rate at booking time
+    const bookingCurrency = currency || "IDR";
+    let exchangeRate = 1;
+    if (bookingCurrency !== "IDR") {
+      const [currRow] = await db
+        .select({ rateToIdr: currencies.rateToIdr })
+        .from(currencies)
+        .where(eq(currencies.code, bookingCurrency))
+        .limit(1);
+      if (currRow?.rateToIdr) exchangeRate = currRow.rateToIdr;
+    }
+
     // Pemesan name: from explicit pemesanName field, else from customerName
     const resolvedPemesanName = (req.body.pemesanName || customerName || null) as string | null;
     const resolvedPemesanPhone = (req.body.pemesanPhone || null) as string | null;
@@ -418,7 +431,8 @@ router.post("/", async (req, res) => {
           packageId,
           departureId,
           totalPrice,
-          currency: currency || "IDR",
+          currency: bookingCurrency,
+          exchangeRate,
           paymentScheme: paymentScheme || "full",
           notes,
           branchId,
@@ -554,6 +568,18 @@ router.post("/group", async (req, res) => {
     const hex = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
     const bookingCode = `BNG-${yymm}-${hex}`;
 
+    // F-14: Snapshot exchange rate at booking time
+    const groupCurrency = currency || "IDR";
+    let groupExchangeRate = 1;
+    if (groupCurrency !== "IDR") {
+      const [currRow] = await db
+        .select({ rateToIdr: currencies.rateToIdr })
+        .from(currencies)
+        .where(eq(currencies.code, groupCurrency))
+        .limit(1);
+      if (currRow?.rateToIdr) groupExchangeRate = currRow.rateToIdr;
+    }
+
     const booking = await db.transaction(async (tx) => {
       const [newBooking] = await tx
         .insert(bookings)
@@ -564,7 +590,8 @@ router.post("/group", async (req, res) => {
           departureId,
           userId: userId || null,
           totalPrice: Number(totalPrice) || 0,
-          currency: currency || "IDR",
+          currency: groupCurrency,
+          exchangeRate: groupExchangeRate,
           paymentScheme: paymentScheme || "full",
           notes: notes || null,
           branchId: branchId || null,
