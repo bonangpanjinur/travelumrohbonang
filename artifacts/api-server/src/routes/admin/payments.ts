@@ -524,7 +524,8 @@ router.post("/", validate(AdminRecordPaymentRequest), async (req, res) => {
       payment: BookingPaymentSchema.parse(created),
       summary: { totalPrice, totalPaid, remaining, paymentStatus },
     });
-  } catch {
+  } catch (err) {
+    console.error("[admin/payments] POST /:bookingId/payments error:", err);
     res.status(500).json({ error: "Failed to record payment" });
   }
 });

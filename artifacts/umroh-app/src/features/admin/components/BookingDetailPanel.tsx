@@ -454,12 +454,12 @@ const BookingDetailPanel = ({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const uploadRes = await fetch(
-        (import.meta.env.BASE_URL ?? "").replace(/\/$/, "") + "/api/admin/payments/upload-proof",
-        { method: "POST", body: fd, credentials: "include" },
+      // apiFetch otomatis menyertakan Authorization Bearer token dari Supabase session
+      // (raw fetch tidak mengirim token sehingga menyebabkan 401 di admin middleware)
+      const { url } = await apiFetch<{ url: string; filename: string; size: number }>(
+        "/api/admin/payments/upload-proof",
+        { method: "POST", body: fd },
       );
-      if (!uploadRes.ok) throw new Error((await uploadRes.json())?.error ?? "Upload gagal");
-      const { url } = await uploadRes.json();
       setNewPayment((p) => ({ ...p, proofUrl: url }));
       toast.success("Bukti pembayaran berhasil diupload");
     } catch (e: any) {
