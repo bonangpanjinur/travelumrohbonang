@@ -23,6 +23,41 @@ export const DeparturePriceSchema = z.object({
   price: z.number(),
 });
 
+const HotelBriefSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    stars: z.number().nullable().optional(),
+    city: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+  })
+  .nullable()
+  .optional();
+
+const AirlineBriefSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    code: z.string().nullable().optional(),
+  })
+  .nullable()
+  .optional();
+
+const ExtraHotelItemSchema = z.object({
+  id: z.string(),
+  hotelId: z.string().optional(),
+  label: z.string().nullable().optional(),
+  sortOrder: z.number().nullable().optional(),
+  hotel: z
+    .object({
+      name: z.string(),
+      stars: z.number().nullable().optional(),
+      city: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+});
+
 export const PackageDepartureSchema = z.object({
   id: z.string(),
   packageId: z.string().nullable(),
@@ -38,6 +73,11 @@ export const PackageDepartureSchema = z.object({
   flightNumber: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   prices: z.array(DeparturePriceSchema),
+  // FASE 2: nested hotel/airline objects untuk admin detail view
+  hotelMakkah: HotelBriefSchema,
+  hotelMadinah: HotelBriefSchema,
+  airline: AirlineBriefSchema,
+  extraHotels: z.array(ExtraHotelItemSchema).optional(),
 });
 
 export const PackageDetailSchema = PackageSchema.extend({

@@ -4,6 +4,7 @@ import {
   manifests,
   packageDepartures,
   departurePrices,
+  departureHotels,
   packages,
   hotels,
   airlines,
@@ -17,6 +18,7 @@ import {
   profiles,
   eq,
   and,
+  asc,
   gte,
   ne,
   inArray,
@@ -49,6 +51,9 @@ router.get("/", async (req, res) => {
         flightNumber: packageDepartures.flightNumber,
         departureAirportId: packageDepartures.departureAirportId,
         arrivalAirportId: packageDepartures.arrivalAirportId,
+        // FASE 2: hotel per keberangkatan
+        hotelMakkahId: packageDepartures.hotelMakkahId,
+        hotelMadinahId: packageDepartures.hotelMadinahId,
         packageTitle: packages.title,
       })
       .from(packageDepartures)
@@ -126,6 +131,9 @@ router.get("/", async (req, res) => {
         flightNumber: dep.flightNumber ?? null,
         departureAirportId: dep.departureAirportId ?? null,
         arrivalAirportId: dep.arrivalAirportId ?? null,
+        // FASE 2: hotel per keberangkatan
+        hotelMakkahId: dep.hotelMakkahId ?? null,
+        hotelMadinahId: dep.hotelMadinahId ?? null,
         package: dep.packageTitle ? { id: dep.packageId, title: dep.packageTitle } : null,
         prices: (pricesByDeparture.get(dep.id) ?? []).map((p) => ({
           id: p.id,
@@ -416,25 +424,31 @@ router.post("/", async (req, res) => {
       muthawif_id,      quota,           status,
       // KB-F03: flight info — accept both snake_case and camelCase
       airline_id, flight_number, departure_airport_id, arrival_airport_id,
+      // FASE 2: hotel per keberangkatan
+      hotel_makkah_id, hotel_madinah_id, extra_hotels,
       // accept camelCase too in case callers are updated
       packageId: _pkgId, departureDate: _depDate, returnDate: _retDate,
       muthawifId: _mId,
       airlineId: _airId, flightNumber: _flNum,
       departureAirportId: _depAp, arrivalAirportId: _arrAp,
+      hotelMakkahId: _hMkId, hotelMadinahId: _hMdId, extraHotels: _extraHotels,
     } = req.body;
 
-    const resolvedPackageId   = package_id   ?? _pkgId;
-    const resolvedDepDate     = departure_date ?? _depDate;
-    const resolvedRetDate     = return_date   ?? _retDate ?? null;
-    const resolvedMuthawifId  = muthawif_id  ?? _mId ?? null;
-    const resolvedQuota       = Number(quota) || 45;
-    const resolvedAirlineId   = airline_id   ?? _airId   ?? null;
-    const resolvedFlightNum   = flight_number ?? _flNum  ?? null;
-    const resolvedDepAirport  = departure_airport_id ?? _depAp ?? null;
-    const resolvedArrAirport  = arrival_airport_id   ?? _arrAp ?? null;
+    const resolvedPackageId      = package_id         ?? _pkgId;
+    const resolvedDepDate        = departure_date      ?? _depDate;
+    const resolvedRetDate        = return_date         ?? _retDate ?? null;
+    const resolvedMuthawifId     = muthawif_id         ?? _mId ?? null;
+    const resolvedQuota          = Number(quota) || 45;
+    const resolvedAirlineId      = airline_id          ?? _airId   ?? null;
+    const resolvedFlightNum      = flight_number       ?? _flNum   ?? null;
+    const resolvedDepAirport     = departure_airport_id ?? _depAp  ?? null;
+    const resolvedArrAirport     = arrival_airport_id  ?? _arrAp  ?? null;
+    const resolvedHotelMakkahId  = hotel_makkah_id     ?? _hMkId  ?? null;
+    const resolvedHotelMadinahId = hotel_madinah_id    ?? _hMdId  ?? null;
+    const resolvedExtraHotels: any[] = extra_hotels ?? _extraHotels ?? [];
 
     // package_id is optional — a departure can be created before being linked to a package
-    if (!resolvedDepDate)     return res.status(400).json({ error: "departure_date diperlukan" });
+    if (!resolvedDepDate) return res.status(400).json({ error: "departure_date diperlukan" });
 
     // Validasi: tanggal pulang harus setelah tanggal berangkat
     if (resolvedRetDate && new Date(resolvedRetDate) <= new Date(resolvedDepDate)) {
@@ -443,7 +457,7 @@ router.post("/", async (req, res) => {
 
     const id = crypto.randomUUID();
 
-    // Wrap in transaction so departure + prices are always consistent.
+    // Wrap in transaction so departure + prices + extra hotels are always consistent.
     const created = await db.transaction(async (tx) => {
       const [dep] = await tx
         .insert(packageDepartures)
@@ -460,6 +474,9 @@ router.post("/", async (req, res) => {
           flightNumber:        resolvedFlightNum,
           departureAirportId:  resolvedDepAirport,
           arrivalAirportId:    resolvedArrAirport,
+          // FASE 2: hotel per keberangkatan
+          hotelMakkahId:       resolvedHotelMakkahId,
+          hotelMadinahId:      resolvedHotelMadinahId,
         })
         .returning();
 
@@ -475,6 +492,19 @@ router.post("/", async (req, res) => {
         if (priceInserts.length > 0) {
           await tx.insert(departurePrices).values(priceInserts);
         }
+      }
+
+      // FASE 2: insert extra hotels (hotel selain Makkah & Madinah)
+      if (Array.isArray(resolvedExtraHotels) && resolvedExtraHotels.length > 0) {
+        await tx.insert(departureHotels).values(
+          resolvedExtraHotels.map((eh: any, i: number) => ({
+            id: crypto.randomUUID(),
+            departureId: id,
+            hotelId: eh.hotelId ?? eh.hotel_id,
+            label: eh.label ?? null,
+            sortOrder: eh.sortOrder ?? eh.sort_order ?? i,
+          })),
+        );
       }
 
       return dep;
@@ -495,9 +525,13 @@ router.patch("/:id", async (req, res) => {
       package_id, departure_date, return_date, muthawif_id,
       // KB-F03: flight info snake_case
       airline_id, flight_number, departure_airport_id, arrival_airport_id,
+      // FASE 2: hotel fields
+      hotel_makkah_id, hotel_madinah_id, extra_hotels,
       packageId: _pkgId, departureDate: _depDate, returnDate: _retDate, muthawifId: _mId,
       // KB-F03: flight info camelCase
       airlineId: _airId, flightNumber: _flNum, departureAirportId: _depAp, arrivalAirportId: _arrAp,
+      // FASE 2: hotel camelCase
+      hotelMakkahId: _hMkId, hotelMadinahId: _hMdId, extraHotels: _extraHotels,
       id: _id, createdAt: _ca, // strip immutable fields
       ...rest
     } = req.body;
@@ -521,6 +555,13 @@ router.patch("/:id", async (req, res) => {
     else if (_depAp          !== undefined) updates.departureAirportId = _depAp              || null;
     if (arrival_airport_id   !== undefined) updates.arrivalAirportId   = arrival_airport_id  ?? _arrAp ?? null;
     else if (_arrAp          !== undefined) updates.arrivalAirportId   = _arrAp              || null;
+    // FASE 2: hotel fields
+    if (hotel_makkah_id  !== undefined) updates.hotelMakkahId  = hotel_makkah_id  ?? _hMkId ?? null;
+    else if (_hMkId      !== undefined) updates.hotelMakkahId  = _hMkId           || null;
+    if (hotel_madinah_id !== undefined) updates.hotelMadinahId = hotel_madinah_id ?? _hMdId ?? null;
+    else if (_hMdId      !== undefined) updates.hotelMadinahId = _hMdId           || null;
+
+    const resolvedExtraHotels: any[] | undefined = extra_hotels ?? _extraHotels;
 
     // Validasi tanggal: jika keduanya ada dalam update, cek langsung.
     // Jika hanya satu yang diupdate, ambil nilai yang ada dari DB.
@@ -541,7 +582,7 @@ router.patch("/:id", async (req, res) => {
       }
     }
 
-    // Wrap in transaction so departure + prices stay consistent.
+    // Wrap in transaction so departure + prices + extra hotels stay consistent.
     const updated = await db.transaction(async (tx) => {
       const [dep] = await tx
         .update(packageDepartures)
@@ -578,6 +619,22 @@ router.patch("/:id", async (req, res) => {
         }
       }
 
+      // FASE 2: replace extra hotels jika dikirim
+      if (resolvedExtraHotels !== undefined) {
+        await tx.delete(departureHotels).where(eq(departureHotels.departureId, req.params.id));
+        if (Array.isArray(resolvedExtraHotels) && resolvedExtraHotels.length > 0) {
+          await tx.insert(departureHotels).values(
+            resolvedExtraHotels.map((eh: any, i: number) => ({
+              id: crypto.randomUUID(),
+              departureId: req.params.id,
+              hotelId: eh.hotelId ?? eh.hotel_id,
+              label: eh.label ?? null,
+              sortOrder: eh.sortOrder ?? eh.sort_order ?? i,
+            })),
+          );
+        }
+      }
+
       return dep;
     });
 
@@ -589,7 +646,7 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-/** POST /api/admin/departures/:id/clone — duplikat keberangkatan beserta harganya */
+/** POST /api/admin/departures/:id/clone — duplikat keberangkatan beserta harganya dan hotel */
 router.post("/:id/clone", async (req, res) => {
   try {
     const [original] = await db
@@ -599,10 +656,10 @@ router.post("/:id/clone", async (req, res) => {
       .limit(1);
     if (!original) return res.status(404).json({ error: "Departure not found" });
 
-    const originalPrices = await db
-      .select()
-      .from(departurePrices)
-      .where(eq(departurePrices.departureId, req.params.id));
+    const [originalPrices, originalExtraHotels] = await Promise.all([
+      db.select().from(departurePrices).where(eq(departurePrices.departureId, req.params.id)),
+      db.select().from(departureHotels).where(eq(departureHotels.departureId, req.params.id)).orderBy(asc(departureHotels.sortOrder)),
+    ]);
 
     const newId = crypto.randomUUID();
 
@@ -611,13 +668,21 @@ router.post("/:id/clone", async (req, res) => {
         .insert(packageDepartures)
         .values({
           id: newId,
-          packageId: original.packageId,
-          departureDate: original.departureDate,
-          returnDate: original.returnDate,
-          quota: original.quota,
-          remainingQuota: original.quota, // reset ke penuh
-          status: "active",
-          muthawifId: original.muthawifId,
+          packageId:           original.packageId,
+          departureDate:       original.departureDate,
+          returnDate:          original.returnDate,
+          quota:               original.quota,
+          remainingQuota:      original.quota, // reset ke penuh
+          status:              "active",
+          muthawifId:          original.muthawifId,
+          // KB-F03: salin flight info
+          airlineId:           original.airlineId,
+          flightNumber:        original.flightNumber,
+          departureAirportId:  original.departureAirportId,
+          arrivalAirportId:    original.arrivalAirportId,
+          // FASE 2: salin hotel
+          hotelMakkahId:       original.hotelMakkahId,
+          hotelMadinahId:      original.hotelMadinahId,
         })
         .returning();
 
@@ -631,6 +696,20 @@ router.post("/:id/clone", async (req, res) => {
           }))
         );
       }
+
+      // FASE 2: salin extra hotels
+      if (originalExtraHotels.length > 0) {
+        await tx.insert(departureHotels).values(
+          originalExtraHotels.map((eh) => ({
+            id: crypto.randomUUID(),
+            departureId: newId,
+            hotelId: eh.hotelId,
+            label: eh.label,
+            sortOrder: eh.sortOrder,
+          }))
+        );
+      }
+
       return dep;
     });
 
@@ -638,6 +717,83 @@ router.post("/:id/clone", async (req, res) => {
   } catch (err) {
     console.error("[departures] clone failed:", err);
     res.status(500).json({ error: "Failed to clone departure" });
+  }
+});
+
+// ── FASE 2: Extra Hotels per Departure ───────────────────────────────────────
+
+/**
+ * GET /api/admin/departures/:id/extra-hotels
+ * List semua extra hotels (hotel selain Makkah & Madinah) untuk keberangkatan ini.
+ */
+router.get("/:id/extra-hotels", async (req, res) => {
+  try {
+    const rows = await db
+      .select({
+        id: departureHotels.id,
+        departureId: departureHotels.departureId,
+        hotelId: departureHotels.hotelId,
+        label: departureHotels.label,
+        sortOrder: departureHotels.sortOrder,
+        hotelName: hotels.name,
+        hotelStars: hotels.stars,
+        hotelCity: hotels.city,
+      })
+      .from(departureHotels)
+      .leftJoin(hotels, eq(departureHotels.hotelId, hotels.id))
+      .where(eq(departureHotels.departureId, req.params.id))
+      .orderBy(asc(departureHotels.sortOrder));
+
+    res.json({
+      data: rows.map((row) => ({
+        id: row.id,
+        departureId: row.departureId,
+        hotelId: row.hotelId,
+        label: row.label ?? null,
+        sortOrder: row.sortOrder ?? null,
+        hotel: { name: row.hotelName ?? null, stars: row.hotelStars ?? null, city: row.hotelCity ?? null },
+      })),
+    });
+  } catch (err) {
+    sendAdminError(res, "GET /api/admin/departures/:id/extra-hotels", err);
+  }
+});
+
+/**
+ * PUT /api/admin/departures/:id/extra-hotels
+ * Replace semua extra hotels untuk keberangkatan ini.
+ * Body: { hotels: Array<{ hotelId: string; label?: string; sortOrder?: number }> }
+ */
+router.put("/:id/extra-hotels", async (req, res) => {
+  try {
+    const { hotels: extraHotels } = req.body as {
+      hotels: Array<{ hotelId: string; label?: string; sortOrder?: number }>;
+    };
+    if (!Array.isArray(extraHotels)) {
+      return res.status(400).json({ error: "hotels harus berupa array" });
+    }
+    if (extraHotels.some((eh) => !eh.hotelId)) {
+      return res.status(400).json({ error: "Setiap item harus punya hotelId" });
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.delete(departureHotels).where(eq(departureHotels.departureId, req.params.id));
+      if (extraHotels.length > 0) {
+        await tx.insert(departureHotels).values(
+          extraHotels.map((eh, i) => ({
+            id: crypto.randomUUID(),
+            departureId: req.params.id,
+            hotelId: eh.hotelId,
+            label: eh.label ?? null,
+            sortOrder: eh.sortOrder ?? i,
+          })),
+        );
+      }
+    });
+
+    res.json({ message: "Extra hotels berhasil diperbarui", count: extraHotels.length });
+  } catch (err) {
+    sendAdminError(res, "PUT /api/admin/departures/:id/extra-hotels", err);
   }
 });
 

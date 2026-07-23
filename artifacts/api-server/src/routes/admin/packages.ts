@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, sql, packages, packageDepartures, departurePrices, departureHotels, packageCommissions, eq, asc, inArray } from "@workspace/db";
+import { db, sql, packages, packageDepartures, departurePrices, departureHotels, packageCommissions, hotels, airlines, eq, asc, inArray } from "@workspace/db";
 import { sendAdminError } from "../../lib/adminApiError";
 import {
   PackageSchema,
@@ -140,12 +140,21 @@ router.get("/:id", async (req, res) => {
       .where(eq(packageDepartures.packageId, id));
 
     const departureIds = departures.map((dep) => dep.id);
-    const allPrices = departureIds.length
-      ? await db
-          .select()
-          .from(departurePrices)
-          .where(inArray(departurePrices.departureId, departureIds))
-      : [];
+
+    // FASE 2: fetch prices, hotels, airlines, dan extra hotels secara paralel
+    const [allPrices, allHotels, allAirlines, allExtraHotels] = await Promise.all([
+      departureIds.length
+        ? db.select().from(departurePrices).where(inArray(departurePrices.departureId, departureIds))
+        : Promise.resolve([]),
+      db.select().from(hotels),
+      db.select().from(airlines),
+      departureIds.length
+        ? db.select().from(departureHotels).where(inArray(departureHotels.departureId, departureIds)).orderBy(asc(departureHotels.sortOrder))
+        : Promise.resolve([]),
+    ]);
+
+    const hotelMap = Object.fromEntries(allHotels.map((h) => [h.id, h]));
+    const airlineMap = Object.fromEntries(allAirlines.map((a) => [a.id, a]));
 
     const pricesByDeparture = new Map<string, typeof allPrices>();
     for (const price of allPrices) {
@@ -154,13 +163,48 @@ router.get("/:id", async (req, res) => {
       pricesByDeparture.set(price.departureId, list);
     }
 
-    const departuresWithPrices = departures.map((dep) => ({
-      ...dep,
-      prices: pricesByDeparture.get(dep.id) ?? [],
-    }));
+    const extraHotelsByDeparture = new Map<string, typeof allExtraHotels>();
+    for (const eh of allExtraHotels) {
+      if (!eh.departureId) continue;
+      const list = extraHotelsByDeparture.get(eh.departureId) ?? [];
+      list.push(eh);
+      extraHotelsByDeparture.set(eh.departureId, list);
+    }
 
-    res.json(PackageDetailSchema.parse({ ...pkg, departures: departuresWithPrices }));
-  } catch {
+    // FASE 2: include hotel, airline, extra_hotels per departure
+    const departuresWithDetail = departures.map((dep) => {
+      const hMakkah = dep.hotelMakkahId ? hotelMap[dep.hotelMakkahId] : null;
+      const hMadinah = dep.hotelMadinahId ? hotelMap[dep.hotelMadinahId] : null;
+      const airline = dep.airlineId ? airlineMap[dep.airlineId] : null;
+      const extras = (extraHotelsByDeparture.get(dep.id) ?? []).map((eh) => {
+        const h = hotelMap[eh.hotelId];
+        return {
+          id: eh.id,
+          hotelId: eh.hotelId,
+          label: eh.label ?? null,
+          sortOrder: eh.sortOrder ?? null,
+          hotel: h ? { name: h.name, stars: h.stars ?? null, city: h.city ?? null } : null,
+        };
+      });
+
+      return {
+        ...dep,
+        hotelMakkah:  hMakkah  ? { id: hMakkah.id,  name: hMakkah.name,  stars: hMakkah.stars  ?? null, city: hMakkah.city  ?? null } : null,
+        hotelMadinah: hMadinah ? { id: hMadinah.id, name: hMadinah.name, stars: hMadinah.stars ?? null, city: hMadinah.city ?? null } : null,
+        airline:      airline  ? { id: airline.id,  name: airline.name,  code:  airline.code   ?? null } : null,
+        extraHotels: extras,
+        prices: (pricesByDeparture.get(dep.id) ?? []).map((p) => ({
+          id: p.id,
+          departureId: p.departureId,
+          roomType: p.roomType,
+          price: Number(p.price),
+        })),
+      };
+    });
+
+    res.json(PackageDetailSchema.parse({ ...pkg, departures: departuresWithDetail }));
+  } catch (err) {
+    console.error("[admin/packages] GET /:id error:", err);
     res.status(500).json({ error: "Failed to fetch package" });
   }
 });

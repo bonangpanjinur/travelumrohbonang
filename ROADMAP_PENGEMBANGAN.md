@@ -1,7 +1,7 @@
 # ROADMAP PENGEMBANGAN — Arsitektur Paket & Keberangkatan
 
 > Dibuat: 23 Juli 2026  
-> Status: **DRAFT — Menunggu Review**
+> Status: **FASE 1 ✅ SELESAI | FASE 2 ✅ SELESAI | FASE 3 & 4 — Belum Dikerjakan**
 
 ---
 
