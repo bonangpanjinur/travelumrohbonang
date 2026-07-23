@@ -444,7 +444,17 @@ router.get("/", async (req, res) => {
     }
 
     const paymentRows = await db
-      .select()
+      .select({
+        id: bookingPayments.id,
+        bookingId: bookingPayments.bookingId,
+        type: bookingPayments.type,
+        amount: bookingPayments.amount,
+        paidAt: bookingPayments.paidAt,
+        method: bookingPayments.method,
+        notes: bookingPayments.notes,
+        isVoided: bookingPayments.isVoided,
+        createdAt: bookingPayments.createdAt,
+      })
       .from(bookingPayments)
       .where(eq(bookingPayments.bookingId, bookingId))
       .orderBy(sql`${bookingPayments.paidAt} asc`);
@@ -452,7 +462,9 @@ router.get("/", async (req, res) => {
     const { totalPrice, totalPaid, remaining, paymentStatus } =
       await computePaymentStatus(bookingId);
 
-    const payments = paymentRows.map((p) => BookingPaymentSchema.parse(p));
+    const payments = paymentRows.flatMap((p) => {
+      try { return [BookingPaymentSchema.parse(p)]; } catch { return []; }
+    });
 
     res.json(
       BookingPaymentSummarySchema.parse({

@@ -984,7 +984,10 @@ router.get("/:id/invoice-data", async (req, res) => {
           WHERE b.id = ${id}
           LIMIT 1
         `),
-        db.select().from(bookingPilgrims).where(eq(bookingPilgrims.bookingId, id)),
+        db.select({
+          name: bookingPilgrims.name,
+          gender: bookingPilgrims.gender,
+        }).from(bookingPilgrims).where(eq(bookingPilgrims.bookingId, id)),
         db.select().from(bookingRooms).where(eq(bookingRooms.bookingId, id)),
         db.execute(sql`
           SELECT type, amount, paid_at, method, is_voided

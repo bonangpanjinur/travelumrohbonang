@@ -1,0 +1,40 @@
+[sentry] VITE_SENTRY_DSN not set — Sentry disabled.
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/bookings/8858c187-1815-4216-8e1e-0d7b0d26b8bd/payments:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings/8858c187-1815-4216-8e1e-0d7b0d26b8bd/passport-recommendation:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/bookings/BNG-UMX2H3BM/invoice-data:1  Failed to load resource: the server responded with a status of 503 ()
+index-CjgK5UYX.js:239 [fetchInvoiceData] Error: Failed query: select "id", "booking_id", "pilgrim_id", "name", "phone", "email", "gender", "nik", "birth_date", "nationality", "passport_number", "passport_expiry", "room_type", "room_number", "seat_number", "flight_segment", "notes", "created_at" from "booking_pilgrims" where "booking_pilgrims"."booking_id" = $1
+params: BNG-UMX2H3BM — Kolom belum ada di database production. Jalankan drizzle-kit push ke Supabase production atau tambahkan kolom yang hilang via SQL: ALTER TABLE ... ADD COLUMN ...
+    at be (index-CjgK5UYX.js:39:80406)
+    at async NH (index-CjgK5UYX.js:239:43026)
+    at async O (index-CjgK5UYX.js:440:183969)
+NH @ index-CjgK5UYX.js:239
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+index-CjgK5UYX.js:39  GET https://www.vinstourtravel.com/api/admin/bookings/BNG-UMX2H3BM/invoice-data 503 (Service Unavailable)
+be @ index-CjgK5UYX.js:39
+await in be
+NH @ index-CjgK5UYX.js:239
+O @ index-CjgK5UYX.js:440
+gG @ index-CjgK5UYX.js:8
+(anonymous) @ index-CjgK5UYX.js:8
+Kc @ index-CjgK5UYX.js:8
+qO @ index-CjgK5UYX.js:8
+rM @ index-CjgK5UYX.js:9
+ACe @ index-CjgK5UYX.js:9
+index-CjgK5UYX.js:239 [fetchInvoiceData] Error: Failed query: select "id", "booking_id", "pilgrim_id", "name", "phone", "email", "gender", "nik", "birth_date", "nationality", "passport_number", "passport_expiry", "room_type", "room_number", "seat_number", "flight_segment", "notes", "created_at" from "booking_pilgrims" where "booking_pilgrims"."booking_id" = $1
+params: BNG-UMX2H3BM — Kolom belum ada di database production. Jalankan drizzle-kit push ke Supabase production atau tambahkan kolom yang hilang via SQL: ALTER TABLE ... ADD COLUMN ...
+    at be (index-CjgK5UYX.js:39:80406)
+    at async NH (index-CjgK5UYX.js:239:43026)
+    at async O (index-CjgK5UYX.js:440:183969)
+NH @ index-CjgK5UYX.js:239
+await in NH
+O @ index-CjgK5UYX.js:440
+gG @ index-CjgK5UYX.js:8
+(anonymous) @ index-CjgK5UYX.js:8
+Kc @ index-CjgK5UYX.js:8
+qO @ index-CjgK5UYX.js:8
+rM @ index-CjgK5UYX.js:9
+ACe @ index-CjgK5UYX.js:9
+index-CjgK5UYX.js:440  GET https://www.vinstourtravel.com/api/admin/bookings/8858c187-1815-4216-8e1e-0d7b0d26b8bd/passport-recommendation 401 (Unauthorized)

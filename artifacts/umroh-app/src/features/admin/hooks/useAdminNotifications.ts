@@ -129,28 +129,17 @@ export function useAdminNotifications() {
         id: string; bookingCode: string; createdAt: string; userName: string | null;
       }> }>("/api/admin/bookings?limit=20").catch(() => ({ data: [] as any[] }));
 
-      // Payments: two-step query — avoids the FK embed booking:bookings(booking_code)
-      const { data: rawPayments } = await supabase
-        .from("payments")
-        .select("id, amount, status, created_at, booking_id")
-        .eq("status", "pending")
-        .order("created_at", { ascending: false })
-        .limit(MAX_ITEMS / 2);
+      // Payments: use Express API instead of direct Supabase to avoid RLS 401 errors
+      const pendingPayments = await apiFetch<Array<{
+        id: string; amount: number; status: string; createdAt: string; bookingCode: string | null;
+      }>>("/api/admin/payments/recent-pending").catch(() => []);
 
-      // Resolve booking_code for each payment via a separate .in() query
-      const bookingIds = (rawPayments || []).map((p: any) => p.booking_id).filter(Boolean);
-      let bookingCodeMap: Map<string, string> = new Map();
-      if (bookingIds.length > 0) {
-        const { data: bkRows } = await supabase
-          .from("bookings")
-          .select("id, booking_code")
-          .in("id", bookingIds);
-        bookingCodeMap = new Map((bkRows || []).map((b: any) => [b.id, b.booking_code]));
-      }
-
-      const paymentsWithCode = (rawPayments || []).map((p: any) => ({
-        ...p,
-        booking: { booking_code: bookingCodeMap.get(p.booking_id) || "" },
+      const paymentsWithCode = pendingPayments.map((p) => ({
+        id: p.id,
+        amount: p.amount,
+        status: p.status,
+        created_at: p.createdAt,
+        booking: { booking_code: p.bookingCode || "" },
       }));
 
       const bookingNotifs: AdminNotif[] = (bookingsResult.data || []).map((b) =>

@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/shared/lib/apiClient";
+import { supabaseAuth } from "@/shared/integrations/supabase/auth-client";
 import BookingDetailPanel from "@/features/admin/components/BookingDetailPanel";
 import BookingStatusBadge from "@/features/admin/components/BookingStatusBadge";
 import ChangeRoomModal from "@/features/admin/components/ChangeRoomModal";
@@ -306,9 +307,16 @@ const BookingDetailPage = () => {
               onClick={async () => {
                 try {
                   const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+                  const authHeaders: HeadersInit = {};
+                  try {
+                    const { data: { session } } = await supabaseAuth.auth.getSession();
+                    if (session?.access_token) {
+                      authHeaders["Authorization"] = `Bearer ${session.access_token}`;
+                    }
+                  } catch { /* session unavailable */ }
                   const res = await fetch(
                     `${base}/api/admin/bookings/${booking.id}/passport-recommendation`,
-                    { credentials: "include" },
+                    { credentials: "include", headers: authHeaders },
                   );
                   if (!res.ok) throw new Error("Gagal generate surat");
                   const blob = await res.blob();
