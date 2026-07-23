@@ -56,6 +56,15 @@ export async function sbGetBooking(bookingId: string, userToken?: string) {
   return rows?.[0] ?? null;
 }
 
+/** Fetch a booking by booking_code from Supabase (for code-based lookups like BNG-XXXXXXXX). */
+export async function sbGetBookingByCode(bookingCode: string, userToken?: string) {
+  const rows = await sbRest<any[]>(
+    `/rest/v1/bookings?booking_code=eq.${encodeURIComponent(bookingCode)}&select=id,booking_code,total_price,status,created_at,package_id,departure_id,branch_id,pemesan_name,pemesan_email,pemesan_phone,pic_name,pic_phone,user_id`,
+    userToken,
+  );
+  return rows?.[0] ?? null;
+}
+
 /** Fetch booking pilgrims from Supabase. */
 export async function sbGetPilgrims(bookingId: string, userToken?: string) {
   const rows = await sbRest<any[]>(

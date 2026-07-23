@@ -25,7 +25,7 @@ import {
   sql,
 } from "@workspace/db";
 import { generatePassportRecommendationPdf } from "../../lib/pdf/passportRecommendation";
-import { sbGetBooking, sbGetPilgrims, sbGetPayments, sbGetPackage, sbGetDeparture, sbGetBranch, sbGetProfile } from "../../lib/supabaseFallback";
+import { sbGetBooking, sbGetBookingByCode, sbGetPilgrims, sbGetPayments, sbGetPackage, sbGetDeparture, sbGetBranch, sbGetProfile } from "../../lib/supabaseFallback";
 import {
   BookingListResponse,
   BookingWithDetailsSchema,
@@ -981,7 +981,7 @@ router.get("/:id/invoice-data", async (req, res) => {
           LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
           LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
           LEFT JOIN profiles           prof ON prof.id = b.user_id
-          WHERE b.id = ${id}
+          WHERE b.id = ${id} OR b.booking_code = ${id.toUpperCase()}
           LIMIT 1
         `),
         db.select({
@@ -1017,21 +1017,27 @@ router.get("/:id/invoice-data", async (req, res) => {
     // Fallback: jika booking tidak ada di local DB, coba Supabase
     if (!booking) {
       const userToken = (req.headers.authorization || "").replace("Bearer ", "");
-      const sbBooking = await sbGetBooking(id, userToken);
+      // Support both UUID and booking_code lookups
+      let sbBooking = await sbGetBooking(id, userToken);
+      if (!sbBooking) {
+        sbBooking = await sbGetBookingByCode(id.toUpperCase(), userToken);
+      }
       if (!sbBooking) {
         res.status(404).json({ error: "Booking not found" });
         return;
       }
+      // Use the real UUID from sbBooking for related-data lookups
+      const realId = sbBooking.id;
       // Ambil data tambahan dari Supabase
       const [sbPkg, sbDep, sbProfile, sbPilgrims, sbPayRows, sbRooms] = await Promise.all([
         sbGetPackage(sbBooking.package_id, userToken),
         sbGetDeparture(sbBooking.departure_id, userToken),
         sbGetProfile(sbBooking.user_id, userToken),
-        sbGetPilgrims(id, userToken),
-        sbGetPayments(id, userToken),
+        sbGetPilgrims(realId, userToken),
+        sbGetPayments(realId, userToken),
         (async () => {
           const { sbRest } = await import("../../lib/supabaseFallback");
-          return sbRest<any[]>(`/rest/v1/booking_rooms?booking_id=eq.${encodeURIComponent(id)}&select=*`, userToken) ?? [];
+          return sbRest<any[]>(`/rest/v1/booking_rooms?booking_id=eq.${encodeURIComponent(realId)}&select=*`, userToken) ?? [];
         })(),
       ]);
 
