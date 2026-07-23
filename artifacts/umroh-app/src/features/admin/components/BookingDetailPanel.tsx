@@ -167,6 +167,7 @@ const BookingDetailPanel = ({
   const [pilgrims, setPilgrims] = useState<FullPilgrim[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
+  const [paymentFetchError, setPaymentFetchError] = useState(false);
   const [commissionRate, setCommissionRate] = useState<number>(0);
   const [picName, setPicName] = useState<string>("-");
   const [agentCommission, setAgentCommission] = useState<{ id: string; status: string; amount: number } | null>(null);
@@ -302,7 +303,12 @@ const BookingDetailPanel = ({
         );
       }
       if (logs.status === "fulfilled") setStatusLogs(logs.value || []);
-      if (paymentsRes.status === "fulfilled") setPaymentSummary(paymentsRes.value);
+      if (paymentsRes.status === "fulfilled") {
+        setPaymentSummary(paymentsRes.value);
+        setPaymentFetchError(false);
+      } else {
+        setPaymentFetchError(true);
+      }
 
       // Fetch installment schedule
       apiFetch<{ data: any[] }>(`/api/admin/installments?bookingId=${bookingId}`)
@@ -1127,12 +1133,11 @@ const BookingDetailPanel = ({
       )}
 
       {/* ── BKG-F01: Panel Pembayaran ─────────────────────────────────────────── */}
-      {paymentSummary && (
-        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+      <div className="bg-muted/50 rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="font-semibold flex items-center gap-2 text-sm">
               <CreditCard className="w-4 h-4 text-primary" /> Pembayaran
-              {paymentSummary.paymentStatus && (
+              {paymentSummary?.paymentStatus && (
                 <span className={`text-xs px-2 py-0.5 rounded-full border font-normal ${payStatusLabel[paymentSummary.paymentStatus]?.cls ?? ""}`}>
                   {payStatusLabel[paymentSummary.paymentStatus]?.label ?? paymentSummary.paymentStatus}
                 </span>
@@ -1146,6 +1151,7 @@ const BookingDetailPanel = ({
             </Button>
           </div>
 
+          {paymentSummary ? (<>
           {/* Ringkasan */}
           <div className="grid grid-cols-3 gap-2">
             <div className="p-2.5 bg-background rounded-lg text-center border border-border/60">
@@ -1324,8 +1330,14 @@ const BookingDetailPanel = ({
                 ))}
             </div>
           )}
-        </div>
-      )}
+          </>) : (
+            <p className="text-sm text-muted-foreground py-2">
+              {paymentFetchError
+                ? "Gagal memuat data pembayaran."
+                : "Memuat data pembayaran…"}
+            </p>
+          )}
+      </div>
 
       {/* ── Feature 5: Jadwal Cicilan ─────────────────────────────────────── */}
       {installments.length > 0 && (() => {

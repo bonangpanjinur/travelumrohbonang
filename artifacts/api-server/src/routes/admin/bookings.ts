@@ -25,6 +25,7 @@ import {
   sql,
 } from "@workspace/db";
 import { generatePassportRecommendationPdf } from "../../lib/pdf/passportRecommendation";
+import { sbGetBooking, sbGetPilgrims, sbGetPayments, sbGetPackage, sbGetDeparture, sbGetBranch, sbGetProfile } from "../../lib/supabaseFallback";
 import {
   BookingListResponse,
   BookingWithDetailsSchema,
@@ -1008,10 +1009,64 @@ router.get("/:id/invoice-data", async (req, res) => {
       ]);
 
     const bRows = (bookingResult as any).rows ?? bookingResult;
-    const booking = bRows[0];
+    let booking = bRows[0];
+
+    // Fallback: jika booking tidak ada di local DB, coba Supabase
     if (!booking) {
-      res.status(404).json({ error: "Booking not found" });
-      return;
+      const userToken = (req.headers.authorization || "").replace("Bearer ", "");
+      const sbBooking = await sbGetBooking(id, userToken);
+      if (!sbBooking) {
+        res.status(404).json({ error: "Booking not found" });
+        return;
+      }
+      // Ambil data tambahan dari Supabase
+      const [sbPkg, sbDep, sbProfile, sbPilgrims, sbPayRows, sbRooms] = await Promise.all([
+        sbGetPackage(sbBooking.package_id, userToken),
+        sbGetDeparture(sbBooking.departure_id, userToken),
+        sbGetProfile(sbBooking.user_id, userToken),
+        sbGetPilgrims(id, userToken),
+        sbGetPayments(id, userToken),
+        (async () => {
+          const { sbRest } = await import("../../lib/supabaseFallback");
+          return sbRest<any[]>(`/rest/v1/booking_rooms?booking_id=eq.${encodeURIComponent(id)}&select=*`, userToken) ?? [];
+        })(),
+      ]);
+
+      const brandRows2 = (brandingResult as any).rows ?? brandingResult;
+      const branding2: any = brandRows2[0]?.value ?? {};
+      const createdAt = sbBooking.created_at;
+      const invoiceYear2 = createdAt ? new Date(createdAt).getFullYear() : new Date().getFullYear();
+
+      return res.json({
+        invoiceNumber: `INV/${invoiceYear2}/0001`,
+        bookingCode: sbBooking.booking_code,
+        customerName: sbBooking.pemesan_name || sbProfile?.name || "-",
+        customerEmail: sbBooking.pemesan_email || sbProfile?.email || "-",
+        customerPhone: sbBooking.pemesan_phone || sbProfile?.phone || null,
+        packageTitle: sbPkg?.title || "-",
+        departureDate: sbDep?.departure_date || null,
+        totalPrice: Number(sbBooking.total_price || 0),
+        createdAt,
+        status: sbBooking.status,
+        pilgrims: sbPilgrims.map((p: any) => ({ name: p.name, gender: p.gender })),
+        rooms: (Array.isArray(sbRooms) ? sbRooms : []).map((r: any) => ({
+          room_type: r.room_type,
+          quantity: r.quantity,
+          price: Number(r.price || 0),
+          subtotal: Number(r.subtotal || 0),
+        })),
+        payments: sbPayRows
+          .filter((p: any) => !p.is_voided)
+          .map((p: any) => ({
+            payment_type: p.type,
+            amount: Number(p.amount),
+            status: "paid",
+            paid_at: p.paid_at,
+          })),
+        companyName: branding2.company_name || "UmrohPlus",
+        companyTagline: branding2.tagline || "Travel & Tours",
+        logoUrl: branding2.logo_url || "",
+      });
     }
 
     const payRows = (paymentsResult as any).rows ?? paymentsResult;
@@ -1376,8 +1431,41 @@ router.get("/:id/passport-recommendation", async (req, res) => {
       .limit(1);
 
     if (!booking) {
-      res.status(404).json({ error: "Booking not found" });
-      return;
+      // Fallback: cek Supabase jika booking tidak ada di local DB
+      const userToken = (req.headers.authorization || "").replace("Bearer ", "");
+      const sbBooking = await sbGetBooking(id, userToken);
+      if (!sbBooking) {
+        res.status(404).json({ error: "Booking not found" });
+        return;
+      }
+      const [sbPkg, sbDep, sbPilgrims, brandingRowSb] = await Promise.all([
+        sbGetPackage(sbBooking.package_id, userToken),
+        sbGetDeparture(sbBooking.departure_id, userToken),
+        sbGetPilgrims(sbBooking.id, userToken),
+        db.select({ key: siteSettings.key, value: siteSettings.value })
+          .from(siteSettings)
+          .where(inArray(siteSettings.key, ["company_name", "company_city"])),
+      ]);
+      const brandingSb = Object.fromEntries(brandingRowSb.map((r) => [r.key, r.value]));
+      const pdfBufferSb = await generatePassportRecommendationPdf({
+        bookingCode: sbBooking.booking_code,
+        packageTitle: sbPkg?.title ?? null,
+        departureDate: sbDep?.departure_date ?? null,
+        pilgrims: sbPilgrims.map((p: any) => ({
+          name: p.name,
+          nik: p.nik ?? null,
+          birthDate: p.birth_date ? String(p.birth_date) : null,
+          gender: p.gender ?? null,
+        })),
+        tenantName: brandingSb.company_name ?? "UmrohPlus",
+        city: brandingSb.company_city ?? "Jakarta",
+      });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="surat-rekomendasi-paspor-${sbBooking.booking_code}.pdf"`,
+      );
+      return res.send(pdfBufferSb);
     }
 
     // Fetch pilgrims

@@ -13,6 +13,7 @@ import {
   sql,
   desc,
 } from "@workspace/db";
+import { sbGetBooking, sbGetPayments } from "../../lib/supabaseFallback";
 import {
   AdminRecordPaymentRequest,
   AdminUpdatePaymentRequest,
@@ -402,6 +403,42 @@ router.get("/", async (req, res) => {
       .limit(1);
 
     if (!booking) {
+      // Fallback: cek Supabase jika booking tidak ada di local DB
+      const userToken = (req.headers.authorization || "").replace("Bearer ", "");
+      const sbBooking = await sbGetBooking(bookingId, userToken);
+      if (sbBooking) {
+        const sbPayRows = await sbGetPayments(bookingId, userToken);
+        const activeRows = sbPayRows.filter((p: any) => !p.is_voided);
+        const totalPrice = Number(sbBooking.total_price || 0);
+        const totalPaid = activeRows.reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+        const remaining = Math.max(0, totalPrice - totalPaid);
+        const paymentStatus =
+          totalPrice > 0 && totalPaid >= totalPrice ? "paid"
+          : totalPaid > 0 ? "partial"
+          : "unpaid";
+        return res.json({
+          totalPrice,
+          totalPaid,
+          remaining,
+          paymentStatus,
+          payments: sbPayRows.map((p: any) => ({
+            id: p.id,
+            bookingId: p.booking_id,
+            type: p.type ?? "cash",
+            amount: Number(p.amount),
+            method: p.method ?? null,
+            paidAt: p.paid_at,
+            referenceNumber: p.reference_number ?? null,
+            notes: p.notes ?? null,
+            isVoided: p.is_voided ?? false,
+            voidedAt: p.voided_at ?? null,
+            voidedBy: p.voided_by ?? null,
+            voidReason: p.void_reason ?? null,
+            proofUrl: p.proof_url ?? null,
+            recordedBy: p.recorded_by ?? null,
+          })),
+        });
+      }
       res.status(404).json({ error: "Booking not found" });
       return;
     }
@@ -426,7 +463,8 @@ router.get("/", async (req, res) => {
         payments,
       }),
     );
-  } catch {
+  } catch (e) {
+    console.error("[admin/payments GET /]", e);
     res.status(500).json({ error: "Failed to fetch payments" });
   }
 });
