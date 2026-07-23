@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { Input } from "@/shared/components/ui/input";
 import { Badge } from "@/shared/components/ui/badge";
@@ -7,11 +7,12 @@ import { Button } from "@/shared/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
-import { Search, Users, Download } from "lucide-react";
+import { Search, Users, Download, Upload } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import AdminPagination from "@/features/admin/components/AdminPagination";
 import { exportToCsv } from "@/shared/lib/exportCsv";
+import PilgrimImportDialog from "@/features/admin/components/PilgrimImportDialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PilgrimRow {
@@ -58,9 +59,11 @@ const STATUS_COLORS: Record<string, string> = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 const AdminPilgrimsDatabase = () => {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 400);
@@ -123,9 +126,14 @@ const AdminPilgrimsDatabase = () => {
             Semua jemaah dari seluruh booking — {total.toLocaleString("id-ID")} total
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={pilgrims.length === 0}>
-          <Download className="w-4 h-4 mr-2" /> Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="w-4 h-4 mr-2" /> Import CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={pilgrims.length === 0}>
+            <Download className="w-4 h-4 mr-2" /> Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -230,6 +238,14 @@ const AdminPilgrimsDatabase = () => {
           {debouncedSearch && ` (dicari: "${debouncedSearch}")`}
         </p>
       )}
+
+      <PilgrimImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={() => {
+          queryClient.invalidateQueries({ queryKey: ["admin-pilgrims-db"] });
+        }}
+      />
     </div>
   );
 };
