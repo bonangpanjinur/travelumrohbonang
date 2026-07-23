@@ -134,6 +134,10 @@ export interface BookingConfirmationData {
   pilgrims: { name: string; gender: string | null; nik: string | null }[];
   rooms: { roomType: string; quantity: number; subtotal: number | string }[];
   tenantName?: string;
+  // FASE 4: hotel & airline dari departure
+  hotelMakkah?: string | null;
+  hotelMadinah?: string | null;
+  airlineName?: string | null;
 }
 
 export async function generateBookingConfirmationPdf(
@@ -199,6 +203,25 @@ export async function generateBookingConfirmationPdf(
           { style: styles.row },
           React.createElement(Text, { style: styles.label }, "Tanggal Kepulangan"),
           React.createElement(Text, { style: styles.value }, formatDate(data.returnDate)),
+        ),
+        // FASE 4: hotel & airline dari departure
+        data.hotelMakkah && React.createElement(
+          View,
+          { style: styles.row },
+          React.createElement(Text, { style: styles.label }, "Hotel Makkah"),
+          React.createElement(Text, { style: styles.value }, data.hotelMakkah),
+        ),
+        data.hotelMadinah && React.createElement(
+          View,
+          { style: styles.row },
+          React.createElement(Text, { style: styles.label }, "Hotel Madinah"),
+          React.createElement(Text, { style: styles.value }, data.hotelMadinah),
+        ),
+        data.airlineName && React.createElement(
+          View,
+          { style: styles.row },
+          React.createElement(Text, { style: styles.label }, "Maskapai"),
+          React.createElement(Text, { style: styles.value }, data.airlineName),
         ),
         React.createElement(
           View,

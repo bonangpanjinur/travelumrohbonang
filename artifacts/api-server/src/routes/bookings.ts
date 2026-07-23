@@ -11,6 +11,8 @@ import {
   paymentGatewayTransactions,
   installmentSchedules,
   refundRequests,
+  hotels,
+  airlines,
   eq,
   and,
   desc,
@@ -268,6 +270,10 @@ router.get("/:id/confirmation.pdf", async (req, res) => {
         departureDate: packageDepartures.departureDate,
         returnDate: packageDepartures.returnDate,
         branchName: branches.name,
+        // FASE 4: hotel & airline dari departure
+        hotelMakkahId: packageDepartures.hotelMakkahId,
+        hotelMadinahId: packageDepartures.hotelMadinahId,
+        airlineId: packageDepartures.airlineId,
       })
       .from(bookings)
       .leftJoin(packages, eq(bookings.packageId, packages.id))
@@ -280,6 +286,19 @@ router.get("/:id/confirmation.pdf", async (req, res) => {
       res.status(404).json({ error: "Booking not found" });
       return;
     }
+
+    // Resolve hotel & airline names for PDF
+    const [hotelMakkahRow, hotelMadinahRow, airlineRow] = await Promise.all([
+      row.hotelMakkahId
+        ? db.select({ name: hotels.name }).from(hotels).where(eq(hotels.id, row.hotelMakkahId)).limit(1)
+        : Promise.resolve([]),
+      row.hotelMadinahId
+        ? db.select({ name: hotels.name }).from(hotels).where(eq(hotels.id, row.hotelMadinahId)).limit(1)
+        : Promise.resolve([]),
+      row.airlineId
+        ? db.select({ name: airlines.name }).from(airlines).where(eq(airlines.id, row.airlineId)).limit(1)
+        : Promise.resolve([]),
+    ]);
 
     const rooms = await db.select().from(bookingRooms).where(eq(bookingRooms.bookingId, id));
     const pilgrims = await db
@@ -294,6 +313,9 @@ router.get("/:id/confirmation.pdf", async (req, res) => {
 
     const pdfBuffer = await generateBookingConfirmationPdf({
       ...row,
+      hotelMakkah: (hotelMakkahRow as any[])[0]?.name ?? null,
+      hotelMadinah: (hotelMadinahRow as any[])[0]?.name ?? null,
+      airlineName: (airlineRow as any[])[0]?.name ?? null,
       rooms: rooms.map((r) => ({ roomType: r.roomType, quantity: r.quantity, subtotal: r.subtotal })),
       pilgrims: pilgrims.map((p) => ({ name: p.name, gender: p.gender, nik: p.nik })),
     });

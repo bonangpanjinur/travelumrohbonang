@@ -35,12 +35,7 @@ interface Package {
   duration_days: number;
   category_id: string | null;
   category: { name: string } | null;
-  hotel_makkah: { name: string; star: number } | null;
-  hotel_madinah: { name: string; star: number } | null;
-  airline: { name: string } | null;
-  airport: { name: string; city: string } | null;
   departures: Departure[];
-  extra_hotels?: ExtraHotel[];
 }
 
 interface ExtraHotel {
@@ -55,6 +50,11 @@ interface Departure {
   return_date: string;
   quota: number;
   remaining_quota: number;
+  status: string | null;
+  hotel_makkah: { name: string; star: number } | null;
+  hotel_madinah: { name: string; star: number } | null;
+  airline: { name: string; code?: string | null } | null;
+  extra_hotels?: ExtraHotel[];
   prices: { room_type: string; price: number }[];
 }
 
@@ -134,7 +134,7 @@ const PackageDetail = () => {
     const fetchItinerary = async () => {
       setItineraryLoading(true);
       try {
-        const data = await apiFetch(`/api/packages/itinerary/${encodeURIComponent(selectedDeparture)}`);
+        const data = await apiFetch(`/api/packages/itinerary/${encodeURIComponent(selectedDeparture)}`) as any;
         setItinerary(data?.itinerary ?? null);
         // Auto-expand first day
         if (data?.itinerary?.days?.length) {
@@ -166,7 +166,12 @@ const PackageDetail = () => {
   };
 
   const departures = pkg?.departures ?? [];
-  const extraHotels = pkg?.extra_hotels ?? [];
+
+  // Derive hotel/airline info from selected departure
+  const selectedDep = departures.find((d) => d.id === selectedDeparture);
+  const displayHotelStar = selectedDep?.hotel_makkah?.star ?? (departures[0]?.hotel_makkah?.star ?? 4);
+  const displayAirline = selectedDep?.airline?.name ?? departures[0]?.airline?.name ?? "TBA";
+  const extraHotels = selectedDep?.extra_hotels ?? [];
 
   if (loading) {
     return (
@@ -231,8 +236,6 @@ const PackageDetail = () => {
     );
   }
 
-  const selectedDep = departures.find((d) => d.id === selectedDeparture);
-
   return (
     <div className="min-h-screen">
       <SEO
@@ -290,7 +293,7 @@ const PackageDetail = () => {
           <div className="grid lg:grid-cols-3 gap-12">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Quick Info */}
+              {/* Quick Info — data from selected departure */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-card border border-border rounded-xl p-4 text-center">
                   <Calendar className="w-6 h-6 mx-auto text-gold mb-2" />
@@ -300,17 +303,17 @@ const PackageDetail = () => {
                 <div className="bg-card border border-border rounded-xl p-4 text-center">
                   <Star className="w-6 h-6 mx-auto text-gold mb-2" />
                   <div className="text-sm text-muted-foreground">Hotel</div>
-                  <div className="font-bold">Bintang {pkg.hotel_makkah?.star || 4}</div>
+                  <div className="font-bold">Bintang {displayHotelStar}</div>
                 </div>
                 <div className="bg-card border border-border rounded-xl p-4 text-center">
                   <Plane className="w-6 h-6 mx-auto text-gold mb-2" />
                   <div className="text-sm text-muted-foreground">Maskapai</div>
-                  <div className="font-bold text-sm">{pkg.airline?.name || "TBA"}</div>
+                  <div className="font-bold text-sm">{displayAirline}</div>
                 </div>
                 <div className="bg-card border border-border rounded-xl p-4 text-center">
-                  <MapPin className="w-6 h-6 mx-auto text-gold mb-2" />
+                  <Users className="w-6 h-6 mx-auto text-gold mb-2" />
                   <div className="text-sm text-muted-foreground">Keberangkatan</div>
-                  <div className="font-bold text-sm">{pkg.airport?.city || "Jakarta"}</div>
+                  <div className="font-bold text-sm">{departures.length} Jadwal</div>
                 </div>
               </div>
 
@@ -322,52 +325,66 @@ const PackageDetail = () => {
                 </p>
               </div>
 
-              {/* Hotels */}
+              {/* Akomodasi — from selected departure */}
               <div>
-                <h2 className="text-2xl font-display font-bold mb-4">Akomodasi</h2>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-card border border-border rounded-xl p-6">
-                    <Hotel className="w-8 h-8 text-gold mb-3" />
-                    <h3 className="font-bold mb-1">Hotel Makkah</h3>
-                    <p className="text-sm text-muted-foreground">{pkg.hotel_makkah?.name || "Hotel Bintang 5"}</p>
-                    <div className="flex gap-1 mt-2">
-                      {[...Array(pkg.hotel_makkah?.star || 5)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-gold text-gold" />
-                      ))}
-                    </div>
-                  </div>
-                  <div className="bg-card border border-border rounded-xl p-6">
-                    <Hotel className="w-8 h-8 text-gold mb-3" />
-                    <h3 className="font-bold mb-1">Hotel Madinah</h3>
-                    <p className="text-sm text-muted-foreground">{pkg.hotel_madinah?.name || "Hotel Bintang 5"}</p>
-                    <div className="flex gap-1 mt-2">
-                      {[...Array(pkg.hotel_madinah?.star || 5)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-gold text-gold" />
-                      ))}
-                    </div>
-                  </div>
-                  {/* Extra Hotels */}
-                  {extraHotels.map((eh) => (
-                    <div key={eh.id} className="bg-card border border-border rounded-xl p-6">
-                      <Hotel className="w-8 h-8 text-gold mb-3" />
-                      <h3 className="font-bold mb-1">{eh.label || `Hotel ${eh.hotel?.city || "Tambahan"}`}</h3>
-                      <p className="text-sm text-muted-foreground">{eh.hotel?.name || "Hotel"}</p>
-                      {eh.hotel?.city && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <MapPin className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">{eh.hotel.city}</span>
-                        </div>
-                      )}
-                      {eh.hotel?.star && (
-                        <div className="flex gap-1 mt-2">
-                          {[...Array(eh.hotel.star)].map((_, i) => (
-                            <Star key={i} className="w-4 h-4 fill-gold text-gold" />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <h2 className="text-2xl font-display font-bold mb-2">Akomodasi</h2>
+                {selectedDep ? (
+                  <>
+                    {(selectedDep.hotel_makkah || selectedDep.hotel_madinah || extraHotels.length > 0) ? (
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {selectedDep.hotel_makkah && (
+                          <div className="bg-card border border-border rounded-xl p-6">
+                            <Hotel className="w-8 h-8 text-gold mb-3" />
+                            <h3 className="font-bold mb-1">Hotel Makkah</h3>
+                            <p className="text-sm text-muted-foreground">{selectedDep.hotel_makkah.name}</p>
+                            <div className="flex gap-1 mt-2">
+                              {[...Array(selectedDep.hotel_makkah.star || 5)].map((_, i) => (
+                                <Star key={i} className="w-4 h-4 fill-gold text-gold" />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {selectedDep.hotel_madinah && (
+                          <div className="bg-card border border-border rounded-xl p-6">
+                            <Hotel className="w-8 h-8 text-gold mb-3" />
+                            <h3 className="font-bold mb-1">Hotel Madinah</h3>
+                            <p className="text-sm text-muted-foreground">{selectedDep.hotel_madinah.name}</p>
+                            <div className="flex gap-1 mt-2">
+                              {[...Array(selectedDep.hotel_madinah.star || 5)].map((_, i) => (
+                                <Star key={i} className="w-4 h-4 fill-gold text-gold" />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {/* Extra Hotels */}
+                        {extraHotels.map((eh) => (
+                          <div key={eh.id} className="bg-card border border-border rounded-xl p-6">
+                            <Hotel className="w-8 h-8 text-gold mb-3" />
+                            <h3 className="font-bold mb-1">{eh.label || `Hotel ${eh.hotel?.city || "Tambahan"}`}</h3>
+                            <p className="text-sm text-muted-foreground">{eh.hotel?.name || "Hotel"}</p>
+                            {eh.hotel?.city && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <MapPin className="w-3 h-3 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">{eh.hotel.city}</span>
+                              </div>
+                            )}
+                            {eh.hotel?.star && (
+                              <div className="flex gap-1 mt-2">
+                                {[...Array(eh.hotel.star)].map((_, i) => (
+                                  <Star key={i} className="w-4 h-4 fill-gold text-gold" />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">Hotel untuk keberangkatan ini belum ditentukan.</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">Pilih keberangkatan untuk melihat informasi hotel.</p>
+                )}
               </div>
 
               {/* Itinerary */}
@@ -528,6 +545,12 @@ const PackageDetail = () => {
                             <div className="text-xs text-muted-foreground">
                               Sisa {dep.remaining_quota} kursi
                             </div>
+                            {dep.airline && (
+                              <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                                <Plane className="w-3 h-3" />
+                                <span>{dep.airline.name}</span>
+                              </div>
+                            )}
                           </div>
                           <Users className="w-4 h-4 text-muted-foreground" />
                         </div>
@@ -564,8 +587,8 @@ const PackageDetail = () => {
                       image_url: pkg.image_url,
                       description: pkg.description,
                       duration_days: pkg.duration_days,
-                      hotel_makkah: pkg.hotel_makkah?.name,
-                      hotel_madinah: pkg.hotel_madinah?.name,
+                      hotel_makkah: selectedDep?.hotel_makkah?.name ?? departures[0]?.hotel_makkah?.name,
+                      hotel_madinah: selectedDep?.hotel_madinah?.name ?? departures[0]?.hotel_madinah?.name,
                       startPrice: selectedDep ? getLowestPrice(selectedDep.prices) : (departures[0] ? getLowestPrice(departures[0].prices) : 0),
                     }}
                   />

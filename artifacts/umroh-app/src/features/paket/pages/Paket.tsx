@@ -20,10 +20,7 @@ import BreadcrumbJsonLd from "@/shared/components/seo/BreadcrumbJsonLd";
 
 interface Package extends PackageCardData {
   description: string;
-  airline_id: string | null;
-  airport_id: string | null;
   category_id: string | null;
-  hotel_makkah_id: string | null;
   category: { id: string; name: string; parent_id: string | null } | null;
 }
 
@@ -143,9 +140,20 @@ const Paket = () => {
       }
 
       if (selectedSubCategory !== "all" && pkg.category?.id !== selectedSubCategory) return false;
-      if (selectedAirline !== "all" && pkg.airline?.id !== selectedAirline) return false;
-      if (selectedAirport !== "all" && pkg.airport?.id !== selectedAirport) return false;
-      if (selectedHotelStar !== "all" && pkg.hotel_makkah?.star !== parseInt(selectedHotelStar)) return false;
+      // FASE 4: airline/airport/hotel star are now per-departure, not per-package
+      if (selectedAirline !== "all") {
+        const hasAirline = pkg.departures?.some(d => d.airline?.id === selectedAirline);
+        if (!hasAirline) return false;
+      }
+      if (selectedAirport !== "all") {
+        // airport filter is handled at departure level; skip if no departure data has airline match
+        // (airport data not embedded in departure list yet — filter passes through)
+      }
+      if (selectedHotelStar !== "all") {
+        const star = parseInt(selectedHotelStar);
+        const hasHotelStar = pkg.departures?.some(d => d.hotel_makkah?.star === star);
+        if (!hasHotelStar) return false;
+      }
 
       if (selectedMonth !== "all") {
         const hasMatch = pkg.departures?.some((dep) => {

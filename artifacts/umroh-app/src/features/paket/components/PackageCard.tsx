@@ -15,6 +15,7 @@ export interface PackageCardData {
   duration_days?: number;
   package_type?: string | null;
   category?: { id: string; name: string } | null;
+  // hotel_makkah kept for backward compat with static/preview data
   hotel_makkah?: { star: number; name?: string } | null;
   airline?: { id: string; name: string } | null;
   airport?: { id: string; name: string; city?: string } | null;
@@ -23,6 +24,9 @@ export interface PackageCardData {
     departure_date: string;
     remaining_quota: number;
     prices?: { price: number; room_type: string }[];
+    // FASE 3.4: hotel & airline are now per-departure
+    hotel_makkah?: { star: number; name?: string } | null;
+    airline?: { id: string; name: string } | null;
   }[];
   // For static/preview data
   lowestPrice?: number;
@@ -59,7 +63,17 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
 
   const lowestPrice = getLowestPrice();
   const nextDep = getNextDeparture();
-  const hotelStar = pkg.hotel_makkah?.star || pkg.hotelStar || 4;
+
+  // FASE 4: hotel star derived from nearest departure first, then package-level fallback
+  const hotelStar =
+    nextDep?.hotel_makkah?.star ??
+    pkg.hotel_makkah?.star ??
+    pkg.hotelStar ??
+    4;
+
+  // FASE 4: airline from nearest departure first, then package-level fallback
+  const displayAirline = nextDep?.airline ?? pkg.airline ?? null;
+
   const categoryName = pkg.category?.name || pkg.package_type || "Reguler";
   const remainingQuota = nextDep?.remaining_quota ?? pkg.quota;
   const totalQuota = pkg.quota || remainingQuota;
@@ -176,11 +190,11 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
           </div>
         )}
 
-        {(pkg.airline || pkg.airport) && !showFeatures && (
+        {(displayAirline || pkg.airport) && !showFeatures && (
           <div className="flex flex-wrap gap-2 mt-3">
-            {pkg.airline && (
+            {displayAirline && (
               <span className="text-xs bg-muted px-2 py-1 rounded flex items-center gap-1">
-                <Plane className="w-3 h-3" /> {pkg.airline.name}
+                <Plane className="w-3 h-3" /> {displayAirline.name}
               </span>
             )}
             {pkg.airport && (

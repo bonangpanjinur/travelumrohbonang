@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -11,7 +11,7 @@ import { useToast } from "@/shared/hooks/use-toast";
 import {
   Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search,
   Images, FileDown, Copy, ArrowRight, Plane, ChevronRight, ClipboardList, RefreshCw, Activity,
-  Wallet, CheckSquare,
+  Wallet, CheckSquare, Hotel, X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -26,7 +26,14 @@ interface Package { id: string; title: string }
 interface Muthawif { id: string; name: string }
 interface Airline { id: string; name: string; code: string | null }
 interface Airport { id: string; name: string; code: string | null; city: string | null }
+interface HotelOption { id: string; name: string; city: string | null }
 interface DeparturePrice { id: string; roomType: string; price: number }
+interface ExtraHotel {
+  id?: string;
+  hotel_id: string;
+  label: string;
+  sort_order: number;
+}
 interface Departure {
   id: string;
   packageId: string;
@@ -41,6 +48,9 @@ interface Departure {
   flightNumber: string | null;
   departureAirportId: string | null;
   arrivalAirportId: string | null;
+  // FASE 2: hotel per keberangkatan
+  hotelMakkahId: string | null;
+  hotelMadinahId: string | null;
   package: Package | null;
   prices: DeparturePrice[];
 }
@@ -138,11 +148,15 @@ interface ManifestSummary {
 
 const AdminDepartures = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const pkgFilterId = searchParams.get("packageId") || "";
+
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [muthawifs, setMuthawifs] = useState<Muthawif[]>([]);
   const [airlines, setAirlines] = useState<Airline[]>([]);
   const [airports, setAirports] = useState<Airport[]>([]);
+  const [hotels, setHotels] = useState<HotelOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Departure | null>(null);
@@ -152,39 +166,96 @@ const AdminDepartures = () => {
   const { toast } = useToast();
   const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
 
+  // FASE 3.2: extra hotels for the departure form
+  const [extraHotels, setExtraHotels] = useState<ExtraHotel[]>([]);
+
   const [form, setForm] = useState<{
     packageId: string; departureDate: string; returnDate: string;
     quota: number; status: string; muthawifId: string; prices: Record<string, number>;
     // KB-F03: flight info
     airlineId: string; flightNumber: string; departureAirportId: string; arrivalAirportId: string;
+    // FASE 3.2: hotel per keberangkatan
+    hotelMakkahId: string; hotelMadinahId: string;
   }>({
     packageId: "", departureDate: "", returnDate: "",
     quota: 45, status: "active", muthawifId: "",
     prices: Object.fromEntries(ROOM_TYPES.map((t) => [t, 0])),
     airlineId: "", flightNumber: "", departureAirportId: "", arrivalAirportId: "",
+    hotelMakkahId: "", hotelMadinahId: "",
   });
 
   useEffect(() => { fetchData(); }, []);
 
+  // Pre-select package from URL param
+  useEffect(() => {
+    if (pkgFilterId && !loading) {
+      setForm(f => ({ ...f, packageId: pkgFilterId }));
+    }
+  }, [pkgFilterId, loading]);
+
   const fetchData = async () => {
     try {
-      const [departuresRes, packagesRes, muthawifRes, airlinesRes, airportsRes] = await Promise.all([
+      const [departuresRes, packagesRes, muthawifRes, airlinesRes, airportsRes, hotelsRes] = await Promise.all([
         apiFetch<{ data: Departure[] }>("/api/admin/departures"),
         apiFetch<{ data: Package[] }>("/api/packages?active=true"),
         apiFetch<{ data: Muthawif[] }>("/api/admin/masterdata/muthawifs"),
         apiFetch<{ data: Airline[] }>("/api/admin/masterdata/airlines").catch(() => ({ data: [] as Airline[] })),
         apiFetch<{ data: Airport[] }>("/api/admin/masterdata/airports").catch(() => ({ data: [] as Airport[] })),
+        apiFetch<{ data: HotelOption[] }>("/api/admin/masterdata/hotels").catch(() => ({ data: [] as HotelOption[] })),
       ]);
       setDepartures(departuresRes.data || []);
       setPackages(packagesRes.data || []);
       setMuthawifs(muthawifRes.data || []);
       setAirlines(airlinesRes.data || []);
       setAirports(airportsRes.data || []);
+      setHotels((hotelsRes.data || []).map((h: any) => ({
+        id: h.id ?? h.id,
+        name: h.name,
+        city: h.city ?? null,
+      })));
     } catch (err: any) {
       toast({ title: "Gagal memuat data keberangkatan", description: err?.message ?? "Periksa koneksi atau coba lagi.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchExtraHotels = async (departureId: string) => {
+    try {
+      const { data } = await apiFetch<{ data: any[] }>(`/api/admin/departures/${departureId}/extra-hotels`);
+      setExtraHotels((data || []).map((eh: any) => ({
+        id: eh.id,
+        hotel_id: eh.hotelId ?? eh.hotel_id,
+        label: eh.label || "",
+        sort_order: eh.sortOrder ?? eh.sort_order ?? 0,
+      })));
+    } catch {
+      setExtraHotels([]);
+    }
+  };
+
+  // ── Extra hotel helpers ───────────────────────────────────────────────────
+  const makkahHotels = hotels.filter(h => h.city === "Makkah");
+  const madinahHotels = hotels.filter(h => h.city === "Madinah");
+
+  const addExtraHotel = () => {
+    setExtraHotels([...extraHotels, { hotel_id: "", label: "", sort_order: extraHotels.length }]);
+  };
+
+  const updateExtraHotel = (index: number, field: keyof ExtraHotel, value: string) => {
+    const updated = [...extraHotels];
+    (updated[index] as any)[field] = value;
+    if (field === "hotel_id" && value) {
+      const hotel = hotels.find(h => h.id === value);
+      if (hotel && !updated[index].label) {
+        updated[index].label = `Hotel ${hotel.city || "Tambahan"}`;
+      }
+    }
+    setExtraHotels(updated);
+  };
+
+  const removeExtraHotel = (index: number) => {
+    setExtraHotels(extraHotels.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -193,12 +264,22 @@ const AdminDepartures = () => {
       toast({ title: "Tanggal pulang tidak valid", description: "Tanggal pulang harus setelah tanggal berangkat.", variant: "destructive" });
       return;
     }
+    const payload = {
+      ...form,
+      hotelMakkahId: form.hotelMakkahId || null,
+      hotelMadinahId: form.hotelMadinahId || null,
+      extraHotels: extraHotels.filter(eh => eh.hotel_id).map((eh, i) => ({
+        hotelId: eh.hotel_id,
+        label: eh.label || null,
+        sortOrder: i,
+      })),
+    };
     try {
       if (editing) {
-        await apiFetch(`/api/admin/departures/${editing.id}`, { method: "PATCH", body: JSON.stringify(form) });
+        await apiFetch(`/api/admin/departures/${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) });
         toast({ title: "Keberangkatan diupdate!" });
       } else {
-        await apiFetch("/api/admin/departures", { method: "POST", body: JSON.stringify(form) });
+        await apiFetch("/api/admin/departures", { method: "POST", body: JSON.stringify(payload) });
         toast({ title: "Keberangkatan ditambahkan!" });
       }
       fetchData();
@@ -209,7 +290,7 @@ const AdminDepartures = () => {
     }
   };
 
-  const handleEdit = (dep: Departure) => {
+  const handleEdit = async (dep: Departure) => {
     setEditing(dep);
     const priceMap: Record<string, number> = Object.fromEntries(ROOM_TYPES.map((t) => [t, 0]));
     (dep.prices ?? []).forEach((p) => { if (ROOM_TYPES.includes(p.roomType)) priceMap[p.roomType] = p.price; });
@@ -225,7 +306,10 @@ const AdminDepartures = () => {
       flightNumber: dep.flightNumber || "",
       departureAirportId: dep.departureAirportId || "",
       arrivalAirportId: dep.arrivalAirportId || "",
+      hotelMakkahId: dep.hotelMakkahId || "",
+      hotelMadinahId: dep.hotelMadinahId || "",
     });
+    await fetchExtraHotels(dep.id);
     setIsOpen(true);
   };
 
@@ -241,20 +325,23 @@ const AdminDepartures = () => {
 
   const resetForm = () => {
     setEditing(null);
+    setExtraHotels([]);
     setForm({
-      packageId: "", departureDate: "", returnDate: "",
+      packageId: pkgFilterId || "", departureDate: "", returnDate: "",
       quota: 45, status: "active", muthawifId: "",
       prices: Object.fromEntries(ROOM_TYPES.map((t) => [t, 0])),
       airlineId: "", flightNumber: "", departureAirportId: "", arrivalAirportId: "",
+      hotelMakkahId: "", hotelMadinahId: "",
     });
   };
 
   const filteredDepartures = departures.filter((d) => {
     const q = search.toLowerCase();
-    if (!q) return true;
-    // search by package title OR departure date
-    return (d.package?.title || "Belum ada paket").toLowerCase().includes(q) ||
+    const matchesSearch = !q ||
+      (d.package?.title || "Belum ada paket").toLowerCase().includes(q) ||
       (d.departureDate || "").includes(q);
+    const matchesPkg = !pkgFilterId || d.packageId === pkgFilterId;
+    return matchesSearch && matchesPkg;
   });
   const { page, setPage, totalPages, totalCount, paginatedItems, pageSize, resetPage } = useAdminPagination(filteredDepartures, 9);
   useEffect(() => { resetPage(); }, [search]);
@@ -285,7 +372,7 @@ const AdminDepartures = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paginatedIds]);
 
-  // Helper: airport display label
+  // Helper: airport/airline display label
   const airportLabel = (id: string | null) => {
     if (!id) return "";
     const ap = airports.find((a) => a.id === id);
@@ -298,6 +385,15 @@ const AdminDepartures = () => {
     return al ? `${al.name}${al.code ? " (" + al.code + ")" : ""}` : id;
   };
 
+  const hotelLabel = (id: string | null) => {
+    if (!id) return null;
+    const h = hotels.find((h) => h.id === id);
+    return h ? `${h.name}${h.city ? ` (${h.city})` : ""}` : null;
+  };
+
+  // Package filter badge
+  const filterPackage = pkgFilterId ? packages.find(p => p.id === pkgFilterId) : null;
+
   return (
     <div className="space-y-6">
       <DeleteAlertDialog open={isDeleteOpen} onOpenChange={cancelDelete} onConfirm={() => confirmDelete(executeDelete)} title="Hapus Keberangkatan?" description="Keberangkatan dan harga terkait akan dihapus permanen." />
@@ -309,6 +405,11 @@ const AdminDepartures = () => {
           {!loading && (
             <p className="text-sm text-muted-foreground mt-0.5">
               {totalCount} jadwal terdaftar
+              {filterPackage && (
+                <span className="ml-2 text-primary font-medium">
+                  — Paket: {filterPackage.title}
+                </span>
+              )}
             </p>
           )}
         </div>
@@ -388,6 +489,79 @@ const AdminDepartures = () => {
                       {muthawifs.map((m) => (<SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* FASE 3.2: Hotel per Keberangkatan */}
+                <div className="border-t pt-4">
+                  <Label className="text-base font-semibold flex items-center gap-2 mb-3">
+                    <Hotel className="w-4 h-4" /> Akomodasi
+                  </Label>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Hotel Makkah</Label>
+                        <Select value={form.hotelMakkahId || "__none__"} onValueChange={(val) => setForm({ ...form, hotelMakkahId: val === "__none__" ? "" : val })}>
+                          <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih hotel" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— Tidak Ada —</SelectItem>
+                            {makkahHotels.map(h => (
+                              <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Hotel Madinah</Label>
+                        <Select value={form.hotelMadinahId || "__none__"} onValueChange={(val) => setForm({ ...form, hotelMadinahId: val === "__none__" ? "" : val })}>
+                          <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih hotel" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— Tidak Ada —</SelectItem>
+                            {madinahHotels.map(h => (
+                              <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Extra Hotels */}
+                    <div className="border border-border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium text-muted-foreground">Hotel Tambahan (opsional)</p>
+                        <Button type="button" variant="outline" size="sm" className="h-6 text-xs px-2" onClick={addExtraHotel}>
+                          <Plus className="w-3 h-3 mr-1" /> Tambah
+                        </Button>
+                      </div>
+                      {extraHotels.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic">Belum ada hotel tambahan (misal: Istanbul, Mina, dll)</p>
+                      )}
+                      {extraHotels.map((eh, index) => (
+                        <div key={index} className="flex gap-2 items-start">
+                          <div className="flex-1">
+                            <Select value={eh.hotel_id || undefined} onValueChange={(v) => updateExtraHotel(index, "hotel_id", v)}>
+                              <SelectTrigger className="text-xs h-7"><SelectValue placeholder="Pilih Hotel" /></SelectTrigger>
+                              <SelectContent>
+                                {hotels.filter(h => h.id).map(h => (
+                                  <SelectItem key={h.id} value={h.id}>{h.name}{h.city ? ` - ${h.city}` : ""}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <Input
+                              value={eh.label}
+                              onChange={(e) => updateExtraHotel(index, "label", e.target.value)}
+                              placeholder="Label (misal: Hotel Istanbul)"
+                              className="text-xs h-7"
+                            />
+                          </div>
+                          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeExtraHotel(index)}>
+                            <X className="w-3.5 h-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {/* KB-F03: Info Penerbangan */}
@@ -485,6 +659,20 @@ const AdminDepartures = () => {
         </div>
       </div>
 
+      {/* Package filter badge */}
+      {filterPackage && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-primary/5 border border-primary/20 rounded-xl text-sm">
+          <span className="text-muted-foreground">Menampilkan keberangkatan untuk:</span>
+          <Badge variant="secondary" className="font-medium">{filterPackage.title}</Badge>
+          <Button
+            variant="ghost" size="sm" className="h-6 px-2 text-xs ml-auto text-muted-foreground"
+            onClick={() => navigate("/admin/departures")}
+          >
+            Lihat Semua
+          </Button>
+        </div>
+      )}
+
       {/* Content */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -513,6 +701,8 @@ const AdminDepartures = () => {
             {paginatedItems.map((dep) => {
               const prices = validPrices(dep.prices);
               const lowestPrice = prices.length > 0 ? Math.min(...prices.map((p) => p.price)) : null;
+              const hotelMakkahName = hotelLabel(dep.hotelMakkahId);
+              const hotelMadinahName = hotelLabel(dep.hotelMadinahId);
 
               return (
                 <div key={dep.id} className="bg-card border border-border rounded-xl overflow-hidden hover:shadow-md transition-shadow group">
@@ -544,6 +734,15 @@ const AdminDepartures = () => {
                               {dep.flightNumber ? ` · ${dep.flightNumber}` : ""}
                               {dep.departureAirportId ? ` · ${airportLabel(dep.departureAirportId)}` : ""}
                               {dep.arrivalAirportId ? ` → ${airportLabel(dep.arrivalAirportId)}` : ""}
+                            </span>
+                          </div>
+                        )}
+                        {/* FASE 3.3: Tampilkan hotel jika ada */}
+                        {(hotelMakkahName || hotelMadinahName) && (
+                          <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                            <Hotel className="w-3 h-3 shrink-0" />
+                            <span className="truncate">
+                              {[hotelMakkahName, hotelMadinahName].filter(Boolean).join(" · ")}
                             </span>
                           </div>
                         )}

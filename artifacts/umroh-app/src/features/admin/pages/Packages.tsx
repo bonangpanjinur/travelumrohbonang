@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Badge } from "@/shared/components/ui/badge";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Hotel, X, Search, Download, ExternalLink, Copy, Package, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Search, Download, ExternalLink, Copy, Package, CheckCircle2, XCircle, Calendar } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import { Link } from "react-router-dom";
 import PackageCommissions from "@/features/admin/components/PackageCommissions";
@@ -20,7 +20,6 @@ import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 import { useDeleteConfirm } from "@/features/admin/hooks/useDeleteConfirm";
 import { useFormDraft } from "@/features/admin/hooks/useFormDraft";
 import { FormDraftBanner } from "@/features/admin/components/FormDraftBanner";
-import { ConfirmDiscardDialog } from "@/features/admin/components/ConfirmDiscardDialog";
 
 interface Package {
   id: string;
@@ -35,22 +34,10 @@ interface Package {
   is_active: boolean;
   created_at: string;
   category_id: string | null;
-  hotel_makkah_id: string | null;
-  hotel_madinah_id: string | null;
-  airline_id: string | null;
-  airport_id: string | null;
   image_url?: string | null;
 }
 
 interface Option { id: string; name: string; show_extra_hotels?: boolean | null; is_active?: boolean | null; }
-interface HotelOption extends Option { city: string | null; }
-
-interface ExtraHotel {
-  id?: string;
-  hotel_id: string;
-  label: string;
-  sort_order: number;
-}
 
 // ── Form shape ────────────────────────────────────────────────────────────────
 
@@ -64,17 +51,10 @@ const EMPTY_FORM = {
   dp_deadline_days: 30,
   full_deadline_days: 7,
   category_id: "",
-  hotel_makkah_id: "",
-  hotel_madinah_id: "",
-  airline_id: "",
-  airport_id: "",
   image_url: "",
 };
 
 type FormData = typeof EMPTY_FORM;
-
-// Draft combines the main form + the extra-hotels list
-type PackageDraft = FormData & { __extraHotels: ExtraHotel[] };
 
 // API returns camelCase (from Drizzle schema); UI works with snake_case.
 const mapPackageFromApi = (p: any): Package => ({
@@ -90,10 +70,6 @@ const mapPackageFromApi = (p: any): Package => ({
   is_active: p.isActive,
   created_at: p.createdAt,
   category_id: p.categoryId,
-  hotel_makkah_id: p.hotelMakkahId,
-  hotel_madinah_id: p.hotelMadinahId,
-  airline_id: p.airlineId,
-  airport_id: p.airportId,
   image_url: p.imageUrl,
 });
 
@@ -129,30 +105,15 @@ const AdminPackages = () => {
   useEffect(() => { resetPage(); }, [search, statusFilter]);
 
   const [categories, setCategories] = useState<Option[]>([]);
-  const [hotels, setHotels] = useState<HotelOption[]>([]);
-  const [airlines, setAirlines] = useState<Option[]>([]);
-  const [airports, setAirports] = useState<(Option & { code: string | null })[]>([]);
-  const [extraHotels, setExtraHotels] = useState<ExtraHotel[]>([]);
-
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
 
   // ── Draft auto-save / restore ─────────────────────────────────────────────
-  // Key switches between "new" and "edit-{id}" so each package gets its own draft.
   const draftKey = editing ? `admin-packages-edit-${editing.id}` : "admin-packages-new";
 
-  // Merge form + extra hotels into one object to persist them together.
-  const draftValue: PackageDraft = { ...form, __extraHotels: extraHotels };
-
-  const handleDraftRestore = useCallback((saved: PackageDraft) => {
-    const { __extraHotels, ...savedForm } = saved;
-    setForm(savedForm as FormData);
-    setExtraHotels(__extraHotels || []);
-  }, []);
-
-  const { hasDraft, restoreDraft, clearDraft, isDirty, markClean } = useFormDraft<PackageDraft>({
+  const { hasDraft, restoreDraft, clearDraft, isDirty, markClean } = useFormDraft<FormData>({
     key: draftKey,
-    value: draftValue,
-    onRestore: handleDraftRestore,
+    value: form,
+    onRestore: useCallback((saved: FormData) => { setForm(saved); }, []),
     isEmpty: (v) => !v.title.trim(),
   });
 
@@ -165,25 +126,13 @@ const AdminPackages = () => {
 
   const fetchOptions = async () => {
     try {
-      const [catRes, hotelRes, airlineRes, airportRes] = await Promise.all([
-        apiFetch<{ data: any[] }>("/api/admin/masterdata/categories"),
-        apiFetch<{ data: any[] }>("/api/admin/masterdata/hotels"),
-        apiFetch<{ data: any[] }>("/api/admin/masterdata/airlines"),
-        apiFetch<{ data: any[] }>("/api/admin/masterdata/airports"),
-      ]);
+      const catRes = await apiFetch<{ data: any[] }>("/api/admin/masterdata/categories");
       setCategories((catRes.data || []).map((c) => ({
         id: c.id,
         name: c.name,
         show_extra_hotels: c.showExtraHotels,
         is_active: c.isActive,
       })));
-      setHotels((hotelRes.data || []).map((h) => ({
-        id: h.id,
-        name: h.name,
-        city: h.city,
-      })));
-      setAirlines((airlineRes.data || []).map((a) => ({ id: a.id, name: a.name })));
-      setAirports((airportRes.data || []).map((a) => ({ id: a.id, name: a.name, code: a.code })));
     } catch (error: any) {
       toast({ title: "Gagal memuat data referensi", description: error.message, variant: "destructive" });
     }
@@ -200,53 +149,21 @@ const AdminPackages = () => {
     }
   };
 
-  const fetchExtraHotels = async (packageId: string) => {
-    const { data } = await apiFetch<{ data: any[] }>(`/api/admin/packages/${packageId}/extra-hotels`);
-    setExtraHotels((data || []).map((eh) => ({
-      id: eh.id,
-      hotel_id: eh.hotelId,
-      label: eh.label,
-      sort_order: eh.sortOrder,
-    })));
-  };
-
-  // Check if selected category needs extra hotels (driven by admin setting, not name matching)
-  const selectedCategory = categories.find(c => c.id === form.category_id);
-  const showExtraHotels = selectedCategory?.show_extra_hotels ?? false;
-
-  const makkahHotels = hotels.filter(h => h.city === "Makkah");
-  const madinahHotels = hotels.filter(h => h.city === "Madinah");
-
   // ── Form helpers ──────────────────────────────────────────────────────────
 
   const buildPayload = () => {
-    // API (Zod/Drizzle) expects camelCase field names.
-    // extraHotels disertakan langsung agar backend bisa menyimpannya
-    // dalam satu transaksi yang sama dengan data paket utama.
-    const payload: Record<string, unknown> = {
+    return {
       title: form.title,
       slug: form.slug || (form.title ?? "").toLowerCase().replace(/\s+/g, "-"),
       description: form.description || null,
       packageType: form.package_type || null,
       durationDays: form.duration_days,
       categoryId: form.category_id || null,
-      hotelMakkahId: form.hotel_makkah_id || null,
-      hotelMadinahId: form.hotel_madinah_id || null,
-      airlineId: form.airline_id || null,
-      airportId: form.airport_id || null,
       imageUrl: form.image_url || null,
-      // Always include these so zero/default values are properly saved on update
       minimumDp: form.minimum_dp,
       dpDeadlineDays: form.dp_deadline_days,
       fullDeadlineDays: form.full_deadline_days,
-      // Extra hotels disertakan dalam payload utama untuk atomic save
-      extraHotels: extraHotels.map((eh, i) => ({
-        hotelId: eh.hotel_id,
-        label: eh.label || null,
-        sortOrder: i,
-      })),
     };
-    return payload;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -292,16 +209,8 @@ const AdminPackages = () => {
       dp_deadline_days: pkg.dp_deadline_days || 30,
       full_deadline_days: pkg.full_deadline_days || 7,
       category_id: pkg.category_id || "",
-      hotel_makkah_id: pkg.hotel_makkah_id || "",
-      hotel_madinah_id: pkg.hotel_madinah_id || "",
-      airline_id: pkg.airline_id || "",
-      airport_id: pkg.airport_id || "",
       image_url: pkg.image_url || "",
     });
-    await fetchExtraHotels(pkg.id);
-    // Capture the freshly-loaded DB values as the clean baseline AFTER all
-    // async data (extraHotels) is in state — so the dirty dot only lights up
-    // when the admin actually edits something, not just from opening the form.
     markClean();
     setIsOpen(true);
   };
@@ -318,7 +227,6 @@ const AdminPackages = () => {
 
   const resetForm = () => {
     setEditing(null);
-    setExtraHotels([]);
     setForm(EMPTY_FORM);
     clearDraft();
   };
@@ -358,26 +266,6 @@ const AdminPackages = () => {
     } catch (err: any) {
       toast({ title: "Gagal menduplikat paket", description: err.message, variant: "destructive" });
     }
-  };
-
-  const addExtraHotel = () => {
-    setExtraHotels([...extraHotels, { hotel_id: "", label: "", sort_order: extraHotels.length }]);
-  };
-
-  const updateExtraHotel = (index: number, field: keyof ExtraHotel, value: string) => {
-    const updated = [...extraHotels];
-    (updated[index] as any)[field] = value;
-    if (field === "hotel_id" && value) {
-      const hotel = hotels.find(h => h.id === value);
-      if (hotel && !updated[index].label) {
-        updated[index].label = `Hotel ${hotel.city || "Tambahan"}`;
-      }
-    }
-    setExtraHotels(updated);
-  };
-
-  const removeExtraHotel = (index: number) => {
-    setExtraHotels(extraHotels.filter((_, i) => i !== index));
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -483,90 +371,16 @@ const AdminPackages = () => {
                   <Input value={form.package_type} onChange={(e) => setForm({ ...form, package_type: e.target.value })} placeholder="VIP, Reguler, Hemat" className="mt-1" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Hotel Makkah</Label>
-                  <Select value={form.hotel_makkah_id || undefined} onValueChange={(v) => setForm({ ...form, hotel_makkah_id: v })}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Hotel" /></SelectTrigger>
-                    <SelectContent className="bg-popover z-50">
-                      {makkahHotels.filter(h => h.id).map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Hotel Madinah</Label>
-                  <Select value={form.hotel_madinah_id || undefined} onValueChange={(v) => setForm({ ...form, hotel_madinah_id: v })}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Hotel" /></SelectTrigger>
-                    <SelectContent className="bg-popover z-50">
-                      {madinahHotels.filter(h => h.id).map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+
+              {/* Info: hotel & maskapai moved to departures */}
+              <div className="flex items-start gap-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
+                <span className="mt-0.5 shrink-0 text-base">ℹ️</span>
+                <p>
+                  <span className="font-semibold">Hotel dan maskapai diatur di setiap keberangkatan.</span>{" "}
+                  Tambahkan keberangkatan di menu <strong>Jadwal Keberangkatan</strong> untuk mengatur hotel, maskapai, dan harga spesifik per tanggal.
+                </p>
               </div>
 
-              {/* Extra Hotels — shown when category is Plus or Haji */}
-              {showExtraHotels && (
-                <div className="border border-border rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Hotel className="w-4 h-4 text-gold" />
-                      <Label className="font-semibold">Hotel Tambahan</Label>
-                    </div>
-                    <Button type="button" variant="outline" size="sm" onClick={addExtraHotel}>
-                      <Plus className="w-3 h-3 mr-1" /> Tambah
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Tambahkan hotel di kota tujuan lain (misal: Istanbul, Cappadocia, Mina, dll)
-                  </p>
-                  {extraHotels.map((eh, index) => (
-                    <div key={index} className="flex gap-2 items-start">
-                      <div className="flex-1">
-                        <Select value={eh.hotel_id || undefined} onValueChange={(v) => updateExtraHotel(index, "hotel_id", v)}>
-                          <SelectTrigger className="text-sm"><SelectValue placeholder="Pilih Hotel" /></SelectTrigger>
-                          <SelectContent className="bg-popover z-50">
-                            {hotels.filter(h => h.id).map(h => (
-                              <SelectItem key={h.id} value={h.id}>{h.name} - {h.city}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex-1">
-                        <Input
-                          value={eh.label}
-                          onChange={(e) => updateExtraHotel(index, "label", e.target.value)}
-                          placeholder="Label (misal: Hotel Istanbul)"
-                          className="text-sm"
-                        />
-                      </div>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeExtraHotel(index)} className="shrink-0">
-                        <X className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Maskapai</Label>
-                  <Select value={form.airline_id || undefined} onValueChange={(v) => setForm({ ...form, airline_id: v })}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Maskapai" /></SelectTrigger>
-                    <SelectContent className="bg-popover z-50">
-                      {airlines.filter(a => a.id).map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Bandara</Label>
-                  <Select value={form.airport_id || undefined} onValueChange={(v) => setForm({ ...form, airport_id: v })}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih Bandara" /></SelectTrigger>
-                    <SelectContent className="bg-popover z-50">
-                      {airports.filter(a => a.id).map(a => <SelectItem key={a.id} value={a.id}>{a.name} ({a.code})</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
               <div>
                 <Label>Durasi (hari)</Label>
                 <Input type="number" value={form.duration_days} onChange={(e) => { const v = parseInt(e.target.value); setForm({ ...form, duration_days: Number.isNaN(v) ? form.duration_days : v }); }} className="mt-1" />
@@ -702,7 +516,7 @@ const AdminPackages = () => {
           />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-              <X className="w-3.5 h-3.5" />
+              ✕
             </button>
           )}
         </div>
@@ -859,6 +673,12 @@ const AdminPackages = () => {
                           >
                             {expandedCommission === pkg.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                           </Button>
+                          {/* FASE 3.3: Link to departures filtered by this package */}
+                          <Link to={`/admin/departures?packageId=${pkg.id}`}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Lihat Keberangkatan">
+                              <Calendar className="w-4 h-4" />
+                            </Button>
+                          </Link>
                           <Link to={`/paket/${pkg.slug}`} target="_blank">
                             <Button variant="ghost" size="icon" className="h-8 w-8" title="Lihat di Frontend">
                               <Eye className="w-4 h-4" />
