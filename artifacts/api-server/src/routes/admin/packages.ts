@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, sql, packages, packageDepartures, departurePrices, packageHotels, packageCommissions, eq, asc, inArray } from "@workspace/db";
+import { db, sql, packages, packageDepartures, departurePrices, departureHotels, packageCommissions, eq, asc, inArray } from "@workspace/db";
 import { sendAdminError } from "../../lib/adminApiError";
 import {
   PackageSchema,
@@ -18,9 +18,7 @@ const router = Router();
  * GET /api/admin/packages
  *
  * Uses raw SQL (same pattern as dashboard-stats) to avoid Drizzle enumerating
- * every schema column — some columns (hotel_makkah_id, required_doc_types, etc.)
- * may not exist in older DB instances, causing "column does not exist" 500 errors.
- * Only selects the columns required by PackageSchema / the frontend.
+ * every schema column — only selects the columns required by PackageSchema / the frontend.
  */
 router.get("/", async (_req, res) => {
   try {
@@ -52,7 +50,7 @@ router.get("/", async (_req, res) => {
 
 router.post("/", validate(AdminCreatePackageRequest), async (req, res) => {
   try {
-    const body = req.body as AdminCreatePackageInput & { extraHotels?: Array<{ hotelId: string; label?: string }> };
+    const body = req.body as AdminCreatePackageInput;
     const packageId = crypto.randomUUID();
 
     const created = await db.transaction(async (tx) => {
@@ -67,28 +65,13 @@ router.post("/", validate(AdminCreatePackageRequest), async (req, res) => {
           durationDays: body.durationDays ?? null,
           packageType: body.packageType ?? null,
           categoryId: body.categoryId ?? null,
-          hotelMakkahId: (body as any).hotelMakkahId ?? null,
-          hotelMadinahId: (body as any).hotelMadinahId ?? null,
-          airlineId: (body as any).airlineId ?? null,
-          airportId: (body as any).airportId ?? null,
+          // FASE 1: hotelMakkahId, hotelMadinahId, airlineId, airportId ada di departure
           minimumDp: body.minimumDp ?? null,
           dpDeadlineDays: body.dpDeadlineDays ?? null,
           fullDeadlineDays: body.fullDeadlineDays ?? null,
           isActive: body.isActive,
         })
         .returning();
-
-      if (body.extraHotels?.length) {
-        await tx.insert(packageHotels).values(
-          body.extraHotels.map((eh, i) => ({
-            id: crypto.randomUUID(),
-            packageId,
-            hotelId: eh.hotelId,
-            label: eh.label ?? null,
-            sortOrder: i,
-          }))
-        );
-      }
 
       return pkg;
     });
@@ -206,41 +189,28 @@ router.patch("/bulk-status", async (req, res) => {
 router.patch("/:id", validate(AdminUpdatePackageRequest), async (req, res) => {
   try {
     const id = req.params.id as string;
-    const updates = req.body as AdminUpdatePackageInput & { extraHotels?: Array<{ hotelId: string; label?: string }> };
+    const updates = req.body as AdminUpdatePackageInput;
 
     const updated = await db.transaction(async (tx) => {
       const [pkg] = await tx
         .update(packages)
         .set({
-          ...updates,
-          hotelMakkahId: (updates as any).hotelMakkahId,
-          hotelMadinahId: (updates as any).hotelMadinahId,
-          airlineId: (updates as any).airlineId,
-          airportId: (updates as any).airportId,
-          extraHotels: undefined, // strip non-column field
+          title: updates.title,
+          slug: updates.slug,
+          description: updates.description,
+          imageUrl: updates.imageUrl,
+          durationDays: updates.durationDays,
+          packageType: updates.packageType,
+          categoryId: updates.categoryId,
+          minimumDp: updates.minimumDp,
+          dpDeadlineDays: updates.dpDeadlineDays,
+          fullDeadlineDays: updates.fullDeadlineDays,
+          isActive: updates.isActive,
         } as any)
         .where(eq(packages.id, id))
         .returning();
 
-      if (!pkg) return null;
-
-      // Sync extra hotels atomically if provided in the request body
-      if (Array.isArray(updates.extraHotels)) {
-        await tx.delete(packageHotels).where(eq(packageHotels.packageId, id));
-        if (updates.extraHotels.length > 0) {
-          await tx.insert(packageHotels).values(
-            updates.extraHotels.map((eh, i) => ({
-              id: crypto.randomUUID(),
-              packageId: id,
-              hotelId: eh.hotelId,
-              label: eh.label ?? null,
-              sortOrder: i,
-            }))
-          );
-        }
-      }
-
-      return pkg;
+      return pkg ?? null;
     });
 
     if (!updated) {
@@ -274,14 +244,28 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// Extra Hotels (package_hotels)
+// ── Extra Hotels (departure_hotels) ─────────────────────────────────────────
+// FASE 1: Extra hotels sekarang per-keberangkatan, bukan per-paket.
+// Endpoint lama /:packageId/extra-hotels diarahkan ke /:id di bawah untuk
+// kompatibilitas; FASE 2 akan mengekspos endpoint ini di departures router.
+
 router.get("/:id/extra-hotels", async (req, res) => {
+  // Ambil semua extra hotels dari keberangkatan pertama paket ini
   try {
+    const [firstDep] = await db
+      .select({ id: packageDepartures.id })
+      .from(packageDepartures)
+      .where(eq(packageDepartures.packageId, req.params.id))
+      .orderBy(asc(packageDepartures.departureDate))
+      .limit(1);
+
+    if (!firstDep) return res.json({ data: [] });
+
     const data = await db
       .select()
-      .from(packageHotels)
-      .where(eq(packageHotels.packageId, req.params.id))
-      .orderBy(asc(packageHotels.sortOrder));
+      .from(departureHotels)
+      .where(eq(departureHotels.departureId, firstDep.id))
+      .orderBy(asc(departureHotels.sortOrder));
     res.json({ data });
   } catch {
     res.status(500).json({ error: "Failed to fetch extra hotels" });
@@ -289,24 +273,12 @@ router.get("/:id/extra-hotels", async (req, res) => {
 });
 
 router.post("/:id/extra-hotels", async (req, res) => {
-  try {
-    const { hotels: rows } = req.body;
-    await db.delete(packageHotels).where(eq(packageHotels.packageId, req.params.id));
-    if (rows && rows.length > 0) {
-      await db.insert(packageHotels).values(
-        rows.map((r: any, i: number) => ({
-          id: crypto.randomUUID(),
-          packageId: req.params.id,
-          hotelId: r.hotelId ?? r.hotel_id,
-          label: r.label ?? null,
-          sortOrder: i,
-        }))
-      );
-    }
-    res.json({ message: "Extra hotels updated" });
-  } catch {
-    res.status(500).json({ error: "Failed to update extra hotels" });
-  }
+  // FASE 2 akan mengimplementasikan endpoint ini di departures router.
+  // Untuk sementara kembalikan 501 agar frontend tidak diam-diam gagal.
+  res.status(501).json({
+    error: "Extra hotels sekarang dikelola per keberangkatan. Gunakan endpoint departures.",
+    hint: "PATCH /api/admin/departures/:departureId/hotels",
+  });
 });
 
 // ── Commissions ──────────────────────────────────────────────────────────────
@@ -372,7 +344,8 @@ router.put("/:id/commissions", async (req, res) => {
 
 /**
  * POST /api/admin/packages/:id/clone  (P3-08)
- * Duplikat paket beserta extra-hotels-nya. Slug dan title diberi suffix " (Kopi)".
+ * Duplikat paket. Slug dan title diberi suffix " (Kopi)".
+ * FASE 1: hotel & maskapai tidak disalin (ada di masing-masing keberangkatan).
  */
 router.post("/:id/clone", async (req, res) => {
   try {
@@ -381,8 +354,7 @@ router.post("/:id/clone", async (req, res) => {
     const cloneQueryResult = await db.execute(sql`
       SELECT
         title, slug, description, image_url, duration_days, package_type,
-        category_id, hotel_makkah_id, hotel_madinah_id, airline_id, airport_id,
-        minimum_dp, dp_deadline_days, full_deadline_days, required_doc_types
+        category_id, minimum_dp, dp_deadline_days, full_deadline_days, required_doc_types
       FROM packages WHERE id = ${sourceId}
     `);
     const cloneRows = (cloneQueryResult as any).rows ?? cloneQueryResult;
@@ -393,13 +365,7 @@ router.post("/:id/clone", async (req, res) => {
     const newTitle = `${src.title} (Kopi)`;
     const baseSlug = `${(src.slug || "paket")}-kopi`;
     // Ensure slug uniqueness by appending a short random suffix
-    const newSlug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
-
-    const extras = await db
-      .select()
-      .from(packageHotels)
-      .where(eq(packageHotels.packageId, sourceId))
-      .orderBy(asc(packageHotels.sortOrder));
+    const newSlug = `${baseSlug}-${crypto.randomUUID().substring(0, 4)}`;
 
     await db.transaction(async (tx) => {
       await tx.insert(packages).values({
@@ -411,28 +377,12 @@ router.post("/:id/clone", async (req, res) => {
         durationDays: src.duration_days ?? null,
         packageType: src.package_type ?? null,
         categoryId: src.category_id ?? null,
-        hotelMakkahId: src.hotel_makkah_id ?? null,
-        hotelMadinahId: src.hotel_madinah_id ?? null,
-        airlineId: src.airline_id ?? null,
-        airportId: src.airport_id ?? null,
         minimumDp: src.minimum_dp ?? null,
         dpDeadlineDays: src.dp_deadline_days ?? null,
         fullDeadlineDays: src.full_deadline_days ?? null,
         requiredDocTypes: src.required_doc_types ?? null,
         isActive: false, // kopi dimulai sebagai nonaktif
       });
-
-      if (extras.length > 0) {
-        await tx.insert(packageHotels).values(
-          extras.map((eh, i) => ({
-            id: crypto.randomUUID(),
-            packageId: newId,
-            hotelId: eh.hotelId,
-            label: eh.label ?? null,
-            sortOrder: i,
-          }))
-        );
-      }
     });
 
     res.status(201).json({ id: newId, title: newTitle, slug: newSlug });

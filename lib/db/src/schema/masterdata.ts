@@ -45,18 +45,8 @@ export const airports = pgTable("airports", {
   createdAt: timestamp("created_at", { withTimezone: true }),
 });
 
-export const packageHotels = pgTable("package_hotels", {
-  id: text("id").primaryKey(),
-  packageId: text("package_id").notNull(),
-  hotelId: text("hotel_id").notNull().references(() => hotels.id, { onDelete: "cascade" }),
-  // NOTE: 'city' does not exist in the actual DB — removed to prevent INSERT errors
-  label: text("label"),
-  sortOrder: integer("sort_order"),
-  createdAt: timestamp("created_at", { withTimezone: true }),
-}, (t) => [
-  index("idx_package_hotels_package_id").on(t.packageId),
-  index("idx_package_hotels_hotel_id").on(t.hotelId),
-]);
+// FASE 1: package_hotels dipindah ke packages.ts sebagai departureHotels
+// (tabel DB diganti menjadi departure_hotels dengan FK ke package_departures)
 
 export const muthawifs = pgTable("muthawifs", {
   id: text("id").primaryKey(),

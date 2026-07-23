@@ -45,6 +45,14 @@ Multi-tenant SaaS for Umrah/Hajj travel agencies: package browsing & booking, in
 - Tujuan deployment: Vercel + Supabase (bukan Replit deployment)
 - Bahasa komunikasi: Bahasa Indonesia
 
+## Schema Architecture (post FASE 1)
+
+- **packages** = template produk (no hotel/airline columns)
+- **package_departures** = instansi nyata: sekarang punya `hotel_makkah_id`, `hotel_madinah_id` (FK ke `hotels`), plus field maskapai/bandara yang sudah ada sebelumnya
+- **departure_hotels** = hotel ekstra per keberangkatan (menggantikan `package_hotels` yang dulu per-paket)
+- Migration SQL: `supabase/migrations/20260723000002_fase1_schema_migration.sql`
+- Setelah merge, jalankan migration ke DB: `cd lib/db && pnpm drizzle-kit push` (atau jalankan SQL migration langsung)
+
 ## Gotchas
 
 - `.migration-backup/` contains the original imported Vercel export — kept as reference only, not part of the pnpm workspace build. Do not re-register artifacts from inside it (it previously created duplicate `.replit-artifact` workflows).

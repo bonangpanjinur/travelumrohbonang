@@ -8,10 +8,7 @@ export const AdminCreatePackageRequest = z.object({
   durationDays: z.number().int().positive().nullish(),
   packageType: z.string().nullish(),
   categoryId: z.string().nullish(),
-  hotelMakkahId: z.string().nullish(),
-  hotelMadinahId: z.string().nullish(),
-  airlineId: z.string().nullish(),
-  airportId: z.string().nullish(),
+  // FASE 1: hotelMakkahId, hotelMadinahId, airlineId, airportId dipindah ke departure
   minimumDp: z.number().int().nonnegative().nullish(),
   dpDeadlineDays: z.number().int().nonnegative().nullish(),
   fullDeadlineDays: z.number().int().nonnegative().nullish(),
@@ -39,6 +36,14 @@ export const AdminCreateDepartureRequest = z.object({
   remainingQuota: z.number().int().nonnegative().optional(),
   status: z.enum(["open", "full", "cancelled"]).default("open"),
   muthawifId: z.string().optional(),
+  // FASE 1: hotel dipindah dari packages ke sini
+  hotelMakkahId: z.string().nullish(),
+  hotelMadinahId: z.string().nullish(),
+  airlineId: z.string().nullish(),
+  departureAirportId: z.string().nullish(),
+  arrivalAirportId: z.string().nullish(),
+  flightNumber: z.string().nullish(),
+  notes: z.string().nullish(),
 });
 
 export const AdminUpdateDepartureRequest = AdminCreateDepartureRequest.partial();

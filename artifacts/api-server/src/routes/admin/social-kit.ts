@@ -9,28 +9,50 @@ const hotelMadinah = aliasedTable(hotels, "hotel_madinah");
 
 /**
  * GET /api/admin/social-kit/packages
- * List active packages for social kit generation
+ * List active packages for social kit generation.
+ * FASE 1: hotel & maskapai diambil dari keberangkatan pertama masing-masing paket.
  */
 router.get("/packages", async (_req, res) => {
   try {
-    const data = await db
+    const pkgs = await db
       .select({
         id: packages.id,
         title: packages.title,
         slug: packages.slug,
         durationDays: packages.durationDays,
         imageUrl: packages.imageUrl,
-        hotelMakkahName: hotelMakkah.name,
-        hotelMadinahName: hotelMadinah.name,
-        airlineName: airlines.name,
       })
       .from(packages)
-      .leftJoin(hotelMakkah, eq(packages.hotelMakkahId, hotelMakkah.id))
-      .leftJoin(hotelMadinah, eq(packages.hotelMadinahId, hotelMadinah.id))
-      .leftJoin(airlines, eq(packages.airlineId, airlines.id))
       .where(eq(packages.isActive, true))
       .orderBy(asc(packages.title));
-    res.json(data);
+
+    // Ambil keberangkatan pertama beserta hotel & maskapai untuk setiap paket
+    const results = await Promise.all(
+      pkgs.map(async (pkg) => {
+        const [dep] = await db
+          .select({
+            hotelMakkahName: hotelMakkah.name,
+            hotelMadinahName: hotelMadinah.name,
+            airlineName: airlines.name,
+          })
+          .from(packageDepartures)
+          .leftJoin(hotelMakkah, eq(packageDepartures.hotelMakkahId, hotelMakkah.id))
+          .leftJoin(hotelMadinah, eq(packageDepartures.hotelMadinahId, hotelMadinah.id))
+          .leftJoin(airlines, eq(packageDepartures.airlineId, airlines.id))
+          .where(eq(packageDepartures.packageId, pkg.id))
+          .orderBy(asc(packageDepartures.departureDate))
+          .limit(1);
+
+        return {
+          ...pkg,
+          hotelMakkahName: dep?.hotelMakkahName ?? null,
+          hotelMadinahName: dep?.hotelMadinahName ?? null,
+          airlineName: dep?.airlineName ?? null,
+        };
+      })
+    );
+
+    res.json(results);
   } catch (err) {
     res.status(500).json({ error: "Gagal mengambil paket" });
   }
@@ -38,7 +60,8 @@ router.get("/packages", async (_req, res) => {
 
 /**
  * GET /api/admin/social-kit/packages/:packageId
- * Get package detail with departures for kit generation
+ * Get package detail with departures for kit generation.
+ * FASE 1: hotel & maskapai diambil dari keberangkatan pertama.
  */
 router.get("/packages/:packageId", async (req, res) => {
   try {
@@ -50,14 +73,8 @@ router.get("/packages/:packageId", async (req, res) => {
         slug: packages.slug,
         durationDays: packages.durationDays,
         imageUrl: packages.imageUrl,
-        hotelMakkahName: hotelMakkah.name,
-        hotelMadinahName: hotelMadinah.name,
-        airlineName: airlines.name,
       })
       .from(packages)
-      .leftJoin(hotelMakkah, eq(packages.hotelMakkahId, hotelMakkah.id))
-      .leftJoin(hotelMadinah, eq(packages.hotelMadinahId, hotelMadinah.id))
-      .leftJoin(airlines, eq(packages.airlineId, airlines.id))
       .where(eq(packages.id, packageId));
 
     if (!pkg) return res.status(404).json({ error: "Paket tidak ditemukan" });
@@ -68,6 +85,22 @@ router.get("/packages/:packageId", async (req, res) => {
       .where(eq(packageDepartures.packageId, packageId))
       .orderBy(asc(packageDepartures.departureDate));
 
+    // Hotel & maskapai dari keberangkatan pertama
+    const [firstDepDetail] = departures.length
+      ? await db
+          .select({
+            hotelMakkahName: hotelMakkah.name,
+            hotelMadinahName: hotelMadinah.name,
+            airlineName: airlines.name,
+          })
+          .from(packageDepartures)
+          .leftJoin(hotelMakkah, eq(packageDepartures.hotelMakkahId, hotelMakkah.id))
+          .leftJoin(hotelMadinah, eq(packageDepartures.hotelMadinahId, hotelMadinah.id))
+          .leftJoin(airlines, eq(packageDepartures.airlineId, airlines.id))
+          .where(eq(packageDepartures.id, departures[0].id))
+          .limit(1)
+      : [null];
+
     // Get lowest price for this package
     const priceRows = await db.execute(
       sql`SELECT MIN(dp.price) as min_price FROM departure_prices dp
@@ -76,7 +109,16 @@ router.get("/packages/:packageId", async (req, res) => {
     );
     const minPrice = (priceRows.rows?.[0] as any)?.min_price;
 
-    res.json({ package: { ...pkg, price: minPrice }, departures });
+    res.json({
+      package: {
+        ...pkg,
+        hotelMakkahName: firstDepDetail?.hotelMakkahName ?? null,
+        hotelMadinahName: firstDepDetail?.hotelMadinahName ?? null,
+        airlineName: firstDepDetail?.airlineName ?? null,
+        price: minPrice,
+      },
+      departures,
+    });
   } catch (err) {
     res.status(500).json({ error: "Gagal mengambil detail paket" });
   }
@@ -102,17 +144,26 @@ router.post("/generate", async (req, res) => {
         id: packages.id,
         title: packages.title,
         durationDays: packages.durationDays,
+      })
+      .from(packages)
+      .where(eq(packages.id, packageId));
+
+    if (!pkg) return res.status(404).json({ error: "Paket tidak ditemukan" });
+
+    // Ambil hotel & maskapai dari keberangkatan pertama
+    const [depDetail] = await db
+      .select({
         hotelMakkahName: hotelMakkah.name,
         hotelMadinahName: hotelMadinah.name,
         airlineName: airlines.name,
       })
-      .from(packages)
-      .leftJoin(hotelMakkah, eq(packages.hotelMakkahId, hotelMakkah.id))
-      .leftJoin(hotelMadinah, eq(packages.hotelMadinahId, hotelMadinah.id))
-      .leftJoin(airlines, eq(packages.airlineId, airlines.id))
-      .where(eq(packages.id, packageId));
-
-    if (!pkg) return res.status(404).json({ error: "Paket tidak ditemukan" });
+      .from(packageDepartures)
+      .leftJoin(hotelMakkah, eq(packageDepartures.hotelMakkahId, hotelMakkah.id))
+      .leftJoin(hotelMadinah, eq(packageDepartures.hotelMadinahId, hotelMadinah.id))
+      .leftJoin(airlines, eq(packageDepartures.airlineId, airlines.id))
+      .where(eq(packageDepartures.packageId, packageId))
+      .orderBy(asc(packageDepartures.departureDate))
+      .limit(1);
 
     let price = priceOverride ?? "-";
     if (!priceOverride) {
@@ -134,9 +185,9 @@ router.post("/generate", async (req, res) => {
       title: pkg.title,
       price,
       duration,
-      airline: pkg.airlineName ?? undefined,
-      hotelMakkah: pkg.hotelMakkahName ?? undefined,
-      hotelMadinah: pkg.hotelMadinahName ?? undefined,
+      airline: depDetail?.airlineName ?? undefined,
+      hotelMakkah: depDetail?.hotelMakkahName ?? undefined,
+      hotelMadinah: depDetail?.hotelMadinahName ?? undefined,
       departure,
       platform,
       style,

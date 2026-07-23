@@ -4,7 +4,7 @@ import {
   packages,
   packageDepartures,
   departurePrices,
-  packageHotels,
+  departureHotels,
   hotels,
   airlines,
   airports,
@@ -29,19 +29,21 @@ const router = Router();
 // the pg pool can't connect from Vercel — fall back to Supabase PostgREST HTTP.
 const USE_SUPABASE_HTTP = shouldUseSupabaseHttp();
 
-// Every packages.* -> {category,hotel,airline,airport} relation has TWO foreign
-// key constraints in the live DB (a hand-named one and Postgres's default
-// `<table>_<col>_fkey`), so PostgREST embeds must disambiguate with `!fkName`
-// or they fail with PGRST201 ("more than one relationship was found").
+// FASE 1: hotel & airline dipindah dari packages ke package_departures.
+// PKG_EMBED_SELECT diperbarui: hapus FK join packages→hotels/airlines,
+// tambah join package_departures→hotels untuk hotel_makkah & hotel_madinah.
 const PKG_EMBED_SELECT =
   "*," +
   "category:package_categories!packages_category_id_fkey(id,name,parent_id)," +
-  "hotel_makkah:hotels!packages_hotel_makkah_id_fkey(id,name,star:stars,city,description)," +
-  "hotel_madinah:hotels!packages_hotel_madinah_id_fkey(id,name,star:stars,city,description)," +
-  "airline:airlines!packages_airline_id_fkey(id,name,code)," +
-  "airport:airports!packages_airport_id_fkey(id,name,code,city)," +
-  "departures:package_departures!package_departures_package_id_fkey(id,departure_date,return_date,quota,remaining_quota,status,muthawif_id,prices:departure_prices!departure_prices_departure_id_fkey(price,room_type))," +
-  "extra_hotels:package_hotels!package_hotels_package_id_fkey(id,label,sort_order,hotel:hotels!package_hotels_hotel_id_fkey(name,star:stars,city))";
+  "departures:package_departures!package_departures_package_id_fkey(" +
+  "id,departure_date,return_date,quota,remaining_quota,status,muthawif_id," +
+  "hotel_makkah_id,hotel_madinah_id,airline_id,departure_airport_id,arrival_airport_id,flight_number," +
+  "prices:departure_prices!departure_prices_departure_id_fkey(price,room_type)," +
+  "hotel_makkah:hotels!package_departures_hotel_makkah_id_fkey(id,name,star:stars,city,description)," +
+  "hotel_madinah:hotels!package_departures_hotel_madinah_id_fkey(id,name,star:stars,city,description)," +
+  "airline:airlines!package_departures_airline_id_fkey(id,name,code)," +
+  "extra_hotels:departure_hotels!departure_hotels_departure_id_fkey(id,label,sort_order,hotel:hotels!departure_hotels_hotel_id_fkey(name,star:stars,city))" +
+  ")";
 
 async function supabaseGet(path: string): Promise<any> {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -62,6 +64,7 @@ async function supabaseGet(path: string): Promise<any> {
 }
 
 function mapPkgRow(row: any) {
+  // FASE 1: hotel & airline sekarang ada di setiap departure, bukan di package
   return {
     id: row.id,
     title: row.title,
@@ -71,20 +74,12 @@ function mapPkgRow(row: any) {
     duration_days: row.duration_days,
     package_type: row.package_type,
     category_id: row.category_id,
-    hotel_makkah_id: row.hotel_makkah_id,
-    hotel_madinah_id: row.hotel_madinah_id,
-    airline_id: row.airline_id,
-    airport_id: row.airport_id,
     minimum_dp: row.minimum_dp,
     dp_deadline_days: row.dp_deadline_days,
     full_deadline_days: row.full_deadline_days,
     is_active: row.is_active,
     created_at: row.created_at,
     category: row.category ?? null,
-    hotel_makkah: row.hotel_makkah ?? null,
-    hotel_madinah: row.hotel_madinah ?? null,
-    airline: row.airline ?? null,
-    airport: row.airport ?? null,
     departures: (row.departures ?? []).map((d: any) => ({
       id: d.id,
       departure_date: d.departure_date,
@@ -93,15 +88,22 @@ function mapPkgRow(row: any) {
       remaining_quota: d.remaining_quota,
       status: d.status,
       muthawif_id: d.muthawif_id,
+      hotel_makkah_id: d.hotel_makkah_id ?? null,
+      hotel_madinah_id: d.hotel_madinah_id ?? null,
+      airline_id: d.airline_id ?? null,
+      flight_number: d.flight_number ?? null,
+      hotel_makkah: d.hotel_makkah ?? null,
+      hotel_madinah: d.hotel_madinah ?? null,
+      airline: d.airline ?? null,
       prices: d.prices ?? [],
-    })),
-    extra_hotels: (row.extra_hotels ?? []).map((eh: any) => ({
-      id: eh.id,
-      label: eh.label ?? null,
-      sort_order: eh.sort_order ?? null,
-      hotel: eh.hotel
-        ? { name: eh.hotel.name, star: eh.hotel.star ?? null, city: eh.hotel.city ?? null }
-        : null,
+      extra_hotels: (d.extra_hotels ?? []).map((eh: any) => ({
+        id: eh.id,
+        label: eh.label ?? null,
+        sort_order: eh.sort_order ?? null,
+        hotel: eh.hotel
+          ? { name: eh.hotel.name, star: eh.hotel.star ?? null, city: eh.hotel.city ?? null }
+          : null,
+      })),
     })),
   };
 }
@@ -164,28 +166,36 @@ router.get("/", async (req: Request, res: Response) => {
       return acc;
     }, {});
 
+    // FASE 1: hotel & airline sekarang ada di setiap departure
     const hotelMap = Object.fromEntries(allHotels.map((h) => [h.id, h]));
     const airlineMap = Object.fromEntries(allAirlines.map((a) => [a.id, a]));
-    const airportMap = Object.fromEntries(allAirports.map((a) => [a.id, a]));
     const catMap = Object.fromEntries(allCats.map((c) => [c.id, c]));
 
     const data = pkgs.map((pkg) => {
-      const hotelMakkah = pkg.hotelMakkahId ? hotelMap[pkg.hotelMakkahId] : null;
-      const airline = pkg.airlineId ? airlineMap[pkg.airlineId] : null;
-      const airport = pkg.airportId ? airportMap[pkg.airportId] : null;
       const category = pkg.categoryId ? catMap[pkg.categoryId] : null;
-      const deps = (depsByPkg[pkg.id] || []).map((d) => ({
-        id: d.id,
-        departure_date: d.departureDate,
-        return_date: d.returnDate,
-        remaining_quota: d.remainingQuota,
-        quota: d.quota,
-        status: d.status,
-        prices: (pricesByDep[d.id] || []).map((p) => ({
-          price: p.price,
-          room_type: p.roomType,
-        })),
-      }));
+      const deps = (depsByPkg[pkg.id] || []).map((d) => {
+        const dHotelMakkah = d.hotelMakkahId ? hotelMap[d.hotelMakkahId] : null;
+        const dHotelMadinah = d.hotelMadinahId ? hotelMap[d.hotelMadinahId] : null;
+        const dAirline = d.airlineId ? airlineMap[d.airlineId] : null;
+        return {
+          id: d.id,
+          departure_date: d.departureDate,
+          return_date: d.returnDate,
+          remaining_quota: d.remainingQuota,
+          quota: d.quota,
+          status: d.status,
+          hotel_makkah_id: d.hotelMakkahId ?? null,
+          hotel_madinah_id: d.hotelMadinahId ?? null,
+          airline_id: d.airlineId ?? null,
+          hotel_makkah: dHotelMakkah ? { id: dHotelMakkah.id, name: dHotelMakkah.name, star: dHotelMakkah.stars } : null,
+          hotel_madinah: dHotelMadinah ? { id: dHotelMadinah.id, name: dHotelMadinah.name, star: dHotelMadinah.stars } : null,
+          airline: dAirline ? { id: dAirline.id, name: dAirline.name } : null,
+          prices: (pricesByDep[d.id] || []).map((p) => ({
+            price: p.price,
+            room_type: p.roomType,
+          })),
+        };
+      });
 
       return {
         id: pkg.id,
@@ -196,21 +206,12 @@ router.get("/", async (req: Request, res: Response) => {
         duration_days: pkg.durationDays,
         package_type: pkg.packageType,
         category_id: pkg.categoryId,
-        hotel_makkah_id: pkg.hotelMakkahId,
-        hotel_madinah_id: pkg.hotelMadinahId,
-        airline_id: pkg.airlineId,
-        airport_id: pkg.airportId,
         minimum_dp: pkg.minimumDp,
         is_active: pkg.isActive,
         created_at: pkg.createdAt,
         category: category
           ? { id: category.id, name: category.name, parent_id: category.parentId }
           : null,
-        hotel_makkah: hotelMakkah
-          ? { id: hotelMakkah.id, name: hotelMakkah.name, star: hotelMakkah.stars }
-          : null,
-        airline: airline ? { id: airline.id, name: airline.name } : null,
-        airport: airport ? { id: airport.id, name: airport.name, city: airport.city } : null,
         departures: deps,
       };
     });
@@ -368,47 +369,69 @@ router.get("/:slug", async (req: Request, res: Response) => {
       return;
     }
 
-    const [deps, hotelMakkah, hotelMadinah, airline, airport, category, extraHotelRows] = await Promise.all([
+    // FASE 1: hotel & airline sekarang ada di setiap departure, bukan di package
+    const [deps, category] = await Promise.all([
       db.select().from(packageDepartures).where(eq(packageDepartures.packageId, pkg.id)),
-      pkg.hotelMakkahId ? db.select().from(hotels).where(eq(hotels.id, pkg.hotelMakkahId)).limit(1) : Promise.resolve([]),
-      pkg.hotelMadinahId ? db.select().from(hotels).where(eq(hotels.id, pkg.hotelMadinahId)).limit(1) : Promise.resolve([]),
-      pkg.airlineId ? db.select().from(airlines).where(eq(airlines.id, pkg.airlineId)).limit(1) : Promise.resolve([]),
-      pkg.airportId ? db.select().from(airports).where(eq(airports.id, pkg.airportId)).limit(1) : Promise.resolve([]),
       pkg.categoryId ? db.select().from(packageCategories).where(eq(packageCategories.id, pkg.categoryId)).limit(1) : Promise.resolve([]),
-      db.select().from(packageHotels).where(eq(packageHotels.packageId, pkg.id)).orderBy(asc(packageHotels.sortOrder)),
     ]);
 
-    const departuresWithPrices = await Promise.all(
-      deps.map(async (dep) => {
-        const prices = await db
-          .select()
-          .from(departurePrices)
-          .where(eq(departurePrices.departureId, dep.id));
+    // Fetch per-departure data: prices, hotels, extra hotels
+    const [allPrices, allHotels, allAirlines, allExtraHotels] = await Promise.all([
+      deps.length
+        ? db.select().from(departurePrices).where(inArray(departurePrices.departureId, deps.map((d) => d.id)))
+        : Promise.resolve([]),
+      db.select().from(hotels),
+      db.select().from(airlines),
+      deps.length
+        ? db.select().from(departureHotels).where(inArray(departureHotels.departureId, deps.map((d) => d.id))).orderBy(asc(departureHotels.sortOrder))
+        : Promise.resolve([]),
+    ]);
+
+    const hotelMap = Object.fromEntries(allHotels.map((h) => [h.id, h]));
+    const airlineMap = Object.fromEntries(allAirlines.map((a) => [a.id, a]));
+    const pricesByDep = allPrices.reduce<Record<string, typeof allPrices>>((acc, p) => {
+      (acc[p.departureId] ??= []).push(p);
+      return acc;
+    }, {});
+    const extraHotelsByDep = allExtraHotels.reduce<Record<string, typeof allExtraHotels>>((acc, eh) => {
+      if (eh.departureId) (acc[eh.departureId] ??= []).push(eh);
+      return acc;
+    }, {});
+
+    const departuresWithDetail = deps.map((dep) => {
+      const dHotelMakkah = dep.hotelMakkahId ? hotelMap[dep.hotelMakkahId] : null;
+      const dHotelMadinah = dep.hotelMadinahId ? hotelMap[dep.hotelMadinahId] : null;
+      const dAirline = dep.airlineId ? airlineMap[dep.airlineId] : null;
+      const extras = (extraHotelsByDep[dep.id] ?? []).map((eh) => {
+        const h = hotelMap[eh.hotelId];
         return {
-          id: dep.id,
-          departure_date: dep.departureDate,
-          return_date: dep.returnDate,
-          quota: dep.quota,
-          remaining_quota: dep.remainingQuota,
-          status: dep.status,
-          muthawif_id: dep.muthawifId,
-          prices: prices.map((p) => ({ price: p.price, room_type: p.roomType })),
+          id: eh.id,
+          label: eh.label ?? null,
+          sort_order: eh.sortOrder ?? null,
+          hotel: h ? { name: h.name, star: h.stars ?? null, city: h.city ?? null } : null,
         };
-      }),
-    );
+      });
+      return {
+        id: dep.id,
+        departure_date: dep.departureDate,
+        return_date: dep.returnDate,
+        quota: dep.quota,
+        remaining_quota: dep.remainingQuota,
+        status: dep.status,
+        muthawif_id: dep.muthawifId,
+        hotel_makkah_id: dep.hotelMakkahId ?? null,
+        hotel_madinah_id: dep.hotelMadinahId ?? null,
+        airline_id: dep.airlineId ?? null,
+        flight_number: dep.flightNumber ?? null,
+        hotel_makkah: dHotelMakkah ? { id: dHotelMakkah.id, name: dHotelMakkah.name, star: dHotelMakkah.stars, city: dHotelMakkah.city, description: dHotelMakkah.description } : null,
+        hotel_madinah: dHotelMadinah ? { id: dHotelMadinah.id, name: dHotelMadinah.name, star: dHotelMadinah.stars, city: dHotelMadinah.city, description: dHotelMadinah.description } : null,
+        airline: dAirline ? { id: dAirline.id, name: dAirline.name, code: dAirline.code } : null,
+        prices: (pricesByDep[dep.id] ?? []).map((p) => ({ price: p.price, room_type: p.roomType })),
+        extra_hotels: extras,
+      };
+    });
 
-    // Fetch hotel details for extra hotels
-    const extraHotelIds = extraHotelRows.map((eh) => eh.hotelId).filter(Boolean);
-    const extraHotelDetails = extraHotelIds.length > 0
-      ? await db.select().from(hotels).where(sql`${hotels.id} = ANY(ARRAY[${sql.raw(extraHotelIds.map(id => `'${id}'`).join(","))}]::text[])`)
-      : [];
-    const extraHotelMap = Object.fromEntries(extraHotelDetails.map((h) => [h.id, h]));
-
-    const h1 = hotelMakkah[0] ?? null;
-    const h2 = hotelMadinah[0] ?? null;
-    const a = airline[0] ?? null;
-    const ap = airport[0] ?? null;
-    const cat = category[0] ?? null;
+    const cat = (category as any[])[0] ?? null;
 
     res.json({
       id: pkg.id,
@@ -419,30 +442,13 @@ router.get("/:slug", async (req: Request, res: Response) => {
       duration_days: pkg.durationDays,
       package_type: pkg.packageType,
       category_id: pkg.categoryId,
-      hotel_makkah_id: pkg.hotelMakkahId,
-      hotel_madinah_id: pkg.hotelMadinahId,
-      airline_id: pkg.airlineId,
-      airport_id: pkg.airportId,
       minimum_dp: pkg.minimumDp,
       dp_deadline_days: pkg.dpDeadlineDays,
       full_deadline_days: pkg.fullDeadlineDays,
       is_active: pkg.isActive,
       created_at: pkg.createdAt,
       category: cat ? { id: cat.id, name: cat.name, parent_id: cat.parentId } : null,
-      hotel_makkah: h1 ? { id: h1.id, name: h1.name, star: h1.stars, city: h1.city, description: h1.description } : null,
-      hotel_madinah: h2 ? { id: h2.id, name: h2.name, star: h2.stars, city: h2.city, description: h2.description } : null,
-      airline: a ? { id: a.id, name: a.name, code: a.code } : null,
-      airport: ap ? { id: ap.id, name: ap.name, code: ap.code, city: ap.city } : null,
-      departures: departuresWithPrices,
-      extra_hotels: extraHotelRows.map((eh) => {
-        const h = extraHotelMap[eh.hotelId];
-        return {
-          id: eh.id,
-          label: eh.label ?? null,
-          sort_order: eh.sortOrder ?? null,
-          hotel: h ? { name: h.name, star: h.stars ?? null, city: h.city ?? null } : null,
-        };
-      }),
+      departures: departuresWithDetail,
     });
   } catch (err) {
     console.error(err);

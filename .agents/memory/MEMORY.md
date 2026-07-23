@@ -14,3 +14,4 @@
 - [Umroh Tabungan module](savings-module.md) — savings schema skips FK to profiles (uuid/text mismatch); ResponsiveTable imports from @/features/admin/components not @/shared.
 - [Quick wins F-5/F-6/F-13/O-12/O-14](quick-wins-f5-f6-f13-o12-o14.md) — F-5&F-6 were already done; fixed O-12 missing ROOM_CAPACITY+sql, O-14 Math.random→crypto.randomUUID, F-13 sequential invoice via COUNT query.
 - [Backlog D-I completion](backlog-completion.md) — all 13 backlog items done; key patterns: paginatedIds dep string, literal routes before /:id, Navbar defaultLinks for /jadwal.
+- [FASE 1 schema migration](fase1-schema-migration.md) — hotel/airline moved from packages→package_departures; package_hotels→departure_hotels; run SQL migration before using new schema.

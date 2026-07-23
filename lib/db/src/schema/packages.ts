@@ -13,10 +13,7 @@ export const packages = pgTable("packages", {
   durationDays: integer("duration_days"),
   packageType: text("package_type"),
   categoryId: text("category_id").references(() => packageCategories.id, { onDelete: "set null" }),
-  hotelMakkahId: text("hotel_makkah_id").references(() => hotels.id, { onDelete: "set null" }),
-  hotelMadinahId: text("hotel_madinah_id").references(() => hotels.id, { onDelete: "set null" }),
-  airlineId: text("airline_id").references(() => airlines.id, { onDelete: "set null" }),
-  airportId: text("airport_id").references(() => airports.id, { onDelete: "set null" }),
+  // FASE 1: hotelMakkahId, hotelMadinahId, airlineId, airportId dipindah ke package_departures
   minimumDp: integer("minimum_dp"),
   dpDeadlineDays: integer("dp_deadline_days"),
   fullDeadlineDays: integer("full_deadline_days"),
@@ -46,6 +43,10 @@ export const packageDepartures = pgTable("package_departures", {
   flightNumber: text("flight_number"),
   departureAirportId: text("departure_airport_id").references(() => airports.id, { onDelete: "set null" }),
   arrivalAirportId: text("arrival_airport_id").references(() => airports.id, { onDelete: "set null" }),
+  // FASE 1: hotel dipindah dari packages ke sini
+  hotelMakkahId: text("hotel_makkah_id").references(() => hotels.id, { onDelete: "set null" }),
+  hotelMadinahId: text("hotel_madinah_id").references(() => hotels.id, { onDelete: "set null" }),
+  notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_departures_package_id").on(t.packageId),
@@ -60,6 +61,20 @@ export const departurePrices = pgTable("departure_prices", {
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_departure_prices_departure_id").on(t.departureId),
+]);
+
+// FASE 1: departure_hotels menggantikan package_hotels
+// Hotel ekstra (selain Makkah & Madinah) per keberangkatan
+export const departureHotels = pgTable("departure_hotels", {
+  id: text("id").primaryKey(),
+  departureId: text("departure_id").references(() => packageDepartures.id, { onDelete: "cascade" }),
+  hotelId: text("hotel_id").notNull().references(() => hotels.id, { onDelete: "cascade" }),
+  label: text("label"),
+  sortOrder: integer("sort_order"),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+}, (t) => [
+  index("idx_departure_hotels_departure_id").on(t.departureId),
+  index("idx_departure_hotels_hotel_id").on(t.hotelId),
 ]);
 
 export const departureGallery = pgTable("departure_gallery", {

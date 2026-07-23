@@ -31,6 +31,12 @@ export const PackageDepartureSchema = z.object({
   quota: z.number(),
   remainingQuota: z.number(),
   status: z.string().nullable(),
+  // FASE 1: hotel & maskapai dipindah dari packages ke sini
+  hotelMakkahId: z.string().nullable().optional(),
+  hotelMadinahId: z.string().nullable().optional(),
+  airlineId: z.string().nullable().optional(),
+  flightNumber: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
   prices: z.array(DeparturePriceSchema),
 });
 

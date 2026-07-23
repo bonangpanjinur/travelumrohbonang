@@ -6,7 +6,6 @@ import {
   airports,
   muthawifs,
   packageCategories,
-  packageHotels,
   equipment,
   eq,
   asc,
