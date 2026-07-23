@@ -6,7 +6,7 @@ import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
 import { Button } from "@/shared/components/ui/button";
 import { motion } from "framer-motion";
-import { Calendar, Star, Users, Plane, Hotel, MapPin, ArrowRight, Check } from "lucide-react";
+import { Calendar, Star, Users, Plane, Hotel, MapPin, ArrowRight, Check, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import SEO from "@/shared/components/seo/SEO";
@@ -58,6 +58,21 @@ interface Departure {
   prices: { room_type: string; price: number }[];
 }
 
+interface ItineraryDay {
+  id: string;
+  day_number: number;
+  title: string | null;
+  description: string | null;
+  image_url: string | null;
+}
+
+interface Itinerary {
+  id: string;
+  title: string | null;
+  notes: string | null;
+  days: ItineraryDay[];
+}
+
 const PackageDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -68,6 +83,9 @@ const PackageDetail = () => {
   const [selectedDeparture, setSelectedDeparture] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [itinerary, setItinerary] = useState<Itinerary | null>(null);
+  const [itineraryLoading, setItineraryLoading] = useState(false);
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -78,6 +96,13 @@ const PackageDetail = () => {
       try {
         const data: Package = await apiFetch(`/api/packages/${encodeURIComponent(slug)}`);
         setPkg(data);
+        // Auto-select first available departure
+        const firstAvailable = data.departures?.find((d) => d.remaining_quota > 0);
+        if (firstAvailable) {
+          setSelectedDeparture(firstAvailable.id);
+        } else if (data.departures?.length) {
+          setSelectedDeparture(data.departures[0].id);
+        }
       } catch (err: any) {
         // 404 → check slug redirect table
         if (err?.status === 404 || err?.message?.includes("404")) {
@@ -98,6 +123,33 @@ const PackageDetail = () => {
 
     fetchPackage();
   }, [slug, tenant?.id, navigate]);
+
+  // Fetch itinerary whenever selected departure changes
+  useEffect(() => {
+    if (!selectedDeparture) {
+      setItinerary(null);
+      return;
+    }
+
+    const fetchItinerary = async () => {
+      setItineraryLoading(true);
+      try {
+        const data = await apiFetch(`/api/packages/itinerary/${encodeURIComponent(selectedDeparture)}`);
+        setItinerary(data?.itinerary ?? null);
+        // Auto-expand first day
+        if (data?.itinerary?.days?.length) {
+          setExpandedDay(data.itinerary.days[0].id);
+        }
+      } catch (err) {
+        console.error("[PackageDetail] failed to fetch itinerary:", err);
+        setItinerary(null);
+      } finally {
+        setItineraryLoading(false);
+      }
+    };
+
+    fetchItinerary();
+  }, [selectedDeparture]);
 
   const handleBookNow = () => {
     if (!user) {
@@ -316,6 +368,105 @@ const PackageDetail = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Itinerary */}
+              <div>
+                <h2 className="text-2xl font-display font-bold mb-2">Program Perjalanan</h2>
+                {selectedDeparture ? (
+                  <>
+                    {/* departure label */}
+                    {selectedDep && (
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Itinerary untuk keberangkatan{" "}
+                        <span className="font-medium text-foreground">
+                          {format(new Date(selectedDep.departure_date), "d MMMM yyyy", { locale: localeId })}
+                        </span>
+                      </p>
+                    )}
+
+                    {itineraryLoading ? (
+                      <div className="space-y-3">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className="bg-muted animate-pulse rounded-xl h-16" />
+                        ))}
+                      </div>
+                    ) : itinerary && itinerary.days.length > 0 ? (
+                      <div className="space-y-3">
+                        {itinerary.title && (
+                          <p className="text-sm font-medium text-gold mb-2">{itinerary.title}</p>
+                        )}
+                        {itinerary.days.map((day) => {
+                          const isOpen = expandedDay === day.id;
+                          return (
+                            <motion.div
+                              key={day.id}
+                              initial={false}
+                              className="border border-border rounded-xl overflow-hidden bg-card"
+                            >
+                              <button
+                                onClick={() => setExpandedDay(isOpen ? null : day.id)}
+                                className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-muted/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center flex-shrink-0">
+                                    <span className="text-xs font-bold text-gold">{day.day_number}</span>
+                                  </div>
+                                  <span className="font-semibold text-sm">
+                                    Hari {day.day_number}
+                                    {day.title ? ` — ${day.title}` : ""}
+                                  </span>
+                                </div>
+                                {isOpen ? (
+                                  <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                )}
+                              </button>
+                              {isOpen && (
+                                <div className="px-5 pb-5">
+                                  {day.image_url && (
+                                    <img
+                                      src={day.image_url}
+                                      alt={day.title || `Hari ${day.day_number}`}
+                                      className="w-full h-40 object-cover rounded-lg mb-3"
+                                    />
+                                  )}
+                                  {day.description ? (
+                                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                                      {day.description}
+                                    </p>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground italic">
+                                      Detail program hari ini belum tersedia.
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </motion.div>
+                          );
+                        })}
+                        {itinerary.notes && (
+                          <p className="text-xs text-muted-foreground mt-2 italic">{itinerary.notes}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed border-border rounded-xl">
+                        <BookOpen className="w-10 h-10 text-muted-foreground/40 mb-3" />
+                        <p className="text-sm text-muted-foreground">
+                          Program perjalanan untuk keberangkatan ini belum tersedia.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed border-border rounded-xl">
+                    <BookOpen className="w-10 h-10 text-muted-foreground/40 mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Pilih keberangkatan di samping untuk melihat program perjalanan.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Facilities */}

@@ -11,6 +11,8 @@ import {
   packageCategories,
   packageReviews,
   profiles,
+  itineraries,
+  itineraryDays,
   eq,
   and,
   asc,
@@ -257,6 +259,84 @@ router.get("/filter-options", async (req: Request, res: Response) => {
       message: process.env.NODE_ENV === "development" ? err?.message : undefined,
       stack: process.env.NODE_ENV === "development" ? err?.stack : undefined,
     });
+  }
+});
+
+// ── GET /api/packages/itinerary/:departureId ─────────────────────────────────
+// Public: fetch itinerary + days for a given departure
+router.get("/itinerary/:departureId", async (req: Request, res: Response) => {
+  try {
+    const { departureId } = req.params;
+
+    if (USE_SUPABASE_HTTP) {
+      const rows = await supabaseGet(
+        `itineraries?departure_id=eq.${encodeURIComponent(departureId)}&is_active=eq.true&select=id,title,notes&limit=1`,
+      );
+      if (!rows || rows.length === 0) {
+        res.json({ itinerary: null });
+        return;
+      }
+      const itin = rows[0];
+      const days = await supabaseGet(
+        `itinerary_days?itinerary_id=eq.${encodeURIComponent(itin.id)}&select=id,day_number,title,description,image_url&order=day_number.asc`,
+      );
+      res.json({
+        itinerary: {
+          id: itin.id,
+          title: itin.title,
+          notes: itin.notes,
+          days: (days ?? []).map((d: any) => ({
+            id: d.id,
+            day_number: d.day_number,
+            title: d.title,
+            description: d.description,
+            image_url: d.image_url,
+          })),
+        },
+      });
+      return;
+    }
+
+    const [itin] = await db
+      .select({ id: itineraries.id, title: itineraries.title, notes: itineraries.notes })
+      .from(itineraries)
+      .where(and(eq(itineraries.departureId, departureId), eq(itineraries.isActive, true)))
+      .limit(1);
+
+    if (!itin) {
+      res.json({ itinerary: null });
+      return;
+    }
+
+    const days = await db
+      .select({
+        id: itineraryDays.id,
+        dayNumber: itineraryDays.dayNumber,
+        title: itineraryDays.title,
+        description: itineraryDays.description,
+        imageUrl: itineraryDays.imageUrl,
+      })
+      .from(itineraryDays)
+      .where(eq(itineraryDays.itineraryId, itin.id))
+      .orderBy(asc(itineraryDays.dayNumber));
+
+    res.json({
+      itinerary: {
+        id: itin.id,
+        title: itin.title,
+        notes: itin.notes,
+        days: days.map((d) => ({
+          id: d.id,
+          day_number: d.dayNumber,
+          title: d.title,
+          description: d.description,
+          image_url: d.imageUrl,
+        })),
+      },
+    });
+  } catch (err) {
+    console.error("[packages] itinerary error:", err);
+    res.status(500).json({ error: "Failed to fetch itinerary" });
   }
 });
 
