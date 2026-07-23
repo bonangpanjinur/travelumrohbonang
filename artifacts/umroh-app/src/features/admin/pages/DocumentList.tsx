@@ -27,12 +27,16 @@ const FALLBACK_DOC_TYPES = [
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof FileCheck }> = {
-  belum_upload: { label: "Belum Upload", variant: "outline", icon: Clock },
-  uploaded: { label: "Diupload", variant: "secondary", icon: Upload },
-  verified: { label: "Terverifikasi", variant: "default", icon: CheckCircle },
-  rejected: { label: "Ditolak", variant: "destructive", icon: XCircle },
-  expired: { label: "Kadaluarsa", variant: "destructive", icon: AlertTriangle },
+  belum_upload: { label: "Belum Upload",    variant: "outline",      icon: Clock },
+  uploaded:     { label: "Diupload",        variant: "secondary",    icon: Upload },
+  submitted:    { label: "Menunggu Review", variant: "secondary",    icon: Upload },
+  pending:      { label: "Menunggu",        variant: "outline",      icon: Clock },
+  verified:     { label: "Terverifikasi",   variant: "default",      icon: CheckCircle },
+  rejected:     { label: "Ditolak",         variant: "destructive",  icon: XCircle },
+  expired:      { label: "Kadaluarsa",      variant: "destructive",  icon: AlertTriangle },
 };
+
+const FALLBACK_STATUS = STATUS_CONFIG["belum_upload"];
 
 interface PilgrimWithDocs {
   id: string;
@@ -346,7 +350,7 @@ const DocumentList = () => {
                         {DOC_TYPES.map(dt => {
                           const doc = pilgrim.documents.find(d => d.doc_type === dt.value);
                           const status = doc?.status || "belum_upload";
-                          const config = STATUS_CONFIG[status];
+                          const config = STATUS_CONFIG[status] ?? FALLBACK_STATUS;
                           const expiryWarning = doc?.expiry_date ? getExpiryWarning(doc.expiry_date) : null;
                           const StatusIcon = config.icon;
 
