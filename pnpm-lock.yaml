@@ -454,7 +454,7 @@ importers:
         specifier: 'catalog:'
         version: 4.4.3
 
-  artifacts/rescan-trigger-tmp:
+  artifacts/throwaway-rescan-xyz:
     devDependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0
