@@ -3,7 +3,7 @@
 > Dokumen ini mencatat semua rencana, progres, dan backlog fitur keuangan dan operasional.
 > Gabungan dari analisa codebase 21 Juli 2026.
 >
-> **Terakhir diperbarui:** 21 Juli 2026
+> **Terakhir diperbarui:** 23 Juli 2026 (diverifikasi ulang dari codebase)
 
 ---
 
@@ -22,10 +22,10 @@
 | F-4  | Biaya Operasional Per Paket | ✅ Selesai |
 | F-5  | Reminder Piutang via WA (Bulk) | ✅ Selesai |
 | F-6  | Jurnal Otomatis (Auto-Posting) | ✅ Selesai |
-| F-7  | Chart of Accounts + Buku Besar | 🔲 Belum |
-| F-8  | Laporan Akuntansi Standar (Neraca, L/R, Arus Kas) | 🔲 Belum |
-| F-9  | HPP Otomatis dari Biaya Aktual | 🔲 Belum |
-| F-10 | Rekonsiliasi Bank (Import Mutasi) | 🔲 Belum |
+| F-7  | Chart of Accounts + Buku Besar | ✅ Selesai |
+| F-8  | Laporan Akuntansi Standar (Neraca, L/R, Arus Kas) | ✅ Selesai |
+| F-9  | HPP Otomatis dari Biaya Aktual | ✅ Selesai |
+| F-10 | Rekonsiliasi Bank (Import Mutasi) | ✅ Selesai |
 | F-11 | Pajak (PPN/PPh) & Faktur Pajak | 🔲 Belum |
 | F-12 | Budget & Proyeksi Cash Flow | 🔲 Belum |
 | F-13 | Nomor Invoice Otomatis per Tenant | ✅ Selesai |
@@ -44,10 +44,10 @@
 | O-5  | Master Data (Hotel, Airline, Muthawif, Equipment) | ✅ Selesai |
 | O-6  | CRM, Chat, Kontrak Digital | ✅ Selesai |
 | O-7  | RBAC, Multi-tenant, Feature Flags | ✅ Selesai |
-| O-8  | Halaman Distribusi Perlengkapan + Stok Rekonsiliasi | 🔲 Belum |
-| O-9  | Visa Tracking (Status Pengajuan) | 🔲 Belum |
-| O-10 | Assignment Kursi Pesawat | 🔲 Belum |
-| O-11 | Pre-departure Checklist Otomatis | 🔲 Belum |
+| O-8  | Halaman Distribusi Perlengkapan + Stok Rekonsiliasi | ✅ Selesai |
+| O-9  | Visa Tracking (Status Pengajuan) | ✅ Selesai |
+| O-10 | Assignment Kursi Pesawat | ✅ Selesai |
+| O-11 | Pre-departure Checklist Otomatis | ✅ Selesai |
 | O-12 | Validasi Kapasitas Kamar + Konflik Gender | ✅ Selesai |
 | O-13 | Manifest Offline Cache | 🔲 Belum |
 | O-14 | Kode Booking Anti-Collision | ✅ Selesai |
@@ -317,42 +317,18 @@ artifacts/api-server/src/routes/admin/finance.ts   ← endpoint baris 300-404
 
 ---
 
-### F-7 — Chart of Accounts (CoA) + Buku Besar
+### F-7 — Chart of Accounts (CoA) + Buku Besar ✅ Selesai
 
-**Prioritas: Tinggi | Estimasi: 2–3 hari**
+**Verifikasi 23 Juli 2026:** Sudah diimplementasi penuh.
 
-**Gap saat ini:**
-- Tidak ada kode akun (Chart of Accounts)
-- Kategori transaksi disimpan di `localStorage` frontend (tidak persisten di DB)
-- Tidak ada buku besar per akun
-- Tidak ada trial balance
+**Implementasi:**
+- Tabel `chart_of_accounts` di `lib/db/src/schema/accounting.ts` — kode akun format `{type_digit}-{seq4}`, kolom `type`, `category`, `normal_balance`, `is_active`, `sort_order`
+- Route `GET/POST/PATCH/DELETE /api/admin/coa` + `POST /seed` (seed akun standar) + `GET /ledger` + `GET /trial-balance`
+- Frontend: `ChartOfAccounts.tsx`, `GeneralLedger.tsx`, `TrialBalance.tsx`
 
-**Rencana schema baru:**
-```sql
--- Tabel chart_of_accounts
-CREATE TABLE chart_of_accounts (
-  id         TEXT PRIMARY KEY,
-  code       TEXT NOT NULL UNIQUE,       -- misal: 1-1101 (Kas), 4-1001 (Pendapatan Umroh)
-  name       TEXT NOT NULL,
-  type       TEXT NOT NULL,              -- asset | liability | equity | revenue | expense
-  category   TEXT,                       -- sub-grouping
-  is_active  BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ
-);
-
--- Ubah financial_transactions: tambah account_id FK ke chart_of_accounts
-ALTER TABLE financial_transactions ADD COLUMN account_id TEXT REFERENCES chart_of_accounts(id);
 ```
-
-**Rencana frontend:**
-- Halaman `ChartOfAccounts.tsx`: CRUD kode akun, seed data akun standar
-- Halaman `GeneralLedger.tsx`: transaksi per akun, filter periode
-- Halaman `TrialBalance.tsx`: saldo debit/kredit per akun per periode
-
-**File yang perlu dibuat:**
-```
-lib/db/src/schema/accounting.ts                         ← schema CoA
-artifacts/api-server/src/routes/admin/accounting.ts     ← tambah CoA endpoints
+lib/db/src/schema/accounting.ts                              ← chartOfAccounts table
+artifacts/api-server/src/routes/admin/coa.ts                 ← semua CoA endpoints
 artifacts/umroh-app/src/features/admin/pages/ChartOfAccounts.tsx
 artifacts/umroh-app/src/features/admin/pages/GeneralLedger.tsx
 artifacts/umroh-app/src/features/admin/pages/TrialBalance.tsx
@@ -360,103 +336,58 @@ artifacts/umroh-app/src/features/admin/pages/TrialBalance.tsx
 
 ---
 
-### F-8 — Laporan Akuntansi Standar (Neraca, L/R, Arus Kas)
+### F-8 — Laporan Akuntansi Standar (Neraca, L/R, Arus Kas) ✅ Selesai
 
-**Prioritas: Tinggi | Estimasi: 2–3 hari**
+**Verifikasi 23 Juli 2026:** Sudah diimplementasi penuh.
 
-**Gap saat ini:**
-- Hanya ada P&L chart sederhana di `Accounting.tsx` (belum standar PSAK/SAK ETAP)
-- Tidak ada Neraca (Balance Sheet)
-- Tidak ada Laporan Arus Kas (Cash Flow Statement)
+**Implementasi:**
+- `GET /api/admin/finance/reports/income-statement` — P&L (revenue, HPP, gross profit, net income) per periode
+- `GET /api/admin/finance/reports/balance-sheet` — Neraca (assets current/fixed, liabilities, equity)
+- `GET /api/admin/finance/reports/cash-flow` — Laporan Arus Kas metode tidak langsung
+- Frontend: `FinancialReports.tsx`
 
-**Rencana (bergantung F-7 selesai dahulu):**
-
-`GET /api/admin/finance/reports/balance-sheet?date=YYYY-MM-DD`
-```json
-{
-  "assets": { "current": [...], "fixed": [...], "total": 0 },
-  "liabilities": { "current": [...], "long_term": [...], "total": 0 },
-  "equity": { "total": 0 }
-}
 ```
-
-`GET /api/admin/finance/reports/income-statement?from=...&to=...`
-```json
-{
-  "revenue": [...],
-  "hpp": [...],
-  "gross_profit": 0,
-  "operating_expenses": [...],
-  "net_income": 0
-}
-```
-
-`GET /api/admin/finance/reports/cash-flow?from=...&to=...`
-
-**File yang perlu dibuat:**
-```
-artifacts/api-server/src/routes/admin/reports.ts         ← endpoint laporan
-artifacts/umroh-app/src/features/admin/pages/Reports.tsx ← sudah ada, perlu diperluas
+artifacts/api-server/src/routes/admin/finance.ts         ← semua endpoint laporan (reports/*)
+artifacts/umroh-app/src/features/admin/pages/FinancialReports.tsx
 ```
 
 ---
 
-### F-9 — HPP Otomatis dari Biaya Aktual
+### F-9 — HPP Otomatis dari Biaya Aktual ✅ Selesai
 
-**Prioritas: Sedang | Estimasi: 1–2 hari**
+**Verifikasi 23 Juli 2026:** Sudah diimplementasi penuh.
 
-**Gap saat ini:**
-- `package_costs` dientry manual, tidak terhubung ke biaya aktual booking (harga hotel/tiket)
-- Tidak ada kolom `actual_amount` (semua dianggap budgeted)
-- Tidak ada variance HPP budget vs aktual, tidak ada HPP per jamaah
+**Implementasi:**
+- Kolom `actual_amount`, `invoice_reference`, `paid_at` sudah ada di tabel `package_costs`
+- `GET /api/admin/costs/summary?packageId=X` — budgeted vs actual vs variance per kategori (dengan `missing_actual_count`)
+- `PATCH /api/admin/costs/:id` — update `actualAmount`, `invoiceReference`, `paidAt`
+- `PackageCosts.tsx` menampilkan kolom Aktual | Variance, export CSV sudah include kolom aktual, HPP per pax otomatis
 
-**Rencana:**
-
-```sql
--- Tambah kolom ke package_costs
-ALTER TABLE package_costs ADD COLUMN actual_amount INTEGER;
-ALTER TABLE package_costs ADD COLUMN invoice_reference TEXT;
-ALTER TABLE package_costs ADD COLUMN paid_at TIMESTAMPTZ;
 ```
-
-Backend tambahan:
-- `GET /api/admin/costs/summary?packageId=X` — budgeted vs actual vs variance
-- `PATCH /api/admin/costs/:id` — terima `actualAmount`, `invoiceReference`, `paidAt`
-
-Frontend `PackageCosts.tsx` + halaman baru variance report:
-- Kolom: Budgeted | Aktual | Variance | Status
-- Filter: Over Budget / Belum Diisi Aktual
-- HPP per pax otomatis: sum(actual_amount) / filledSeats
+lib/db/src/schema/packages.ts                            ← actual_amount, invoice_reference, paid_at
+artifacts/api-server/src/routes/admin/costs.ts           ← summary endpoint + PATCH
+artifacts/umroh-app/src/features/admin/pages/PackageCosts.tsx
+```
 
 ---
 
-### F-10 — Rekonsiliasi Bank (Import Mutasi)
+### F-10 — Rekonsiliasi Bank (Import Mutasi) ✅ Selesai
 
-**Prioritas: Sedang | Estimasi: 2–3 hari**
+**Verifikasi 23 Juli 2026:** Sudah diimplementasi penuh.
 
-**Gap saat ini:**
-- Tab reconciliation di `Accounting.tsx` sudah ada tapi tidak terhubung ke data apapun
-- Tidak ada import mutasi bank (CSV/API)
-- Tidak ada matching otomatis transaksi gateway ↔ booking_payments
+**Implementasi:**
+- Tabel `bank_mutations` di `lib/db/src/schema/accounting.ts` — kolom `mutation_date`, `amount`, `balance`, `ref_number`, `bank_account`, `bank_name`, `matched_to`, `is_matched`
+- `GET /api/admin/bank-reconciliation` — list mutasi (filter: bankAccount, matched, date range)
+- `POST /api/admin/bank-reconciliation/import` — import CSV mutasi
+- `PATCH /api/admin/bank-reconciliation/:id` — manual match ke booking_payment
+- `POST /api/admin/bank-reconciliation/auto-match` — auto-match by amount + tanggal ±1 hari
+- Frontend: `BankReconciliation.tsx`
 
-**Rencana:**
-```sql
-CREATE TABLE bank_mutations (
-  id          TEXT PRIMARY KEY,
-  date        DATE NOT NULL,
-  description TEXT,
-  amount      INTEGER NOT NULL,           -- positif = kredit, negatif = debit
-  balance     INTEGER,
-  ref_number  TEXT,
-  matched_to  TEXT,                       -- FK ke booking_payments.id (nullable)
-  is_matched  BOOLEAN DEFAULT false,
-  created_at  TIMESTAMPTZ
-);
 ```
-
-- Import CSV mutasi (format BCA, Mandiri, BNI)
-- Auto-matching: cocokkan amount + tanggal ± 1 hari dengan `booking_payments`
-- UI: tabel dua kolom (mutasi bank | pembayaran di sistem), tombol "Match" manual
+lib/db/src/schema/accounting.ts                               ← bankMutations table
+artifacts/api-server/src/routes/admin/bank-reconciliation.ts  ← semua endpoint
+artifacts/umroh-app/src/features/admin/pages/BankReconciliation.tsx
+```
 
 ---
 
@@ -519,121 +450,72 @@ artifacts/api-server/src/routes/admin/bookings.ts  ← invoice-data endpoint
 
 ---
 
-### O-8 — Halaman Distribusi Perlengkapan + Stok Rekonsiliasi
+### O-8 — Halaman Distribusi Perlengkapan + Stok Rekonsiliasi ✅ Selesai
 
-**Prioritas: Tinggi | Estimasi: 1.5 hari**
+**Verifikasi 23 Juli 2026:** Sudah diimplementasi penuh.
 
-**Gap saat ini:**
-- Equipment assignment hanya bisa via detail view jamaah (1 per 1)
-- `equipment.total_stock` tidak auto-decrement saat status = `distributed`
-- Tidak ada laporan stok (tersedia / didistribusikan / dikembalikan)
+**Implementasi:**
+- `PATCH /api/admin/pilgrim-equipment/bulk-status` — bulk update status (pending→distributed→returned) dengan auto-adjust `total_stock` per equipment
+- Stock delta dihitung per-row sebelum update, lalu aggregasi ke equipment
+- Frontend: `EquipmentDistribution.tsx` dan `EquipmentReport.tsx` (laporan stok)
 
-**Rencana:**
-
-Halaman baru `/admin/equipment-distribution`:
-- Pilih keberangkatan → tampilkan semua jamaah
-- Bulk assign item perlengkapan (ceklis per jamaah, item per item)
-- Status per item: pending → distributed → returned
-- Auto-decrement `total_stock` saat mark distributed
-- Laporan: stok tersedia vs terdistribusi vs dikembalikan per item
-
-**File yang perlu dibuat/diubah:**
 ```
-artifacts/api-server/src/routes/admin/pilgrim-equipment.ts  ← tambah bulk assign + stok update
-artifacts/umroh-app/src/features/admin/pages/EquipmentDistribution.tsx  ← halaman baru
-lib/db/src/schema/masterdata.ts                              ← trigger/logic stok
+artifacts/api-server/src/routes/admin/pilgrim-equipment.ts  ← PATCH /bulk-status
+artifacts/umroh-app/src/features/admin/pages/EquipmentDistribution.tsx
+artifacts/umroh-app/src/features/admin/pages/EquipmentReport.tsx
 ```
 
 ---
 
-### O-9 — Visa Tracking (Status Pengajuan)
+### O-9 — Visa Tracking (Status Pengajuan) ✅ Selesai
 
-**Prioritas: Tinggi | Estimasi: 1.5 hari**
+**Verifikasi 23 Juli 2026:** Sudah diimplementasi penuh.
 
-**Gap saat ini:** Visa hanya berupa upload dokumen. Tidak ada tracking status pengajuan visa ke kedutaan/imigrasi.
+**Implementasi:**
+- Tabel `visa_applications` di `lib/db/src/schema/visa.ts` — kolom `status` (draft/submitted/processing/approved/rejected/expired), `submitted_at`, `approved_at`, `expiry_date`, `rejection_reason`, `visa_number`, `updated_by`
+- Route lengkap di `artifacts/api-server/src/routes/admin/visa.ts`
+- Frontend: `VisaTracking.tsx`
 
-**Rencana schema:**
-```sql
-CREATE TABLE visa_applications (
-  id              TEXT PRIMARY KEY,
-  booking_id      TEXT NOT NULL REFERENCES bookings(id),
-  pilgrim_id      TEXT NOT NULL REFERENCES booking_pilgrims(id),
-  status          TEXT NOT NULL DEFAULT 'draft',
-  -- draft | submitted | processing | approved | rejected | expired
-  submitted_at    TIMESTAMPTZ,
-  approved_at     TIMESTAMPTZ,
-  expiry_date     DATE,
-  rejection_reason TEXT,
-  visa_number     TEXT,
-  notes           TEXT,
-  created_at      TIMESTAMPTZ
-);
 ```
-
-**Rencana frontend:**
-
-Halaman `/admin/visa-tracking`:
-- Tabel jamaah + status visa (badge berwarna per status)
-- Bulk update status (misal: select semua "submitted" → mark "processing")
-- Filter per keberangkatan + status
-- Alert: visa expired / expiring 90 hari sebelum keberangkatan
-- Statistik: berapa % sudah approved per departure
+lib/db/src/schema/visa.ts
+artifacts/api-server/src/routes/admin/visa.ts
+artifacts/umroh-app/src/features/admin/pages/VisaTracking.tsx
+```
 
 ---
 
-### O-10 — Assignment Kursi Pesawat
+### O-10 — Assignment Kursi Pesawat ✅ Selesai
 
-**Prioritas: Sedang | Estimasi: 1 hari**
+**Verifikasi 23 Juli 2026:** Sudah diimplementasi penuh.
 
-**Gap saat ini:** Tidak ada assignment kursi pesawat per jamaah.
+**Implementasi:**
+- Kolom `seat_number` dan `flight_segment` sudah ada di `booking_pilgrims`
+- `GET /api/admin/seat-assignment?departureId=X` — list jemaah beserta kursi per departure
+- `PATCH /api/admin/seat-assignment/:pilgrimId` — update kursi individual
+- `POST /api/admin/seat-assignment/bulk` — bulk update kursi sekaligus
+- Frontend: `SeatAssignment.tsx`
 
-**Rencana schema:**
-```sql
--- Tambah ke booking_pilgrims
-ALTER TABLE booking_pilgrims ADD COLUMN seat_number TEXT;   -- misal: 14A
-ALTER TABLE booking_pilgrims ADD COLUMN flight_segment TEXT; -- MH-1234 (GO) / SV-7654 (RETURN)
 ```
-
-**Rencana frontend:**
-
-Tambah kolom kursi di `RoomAssignment.tsx` atau halaman terpisah `/admin/seat-assignment`:
-- Grid peta kursi pesawat (visual) per flight
-- Drag-drop atau input manual nomor kursi
-- Validasi: kursi tidak double-assign, gender consideration (bila ada kebijakan)
-- Export daftar kursi ke manifest airline
+lib/db/src/schema/bookings.ts                              ← seat_number, flight_segment
+artifacts/api-server/src/routes/admin/seat-assignment.ts   ← semua endpoint
+artifacts/umroh-app/src/features/admin/pages/SeatAssignment.tsx
+```
 
 ---
 
-### O-11 — Pre-departure Checklist Otomatis
+### O-11 — Pre-departure Checklist Otomatis ✅ Selesai
 
-**Prioritas: Sedang | Estimasi: 1.5 hari**
+**Verifikasi 23 Juli 2026:** Sudah diimplementasi penuh.
 
-**Gap saat ini:** Tidak ada sistem checklist otomatis H-N sebelum keberangkatan.
+**Implementasi:**
+- Tabel `departure_checklists` di `lib/db/src/schema/checklists.ts` — kolom `h_minus` (60/30/14/7/3), `category`, `item`, `is_done`, `done_by`, `done_at`
+- Route lengkap di `artifacts/api-server/src/routes/admin/checklist.ts` (termasuk cron generate `/cron/checklist-generate`)
+- Frontend: `DepartureChecklist.tsx`
 
-**Rencana:**
-
-Cron job harian yang memeriksa semua departure dalam 60 hari ke depan dan membuat task checklist:
-
-| H- | Item Checklist |
-|----|---------------|
-| H-60 | Cek kelengkapan dokumen jamaah (passport, visa) |
-| H-30 | Konfirmasi hotel & tiket, cek sisa piutang |
-| H-14 | Distribusi perlengkapan, manifest final |
-| H-7  | Briefing/manasik reminder, cek cicilan overdue |
-| H-3  | Konfirmasi transportasi, cek check-in |
-
-**Schema baru:**
-```sql
-CREATE TABLE departure_checklists (
-  id            TEXT PRIMARY KEY,
-  departure_id  TEXT NOT NULL REFERENCES package_departures(id),
-  h_minus       INTEGER NOT NULL,    -- 60, 30, 14, 7, 3
-  item          TEXT NOT NULL,
-  is_done       BOOLEAN DEFAULT false,
-  done_by       TEXT,
-  done_at       TIMESTAMPTZ,
-  created_at    TIMESTAMPTZ
-);
+```
+lib/db/src/schema/checklists.ts
+artifacts/api-server/src/routes/admin/checklist.ts
+artifacts/umroh-app/src/features/admin/pages/DepartureChecklist.tsx
 ```
 
 ---
@@ -679,55 +561,23 @@ artifacts/api-server/src/routes/admin/bookings.ts  ← POST / handler baris ~330
 
 ---
 
-## 📌 Prioritas Eksekusi
+## 📌 Sisa Backlog (Yang Benar-Benar Belum Ada)
 
-### Prioritas 1 — Quick Win (dampak langsung, mudah dikerjakan)
+> Diverifikasi 23 Juli 2026. Semua item lain sudah selesai di codebase.
 
-| # | Task | Estimasi | Alasan |
-|---|------|----------|--------|
-| 1 | F-5: Reminder Piutang via WA (bulk) | 0.5 hari | UI sudah ada, tinggal 1 endpoint backend |
-| 2 | O-14: Kode Booking Anti-Collision | 0.5 hari | Bug potensial, mudah fix |
-| 3 | O-12: Validasi Kapasitas Kamar | 0.5 hari | Cegah kesalahan operasional di lapangan |
-| 4 | F-13: Nomor Invoice Otomatis | 0.5 hari | Kebutuhan dasar profesionalisme dokumen |
+| # | Task | Estimasi | Prioritas |
+|---|------|----------|-----------|
+| 1 | F-11: Pajak (PPN/PPh) & Faktur Pajak | 3 hari | Sedang |
+| 2 | F-12: Budget & Proyeksi Cash Flow | 2 hari | Rendah |
+| 3 | F-14: Multi-Currency Terintegrasi | 2 hari | Rendah |
+| 4 | F-15: Export ke Software Akuntansi | 1–2 hari | Rendah |
+| 5 | O-13: Manifest Offline Cache (Service Worker) | 1 hari | Sedang |
 
-### Prioritas 2 — Fondasi Keuangan (nilai bisnis tinggi, perlu kerja lebih)
-
-| # | Task | Estimasi | Alasan |
-|---|------|----------|--------|
-| 5 | F-6: Jurnal Otomatis (Auto-Posting) | 2 hari | Fondasi akuntansi; tanpa ini laporan tidak akurat |
-| 6 | F-7: Chart of Accounts + Buku Besar | 2–3 hari | Prasyarat untuk F-8 |
-| 7 | F-8: Neraca + L/R + Arus Kas | 2–3 hari | Laporan yang bisa dipakai akuntan/auditor |
-| 8 | F-9: HPP Aktual + Variance | 1–2 hari | Kontrol margin nyata per keberangkatan |
-
-### Prioritas 3 — Operasional Lapangan
-
-| # | Task | Estimasi | Alasan |
-|---|------|----------|--------|
-| 9  | O-8: Distribusi Perlengkapan + Stok | 1.5 hari | Manajemen logistik yang benar |
-| 10 | O-9: Visa Tracking | 1.5 hari | Kritis H-60 sebelum keberangkatan |
-| 11 | O-11: Pre-departure Checklist | 1.5 hari | Standardisasi persiapan per departure |
-| 12 | O-10: Seat Assignment | 1 hari | Koordinasi dengan airline |
-
-### Prioritas 4 — Penguatan & Compliance
-
-| # | Task | Estimasi | Alasan |
-|---|------|----------|--------|
-| 13 | F-10: Rekonsiliasi Bank | 2–3 hari | Audit trail pembayaran |
-| 14 | F-11: PPN/PPh + Faktur Pajak | 3 hari | Kepatuhan pajak |
-| 15 | O-13: Manifest Offline Cache | 1 hari | Keandalan di bandara |
-| 16 | F-12: Budget & Proyeksi | 2 hari | Perencanaan keuangan |
-| 17 | F-14: Multi-Currency | 2 hari | Untuk paket harga USD/SAR |
-| 18 | F-15: Export Software Akuntansi | 1–2 hari | Integrasi Jurnal.id/Accurate |
-
-### Estimasi Total
+### Estimasi Sisa
 
 ```
-Prioritas 1 (Quick Win)          : ~2 hari kerja
-Prioritas 2 (Fondasi Keuangan)   : ~9 hari kerja
-Prioritas 3 (Operasional Lapangan): ~5.5 hari kerja
-Prioritas 4 (Penguatan/Compliance): ~12 hari kerja
-─────────────────────────────────────────────────
-Total estimasi                   : ~28.5 hari kerja
+Sisa backlog                     : ~9–10 hari kerja
+(dari total awal ~28.5 hari kerja)
 ```
 
 ---
@@ -737,11 +587,11 @@ Total estimasi                   : ~28.5 hari kerja
 ```
 lib/
 ├── db/src/schema/
-│   ├── bookings.ts          ✅ bookings, booking_pilgrims, check_ins, contracts
+│   ├── bookings.ts          ✅ bookings, booking_pilgrims (+ seat_number, flight_segment)
 │   ├── payments.ts          ✅ payments, installment_schedules, payment_gateway_transactions
-│   ├── packages.ts          ✅ packages, package_departures, package_costs, package_prices
+│   ├── packages.ts          ✅ packages, package_departures, package_costs (+ actual_amount)
 │   ├── itineraries.ts       ✅ itineraries, itinerary_days
-│   ├── masterdata.ts        ✅ hotels, airlines, airports, muthawifs, equipment, categories
+│   ├── masterdata.ts        ✅ hotels, airlines, airports, muthawifs, equipment, currencies
 │   ├── pilgrim-equipment.ts ✅ pilgrim_equipment
 │   ├── pilgrims.ts          ✅ master_pilgrims, pilgrim_documents
 │   ├── agents.ts            ✅ agents, commissions, withdrawals, affiliate_clicks
@@ -749,35 +599,43 @@ lib/
 │   ├── crm.ts               ✅ leads, interactions, follow_ups
 │   ├── cms.ts               ✅ blog_posts, pages, gallery, testimonials, faqs
 │   ├── tenant.ts            ✅ tenant_sites, site_settings, navigation_items
-│   ├── accounting.ts        🔲 [F-7: chart_of_accounts — belum ada]
-│   └── visa.ts              🔲 [O-9: visa_applications — belum ada]
+│   ├── accounting.ts        ✅ chart_of_accounts (F-7), bank_mutations (F-10)
+│   ├── checklists.ts        ✅ departure_checklists (O-11)
+│   └── visa.ts              ✅ visa_applications (O-9)
 │
 artifacts/
 ├── api-server/src/routes/admin/
-│   ├── finance.ts           ✅ dashboard, piutang, departures P&L
-│   ├── accounting.ts        ✅ manual journal CRUD → 🔲 perlu CoA + auto-posting
-│   ├── payments.ts          ✅ verify → 🔲 hook ke autoJournal
-│   ├── costs.ts             ✅ package_costs → 🔲 tambah actual_amount
+│   ├── finance.ts           ✅ dashboard, piutang, departures P&L, income-statement, balance-sheet, cash-flow
+│   ├── accounting.ts        ✅ manual journal CRUD
+│   ├── coa.ts               ✅ CoA CRUD + seed + ledger + trial-balance (F-7)
+│   ├── bank-reconciliation.ts ✅ import CSV, auto-match, manual match (F-10)
+│   ├── payments.ts          ✅ verify + hook ke autoJournal
+│   ├── costs.ts             ✅ package_costs + actual_amount + summary/variance (F-9)
 │   ├── installments.ts      ✅ monitoring + mark paid
-│   ├── bookings.ts          ✅ lifecycle → 🔲 kode anti-collision
-│   ├── pilgrim-equipment.ts ✅ assign → 🔲 bulk + stok auto-update
-│   ├── room-assignment.ts   ✅ bulk edit → 🔲 validasi kapasitas
-│   └── [visa.ts]            🔲 [O-9: belum ada]
+│   ├── bookings.ts          ✅ lifecycle, invoice-data, booking code anti-collision
+│   ├── pilgrim-equipment.ts ✅ assign + bulk-status + auto stock update (O-8)
+│   ├── room-assignment.ts   ✅ bulk edit + validasi kapasitas + konflik gender
+│   ├── seat-assignment.ts   ✅ get/patch/bulk kursi pesawat (O-10)
+│   ├── checklist.ts         ✅ pre-departure checklist CRUD + generate (O-11)
+│   └── visa.ts              ✅ visa tracking CRUD + bulk update (O-9)
 │
 └── umroh-app/src/features/admin/pages/
-    ├── FinanceDashboard.tsx  ✅
-    ├── Piutang.tsx           ✅ → 🔲 F-5 endpoint remind
-    ├── Accounting.tsx        ✅ → 🔲 F-7 CoA, F-6 auto-posting
-    ├── PackageCosts.tsx      ✅ → 🔲 F-9 actual + variance
-    ├── Installments.tsx      ✅
-    ├── Reports.tsx           ✅ → 🔲 F-8 neraca, L/R, arus kas
-    ├── Pilgrims.tsx          ✅
-    ├── RoomAssignment.tsx    ✅ → 🔲 O-12 validasi kapasitas
-    ├── Manifest.tsx          ✅ → 🔲 O-13 offline cache
-    ├── CheckIn.tsx           ✅
-    ├── [ChartOfAccounts.tsx] 🔲 [F-7: belum ada]
-    ├── [GeneralLedger.tsx]   🔲 [F-7: belum ada]
-    ├── [TrialBalance.tsx]    🔲 [F-7: belum ada]
-    ├── [EquipmentDistribution.tsx] 🔲 [O-8: belum ada]
-    └── [VisaTracking.tsx]    🔲 [O-9: belum ada]
+    ├── FinanceDashboard.tsx     ✅
+    ├── Piutang.tsx              ✅ (termasuk bulk remind WA)
+    ├── Accounting.tsx           ✅ manual journal
+    ├── ChartOfAccounts.tsx      ✅ (F-7)
+    ├── GeneralLedger.tsx        ✅ (F-7)
+    ├── TrialBalance.tsx         ✅ (F-7)
+    ├── BankReconciliation.tsx   ✅ (F-10)
+    ├── FinancialReports.tsx     ✅ neraca, L/R, arus kas (F-8)
+    ├── PackageCosts.tsx         ✅ (termasuk kolom Aktual + Variance, F-9)
+    ├── Installments.tsx         ✅
+    ├── Pilgrims.tsx             ✅
+    ├── RoomAssignment.tsx       ✅ (validasi kapasitas + gender)
+    ├── SeatAssignment.tsx       ✅ (O-10)
+    ├── EquipmentDistribution.tsx ✅ (O-8)
+    ├── EquipmentReport.tsx      ✅ (O-8 laporan stok)
+    ├── VisaTracking.tsx         ✅ (O-9)
+    ├── DepartureChecklist.tsx   ✅ (O-11)
+    └── Manifest.tsx             ✅ → 🔲 O-13 offline cache (Service Worker belum ada)
 ```
