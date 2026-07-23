@@ -45,6 +45,19 @@ const PKG_EMBED_SELECT =
   "extra_hotels:departure_hotels!departure_hotels_departure_id_fkey(id,label,sort_order,hotel:hotels!departure_hotels_hotel_id_fkey(name,star:stars,city))" +
   ")";
 
+// Pre-FASE-1 compatible embed: no hotel_makkah/hotel_madinah FK on package_departures,
+// no departure_hotels table. Used as fallback when the FASE 1 migration hasn't been
+// applied to the production Supabase DB yet.
+const PKG_EMBED_SELECT_COMPAT =
+  "*," +
+  "category:package_categories!packages_category_id_fkey(id,name,parent_id)," +
+  "departures:package_departures!package_departures_package_id_fkey(" +
+  "id,departure_date,return_date,quota,remaining_quota,status,muthawif_id," +
+  "airline_id,departure_airport_id,arrival_airport_id,flight_number," +
+  "prices:departure_prices!departure_prices_departure_id_fkey(price,room_type)," +
+  "airline:airlines!package_departures_airline_id_fkey(id,name,code)" +
+  ")";
+
 async function supabaseGet(path: string): Promise<any> {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error("Supabase not configured: SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY missing");
@@ -113,12 +126,24 @@ router.get("/", async (req: Request, res: Response) => {
     const { type, active } = req.query;
 
     if (USE_SUPABASE_HTTP) {
-      const filters: string[] = [`select=${encodeURIComponent(PKG_EMBED_SELECT)}`];
+      const extraFilters: string[] = [];
       // is_active is nullable in the schema — treat NULL as active (IS NOT FALSE).
       // PostgREST OR filter: matches rows where is_active=true OR is_active IS NULL.
-      if (active !== "false") filters.push("or=(is_active.eq.true,is_active.is.null)");
-      if (type && typeof type === "string") filters.push(`package_type=eq.${encodeURIComponent(type)}`);
-      const rows = await supabaseGet(`packages?${filters.join("&")}`);
+      if (active !== "false") extraFilters.push("or=(is_active.eq.true,is_active.is.null)");
+      if (type && typeof type === "string") extraFilters.push(`package_type=eq.${encodeURIComponent(type)}`);
+
+      // Try FASE-1 full embed; fall back to pre-FASE-1 compat if the new FK constraints
+      // aren't in the production DB yet (migration not applied).
+      let rows: any[];
+      try {
+        const filters = [`select=${encodeURIComponent(PKG_EMBED_SELECT)}`, ...extraFilters];
+        rows = await supabaseGet(`packages?${filters.join("&")}`);
+      } catch (embedErr: any) {
+        console.warn("[GET /api/packages] Full embed failed, retrying with compat embed:", embedErr?.message);
+        const filters = [`select=${encodeURIComponent(PKG_EMBED_SELECT_COMPAT)}`, ...extraFilters];
+        rows = await supabaseGet(`packages?${filters.join("&")}`);
+      }
+
       const data = rows.map(mapPkgRow);
       res.json({ data, total: data.length });
       return;
@@ -346,9 +371,17 @@ router.get("/:slug", async (req: Request, res: Response) => {
     const slug = req.params.slug as string;
 
     if (USE_SUPABASE_HTTP) {
-      const rows = await supabaseGet(
-        `packages?slug=eq.${encodeURIComponent(slug)}&select=${encodeURIComponent(PKG_EMBED_SELECT)}&limit=1`,
-      );
+      // Try FASE-1 full embed; fall back to compat if migration not yet applied in production.
+      let rows: any[];
+      try {
+        rows = await supabaseGet(
+          `packages?slug=eq.${encodeURIComponent(slug)}&select=${encodeURIComponent(PKG_EMBED_SELECT)}&limit=1`,
+        );
+      } catch {
+        rows = await supabaseGet(
+          `packages?slug=eq.${encodeURIComponent(slug)}&select=${encodeURIComponent(PKG_EMBED_SELECT_COMPAT)}&limit=1`,
+        );
+      }
       const row = rows[0];
       if (!row) {
         res.status(404).json({ error: "Package not found" });

@@ -197,7 +197,7 @@ const AdminDepartures = () => {
     try {
       const [departuresRes, packagesRes, muthawifRes, airlinesRes, airportsRes, hotelsRes] = await Promise.all([
         apiFetch<{ data: Departure[] }>("/api/admin/departures"),
-        apiFetch<{ data: Package[] }>("/api/packages?active=true"),
+        apiFetch<{ data: Package[] }>("/api/packages?active=true").catch(() => ({ data: [] as Package[] })),
         apiFetch<{ data: Muthawif[] }>("/api/admin/masterdata/muthawifs"),
         apiFetch<{ data: Airline[] }>("/api/admin/masterdata/airlines").catch(() => ({ data: [] as Airline[] })),
         apiFetch<{ data: Airport[] }>("/api/admin/masterdata/airports").catch(() => ({ data: [] as Airport[] })),
