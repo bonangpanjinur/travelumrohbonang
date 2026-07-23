@@ -136,16 +136,75 @@ router.post("/", async (req, res) => {
   }
 });
 
+// ── O-8: PATCH /bulk-status — bulk update status + auto-adjust stock ──────────
+// MUST be registered BEFORE PATCH /:id so Express does not swallow /bulk-status
+router.patch("/bulk-status", async (req, res) => {
+  try {
+    const { ids, status } = req.body as { ids: string[]; status: string };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "ids array required" });
+    }
+    if (!status) return res.status(400).json({ error: "status required" });
+
+    // Fetch existing rows to compute stock deltas
+    const existingRows = await db
+      .select({ id: pilgrimEquipment.id, status: pilgrimEquipment.status, equipmentId: pilgrimEquipment.equipmentId, quantity: pilgrimEquipment.quantity })
+      .from(pilgrimEquipment)
+      .where(inArray(pilgrimEquipment.id, ids));
+
+    const patch: Record<string, any> = { status };
+    if (status === "distributed") patch.distributedAt = new Date();
+    if (status === "returned") patch.returnedAt = new Date();
+
+    await db.update(pilgrimEquipment).set(patch).where(inArray(pilgrimEquipment.id, ids));
+
+    // Aggregate stock deltas per equipment
+    const stockDeltas = new Map<string, number>();
+    for (const row of existingRows) {
+      if (row.status === status) continue;
+      const qty = row.quantity ?? 1;
+      let delta = 0;
+      if (status === "distributed" && row.status !== "distributed") delta = -qty;
+      if (status === "returned" && row.status === "distributed") delta = qty;
+      if (delta !== 0) {
+        stockDeltas.set(row.equipmentId, (stockDeltas.get(row.equipmentId) ?? 0) + delta);
+      }
+    }
+    for (const [equipmentId, delta] of stockDeltas.entries()) {
+      await db
+        .update(equipment)
+        .set({ totalStock: sql`GREATEST(0, ${equipment.totalStock} + ${delta})` })
+        .where(eq(equipment.id, equipmentId));
+    }
+
+    res.json({ ok: true, updated: ids.length });
+  } catch (e) {
+    console.error("[pilgrim-equipment PATCH /bulk-status]", e);
+    res.status(500).json({ error: "Failed to bulk update status" });
+  }
+});
+
 // PATCH /api/admin/pilgrim-equipment/:id
 router.patch("/:id", async (req, res) => {
   const { status, notes, distributedBy } = req.body ?? {};
   try {
+    // Fetch old status to calculate stock delta
+    const [existing] = await db
+      .select({ status: pilgrimEquipment.status, equipmentId: pilgrimEquipment.equipmentId, quantity: pilgrimEquipment.quantity })
+      .from(pilgrimEquipment)
+      .where(eq(pilgrimEquipment.id, req.params.id));
+    if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+
     const patch: Record<string, any> = {};
     if (status !== undefined) patch.status = status;
     if (notes !== undefined) patch.notes = notes;
     if (status === "distributed") {
       patch.distributedAt = new Date();
+      patch.returnedAt = null;
       if (distributedBy !== undefined) patch.distributedBy = distributedBy;
+    }
+    if (status === "returned") {
+      patch.returnedAt = new Date();
     }
 
     const [updated] = await db
@@ -155,6 +214,21 @@ router.patch("/:id", async (req, res) => {
       .returning();
 
     if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+
+    // Auto-adjust stock
+    if (status && status !== existing.status) {
+      const qty = existing.quantity ?? 1;
+      let delta = 0;
+      if (status === "distributed" && existing.status !== "distributed") delta = -qty;
+      if (status === "returned" && existing.status === "distributed") delta = qty;
+      if (delta !== 0) {
+        await db
+          .update(equipment)
+          .set({ totalStock: sql`GREATEST(0, ${equipment.totalStock} + ${delta})` })
+          .where(eq(equipment.id, existing.equipmentId));
+      }
+    }
+
     res.json(updated);
   } catch (e) {
     console.error("[pilgrim-equipment PATCH /:id]", e);

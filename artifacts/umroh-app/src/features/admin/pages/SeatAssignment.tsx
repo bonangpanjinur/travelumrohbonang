@@ -18,10 +18,11 @@ import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Plane, Save, Search, Users, CheckCircle2, X, User,
-  ChevronDown, ChevronUp, RotateCcw, Settings2,
+  ChevronDown, ChevronUp, RotateCcw, Settings2, Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { exportToCsv } from "@/shared/lib/exportCsv";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -394,6 +395,25 @@ export default function SeatAssignment() {
           </p>
         </div>
         <div className="flex gap-2">
+          {result && result.data.length > 0 && (
+            <Button variant="outline" onClick={() => {
+              const rows = result.data.map((p) => [
+                p.name,
+                p.gender ?? "-",
+                p.passportNumber ?? "-",
+                p.bookingCode,
+                p.flightSegment ?? "-",
+                p.seatNumber ?? "-",
+              ]);
+              exportToCsv(
+                `manifest-kursi-${departureId}`,
+                ["Nama", "Jenis Kelamin", "No. Paspor", "Kode Booking", "Segmen", "No. Kursi"],
+                rows,
+              );
+            }}>
+              <Download className="h-4 w-4 mr-2" />Export Manifest
+            </Button>
+          )}
           {totalDirty > 0 && (
             <Button onClick={saveAll} disabled={saving} className="gradient-gold text-primary">
               <Save className="h-4 w-4 mr-2" />

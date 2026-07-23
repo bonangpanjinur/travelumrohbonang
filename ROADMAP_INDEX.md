@@ -13,7 +13,7 @@ Dokumen ini menggantikan/melengkapi tiga file roadmap sebelumnya dengan membagi 
 |------|------|----------|-----------|--------|
 | [Fase 1](FASE_1_ARSITEKTUR_PAKET.md) | Refaktor Arsitektur Paket & Keberangkatan | ~3 hari | — | 🔲 Belum |
 | [Fase 2](FASE_2_FONDASI_KEUANGAN.md) | Fondasi Akuntansi (CoA, Buku Besar, Laporan) | ~5–6 hari | Fase 1 selesai | 🔲 Belum |
-| [Fase 3](FASE_3_OPERASIONAL_LAPANGAN.md) | Operasional Lapangan (Visa, Perlengkapan, Kursi, Checklist) | ~5.5 hari | Fase 1 selesai | 🔲 Belum |
+| [Fase 3](FASE_3_OPERASIONAL_LAPANGAN.md) | Operasional Lapangan (Visa, Perlengkapan, Kursi, Checklist) | ~5.5 hari | Fase 1 selesai | ✅ Selesai |
 | [Fase 4](FASE_4_KEUANGAN_LANJUTAN.md) | Keuangan Lanjutan (HPP Aktual, Rekonsiliasi Bank) | ~4–5 hari | Fase 2 selesai | 🔲 Belum |
 | [Fase 5](FASE_5_COMPLIANCE_PENGUATAN.md) | Compliance & Penguatan (Pajak, Budget, Multi-Currency, Offline) | ~8–9 hari | Fase 3 & 4 selesai | 🔲 Belum |
 

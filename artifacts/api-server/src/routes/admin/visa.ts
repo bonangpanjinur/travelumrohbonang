@@ -178,6 +178,56 @@ router.get("/stats/:departureId", async (req, res) => {
   }
 });
 
+// ── POST /bulk — create visa applications untuk semua jemaah di departure ────
+
+router.post("/bulk", async (req, res) => {
+  try {
+    const adminId = (req as any).user?.id as string | undefined;
+    const { departureId, status } = req.body as { departureId: string; status?: string };
+
+    if (!departureId) return res.status(400).json({ error: "departureId required" });
+
+    // Get all booking_pilgrims for this departure
+    const pilgrims = await db
+      .select({
+        pilgrimId: bookingPilgrims.id,
+        bookingId: bookingPilgrims.bookingId,
+      })
+      .from(bookingPilgrims)
+      .leftJoin(bookings, eq(bookingPilgrims.bookingId, bookings.id))
+      .where(eq(bookings.departureId, departureId));
+
+    if (pilgrims.length === 0) {
+      return res.status(404).json({ error: "Tidak ada jemaah di keberangkatan ini" });
+    }
+
+    let inserted = 0;
+    let skipped = 0;
+
+    for (const p of pilgrims) {
+      try {
+        await db.insert(visaApplications).values({
+          id: crypto.randomUUID(),
+          bookingId: p.bookingId,
+          pilgrimId: p.pilgrimId,
+          status: status ?? "draft",
+          updatedBy: adminId ?? null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+        inserted++;
+      } catch (e: any) {
+        if (e?.code === "23505") { skipped++; continue; }
+        throw e;
+      }
+    }
+
+    res.status(201).json({ ok: true, inserted, skipped, total: pilgrims.length });
+  } catch (err) {
+    sendAdminError(res, "POST /api/admin/visa/bulk", err);
+  }
+});
+
 // ── POST /bulk-update — bulk update status ───────────────────────────────────
 
 router.post("/bulk-update", async (req, res) => {

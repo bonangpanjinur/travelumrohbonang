@@ -2,7 +2,7 @@
 
 > Estimasi: **~5.5 hari kerja**  
 > Prasyarat: Fase 1 selesai  
-> Status: 🔲 Belum dimulai
+> Status: ✅ Selesai — 23 Juli 2026
 
 ---
 
@@ -190,28 +190,28 @@ CREATE TABLE departure_checklists (
 ## Checklist Selesai
 
 ### O-8
-- [ ] Endpoint bulk-assign equipment berjalan
-- [ ] Auto-decrement/increment total_stock berfungsi
-- [ ] Endpoint stock-report berjalan
-- [ ] Halaman EquipmentDistribution.tsx bisa bulk assign per departure
+- [x] Endpoint bulk-assign equipment berjalan
+- [x] Auto-decrement/increment total_stock berfungsi — PATCH /:id & PATCH /bulk-status kini auto-adjust stok
+- [x] Endpoint stock-report berjalan — `GET /api/admin/equipment-report`
+- [x] Halaman EquipmentDistribution.tsx bisa bulk assign per departure
 
 ### O-9
-- [ ] Schema `visa_applications` dibuat & push ke DB
-- [ ] Endpoint CRUD visa berjalan
-- [ ] Bulk status update berfungsi
-- [ ] Halaman VisaTracking.tsx tampilkan status + progress per departure
+- [x] Schema `visa_applications` dibuat & push ke DB
+- [x] Endpoint CRUD visa berjalan
+- [x] Bulk status update berfungsi
+- [x] Halaman VisaTracking.tsx tampilkan status + progress per departure — progress bar % approved + tombol "Buat Semua Visa"
 
 ### O-10
-- [ ] Kolom `seat_number` & `flight_segment` ditambah ke `booking_pilgrims`
-- [ ] Endpoint bulk seat assignment berjalan
-- [ ] Validasi kursi double-assign berfungsi
-- [ ] Halaman SeatAssignment.tsx bisa input + export
+- [x] Kolom `seat_number` & `flight_segment` ditambah ke `booking_pilgrims`
+- [x] Endpoint bulk seat assignment berjalan
+- [x] Validasi kursi double-assign berfungsi
+- [x] Halaman SeatAssignment.tsx bisa input + export — tombol "Export Manifest" CSV
 
 ### O-11
-- [ ] Schema `departure_checklists` dibuat & push ke DB
-- [ ] Endpoint list + mark done berjalan
-- [ ] Cron auto-generate checklist berjalan
-- [ ] UI checklist muncul di detail keberangkatan
+- [x] Schema `departure_checklists` dibuat & push ke DB
+- [x] Endpoint list + mark done berjalan
+- [x] Cron auto-generate checklist berjalan — `GET /cron/checklist-generate` + lib/checklistCron.ts
+- [x] UI checklist muncul di detail keberangkatan — halaman DepartureChecklist.tsx
 
 ---
 

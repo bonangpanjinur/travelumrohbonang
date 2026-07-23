@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/shared/components/ui/dialog";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { toast } from "sonner";
-import { FileText, Plus, CheckCheck, AlertTriangle } from "lucide-react";
+import { Progress } from "@/shared/components/ui/progress";
+import { FileText, Plus, CheckCheck, AlertTriangle, Wand2 } from "lucide-react";
 
 interface VisaApp {
   id: string; bookingId: string; pilgrimId: string;
@@ -66,6 +67,15 @@ export default function VisaTracking() {
       v.bookingCode.toLowerCase().includes(search.toLowerCase());
   });
 
+  const bulkCreateMutation = useMutation({
+    mutationFn: (body: any) => apiFetch("/api/admin/visa/bulk", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: (d: any) => {
+      qc.invalidateQueries({ queryKey: ["visa"] });
+      toast.success(`${d.inserted} aplikasi visa dibuat (${d.skipped} sudah ada)`);
+    },
+    onError: (e: any) => toast.error(e.message || "Gagal membuat visa"),
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ id, body }: { id: string; body: any }) =>
       apiFetch(`/api/admin/visa/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
@@ -103,7 +113,32 @@ export default function VisaTracking() {
           <h1 className="text-2xl font-bold">Tracking Visa</h1>
           <p className="text-muted-foreground text-sm">Status pengajuan visa per jemaah keberangkatan</p>
         </div>
+        {departureId !== "all" && (
+          <Button variant="outline" onClick={() => bulkCreateMutation.mutate({ departureId })} disabled={bulkCreateMutation.isPending}>
+            <Wand2 className="h-4 w-4 mr-2" />
+            {bulkCreateMutation.isPending ? "Membuat..." : "Buat Semua Visa"}
+          </Button>
+        )}
       </div>
+
+      {/* Progress bar per departure */}
+      {departureId !== "all" && visas.length > 0 && (
+        <div className="space-y-1">
+          {(() => {
+            const approved = visas.filter((v) => v.status === "approved").length;
+            const pct = visas.length > 0 ? Math.round((approved / visas.length) * 100) : 0;
+            return (
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-medium">Progress Approved</span>
+                  <span className="text-sm text-muted-foreground">{approved}/{visas.length} ({pct}%)</span>
+                </div>
+                <Progress value={pct} className="h-2" />
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
