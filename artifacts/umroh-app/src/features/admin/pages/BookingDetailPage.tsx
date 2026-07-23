@@ -7,6 +7,7 @@ import BookingStatusBadge from "@/features/admin/components/BookingStatusBadge";
 import ChangeRoomModal from "@/features/admin/components/ChangeRoomModal";
 import ChangeDepartureModal from "@/features/admin/components/ChangeDepartureModal";
 import { fetchInvoiceData, generateInvoiceHTML, openInvoicePrintWindow } from "@/features/admin/components/InvoiceGenerator";
+import { fetchPassportRecommendationData, generatePassportRecommendationHTML, openPassportRecommendationPrintWindow } from "@/features/admin/components/PassportRecommendationGenerator";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import {
@@ -306,26 +307,10 @@ const BookingDetailPage = () => {
               size="sm" variant="outline"
               onClick={async () => {
                 try {
-                  const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
-                  const authHeaders: HeadersInit = {};
-                  try {
-                    const { data: { session } } = await supabaseAuth.auth.getSession();
-                    if (session?.access_token) {
-                      authHeaders["Authorization"] = `Bearer ${session.access_token}`;
-                    }
-                  } catch { /* session unavailable */ }
-                  const res = await fetch(
-                    `${base}/api/admin/bookings/${booking.id}/passport-recommendation`,
-                    { credentials: "include", headers: authHeaders },
-                  );
-                  if (!res.ok) throw new Error("Gagal generate surat");
-                  const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `surat-rekomendasi-paspor-${booking.bookingCode}.pdf`;
-                  a.click();
-                  URL.revokeObjectURL(url);
+                  const data = await fetchPassportRecommendationData(booking.id);
+                  if (!data) throw new Error("Gagal mengambil data surat rekomendasi");
+                  const html = await generatePassportRecommendationHTML(data);
+                  openPassportRecommendationPrintWindow(html);
                 } catch (e: any) {
                   toast.error(e?.message || "Gagal generate surat rekomendasi");
                 }

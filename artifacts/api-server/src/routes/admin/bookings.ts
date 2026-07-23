@@ -1124,6 +1124,100 @@ router.get("/:id/invoice-data", async (req, res) => {
   }
 });
 
+// ── GET /:id/passport-recommendation-data  (JSON, for frontend HTML print) ─────
+router.get("/:id/passport-recommendation-data", async (req, res) => {
+  try {
+    const id = req.params.id as string;
+
+    const [bookingRows, brandingResult] = await Promise.all([
+      db.execute(sql`
+        SELECT
+          b.id, b.booking_code,
+          pkg.title   AS package_title,
+          dep.departure_date
+        FROM bookings b
+        LEFT JOIN packages           pkg ON pkg.id = b.package_id
+        LEFT JOIN package_departures dep ON dep.id = b.departure_id
+        WHERE b.id = ${id} OR b.booking_code = ${id.toUpperCase()}
+        LIMIT 1
+      `),
+      db.execute(sql`
+        SELECT value FROM site_settings
+        WHERE key = 'branding' AND category = 'general'
+        LIMIT 1
+      `),
+    ]);
+
+    const bRows = (bookingRows as any).rows ?? bookingRows;
+    const localBooking = bRows[0];
+    const brandRows = (brandingResult as any).rows ?? brandingResult;
+    const branding: any = brandRows[0]?.value ?? {};
+
+    let bookingId: string;
+    let bookingCode: string;
+    let packageTitle: string | null;
+    let departureDate: string | null;
+    let pilgrims: { name: string; nik: string | null; birthDate: string | null; gender: string | null }[];
+
+    if (localBooking) {
+      bookingId = localBooking.id;
+      bookingCode = localBooking.booking_code;
+      packageTitle = localBooking.package_title ?? null;
+      departureDate = localBooking.departure_date ?? null;
+      const pilgrimRows = await db
+        .select({
+          name: bookingPilgrims.name,
+          nik: bookingPilgrims.nik,
+          birthDate: bookingPilgrims.birthDate,
+          gender: bookingPilgrims.gender,
+        })
+        .from(bookingPilgrims)
+        .where(eq(bookingPilgrims.bookingId, bookingId));
+      pilgrims = pilgrimRows.map((p) => ({
+        name: p.name,
+        nik: p.nik ?? null,
+        birthDate: p.birthDate ? String(p.birthDate) : null,
+        gender: p.gender ?? null,
+      }));
+    } else {
+      // Supabase fallback
+      const userToken = (req.headers.authorization || "").replace("Bearer ", "");
+      let sbBooking = await sbGetBooking(id, userToken);
+      if (!sbBooking) sbBooking = await sbGetBookingByCode(id.toUpperCase(), userToken);
+      if (!sbBooking) {
+        res.status(404).json({ error: "Booking not found" });
+        return;
+      }
+      const [sbPkg, sbDep, sbPilgrimsRaw] = await Promise.all([
+        sbGetPackage(sbBooking.package_id, userToken),
+        sbGetDeparture(sbBooking.departure_id, userToken),
+        sbGetPilgrims(sbBooking.id, userToken),
+      ]);
+      bookingCode = sbBooking.booking_code;
+      packageTitle = sbPkg?.title ?? null;
+      departureDate = sbDep?.departure_date ?? null;
+      pilgrims = sbPilgrimsRaw.map((p: any) => ({
+        name: p.name,
+        nik: p.nik ?? null,
+        birthDate: p.birth_date ? String(p.birth_date) : null,
+        gender: p.gender ?? null,
+      }));
+    }
+
+    res.json({
+      bookingCode,
+      packageTitle,
+      departureDate,
+      companyName: branding.company_name || "UmrohPlus",
+      companyTagline: branding.tagline || "Travel & Tours",
+      logoUrl: branding.logo_url || "",
+      pilgrims,
+    });
+  } catch (e) {
+    sendAdminError(res, "GET /api/admin/bookings/:id/passport-recommendation-data", e);
+  }
+});
+
 // ── Change room type ───────────────────────────────────────────────────────────
 router.patch("/:id/room", async (req, res) => {
   try {
