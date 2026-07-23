@@ -62,6 +62,8 @@ import adminSeatAssignmentRouter from "./seat-assignment";
 import adminChecklistRouter from "./checklist";
 import adminBankReconciliationRouter from "./bank-reconciliation";
 import adminDocumentTypesRouter from "./document-types";
+import adminAccountingExportRouter from "./accounting-export";
+import adminBudgetRouter from "./budget";
 
 const router = Router();
 
@@ -171,5 +173,11 @@ router.use("/bank-reconciliation", requireFinance, adminBankReconciliationRouter
 
 // ── Konfigurasi Jenis Dokumen Jemaah ─────────────────────────────────────────
 router.use("/document-types", requireStaff, adminDocumentTypesRouter);
+
+// ── F-15: Export ke Software Akuntansi ───────────────────────────────────────
+router.use("/accounting-export", requireFinance, adminAccountingExportRouter);
+
+// ── F-12: Budget & Proyeksi Cash Flow ────────────────────────────────────────
+router.use("/budget", requireFinance, adminBudgetRouter);
 
 export default router;

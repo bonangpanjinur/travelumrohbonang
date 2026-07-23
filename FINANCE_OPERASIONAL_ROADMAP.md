@@ -27,10 +27,10 @@
 | F-9  | HPP Otomatis dari Biaya Aktual | ✅ Selesai |
 | F-10 | Rekonsiliasi Bank (Import Mutasi) | ✅ Selesai |
 | F-11 | Pajak (PPN/PPh) & Faktur Pajak | 🔲 Belum |
-| F-12 | Budget & Proyeksi Cash Flow | 🔲 Belum |
+| F-12 | Budget & Proyeksi Cash Flow | ✅ Selesai |
 | F-13 | Nomor Invoice Otomatis per Tenant | ✅ Selesai |
 | F-14 | Multi-Currency Terintegrasi | 🔲 Belum |
-| F-15 | Export ke Software Akuntansi | 🔲 Belum |
+| F-15 | Export ke Software Akuntansi | ✅ Selesai |
 
 ### Modul Operasional
 

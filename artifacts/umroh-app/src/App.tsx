@@ -139,6 +139,8 @@ import DepartureChecklist from "./features/admin/pages/DepartureChecklist";
 import DepartureReadiness from "./features/admin/pages/DepartureReadiness";
 import EquipmentDistribution from "./features/admin/pages/EquipmentDistribution";
 import BankReconciliation from "./features/admin/pages/BankReconciliation";
+import AccountingExport from "./features/admin/pages/AccountingExport";
+import BudgetCashFlow from "./features/admin/pages/BudgetCashFlow";
 import { useEffect } from "react";
 import { installGlobalErrorHandlers } from "@/shared/lib/errorLogger";
 import ErrorBoundary from "@/shared/components/common/ErrorBoundary";
@@ -291,6 +293,10 @@ const AppContent = () => {
           <Route path="financial-reports" element={<FinancialReports />} />
           {/* F-10: Rekonsiliasi Bank */}
           <Route path="bank-reconciliation" element={<BankReconciliation />} />
+          {/* F-15: Export ke Software Akuntansi */}
+          <Route path="accounting-export" element={<AccountingExport />} />
+          {/* F-12: Budget & Proyeksi Cash Flow */}
+          <Route path="budget-cashflow" element={<BudgetCashFlow />} />
           {/* O-8: Equipment Distribution */}
           <Route path="equipment-distribution" element={<EquipmentDistribution />} />
           {/* O-9: Visa Tracking */}
