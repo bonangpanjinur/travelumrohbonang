@@ -145,17 +145,11 @@ export default function AdminDocumentTracking() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2">
-          <FileCheck className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-bold">Tracking Dokumen Jemaah</h1>
-        </div>
-        <p className="text-muted-foreground mt-1">
-          Pantau kelengkapan dokumen per keberangkatan
-        </p>
-      </div>
+    <div className="space-y-6">
+      {/* Departure selector description */}
+      <p className="text-sm text-muted-foreground">
+        Pantau kelengkapan dokumen jemaah per keberangkatan secara real-time.
+      </p>
 
       {/* Departure selector row */}
       <div className="flex items-center gap-3">

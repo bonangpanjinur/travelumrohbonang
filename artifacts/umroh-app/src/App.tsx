@@ -2,7 +2,7 @@ import { Toaster } from "@/shared/components/ui/toaster";
 import { Toaster as Sonner } from "@/shared/components/ui/sonner";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/shared/hooks/useAuth";
 import { LanguageProvider } from "@/shared/i18n/LanguageContext";
@@ -73,7 +73,7 @@ import AdminPlaceholder from "./features/admin/pages/Placeholder";
 import AdminAccounting from "./features/admin/pages/Accounting";
 import AdminCRM from "./features/admin/pages/CRM";
 import AdminDocuments from "./features/admin/pages/Documents";
-import AdminDocumentTypes from "./features/admin/pages/DocumentTypes";
+// AdminDocumentTypes route now redirects to /admin/documents?tab=pengaturan
 import AdminPaymentGateway from "./features/admin/pages/PaymentGateway";
 import AdminAnalyticsAI from "./features/admin/pages/AnalyticsAI";
 import AdminMultiBranch from "./features/admin/pages/MultiBranch";
@@ -118,7 +118,7 @@ import AdminErrorLogs from "./features/admin/pages/ErrorLogs";
 import AdminRestDiagLogs from "./features/admin/pages/RestDiagLogs";
 import AdminIncidentReportView from "./features/admin/pages/IncidentReportView";
 import AdminIncidentManagement from "./features/admin/pages/IncidentManagement";
-import AdminDocumentTracking from "./features/admin/pages/DocumentTracking";
+// AdminDocumentTracking route now redirects to /admin/documents?tab=tracking
 import AdminIntegrations from "./features/admin/pages/Integrations";
 import AdminLoginSettings from "./features/admin/pages/LoginSettings";
 import AdminSEO from "./features/admin/pages/SEO";
@@ -242,7 +242,7 @@ const AppContent = () => {
           <Route path="crm" element={<AdminCRM />} />
           <Route path="payment-gateway" element={<AdminPaymentGateway />} />
           <Route path="documents" element={<AdminDocuments />} />
-          <Route path="document-types" element={<AdminDocumentTypes />} />
+          <Route path="document-types" element={<Navigate to="/admin/documents?tab=pengaturan" replace />} />
           <Route path="analytics-ai" element={<AdminAnalyticsAI />} />
           <Route path="multi-language" element={<AdminPlaceholder title="Multi-Bahasa" />} />
           <Route path="multi-branch" element={<AdminMultiBranch />} />
@@ -273,7 +273,7 @@ const AppContent = () => {
           <Route path="rest-diag" element={<AdminRestDiagLogs />} />
           <Route path="incident-reports/:id" element={<AdminIncidentReportView />} />
           <Route path="incident-management" element={<AdminIncidentManagement />} />
-          <Route path="document-tracking" element={<AdminDocumentTracking />} />
+          <Route path="document-tracking" element={<Navigate to="/admin/documents?tab=tracking" replace />} />
           <Route path="integrations" element={<AdminIntegrations />} />
           <Route path="login-settings" element={<AdminLoginSettings />} />
           <Route path="seo" element={<AdminSEO />} />
