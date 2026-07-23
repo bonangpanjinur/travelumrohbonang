@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
@@ -19,13 +19,12 @@ import {
   Clock, Users, FileText, Filter, ChevronDown, ChevronRight
 } from "lucide-react";
 
-const DOC_TYPES = [
+// DOC_TYPES sekarang dimuat dari API (/api/admin/document-types)
+// Fallback hardcoded hanya digunakan saat data belum tersedia
+const FALLBACK_DOC_TYPES = [
   { value: "paspor", label: "Paspor", hasExpiry: true },
-  { value: "visa", label: "Visa", hasExpiry: true },
-  { value: "ktp", label: "KTP", hasExpiry: true },
-  { value: "foto", label: "Foto", hasExpiry: false },
-  { value: "surat_mahram", label: "Surat Mahram", hasExpiry: false },
-  { value: "lainnya", label: "Lainnya", hasExpiry: false },
+  { value: "ktp",    label: "KTP",    hasExpiry: true },
+  { value: "foto",   label: "Foto",   hasExpiry: false },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof FileCheck }> = {
@@ -62,10 +61,34 @@ interface DocRecord {
   updated_at: string | null;
 }
 
+interface ApiDocType {
+  id: string; code: string; label: string;
+  hasExpiry: boolean; isRequired: boolean; isActive: boolean;
+}
+
 const Documents = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // Load configured document types from API — key includes "active" to avoid cache collision
+  // with the DocumentTypes config page which loads all (including inactive) types.
+  const { data: apiDocTypes = [] } = useQuery<ApiDocType[]>({
+    queryKey: ["document-types", "active"],
+    queryFn: () => apiFetch("/api/admin/document-types?activeOnly=true"),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Build DOC_TYPES from API; fall back to hardcoded if not yet loaded
+  const DOC_TYPES = useMemo(() => {
+    if (apiDocTypes.length > 0) {
+      return apiDocTypes.map(d => ({ value: d.code, label: d.label, hasExpiry: d.hasExpiry, isRequired: d.isRequired }));
+    }
+    return FALLBACK_DOC_TYPES.map(d => ({ ...d, isRequired: true }));
+  }, [apiDocTypes]);
+
+  // Required doc codes for completion % calculation
+  const REQUIRED_DOC_CODES = useMemo(() => DOC_TYPES.filter(d => d.isRequired).map(d => d.value), [DOC_TYPES]);
   const [expandedPilgrims, setExpandedPilgrims] = useState<Set<string>>(new Set());
   const [uploadDialog, setUploadDialog] = useState<{ open: boolean; pilgrimId: string; bookingId: string | null; docType: string } | null>(null);
   const [verifyDialog, setVerifyDialog] = useState<{ open: boolean; doc: DocRecord } | null>(null);
@@ -98,9 +121,8 @@ const Documents = () => {
         );
       }
       if (statusFilter === "verified") {
-        const requiredDocs = ["paspor", "ktp", "foto"];
         return result.filter(p =>
-          requiredDocs.every(dt => p.documents.some(d => d.doc_type === dt && d.status === "verified"))
+          REQUIRED_DOC_CODES.every(dt => p.documents.some(d => d.doc_type === dt && d.status === "verified"))
         );
       }
 
@@ -184,9 +206,9 @@ const Documents = () => {
   };
 
   const getCompletionPercent = (p: PilgrimWithDocs) => {
-    const required = ["paspor", "ktp", "foto"];
-    const verified = required.filter(dt => p.documents.some(d => d.doc_type === dt && d.status === "verified"));
-    return Math.round((verified.length / required.length) * 100);
+    if (REQUIRED_DOC_CODES.length === 0) return 0;
+    const verified = REQUIRED_DOC_CODES.filter(dt => p.documents.some(d => d.doc_type === dt && d.status === "verified"));
+    return Math.round((verified.length / REQUIRED_DOC_CODES.length) * 100);
   };
 
   const getExpiryWarning = (date: string | null) => {

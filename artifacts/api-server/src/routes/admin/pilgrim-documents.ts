@@ -4,7 +4,7 @@
  * tanpa batasan kepemilikan (admin bypass).
  */
 import { Router } from "express";
-import { db, pilgrimDocuments, bookingPilgrims, bookings, packages, eq, and, inArray } from "@workspace/db";
+import { db, pilgrimDocuments, documentTypes, bookingPilgrims, bookings, packages, eq, and, inArray, asc } from "@workspace/db";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
@@ -148,9 +148,18 @@ router.post("/init-pilgrim/:pilgrimId", async (req: any, res) => {
   const { bookingId } = req.body as Record<string, string | undefined>;
   if (!bookingId) return res.status(400).json({ error: "bookingId diperlukan" });
 
-  const DOC_TYPES = ["paspor", "visa", "ktp", "foto", "surat_mahram", "lainnya"];
-
   try {
+    // Ambil tipe dokumen aktif dari DB (fallback ke hardcoded jika tabel kosong)
+    const configuredTypes = await db
+      .select({ code: documentTypes.code })
+      .from(documentTypes)
+      .where(eq(documentTypes.isActive, true))
+      .orderBy(asc(documentTypes.sortOrder));
+
+    const DOC_TYPES = configuredTypes.length > 0
+      ? configuredTypes.map((t) => t.code)
+      : ["paspor", "ktp", "foto", "visa", "surat_mahram", "lainnya"];
+
     const existing = await db
       .select({ documentType: pilgrimDocuments.documentType })
       .from(pilgrimDocuments)

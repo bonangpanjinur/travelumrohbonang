@@ -131,6 +131,7 @@ export const menuGroups: MenuGroup[] = [
       // ── 3. Dokumen & Visa ─────────────────────────────────────────────────────
       { label: "Dokumen Jemaah", labelKey: "menu.pilgrim_documents", href: "/admin/documents", icon: FileCheck, roles: OPERATIONAL, featureId: "documents" },
       { label: "Tracking Dokumen", labelKey: "menu.document_tracking", href: "/admin/document-tracking", icon: BarChart2, roles: ALL_STAFF, featureId: "documents" },
+      { label: "Konfigurasi Dokumen", labelKey: "menu.document_types", href: "/admin/document-types", icon: SlidersHorizontal, roles: OPERATIONAL, featureId: "documents" },
       { label: "Tracking Visa", labelKey: "menu.visa_tracking", href: "/admin/visa-tracking", icon: IdCard, roles: OPERATIONAL },
       // ── 4. Perlengkapan ───────────────────────────────────────────────────────
       { label: "Materi Manasik", labelKey: "menu.manasik_kit", href: "/admin/manasik", icon: BookOpen, roles: SUPER_ADMIN_ADMIN, featureId: "equipment" },

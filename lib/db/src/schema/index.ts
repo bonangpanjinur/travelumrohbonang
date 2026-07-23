@@ -20,3 +20,4 @@ export * from "./savings";
 export * from "./accounting";
 export * from "./visa";
 export * from "./checklists";
+export * from "./documents";

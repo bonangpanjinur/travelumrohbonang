@@ -61,6 +61,7 @@ import adminVisaRouter from "./visa";
 import adminSeatAssignmentRouter from "./seat-assignment";
 import adminChecklistRouter from "./checklist";
 import adminBankReconciliationRouter from "./bank-reconciliation";
+import adminDocumentTypesRouter from "./document-types";
 
 const router = Router();
 
@@ -167,5 +168,8 @@ router.use("/checklist", requireStaff, adminChecklistRouter);
 
 // ── F-10: Rekonsiliasi Bank ───────────────────────────────────────────────────
 router.use("/bank-reconciliation", requireFinance, adminBankReconciliationRouter);
+
+// ── Konfigurasi Jenis Dokumen Jemaah ─────────────────────────────────────────
+router.use("/document-types", requireStaff, adminDocumentTypesRouter);
 
 export default router;

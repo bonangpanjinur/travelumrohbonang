@@ -73,6 +73,7 @@ import AdminPlaceholder from "./features/admin/pages/Placeholder";
 import AdminAccounting from "./features/admin/pages/Accounting";
 import AdminCRM from "./features/admin/pages/CRM";
 import AdminDocuments from "./features/admin/pages/Documents";
+import AdminDocumentTypes from "./features/admin/pages/DocumentTypes";
 import AdminPaymentGateway from "./features/admin/pages/PaymentGateway";
 import AdminAnalyticsAI from "./features/admin/pages/AnalyticsAI";
 import AdminMultiBranch from "./features/admin/pages/MultiBranch";
@@ -241,6 +242,7 @@ const AppContent = () => {
           <Route path="crm" element={<AdminCRM />} />
           <Route path="payment-gateway" element={<AdminPaymentGateway />} />
           <Route path="documents" element={<AdminDocuments />} />
+          <Route path="document-types" element={<AdminDocumentTypes />} />
           <Route path="analytics-ai" element={<AdminAnalyticsAI />} />
           <Route path="multi-language" element={<AdminPlaceholder title="Multi-Bahasa" />} />
           <Route path="multi-branch" element={<AdminMultiBranch />} />
