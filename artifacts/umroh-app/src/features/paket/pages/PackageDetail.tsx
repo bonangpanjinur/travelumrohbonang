@@ -56,6 +56,8 @@ interface Departure {
   airline: { name: string; code?: string | null } | null;
   extra_hotels?: ExtraHotel[];
   prices: { room_type: string; price: number }[];
+  departure_type?: string;
+  flight_segments?: { airlineId: string | null; airlineName?: string | null; flightNumber: string | null }[];
 }
 
 interface ItineraryDay {
@@ -308,7 +310,11 @@ const PackageDetail = () => {
                 <div className="bg-card border border-border rounded-xl p-4 text-center">
                   <Plane className="w-6 h-6 mx-auto text-gold mb-2" />
                   <div className="text-sm text-muted-foreground">Maskapai</div>
-                  <div className="font-bold text-sm">{displayAirline}</div>
+                  {selectedDep?.departure_type === "transit" ? (
+                    <div className="font-bold text-sm text-amber-600">Transit</div>
+                  ) : (
+                    <div className="font-bold text-sm">{displayAirline}</div>
+                  )}
                 </div>
                 <div className="bg-card border border-border rounded-xl p-4 text-center">
                   <Users className="w-6 h-6 mx-auto text-gold mb-2" />
@@ -545,12 +551,17 @@ const PackageDetail = () => {
                             <div className="text-xs text-muted-foreground">
                               Sisa {dep.remaining_quota} kursi
                             </div>
-                            {dep.airline && (
+                            {dep.departure_type === "transit" && dep.flight_segments && dep.flight_segments.length > 0 ? (
+                              <div className="flex items-center gap-1 mt-1 text-xs text-amber-600">
+                                <Plane className="w-3 h-3" />
+                                <span>Transit ({dep.flight_segments.length} penerbangan)</span>
+                              </div>
+                            ) : dep.airline ? (
                               <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                                 <Plane className="w-3 h-3" />
                                 <span>{dep.airline.name}</span>
                               </div>
-                            )}
+                            ) : null}
                           </div>
                           <Users className="w-4 h-4 text-muted-foreground" />
                         </div>

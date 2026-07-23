@@ -27,6 +27,8 @@ export interface PackageCardData {
     // FASE 3.4: hotel & airline are now per-departure
     hotel_makkah?: { star: number; name?: string } | null;
     airline?: { id: string; name: string } | null;
+    departure_type?: string;
+    flight_segments?: { airlineId: string | null; flightNumber: string | null }[];
   }[];
   // For static/preview data
   lowestPrice?: number;
@@ -192,11 +194,15 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
 
         {(displayAirline || pkg.airport) && !showFeatures && (
           <div className="flex flex-wrap gap-2 mt-3">
-            {displayAirline && (
+            {nextDep?.departure_type === "transit" && nextDep.flight_segments && nextDep.flight_segments.length > 0 ? (
+              <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-2 py-1 rounded flex items-center gap-1">
+                <Plane className="w-3 h-3" /> Transit ({nextDep.flight_segments.length}x)
+              </span>
+            ) : displayAirline ? (
               <span className="text-xs bg-muted px-2 py-1 rounded flex items-center gap-1">
                 <Plane className="w-3 h-3" /> {displayAirline.name}
               </span>
-            )}
+            ) : null}
             {pkg.airport && (
               <span className="text-xs bg-muted px-2 py-1 rounded flex items-center gap-1">
                 <MapPin className="w-3 h-3" /> {pkg.airport.city}

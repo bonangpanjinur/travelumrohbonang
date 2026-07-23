@@ -5,6 +5,7 @@ import {
   packageDepartures,
   departurePrices,
   departureHotels,
+  departureFlightSegments,
   packages,
   hotels,
   airlines,
@@ -113,6 +114,30 @@ router.get("/", async (req, res) => {
       pricesByDeparture.set(price.departureId, list);
     }
 
+    // Fetch flight segments for transit departures
+    const allSegments = departureIds.length
+      ? await db
+          .select({
+            id: departureFlightSegments.id,
+            departureId: departureFlightSegments.departureId,
+            segmentOrder: departureFlightSegments.segmentOrder,
+            airlineId: departureFlightSegments.airlineId,
+            flightNumber: departureFlightSegments.flightNumber,
+            departureAirportId: departureFlightSegments.departureAirportId,
+            arrivalAirportId: departureFlightSegments.arrivalAirportId,
+          })
+          .from(departureFlightSegments)
+          .where(inArray(departureFlightSegments.departureId, departureIds))
+          .orderBy(asc(departureFlightSegments.segmentOrder))
+      : [];
+
+    const segmentsByDeparture = new Map<string, typeof allSegments>();
+    for (const seg of allSegments) {
+      const list = segmentsByDeparture.get(seg.departureId) ?? [];
+      list.push(seg);
+      segmentsByDeparture.set(seg.departureId, list);
+    }
+
     // Return camelCase — matches Drizzle default and frontend interface.
     const departuresWithPrices = data.map((dep: any) => {
       const filled = filledCountMap.get(dep.id) ?? 0;
@@ -134,6 +159,16 @@ router.get("/", async (req, res) => {
         // FASE 2: hotel per keberangkatan
         hotelMakkahId: dep.hotelMakkahId ?? null,
         hotelMadinahId: dep.hotelMadinahId ?? null,
+        // Transit support
+        departureType: (dep as any).departureType ?? "direct",
+        flightSegments: (segmentsByDeparture.get(dep.id) ?? []).map((s) => ({
+          id: s.id,
+          segmentOrder: s.segmentOrder,
+          airlineId: s.airlineId ?? null,
+          flightNumber: s.flightNumber ?? null,
+          departureAirportId: s.departureAirportId ?? null,
+          arrivalAirportId: s.arrivalAirportId ?? null,
+        })),
         package: dep.packageTitle ? { id: dep.packageId, title: dep.packageTitle } : null,
         prices: (pricesByDeparture.get(dep.id) ?? []).map((p) => ({
           id: p.id,
@@ -434,6 +469,11 @@ router.post("/", async (req, res) => {
       hotelMakkahId: _hMkId, hotelMadinahId: _hMdId, extraHotels: _extraHotels,
     } = req.body;
 
+    const {
+      departureType: _depType,
+      flightSegments: _flightSegments,
+    } = req.body;
+
     const resolvedPackageId      = package_id         ?? _pkgId;
     const resolvedDepDate        = departure_date      ?? _depDate;
     const resolvedRetDate        = return_date         ?? _retDate ?? null;
@@ -446,6 +486,8 @@ router.post("/", async (req, res) => {
     const resolvedHotelMakkahId  = hotel_makkah_id     ?? _hMkId  ?? null;
     const resolvedHotelMadinahId = hotel_madinah_id    ?? _hMdId  ?? null;
     const resolvedExtraHotels: any[] = extra_hotels ?? _extraHotels ?? [];
+    const resolvedDepartureType  = _depType ?? "direct";
+    const resolvedFlightSegments: any[] = _flightSegments ?? [];
 
     // package_id is optional — a departure can be created before being linked to a package
     if (!resolvedDepDate) return res.status(400).json({ error: "departure_date diperlukan" });
@@ -477,6 +519,7 @@ router.post("/", async (req, res) => {
           // FASE 2: hotel per keberangkatan
           hotelMakkahId:       resolvedHotelMakkahId,
           hotelMadinahId:      resolvedHotelMadinahId,
+          departureType:       resolvedDepartureType,
         })
         .returning();
 
@@ -507,6 +550,21 @@ router.post("/", async (req, res) => {
         );
       }
 
+      // Insert flight segments for transit departures
+      if (resolvedDepartureType === "transit" && Array.isArray(resolvedFlightSegments) && resolvedFlightSegments.length > 0) {
+        await tx.insert(departureFlightSegments).values(
+          resolvedFlightSegments.map((seg: any, i: number) => ({
+            id: crypto.randomUUID(),
+            departureId: id,
+            segmentOrder: i,
+            airlineId: seg.airlineId || null,
+            flightNumber: seg.flightNumber || null,
+            departureAirportId: seg.departureAirportId || null,
+            arrivalAirportId: seg.arrivalAirportId || null,
+          })),
+        );
+      }
+
       return dep;
     });
 
@@ -532,6 +590,8 @@ router.patch("/:id", async (req, res) => {
       airlineId: _airId, flightNumber: _flNum, departureAirportId: _depAp, arrivalAirportId: _arrAp,
       // FASE 2: hotel camelCase
       hotelMakkahId: _hMkId, hotelMadinahId: _hMdId, extraHotels: _extraHotels,
+      // Transit support
+      departureType: _patchDepType, flightSegments: _patchFlightSegments,
       id: _id, createdAt: _ca, // strip immutable fields
       ...rest
     } = req.body;
@@ -560,8 +620,12 @@ router.patch("/:id", async (req, res) => {
     else if (_hMkId      !== undefined) updates.hotelMakkahId  = _hMkId           || null;
     if (hotel_madinah_id !== undefined) updates.hotelMadinahId = hotel_madinah_id ?? _hMdId ?? null;
     else if (_hMdId      !== undefined) updates.hotelMadinahId = _hMdId           || null;
+    // Transit: departure type
+    if (resolvedPatchDepType !== undefined) updates.departureType = resolvedPatchDepType;
 
     const resolvedExtraHotels: any[] | undefined = extra_hotels ?? _extraHotels;
+    const resolvedPatchDepType: string | undefined = _patchDepType;
+    const resolvedPatchFlightSegs: any[] | undefined = _patchFlightSegments;
 
     // Validasi tanggal: jika keduanya ada dalam update, cek langsung.
     // Jika hanya satu yang diupdate, ambil nilai yang ada dari DB.
@@ -635,6 +699,24 @@ router.patch("/:id", async (req, res) => {
         }
       }
 
+      // Replace flight segments if sent
+      if (resolvedPatchFlightSegs !== undefined) {
+        await tx.delete(departureFlightSegments).where(eq(departureFlightSegments.departureId, req.params.id));
+        if (Array.isArray(resolvedPatchFlightSegs) && resolvedPatchFlightSegs.length > 0) {
+          await tx.insert(departureFlightSegments).values(
+            resolvedPatchFlightSegs.map((seg: any, i: number) => ({
+              id: crypto.randomUUID(),
+              departureId: req.params.id,
+              segmentOrder: i,
+              airlineId: seg.airlineId || null,
+              flightNumber: seg.flightNumber || null,
+              departureAirportId: seg.departureAirportId || null,
+              arrivalAirportId: seg.arrivalAirportId || null,
+            })),
+          );
+        }
+      }
+
       return dep;
     });
 
@@ -656,9 +738,10 @@ router.post("/:id/clone", async (req, res) => {
       .limit(1);
     if (!original) return res.status(404).json({ error: "Departure not found" });
 
-    const [originalPrices, originalExtraHotels] = await Promise.all([
+    const [originalPrices, originalExtraHotels, originalFlightSegments] = await Promise.all([
       db.select().from(departurePrices).where(eq(departurePrices.departureId, req.params.id)),
       db.select().from(departureHotels).where(eq(departureHotels.departureId, req.params.id)).orderBy(asc(departureHotels.sortOrder)),
+      db.select().from(departureFlightSegments).where(eq(departureFlightSegments.departureId, req.params.id)).orderBy(asc(departureFlightSegments.segmentOrder)),
     ]);
 
     const newId = crypto.randomUUID();
@@ -683,6 +766,7 @@ router.post("/:id/clone", async (req, res) => {
           // FASE 2: salin hotel
           hotelMakkahId:       original.hotelMakkahId,
           hotelMadinahId:      original.hotelMadinahId,
+          departureType:       (original as any).departureType ?? "direct",
         })
         .returning();
 
@@ -706,6 +790,21 @@ router.post("/:id/clone", async (req, res) => {
             hotelId: eh.hotelId,
             label: eh.label,
             sortOrder: eh.sortOrder,
+          }))
+        );
+      }
+
+      // Salin flight segments (transit)
+      if (originalFlightSegments.length > 0) {
+        await tx.insert(departureFlightSegments).values(
+          originalFlightSegments.map((s) => ({
+            id: crypto.randomUUID(),
+            departureId: newId,
+            segmentOrder: s.segmentOrder,
+            airlineId: s.airlineId,
+            flightNumber: s.flightNumber,
+            departureAirportId: s.departureAirportId,
+            arrivalAirportId: s.arrivalAirportId,
           }))
         );
       }

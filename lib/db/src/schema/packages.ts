@@ -47,10 +47,27 @@ export const packageDepartures = pgTable("package_departures", {
   hotelMakkahId: text("hotel_makkah_id").references(() => hotels.id, { onDelete: "set null" }),
   hotelMadinahId: text("hotel_madinah_id").references(() => hotels.id, { onDelete: "set null" }),
   notes: text("notes"),
+  // Jenis penerbangan: "direct" (langsung) atau "transit"
+  departureType: text("departure_type").default("direct"),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_departures_package_id").on(t.packageId),
   index("idx_departures_status").on(t.status),
+]);
+
+// Tabel segmen penerbangan untuk keberangkatan transit (lebih dari 1 pesawat)
+export const departureFlightSegments = pgTable("departure_flight_segments", {
+  id: text("id").primaryKey(),
+  departureId: text("departure_id").notNull().references(() => packageDepartures.id, { onDelete: "cascade" }),
+  segmentOrder: integer("segment_order").notNull().default(0),
+  airlineId: text("airline_id").references(() => airlines.id, { onDelete: "set null" }),
+  flightNumber: text("flight_number"),
+  departureAirportId: text("departure_airport_id").references(() => airports.id, { onDelete: "set null" }),
+  arrivalAirportId: text("arrival_airport_id").references(() => airports.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+}, (t) => [
+  index("idx_dep_flight_segments_departure_id").on(t.departureId),
+  index("idx_dep_flight_segments_order").on(t.segmentOrder),
 ]);
 
 export const departurePrices = pgTable("departure_prices", {

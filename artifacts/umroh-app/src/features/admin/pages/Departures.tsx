@@ -34,6 +34,12 @@ interface ExtraHotel {
   label: string;
   sort_order: number;
 }
+interface FlightSegment {
+  airlineId: string;
+  flightNumber: string;
+  departureAirportId: string;
+  arrivalAirportId: string;
+}
 interface Departure {
   id: string;
   packageId: string;
@@ -51,6 +57,9 @@ interface Departure {
   // FASE 2: hotel per keberangkatan
   hotelMakkahId: string | null;
   hotelMadinahId: string | null;
+  // Transit support
+  departureType?: string;
+  flightSegments?: FlightSegment[];
   package: Package | null;
   prices: DeparturePrice[];
 }
@@ -168,20 +177,27 @@ const AdminDepartures = () => {
 
   // FASE 3.2: extra hotels for the departure form
   const [extraHotels, setExtraHotels] = useState<ExtraHotel[]>([]);
+  // Transit: flight segments (multiple airlines for transit departures)
+  const [flightSegments, setFlightSegments] = useState<FlightSegment[]>([
+    { airlineId: "", flightNumber: "", departureAirportId: "", arrivalAirportId: "" },
+  ]);
 
   const [form, setForm] = useState<{
     packageId: string; departureDate: string; returnDate: string;
     quota: number; status: string; muthawifId: string; prices: Record<string, number>;
-    // KB-F03: flight info
+    // KB-F03: flight info (direct mode)
     airlineId: string; flightNumber: string; departureAirportId: string; arrivalAirportId: string;
     // FASE 3.2: hotel per keberangkatan
     hotelMakkahId: string; hotelMadinahId: string;
+    // Transit support
+    departureType: string;
   }>({
     packageId: "", departureDate: "", returnDate: "",
     quota: 45, status: "active", muthawifId: "",
     prices: Object.fromEntries(ROOM_TYPES.map((t) => [t, 0])),
     airlineId: "", flightNumber: "", departureAirportId: "", arrivalAirportId: "",
     hotelMakkahId: "", hotelMadinahId: "",
+    departureType: "direct",
   });
 
   useEffect(() => { fetchData(); }, []);
@@ -197,7 +213,7 @@ const AdminDepartures = () => {
     try {
       const [departuresRes, packagesRes, muthawifRes, airlinesRes, airportsRes, hotelsRes] = await Promise.all([
         apiFetch<{ data: Departure[] }>("/api/admin/departures"),
-        apiFetch<{ data: Package[] }>("/api/packages?active=true").catch(() => ({ data: [] as Package[] })),
+        apiFetch<{ data: Package[] }>("/api/admin/packages").catch(() => ({ data: [] as Package[] })),
         apiFetch<{ data: Muthawif[] }>("/api/admin/masterdata/muthawifs"),
         apiFetch<{ data: Airline[] }>("/api/admin/masterdata/airlines").catch(() => ({ data: [] as Airline[] })),
         apiFetch<{ data: Airport[] }>("/api/admin/masterdata/airports").catch(() => ({ data: [] as Airport[] })),
@@ -273,6 +289,10 @@ const AdminDepartures = () => {
         label: eh.label || null,
         sortOrder: i,
       })),
+      // Transit: send flight segments
+      flightSegments: form.departureType === "transit"
+        ? flightSegments.filter(s => s.airlineId || s.flightNumber).map((s, i) => ({ ...s, segmentOrder: i }))
+        : [],
     };
     try {
       if (editing) {
@@ -294,6 +314,7 @@ const AdminDepartures = () => {
     setEditing(dep);
     const priceMap: Record<string, number> = Object.fromEntries(ROOM_TYPES.map((t) => [t, 0]));
     (dep.prices ?? []).forEach((p) => { if (ROOM_TYPES.includes(p.roomType)) priceMap[p.roomType] = p.price; });
+    const depType = dep.departureType || "direct";
     setForm({
       packageId: dep.packageId,
       departureDate: dep.departureDate,
@@ -308,7 +329,19 @@ const AdminDepartures = () => {
       arrivalAirportId: dep.arrivalAirportId || "",
       hotelMakkahId: dep.hotelMakkahId || "",
       hotelMadinahId: dep.hotelMadinahId || "",
+      departureType: depType,
     });
+    // Restore flight segments for transit
+    if (depType === "transit" && dep.flightSegments && dep.flightSegments.length > 0) {
+      setFlightSegments(dep.flightSegments.map(s => ({
+        airlineId: s.airlineId || "",
+        flightNumber: s.flightNumber || "",
+        departureAirportId: s.departureAirportId || "",
+        arrivalAirportId: s.arrivalAirportId || "",
+      })));
+    } else {
+      setFlightSegments([{ airlineId: "", flightNumber: "", departureAirportId: "", arrivalAirportId: "" }]);
+    }
     await fetchExtraHotels(dep.id);
     setIsOpen(true);
   };
@@ -326,12 +359,14 @@ const AdminDepartures = () => {
   const resetForm = () => {
     setEditing(null);
     setExtraHotels([]);
+    setFlightSegments([{ airlineId: "", flightNumber: "", departureAirportId: "", arrivalAirportId: "" }]);
     setForm({
       packageId: pkgFilterId || "", departureDate: "", returnDate: "",
       quota: 45, status: "active", muthawifId: "",
       prices: Object.fromEntries(ROOM_TYPES.map((t) => [t, 0])),
       airlineId: "", flightNumber: "", departureAirportId: "", arrivalAirportId: "",
       hotelMakkahId: "", hotelMadinahId: "",
+      departureType: "direct",
     });
   };
 
@@ -538,9 +573,10 @@ const AdminDepartures = () => {
                       {extraHotels.map((eh, index) => (
                         <div key={index} className="flex gap-2 items-start">
                           <div className="flex-1">
-                            <Select value={eh.hotel_id || undefined} onValueChange={(v) => updateExtraHotel(index, "hotel_id", v)}>
+                            <Select value={eh.hotel_id || "__none__"} onValueChange={(v) => updateExtraHotel(index, "hotel_id", v === "__none__" ? "" : v)}>
                               <SelectTrigger className="text-xs h-7"><SelectValue placeholder="Pilih Hotel" /></SelectTrigger>
                               <SelectContent>
+                                <SelectItem value="__none__">— Pilih Hotel —</SelectItem>
                                 {hotels.filter(h => h.id).map(h => (
                                   <SelectItem key={h.id} value={h.id}>{h.name}{h.city ? ` - ${h.city}` : ""}</SelectItem>
                                 ))}
@@ -569,63 +605,135 @@ const AdminDepartures = () => {
                   <Label className="text-base font-semibold flex items-center gap-2 mb-3">
                     <Plane className="w-4 h-4" /> Info Penerbangan
                   </Label>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs">Maskapai</Label>
-                        <Select value={form.airlineId || "__none__"} onValueChange={(val) => setForm({ ...form, airlineId: val === "__none__" ? "" : val })}>
-                          <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih maskapai" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">— Tidak Ada —</SelectItem>
-                            {airlines.map((a) => (
-                              <SelectItem key={a.id} value={a.id}>
-                                {a.name}{a.code ? ` (${a.code})` : ""}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label className="text-xs">Nomor Penerbangan</Label>
-                        <Input
-                          value={form.flightNumber}
-                          onChange={(e) => setForm({ ...form, flightNumber: e.target.value })}
-                          placeholder="Cth: GA-123"
-                          className="mt-1 h-8 text-sm"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs">Bandara Keberangkatan</Label>
-                        <Select value={form.departureAirportId || "__none__"} onValueChange={(val) => setForm({ ...form, departureAirportId: val === "__none__" ? "" : val })}>
-                          <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih bandara" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">— Tidak Ada —</SelectItem>
-                            {airports.map((a) => (
-                              <SelectItem key={a.id} value={a.id}>
-                                {a.code ? `${a.code} - ` : ""}{a.city ?? a.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label className="text-xs">Bandara Tujuan</Label>
-                        <Select value={form.arrivalAirportId || "__none__"} onValueChange={(val) => setForm({ ...form, arrivalAirportId: val === "__none__" ? "" : val })}>
-                          <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih bandara" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">— Tidak Ada —</SelectItem>
-                            {airports.map((a) => (
-                              <SelectItem key={a.id} value={a.id}>
-                                {a.code ? `${a.code} - ` : ""}{a.city ?? a.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+
+                  {/* Jenis penerbangan toggle */}
+                  <div className="flex gap-2 mb-4">
+                    <button type="button"
+                      onClick={() => setForm(f => ({ ...f, departureType: "direct" }))}
+                      className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${form.departureType !== "transit" ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/50"}`}
+                    >
+                      ✈ Langsung (Direct)
+                    </button>
+                    <button type="button"
+                      onClick={() => {
+                        setForm(f => ({ ...f, departureType: "transit" }));
+                        if (flightSegments.length < 2) setFlightSegments(s => [...s, { airlineId: "", flightNumber: "", departureAirportId: "", arrivalAirportId: "" }]);
+                      }}
+                      className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${form.departureType === "transit" ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary/50"}`}
+                    >
+                      🔄 Transit
+                    </button>
                   </div>
+
+                  {form.departureType === "transit" ? (
+                    /* Transit: multiple flight segments */
+                    <div className="space-y-3">
+                      {flightSegments.map((seg, index) => (
+                        <div key={index} className="border border-border rounded-lg p-3 space-y-2 bg-muted/20">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-semibold text-muted-foreground">Penerbangan {index + 1}</p>
+                            {flightSegments.length > 1 && (
+                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6"
+                                onClick={() => setFlightSegments(flightSegments.filter((_, i) => i !== index))}>
+                                <X className="w-3.5 h-3.5 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-xs">Maskapai</Label>
+                              <Select value={seg.airlineId || "__none__"}
+                                onValueChange={(v) => { const s = [...flightSegments]; s[index] = { ...s[index], airlineId: v === "__none__" ? "" : v }; setFlightSegments(s); }}>
+                                <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih maskapai" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">— Tidak Ada —</SelectItem>
+                                  {airlines.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}{a.code ? ` (${a.code})` : ""}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-xs">No. Penerbangan</Label>
+                              <Input value={seg.flightNumber}
+                                onChange={(e) => { const s = [...flightSegments]; s[index] = { ...s[index], flightNumber: e.target.value }; setFlightSegments(s); }}
+                                placeholder="Cth: GA-123" className="mt-1 h-8 text-sm" />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-xs">Bandara Asal</Label>
+                              <Select value={seg.departureAirportId || "__none__"}
+                                onValueChange={(v) => { const s = [...flightSegments]; s[index] = { ...s[index], departureAirportId: v === "__none__" ? "" : v }; setFlightSegments(s); }}>
+                                <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih bandara" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">— Tidak Ada —</SelectItem>
+                                  {airports.map((a) => <SelectItem key={a.id} value={a.id}>{a.code ? `${a.code} - ` : ""}{a.city ?? a.name}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Bandara Tujuan</Label>
+                              <Select value={seg.arrivalAirportId || "__none__"}
+                                onValueChange={(v) => { const s = [...flightSegments]; s[index] = { ...s[index], arrivalAirportId: v === "__none__" ? "" : v }; setFlightSegments(s); }}>
+                                <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih bandara" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">— Tidak Ada —</SelectItem>
+                                  {airports.map((a) => <SelectItem key={a.id} value={a.id}>{a.code ? `${a.code} - ` : ""}{a.city ?? a.name}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <Button type="button" variant="outline" size="sm" className="w-full gap-1"
+                        onClick={() => setFlightSegments(s => [...s, { airlineId: "", flightNumber: "", departureAirportId: "", arrivalAirportId: "" }])}>
+                        <Plus className="w-3.5 h-3.5" /> Tambah Penerbangan Transit
+                      </Button>
+                    </div>
+                  ) : (
+                    /* Direct: single airline/flight */
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Maskapai</Label>
+                          <Select value={form.airlineId || "__none__"} onValueChange={(val) => setForm({ ...form, airlineId: val === "__none__" ? "" : val })}>
+                            <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih maskapai" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">— Tidak Ada —</SelectItem>
+                              {airlines.map((a) => (
+                                <SelectItem key={a.id} value={a.id}>{a.name}{a.code ? ` (${a.code})` : ""}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Nomor Penerbangan</Label>
+                          <Input value={form.flightNumber} onChange={(e) => setForm({ ...form, flightNumber: e.target.value })} placeholder="Cth: GA-123" className="mt-1 h-8 text-sm" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Bandara Keberangkatan</Label>
+                          <Select value={form.departureAirportId || "__none__"} onValueChange={(val) => setForm({ ...form, departureAirportId: val === "__none__" ? "" : val })}>
+                            <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih bandara" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">— Tidak Ada —</SelectItem>
+                              {airports.map((a) => <SelectItem key={a.id} value={a.id}>{a.code ? `${a.code} - ` : ""}{a.city ?? a.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Bandara Tujuan</Label>
+                          <Select value={form.arrivalAirportId || "__none__"} onValueChange={(val) => setForm({ ...form, arrivalAirportId: val === "__none__" ? "" : val })}>
+                            <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Pilih bandara" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">— Tidak Ada —</SelectItem>
+                              {airports.map((a) => <SelectItem key={a.id} value={a.id}>{a.code ? `${a.code} - ` : ""}{a.city ?? a.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Harga per Kamar */}
@@ -726,7 +834,19 @@ const AdminDepartures = () => {
                           )}
                         </div>
                         {/* KB-F03: Tampilkan info penerbangan jika ada */}
-                        {(dep.airlineId || dep.flightNumber) && (
+                        {dep.departureType === "transit" && dep.flightSegments && dep.flightSegments.length > 0 ? (
+                          <div className="mt-1 space-y-0.5">
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                              🔄 Transit ({dep.flightSegments.length} penerbangan)
+                            </span>
+                            {dep.flightSegments.map((seg, i) => (
+                              <div key={i} className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Plane className="w-3 h-3 shrink-0" />
+                                <span>{airlineLabel(seg.airlineId)}{seg.flightNumber ? ` · ${seg.flightNumber}` : ""}{seg.departureAirportId ? ` · ${airportLabel(seg.departureAirportId)}` : ""}{seg.arrivalAirportId ? ` → ${airportLabel(seg.arrivalAirportId)}` : ""}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (dep.airlineId || dep.flightNumber) ? (
                           <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                             <Plane className="w-3 h-3 shrink-0" />
                             <span>
@@ -736,7 +856,7 @@ const AdminDepartures = () => {
                               {dep.arrivalAirportId ? ` → ${airportLabel(dep.arrivalAirportId)}` : ""}
                             </span>
                           </div>
-                        )}
+                        ) : null}
                         {/* FASE 3.3: Tampilkan hotel jika ada */}
                         {(hotelMakkahName || hotelMadinahName) && (
                           <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
