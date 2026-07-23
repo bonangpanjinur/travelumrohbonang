@@ -433,7 +433,7 @@ router.post("/", async (req, res) => {
     const resolvedDepAirport  = departure_airport_id ?? _depAp ?? null;
     const resolvedArrAirport  = arrival_airport_id   ?? _arrAp ?? null;
 
-    if (!resolvedPackageId)   return res.status(400).json({ error: "package_id diperlukan" });
+    // package_id is optional — a departure can be created before being linked to a package
     if (!resolvedDepDate)     return res.status(400).json({ error: "departure_date diperlukan" });
 
     // Validasi: tanggal pulang harus setelah tanggal berangkat
@@ -449,7 +449,7 @@ router.post("/", async (req, res) => {
         .insert(packageDepartures)
         .values({
           id,
-          packageId:           resolvedPackageId,
+          packageId:           resolvedPackageId || null,
           departureDate:       resolvedDepDate,
           returnDate:          resolvedRetDate,
           quota:               resolvedQuota,
@@ -504,7 +504,9 @@ router.patch("/:id", async (req, res) => {
 
     // Build Drizzle-compatible update object (camelCase only)
     const updates: Record<string, unknown> = { ...rest };
-    if (package_id   ?? _pkgId)    updates.packageId      = package_id   ?? _pkgId;
+    // Allow explicitly setting packageId to null (unlink from package)
+    const incomingPkgId = package_id !== undefined ? package_id : _pkgId;
+    if (incomingPkgId !== undefined) updates.packageId = incomingPkgId || null;
     if (departure_date ?? _depDate) updates.departureDate  = departure_date ?? _depDate;
     if ("return_date" in req.body)  updates.returnDate     = return_date ?? _retDate ?? null;
     if (muthawif_id  !== undefined) updates.muthawifId     = muthawif_id  || null;

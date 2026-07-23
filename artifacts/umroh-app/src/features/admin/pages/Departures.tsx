@@ -249,9 +249,13 @@ const AdminDepartures = () => {
     });
   };
 
-  const filteredDepartures = departures.filter((d) =>
-    (d.package?.title || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredDepartures = departures.filter((d) => {
+    const q = search.toLowerCase();
+    if (!q) return true;
+    // search by package title OR departure date
+    return (d.package?.title || "Belum ada paket").toLowerCase().includes(q) ||
+      (d.departureDate || "").includes(q);
+  });
   const { page, setPage, totalPages, totalCount, paginatedItems, pageSize, resetPage } = useAdminPagination(filteredDepartures, 9);
   useEffect(() => { resetPage(); }, [search]);
 
@@ -329,15 +333,17 @@ const AdminDepartures = () => {
                 <DialogTitle>{editing ? "Edit Keberangkatan" : "Tambah Keberangkatan Baru"}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Paket */}
+                {/* Paket (opsional) */}
                 <div>
-                  <Label>Paket *</Label>
-                  <Select value={form.packageId} onValueChange={(val) => setForm({ ...form, packageId: val })}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Pilih paket" /></SelectTrigger>
+                  <Label>Paket <span className="text-muted-foreground font-normal text-xs">(opsional — bisa diatur kemudian)</span></Label>
+                  <Select value={form.packageId || "__none__"} onValueChange={(val) => setForm({ ...form, packageId: val === "__none__" ? "" : val })}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="— Belum ditentukan —" /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="__none__">— Belum ditentukan —</SelectItem>
                       {packages.map((pkg) => (<SelectItem key={pkg.id} value={pkg.id}>{pkg.title}</SelectItem>))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground mt-1">Satu keberangkatan memiliki satu paket. Paket dapat ditetapkan atau diubah kapan saja.</p>
                 </div>
 
                 {/* Tanggal */}
@@ -514,8 +520,10 @@ const AdminDepartures = () => {
                   <div className="px-5 pt-5 pb-4 border-b border-border/60">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm leading-tight truncate" title={dep.package?.title || "-"}>
-                          {dep.package?.title || "-"}
+                        <p className="font-semibold text-sm leading-tight truncate" title={dep.package?.title || "Belum ada paket"}>
+                          {dep.package?.title || (
+                            <span className="text-muted-foreground italic font-normal">Belum ada paket</span>
+                          )}
                         </p>
                         <div className="flex items-center gap-1.5 mt-1.5 text-muted-foreground text-xs">
                           <Calendar className="w-3.5 h-3.5 shrink-0" />
@@ -701,12 +709,12 @@ const AdminDepartures = () => {
       <GalleryDialog open={!!galleryDep} onOpenChange={(o) => !o && setGalleryDep(null)}>
         <GalleryDialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <GalleryDialogHeader>
-            <GalleryDialogTitle>Galeri Foto — {galleryDep?.package?.title}</GalleryDialogTitle>
+            <GalleryDialogTitle>Galeri Foto — {galleryDep?.package?.title || safeFormatDate(galleryDep?.departureDate ?? null, "d MMM yyyy")}</GalleryDialogTitle>
           </GalleryDialogHeader>
           {galleryDep && (
             <DepartureGalleryPanel
               departureId={galleryDep.id}
-              departureLabel={`${galleryDep.package?.title ?? "-"} · ${safeFormatDate(galleryDep.departureDate, "d MMM yyyy")}`}
+              departureLabel={`${galleryDep.package?.title ?? "Tanpa Paket"} · ${safeFormatDate(galleryDep.departureDate, "d MMM yyyy")}`}
             />
           )}
         </GalleryDialogContent>

@@ -33,7 +33,8 @@ export const packages = pgTable("packages", {
 
 export const packageDepartures = pgTable("package_departures", {
   id: text("id").primaryKey(),
-  packageId: text("package_id").notNull().references(() => packages.id, { onDelete: "cascade" }),
+  // nullable: a departure can exist before being linked to a package
+  packageId: text("package_id").references(() => packages.id, { onDelete: "set null" }),
   departureDate: text("departure_date").notNull(),
   returnDate: text("return_date"),
   quota: integer("quota").notNull(),
