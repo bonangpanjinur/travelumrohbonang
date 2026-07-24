@@ -12,3 +12,9 @@ id = "SoAnjnO0uJXfjhc2-lF2N"
 uri = "file://supabase-migration.sql"
 type = "unspecified"
 title = "supabase-migration.sql — Migration SQL untuk Production"
+
+[[outputs]]
+id = "GliqEusis0bthJkgome0G"
+uri = "file://docs/booking-admin-audit.md"
+type = "text"
+title = "Booking Admin — Audit & Roadmap"
