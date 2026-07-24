@@ -1,0 +1,62 @@
+[sentry] VITE_SENTRY_DSN not set — Sentry disabled.
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+index-DvWmiqKi.js:601 [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues.
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+index-DvWmiqKi.js:9 Switch is changing from uncontrolled to controlled. Components should not switch from controlled to uncontrolled (or vice versa). Decide between using a controlled or uncontrolled value for the lifetime of the component.
+/api/admin/content/pages/page_about:1 
+ Failed to load resource: the server responded with a status of 500 ()
+/api/admin/content/pages/page_about:1 
+ Failed to load resource: the server responded with a status of 500 ()
+/api/admin/content/pages/page_contact:1 
+ Failed to load resource: the server responded with a status of 500 ()
+/api/admin/content/pages/page_contact:1 
+ Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+index-DvWmiqKi.js:601 [tiptap warn]: Duplicate extension names found: ['link', 'underline']. This can lead to issues.
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+index-DvWmiqKi.js:9 Switch is changing from uncontrolled to controlled. Components should not switch from controlled to uncontrolled (or vice versa). Decide between using a controlled or uncontrolled value for the lifetime of the component.
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+/api/admin/departure…b8d6-20fd3330dddf:1 
+ Failed to load resource: the server responded with a status of 500 ()
+/api/admin/departure…b8d6-20fd3330dddf:1 
+ Failed to load resource: the server responded with a status of 500 ()
+/api/admin/departure…b8d6-20fd3330dddf:1 
+ Failed to load resource: the server responded with a status of 500 ()
+/api/admin/departure…b8d6-20fd3330dddf:1 
+ Failed to load resource: the server responded with a status of 500 ()
+/api/admin/departure…b8d6-20fd3330dddf:1 
+ Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe…abase.co/rest/v1/:1 
+ Failed to load resource: the server responded with a status of 401 ()
+index-DvWmiqKi.js:39 
+ PATCH https://www.vinstourtravel.com/api/admin/departures/67261e43-f8d3-4290-b8d6-20fd3330dddf 500 (Internal Server Error)
+ge	@	index-DvWmiqKi.js:39
+await in ge		
+ye	@	index-DvWmiqKi.js:440
+NG	@	index-DvWmiqKi.js:8
+(anonymous)	@	index-DvWmiqKi.js:8
+Yc	@	index-DvWmiqKi.js:8
+JO	@	index-DvWmiqKi.js:8
+cM	@	index-DvWmiqKi.js:9
+HCe	@	index-DvWmiqKi.js:9

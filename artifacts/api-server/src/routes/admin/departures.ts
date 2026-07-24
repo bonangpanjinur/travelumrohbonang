@@ -620,12 +620,14 @@ router.patch("/:id", async (req, res) => {
     else if (_hMkId      !== undefined) updates.hotelMakkahId  = _hMkId           || null;
     if (hotel_madinah_id !== undefined) updates.hotelMadinahId = hotel_madinah_id ?? _hMdId ?? null;
     else if (_hMdId      !== undefined) updates.hotelMadinahId = _hMdId           || null;
-    // Transit: departure type
-    if (resolvedPatchDepType !== undefined) updates.departureType = resolvedPatchDepType;
 
+    // Declare resolved vars BEFORE use (fixes temporal dead zone ReferenceError)
     const resolvedExtraHotels: any[] | undefined = extra_hotels ?? _extraHotels;
     const resolvedPatchDepType: string | undefined = _patchDepType;
     const resolvedPatchFlightSegs: any[] | undefined = _patchFlightSegments;
+
+    // Transit: departure type
+    if (resolvedPatchDepType !== undefined) updates.departureType = resolvedPatchDepType;
 
     // Validasi tanggal: jika keduanya ada dalam update, cek langsung.
     // Jika hanya satu yang diupdate, ambil nilai yang ada dari DB.
