@@ -28,6 +28,7 @@ const AdminBookings = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState("__all__");
   const [packageFilter, setPackageFilter] = useState("__all__");
@@ -85,10 +86,11 @@ const AdminBookings = () => {
   };
 
   const hasActiveFilters =
-    filter !== "all" || search !== "" || branchFilter !== "__all__" || packageFilter !== "__all__" || startDate !== "" || endDate !== "" || departureFilter !== "__all_dep__";
+    filter !== "all" || paymentFilter !== "all" || search !== "" || branchFilter !== "__all__" || packageFilter !== "__all__" || startDate !== "" || endDate !== "" || departureFilter !== "__all_dep__";
 
   const resetFilters = () => {
     setFilter("all");
+    setPaymentFilter("all");
     setSearch("");
     setBranchFilter("__all__");
     setPackageFilter("__all__");
@@ -127,7 +129,7 @@ const AdminBookings = () => {
     setPage(0);
     fetchBookings(0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, search, branchFilter, packageFilter, departureFilter, startDate, endDate]);
+  }, [filter, paymentFilter, search, branchFilter, packageFilter, departureFilter, startDate, endDate]);
 
   const fetchBookings = async (pageOverride?: number) => {
     const currentPage = pageOverride ?? page;
@@ -137,7 +139,7 @@ const AdminBookings = () => {
       const offset = currentPage * PAGE_SIZE;
       const isoStart = startDate ? new Date(startDate).toISOString().slice(0, 10) : "";
       const isoEnd = endDate ? new Date(endDate).toISOString().slice(0, 10) : "";
-      let url = `/api/admin/bookings?status=${filter}&search=${encodeURIComponent(search.trim())}&branchId=${branchFilter}&packageId=${packageFilter}&limit=${PAGE_SIZE}&offset=${offset}`;
+      let url = `/api/admin/bookings?status=${filter}&paymentStatus=${paymentFilter}&search=${encodeURIComponent(search.trim())}&branchId=${branchFilter}&packageId=${packageFilter}&limit=${PAGE_SIZE}&offset=${offset}`;
       if (departureFilter !== "__all_dep__") url += `&departureId=${departureFilter}`;
       if (isoStart) url += `&startDate=${isoStart}`;
       if (isoEnd) url += `&endDate=${isoEnd}`;
@@ -236,7 +238,12 @@ const AdminBookings = () => {
             className="pl-9"
           />
         </div>
-        <BookingFilters filter={filter} onFilterChange={setFilter} />
+        <BookingFilters
+          filter={filter}
+          onFilterChange={setFilter}
+          paymentFilter={paymentFilter}
+          onPaymentFilterChange={setPaymentFilter}
+        />
         <Button
           variant={showFilters ? "default" : "outline"}
           onClick={() => setShowFilters(!showFilters)}

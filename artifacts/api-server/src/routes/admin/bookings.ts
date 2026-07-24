@@ -103,13 +103,24 @@ router.get("/export.xlsx", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const { status, userId, search, branchId, packageId, departureId: departureIdFilter, limit, offset, startDate, endDate } = req.query;
+    const { status, paymentStatus, userId, search, branchId, packageId, departureId: departureIdFilter, limit, offset, startDate, endDate } = req.query;
 
     // Build WHERE conditions with Drizzle sql template (parameterised, injection-safe)
     const conditions: ReturnType<typeof sql>[] = [];
 
     if (status && typeof status === "string" && status !== "all") {
       conditions.push(sql`b.status = ${status}`);
+    }
+
+    // P0: Payment status filter — separate from booking status
+    if (paymentStatus && typeof paymentStatus === "string" && paymentStatus !== "all") {
+      if (paymentStatus === "paid") {
+        conditions.push(sql`(b.total_price > 0 AND COALESCE((SELECT SUM(pt.amount) FROM booking_payments pt WHERE pt.booking_id = b.id AND NOT pt.is_voided), 0) >= b.total_price)`);
+      } else if (paymentStatus === "partial") {
+        conditions.push(sql`(COALESCE((SELECT SUM(pt.amount) FROM booking_payments pt WHERE pt.booking_id = b.id AND NOT pt.is_voided), 0) > 0 AND (b.total_price <= 0 OR COALESCE((SELECT SUM(pt.amount) FROM booking_payments pt WHERE pt.booking_id = b.id AND NOT pt.is_voided), 0) < b.total_price))`);
+      } else if (paymentStatus === "unpaid") {
+        conditions.push(sql`COALESCE((SELECT SUM(pt.amount) FROM booking_payments pt WHERE pt.booking_id = b.id AND NOT pt.is_voided), 0) = 0`);
+      }
     }
     if (userId && typeof userId === "string") {
       conditions.push(sql`b.user_id = ${userId}`);
@@ -386,17 +397,59 @@ router.post("/", async (req, res) => {
       }
     }
 
-    // BK-DB02: Check remaining quota before creating booking
-    if (departureId) {
-      const [dep] = await db
-        .select({ remainingQuota: packageDepartures.remainingQuota })
-        .from(packageDepartures)
-        .where(eq(packageDepartures.id, departureId))
-        .limit(1);
-      if (dep && dep.remainingQuota <= 0) {
-        res.status(409).json({ error: "Kuota keberangkatan penuh, tidak dapat membuat booking baru" });
+    // P0: Validate departure — existence, package relation, active status, not past
+    if (!departureId) {
+      res.status(400).json({ error: "departureId wajib diisi" });
+      return;
+    }
+    const [depRow] = await db
+      .select({
+        remainingQuota: packageDepartures.remainingQuota,
+        status: packageDepartures.status,
+        packageId: packageDepartures.packageId,
+        departureDate: packageDepartures.departureDate,
+      })
+      .from(packageDepartures)
+      .where(eq(packageDepartures.id, departureId))
+      .limit(1);
+    if (!depRow) {
+      res.status(404).json({ error: "Keberangkatan tidak ditemukan" });
+      return;
+    }
+    if (packageId && depRow.packageId !== packageId) {
+      res.status(400).json({ error: "Keberangkatan tidak sesuai dengan paket yang dipilih" });
+      return;
+    }
+    if (depRow.status && depRow.status !== "active") {
+      res.status(400).json({ error: "Keberangkatan tidak aktif atau sudah ditutup" });
+      return;
+    }
+    if (depRow.departureDate) {
+      const todayCheck = new Date();
+      todayCheck.setHours(0, 0, 0, 0);
+      if (new Date(depRow.departureDate) < todayCheck) {
+        res.status(400).json({ error: "Tidak dapat membuat booking untuk keberangkatan yang tanggalnya sudah lewat" });
         return;
       }
+    }
+
+    // P0: Lookup price from DB — do not trust totalPrice from frontend
+    let calculatedPrice = 0;
+    if (roomType) {
+      const [priceRow] = await db
+        .select({ price: departurePrices.price })
+        .from(departurePrices)
+        .where(and(eq(departurePrices.departureId, departureId), eq(departurePrices.roomType, roomType)))
+        .limit(1);
+      if (!priceRow) {
+        res.status(400).json({ error: `Tipe kamar '${roomType}' tidak tersedia untuk keberangkatan ini` });
+        return;
+      }
+      if (priceRow.price <= 0) {
+        res.status(400).json({ error: `Tipe kamar '${roomType}' belum memiliki harga. Lengkapi harga terlebih dahulu.` });
+        return;
+      }
+      calculatedPrice = priceRow.price;
     }
 
     // O-14: Anti-collision booking code — crypto-random, no Math.random()
@@ -431,7 +484,7 @@ router.post("/", async (req, res) => {
           bookingCode,
           packageId,
           departureId,
-          totalPrice,
+          totalPrice: calculatedPrice,
           currency: bookingCurrency,
           exchangeRate,
           paymentScheme: paymentScheme || "full",
@@ -453,9 +506,9 @@ router.post("/", async (req, res) => {
         id: crypto.randomUUID(),
         bookingId: newBooking.id,
         roomType,
-        price: String(totalPrice),
+        price: String(calculatedPrice),
         quantity: 1,
-        subtotal: String(totalPrice),
+        subtotal: String(calculatedPrice),
         createdAt: new Date(),
       });
 
@@ -470,13 +523,21 @@ router.post("/", async (req, res) => {
         });
       }
 
-      // BK-DB02: decrement remaining quota inside transaction
-      if (departureId) {
-        await tx.execute(sql`
-          UPDATE package_departures
-          SET remaining_quota = GREATEST(0, remaining_quota - 1)
-          WHERE id = ${departureId}
-        `);
+      // P0: Atomic quota decrement — prevents overselling under concurrent requests
+      const quotaResult = await tx.execute(sql`
+        UPDATE package_departures
+        SET
+          remaining_quota = remaining_quota - 1,
+          status = CASE WHEN remaining_quota - 1 <= 0 THEN 'penuh' ELSE status END
+        WHERE id = ${departureId} AND remaining_quota >= 1
+        RETURNING id
+      `);
+      const quotaRows = (quotaResult as any).rows ?? quotaResult;
+      if (!Array.isArray(quotaRows) || quotaRows.length === 0) {
+        throw Object.assign(
+          new Error("Kuota keberangkatan penuh, tidak dapat membuat booking baru"),
+          { code: "CAPACITY_FULL" },
+        );
       }
 
       return newBooking;
@@ -497,7 +558,11 @@ router.post("/", async (req, res) => {
     }
 
     res.status(201).json(booking);
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.code === "CAPACITY_FULL") {
+      res.status(409).json({ error: e.message });
+      return;
+    }
     console.error("[POST /api/admin/bookings]", e);
     res.status(500).json({ error: "Failed to create booking" });
   }
@@ -518,7 +583,6 @@ router.post("/group", async (req, res) => {
       pemesanPhone,
       pemesanEmail,
       groupName,
-      totalPrice,
       currency,
       jamaah, // Array<{ name, phone, email, gender, roomType }>
     } = req.body;
@@ -546,9 +610,15 @@ router.post("/group", async (req, res) => {
       }
     }
 
-    // Validate departure quota
+    // P0: Validate departure — existence, package relation, active status, not past
     const [dep] = await db
-      .select({ remainingQuota: packageDepartures.remainingQuota, quota: packageDepartures.quota })
+      .select({
+        remainingQuota: packageDepartures.remainingQuota,
+        quota: packageDepartures.quota,
+        status: packageDepartures.status,
+        packageId: packageDepartures.packageId,
+        departureDate: packageDepartures.departureDate,
+      })
       .from(packageDepartures)
       .where(eq(packageDepartures.id, departureId))
       .limit(1);
@@ -556,12 +626,45 @@ router.post("/group", async (req, res) => {
       res.status(404).json({ error: "Keberangkatan tidak ditemukan" });
       return;
     }
-    if (dep.remainingQuota < jamaah.length) {
-      res.status(409).json({
-        error: `Kuota tidak mencukupi. Sisa ${dep.remainingQuota} kursi, butuh ${jamaah.length} kursi.`,
-      });
+    if (packageId && dep.packageId !== packageId) {
+      res.status(400).json({ error: "Keberangkatan tidak sesuai dengan paket yang dipilih" });
       return;
     }
+    if (dep.status && dep.status !== "active") {
+      res.status(400).json({ error: "Keberangkatan tidak aktif atau sudah ditutup" });
+      return;
+    }
+    if (dep.departureDate) {
+      const todayGroup = new Date();
+      todayGroup.setHours(0, 0, 0, 0);
+      if (new Date(dep.departureDate) < todayGroup) {
+        res.status(400).json({ error: "Tidak dapat membuat booking untuk keberangkatan yang tanggalnya sudah lewat" });
+        return;
+      }
+    }
+
+    // P0: Lookup all departure prices from DB — do not trust roomPrice from frontend
+    const depPricesRows = await db
+      .select({ roomType: departurePrices.roomType, price: departurePrices.price })
+      .from(departurePrices)
+      .where(eq(departurePrices.departureId, departureId));
+    const priceMap = new Map(depPricesRows.map((p) => [p.roomType, p.price]));
+
+    // Validate each jamaah's room type has a valid price in this departure
+    for (let i = 0; i < jamaah.length; i++) {
+      const price = priceMap.get(jamaah[i].roomType);
+      if (price === undefined) {
+        res.status(400).json({ error: `Tipe kamar '${jamaah[i].roomType}' tidak tersedia untuk keberangkatan ini` });
+        return;
+      }
+      if (price <= 0) {
+        res.status(400).json({ error: `Tipe kamar '${jamaah[i].roomType}' belum memiliki harga yang valid` });
+        return;
+      }
+    }
+
+    // P0: Calculate total price from DB prices — ignore totalPrice from frontend
+    const calculatedGroupTotal = jamaah.reduce((sum: number, j: any) => sum + (priceMap.get(j.roomType) ?? 0), 0);
 
     // Generate booking code
     const now = new Date();
@@ -590,7 +693,7 @@ router.post("/group", async (req, res) => {
           packageId,
           departureId,
           userId: userId || null,
-          totalPrice: Number(totalPrice) || 0,
+          totalPrice: calculatedGroupTotal,
           currency: groupCurrency,
           exchangeRate: groupExchangeRate,
           paymentScheme: paymentScheme || "full",
@@ -625,12 +728,12 @@ router.post("/group", async (req, res) => {
         });
       }
 
-      // Aggregate booking_rooms by room type
+      // Aggregate booking_rooms by room type — use DB prices, not frontend roomPrice
       const roomAgg: Record<string, { count: number; price: number }> = {};
       for (const j of jamaah) {
-        if (!roomAgg[j.roomType]) roomAgg[j.roomType] = { count: 0, price: Number(j.roomPrice) || 0 };
+        const dbPrice = priceMap.get(j.roomType) ?? 0;
+        if (!roomAgg[j.roomType]) roomAgg[j.roomType] = { count: 0, price: dbPrice };
         roomAgg[j.roomType].count += 1;
-        if (Number(j.roomPrice) > 0) roomAgg[j.roomType].price = Number(j.roomPrice);
       }
       for (const [rt, { count, price }] of Object.entries(roomAgg)) {
         await tx.insert(bookingRooms).values({
@@ -644,12 +747,22 @@ router.post("/group", async (req, res) => {
         });
       }
 
-      // Decrement quota by number of jamaah
-      await tx.execute(sql`
+      // P0: Atomic quota decrement — prevents overselling under concurrent booking requests
+      const groupQuotaResult = await tx.execute(sql`
         UPDATE package_departures
-        SET remaining_quota = GREATEST(0, remaining_quota - ${jamaah.length})
-        WHERE id = ${departureId}
+        SET
+          remaining_quota = remaining_quota - ${jamaah.length},
+          status = CASE WHEN remaining_quota - ${jamaah.length} <= 0 THEN 'penuh' ELSE status END
+        WHERE id = ${departureId} AND remaining_quota >= ${jamaah.length}
+        RETURNING id
       `);
+      const groupQuotaRows = (groupQuotaResult as any).rows ?? groupQuotaResult;
+      if (!Array.isArray(groupQuotaRows) || groupQuotaRows.length === 0) {
+        throw Object.assign(
+          new Error(`Kuota tidak mencukupi. Dibutuhkan ${jamaah.length} kursi tetapi kuota sudah habis.`),
+          { code: "CAPACITY_FULL" },
+        );
+      }
 
       return newBooking;
     });
@@ -665,7 +778,11 @@ router.post("/group", async (req, res) => {
     }
 
     res.status(201).json({ ...booking, jamaahCount: jamaah.length });
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.code === "CAPACITY_FULL") {
+      res.status(409).json({ error: e.message });
+      return;
+    }
     console.error("[POST /api/admin/bookings/group]", e);
     res.status(500).json({ error: "Gagal membuat booking rombongan" });
   }
