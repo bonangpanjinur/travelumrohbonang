@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Save, Image, Globe, Building2, Phone, Palette, ImageIcon, Layout, Check, Banknote, Share2, Wallet, Eye, EyeOff } from "lucide-react";
+import { Save, Image, Globe, Building2, Phone, Palette, ImageIcon, Layout, Check, Banknote, Share2, Wallet, Eye, EyeOff, LayoutGrid } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { IconPicker } from "@/shared/components/ui/icon-picker";
 import { cn } from "@/shared/lib/utils";
@@ -166,6 +166,16 @@ interface PaymentGatewaySettings {
   xendit_environment: "sandbox" | "production";
   default_gateway: "midtrans" | "xendit";
 }
+
+interface CardDesignSettings {
+  image_ratio: "landscape" | "portrait";
+  info_layout: "cards" | "compact";
+}
+
+const defaultCardDesign: CardDesignSettings = {
+  image_ratio: "landscape",
+  info_layout: "cards",
+};
 
 
 // Template definitions — 3 variants
@@ -315,6 +325,7 @@ const AdminSettings = () => {
   const [bank, setBank] = useState<BankSettings>(defaultBank);
   const [social, setSocial] = useState<SocialSettings>(defaultSocial);
   const [paymentGateway, setPaymentGateway] = useState<PaymentGatewaySettings>(defaultPaymentGateway);
+  const [cardDesign, setCardDesign] = useState<CardDesignSettings>(defaultCardDesign);
   const [showMidtransKey, setShowMidtransKey] = useState(false);
   const [showXenditKey, setShowXenditKey] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -363,6 +374,9 @@ const AdminSettings = () => {
             break;
           case "payment_gateway":
             setPaymentGateway({ ...defaultPaymentGateway, ...value });
+            break;
+          case "card_design":
+            setCardDesign({ ...defaultCardDesign, ...value });
             break;
         }
       });
@@ -474,6 +488,9 @@ const AdminSettings = () => {
           </TabsTrigger>
           <TabsTrigger value="payment_gateway" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Wallet className="w-4 h-4 mr-2" /> Payment Gateway
+          </TabsTrigger>
+          <TabsTrigger value="card_design" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <LayoutGrid className="w-4 h-4 mr-2" /> Card Paket
           </TabsTrigger>
         </TabsList>
 
@@ -1776,6 +1793,180 @@ const AdminSettings = () => {
               <Save className="w-4 h-4 mr-2" />
               {saving ? "Menyimpan..." : "Simpan Konfigurasi Gateway"}
             </Button>
+          </div>
+        </TabsContent>
+
+        {/* ── Card Paket Design ── */}
+        <TabsContent value="card_design">
+          <div className="bg-card border border-border rounded-xl p-6 space-y-8">
+            <div>
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <LayoutGrid className="w-5 h-5 text-primary" />
+                Desain Card Paket
+              </h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                Atur tampilan card paket di halaman katalog. Perubahan langsung terlihat di halaman Paket Perjalanan.
+              </p>
+            </div>
+
+            {/* Image Ratio */}
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-semibold">Rasio Gambar Utama</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Pilih proporsi gambar pada card paket — persegi panjang horizontal seperti card biasa, atau vertikal seperti flyer/poster.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 max-w-lg">
+                {/* Landscape option */}
+                <button
+                  type="button"
+                  onClick={() => setCardDesign((p) => ({ ...p, image_ratio: "landscape" }))}
+                  className={cn(
+                    "relative rounded-xl border-2 p-3 text-left transition-all hover:border-primary/60",
+                    cardDesign.image_ratio === "landscape"
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-card"
+                  )}
+                >
+                  {cardDesign.image_ratio === "landscape" && (
+                    <span className="absolute top-2 right-2 flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground">
+                      <Check className="w-3 h-3" />
+                    </span>
+                  )}
+                  {/* Preview */}
+                  <div className="rounded-lg overflow-hidden mb-2 bg-muted border border-border">
+                    <div className="h-10 bg-gradient-to-br from-amber-300/60 to-amber-600/60" />
+                    <div className="p-1.5 space-y-1">
+                      <div className="h-2 rounded bg-muted-foreground/20 w-3/4" />
+                      <div className="h-1.5 rounded bg-muted-foreground/10 w-1/2" />
+                    </div>
+                  </div>
+                  <p className="text-xs font-semibold">Landscape</p>
+                  <p className="text-[11px] text-muted-foreground">Card horizontal standar</p>
+                </button>
+
+                {/* Portrait option */}
+                <button
+                  type="button"
+                  onClick={() => setCardDesign((p) => ({ ...p, image_ratio: "portrait" }))}
+                  className={cn(
+                    "relative rounded-xl border-2 p-3 text-left transition-all hover:border-primary/60",
+                    cardDesign.image_ratio === "portrait"
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-card"
+                  )}
+                >
+                  {cardDesign.image_ratio === "portrait" && (
+                    <span className="absolute top-2 right-2 flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground">
+                      <Check className="w-3 h-3" />
+                    </span>
+                  )}
+                  {/* Preview */}
+                  <div className="rounded-lg overflow-hidden mb-2 bg-muted border border-border">
+                    <div className="h-16 bg-gradient-to-br from-amber-300/60 to-amber-600/60" />
+                    <div className="p-1.5 space-y-1">
+                      <div className="h-2 rounded bg-muted-foreground/20 w-3/4" />
+                      <div className="h-1.5 rounded bg-muted-foreground/10 w-1/2" />
+                    </div>
+                  </div>
+                  <p className="text-xs font-semibold">Portrait</p>
+                  <p className="text-[11px] text-muted-foreground">Vertikal seperti flyer</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Info Layout */}
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-semibold">Tampilan Info Maskapai & Hotel</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Pilih cara menampilkan info maskapai dan hotel — kartu terpisah yang detail, atau chip ringkas dalam satu baris.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 max-w-lg">
+                {/* Cards option */}
+                <button
+                  type="button"
+                  onClick={() => setCardDesign((p) => ({ ...p, info_layout: "cards" }))}
+                  className={cn(
+                    "relative rounded-xl border-2 p-3 text-left transition-all hover:border-primary/60",
+                    cardDesign.info_layout === "cards"
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-card"
+                  )}
+                >
+                  {cardDesign.info_layout === "cards" && (
+                    <span className="absolute top-2 right-2 flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground">
+                      <Check className="w-3 h-3" />
+                    </span>
+                  )}
+                  {/* Preview */}
+                  <div className="space-y-1 mb-2">
+                    <div className="h-5 rounded-md bg-sky-100 dark:bg-sky-900/40 border border-sky-200/60 flex items-center px-1.5 gap-1">
+                      <div className="w-2 h-2 rounded-sm bg-sky-300 flex-shrink-0" />
+                      <div className="h-1.5 rounded bg-sky-200 w-2/3" />
+                    </div>
+                    <div className="h-5 rounded-md bg-amber-100 dark:bg-amber-900/40 border border-amber-200/60 flex items-center px-1.5 gap-1">
+                      <div className="w-2 h-2 rounded-sm bg-amber-300 flex-shrink-0" />
+                      <div className="h-1.5 rounded bg-amber-200 w-2/3" />
+                    </div>
+                    <div className="h-5 rounded-md bg-emerald-100 dark:bg-emerald-900/40 border border-emerald-200/60 flex items-center px-1.5 gap-1">
+                      <div className="w-2 h-2 rounded-sm bg-emerald-300 flex-shrink-0" />
+                      <div className="h-1.5 rounded bg-emerald-200 w-2/3" />
+                    </div>
+                  </div>
+                  <p className="text-xs font-semibold">Kartu Terpisah</p>
+                  <p className="text-[11px] text-muted-foreground">Detail, mudah dibaca</p>
+                </button>
+
+                {/* Compact option */}
+                <button
+                  type="button"
+                  onClick={() => setCardDesign((p) => ({ ...p, info_layout: "compact" }))}
+                  className={cn(
+                    "relative rounded-xl border-2 p-3 text-left transition-all hover:border-primary/60",
+                    cardDesign.info_layout === "compact"
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-card"
+                  )}
+                >
+                  {cardDesign.info_layout === "compact" && (
+                    <span className="absolute top-2 right-2 flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground">
+                      <Check className="w-3 h-3" />
+                    </span>
+                  )}
+                  {/* Preview */}
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    <div className="h-5 rounded-md bg-sky-100 dark:bg-sky-900/40 border border-sky-200/60 px-1.5 flex items-center gap-0.5">
+                      <div className="w-2 h-2 rounded-sm bg-sky-300" />
+                      <div className="h-1.5 rounded bg-sky-200 w-8" />
+                    </div>
+                    <div className="h-5 rounded-md bg-amber-100 dark:bg-amber-900/40 border border-amber-200/60 px-1.5 flex items-center gap-0.5">
+                      <div className="w-2 h-2 rounded-sm bg-amber-300" />
+                      <div className="h-1.5 rounded bg-amber-200 w-8" />
+                    </div>
+                    <div className="h-5 rounded-md bg-emerald-100 dark:bg-emerald-900/40 border border-emerald-200/60 px-1.5 flex items-center gap-0.5">
+                      <div className="w-2 h-2 rounded-sm bg-emerald-300" />
+                      <div className="h-1.5 rounded bg-emerald-200 w-8" />
+                    </div>
+                  </div>
+                  <p className="text-xs font-semibold">Chip Ringkas</p>
+                  <p className="text-[11px] text-muted-foreground">Hemat ruang, padat</p>
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <Button
+                onClick={() => saveSetting("card_design", "appearance", cardDesign)}
+                disabled={saving}
+                className="gap-2"
+              >
+                <Save className="w-4 h-4" />
+                Simpan Pengaturan Card
+              </Button>
+            </div>
           </div>
         </TabsContent>
       </Tabs>

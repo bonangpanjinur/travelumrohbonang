@@ -2,6 +2,12 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/shared/components/ui/button";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
+import {
   Star,
   Calendar,
   Users,
@@ -15,6 +21,7 @@ import {
 import { format, differenceInCalendarDays } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { useCurrency } from "@/shared/hooks/useCurrency";
+import type { CardDesignSettings } from "@/shared/hooks/useCardDesign";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -83,9 +90,7 @@ function cheapestRoomLabel(dep: DepartureData): string {
  * Pick the reference departure for the card:
  *  - Prefer nearest upcoming departure (status != sold_out).
  *  - Fall back to nearest upcoming regardless of status.
- *  - Fall back to the most recent past departure (for packages with only past dates).
- *
- * A separate pass picks the departure with the global lowest VALID price.
+ *  - Fall back to the most recent past departure.
  */
 function pickReferenceDeparture(pkg: PackageCardData): DepartureData | null {
   const all = pkg.departures ?? [];
@@ -101,12 +106,10 @@ function pickReferenceDeparture(pkg: PackageCardData): DepartureData | null {
         new Date(a.departure_date).getTime() - new Date(b.departure_date).getTime(),
     );
 
-  // Prefer upcoming with seats available
   const withSeats = upcoming.filter((d) => d.status !== "sold_out");
   if (withSeats.length) return withSeats[0];
   if (upcoming.length) return upcoming[0];
 
-  // No upcoming → use most recent past departure
   return all.sort(
     (a, b) =>
       new Date(b.departure_date).getTime() - new Date(a.departure_date).getTime(),
@@ -114,8 +117,7 @@ function pickReferenceDeparture(pkg: PackageCardData): DepartureData | null {
 }
 
 /**
- * Scan ALL departures (past + future) to find the globally lowest valid price.
- * Returns { price, roomLabel, depId }.
+ * Scan ALL departures to find the globally lowest valid price.
  */
 function globalLowestPrice(pkg: PackageCardData): {
   price: number;
@@ -130,7 +132,6 @@ function globalLowestPrice(pkg: PackageCardData): {
       best = { price: min, roomLabel: cheapestRoomLabel(dep) };
     }
   }
-  // Package-level fallback
   if (best.price === 0 && pkg.lowestPrice && Number(pkg.lowestPrice) > 0) {
     best = { price: Number(pkg.lowestPrice), roomLabel: "" };
   }
@@ -171,13 +172,157 @@ function seatStatus(remainingPct: number) {
 
 // ─── Star dots ────────────────────────────────────────────────────────────────
 
-function StarDots({ count }: { count: number }) {
+function StarDots({ count, size = "md" }: { count: number; size?: "sm" | "md" }) {
+  const cls = size === "sm" ? "w-2.5 h-2.5" : "w-3 h-3";
   return (
     <span className="flex items-center gap-0.5">
       {Array.from({ length: Math.min(5, Math.max(1, count)) }).map((_, i) => (
-        <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
+        <Star key={i} className={`${cls} fill-amber-400 text-amber-400`} />
       ))}
     </span>
+  );
+}
+
+// ─── Departure date chips with tooltip ───────────────────────────────────────
+
+const MAX_VISIBLE_DATES = 3;
+
+function DepartureDateChips({ departures }: { departures: DepartureData[] }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const upcoming = [...departures]
+    .filter((d) => new Date(d.departure_date) >= today)
+    .sort(
+      (a, b) =>
+        new Date(a.departure_date).getTime() - new Date(b.departure_date).getTime(),
+    );
+
+  if (upcoming.length === 0) return null;
+
+  const visible = upcoming.slice(0, MAX_VISIBLE_DATES);
+  const hidden = upcoming.slice(MAX_VISIBLE_DATES);
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {visible.map((dep) => (
+        <span
+          key={dep.id}
+          className={[
+            "inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg border",
+            dep.status === "sold_out"
+              ? "bg-muted/40 border-border text-muted-foreground line-through"
+              : "bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900/40 text-amber-700 dark:text-amber-300",
+          ].join(" ")}
+        >
+          <Calendar className="w-3 h-3 flex-shrink-0" />
+          {format(new Date(dep.departure_date), "d MMM yyyy", { locale: idLocale })}
+        </span>
+      ))}
+
+      {hidden.length > 0 && (
+        <TooltipProvider delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center text-[11px] font-semibold px-2 py-1 rounded-lg border bg-muted/50 border-border text-muted-foreground cursor-default hover:bg-muted transition-colors select-none">
+                +{hidden.length} lagi…
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-[220px] p-2">
+              <p className="text-[11px] text-muted-foreground font-medium mb-1.5">
+                Tanggal keberangkatan lainnya:
+              </p>
+              <div className="space-y-1">
+                {hidden.map((dep) => (
+                  <div key={dep.id} className="flex items-center gap-1.5 text-xs">
+                    <Calendar className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                    <span>
+                      {format(new Date(dep.departure_date), "d MMMM yyyy", { locale: idLocale })}
+                    </span>
+                    {dep.status === "sold_out" && (
+                      <span className="text-[10px] text-red-400 font-medium">(Penuh)</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+    </div>
+  );
+}
+
+// ─── Compact info row (alternative to stacked cards) ─────────────────────────
+
+function CompactInfoRow({
+  airline,
+  hotelMakkah,
+  hotelMadinah,
+  hotelStar,
+  isTransit,
+}: {
+  airline: { name: string } | null;
+  hotelMakkah: { name?: string; star: number } | null;
+  hotelMadinah: { name?: string; star: number } | null;
+  hotelStar: number;
+  isTransit: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {/* Airline chip */}
+      {airline ? (
+        <div className="inline-flex items-center gap-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/30 border border-sky-100 dark:border-sky-900/40 px-2.5 py-1.5 text-[11px]">
+          <Plane className="w-3 h-3 text-sky-600 dark:text-sky-400 -rotate-45 flex-shrink-0" />
+          <span className="font-semibold text-sky-700 dark:text-sky-300 max-w-[100px] truncate">
+            {isTransit ? `${airline.name} (Transit)` : airline.name}
+          </span>
+        </div>
+      ) : (
+        <div className="inline-flex items-center gap-1.5 rounded-lg bg-muted/30 border border-dashed border-border/50 px-2.5 py-1.5 text-[11px] opacity-50">
+          <Plane className="w-3 h-3 text-muted-foreground -rotate-45 flex-shrink-0" />
+          <span className="text-muted-foreground/60">Maskapai?</span>
+        </div>
+      )}
+
+      {/* Hotel Makkah chip */}
+      <div className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 px-2.5 py-1.5 text-[11px]">
+        <Hotel className="w-3 h-3 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+        {hotelMakkah?.name ? (
+          <>
+            <span className="font-semibold text-amber-700 dark:text-amber-300 max-w-[90px] truncate">
+              {hotelMakkah.name}
+            </span>
+            <StarDots count={hotelStar} size="sm" />
+          </>
+        ) : (
+          <>
+            <span className="text-amber-700 dark:text-amber-300 font-medium">Makkah</span>
+            <StarDots count={hotelStar} size="sm" />
+          </>
+        )}
+      </div>
+
+      {/* Hotel Madinah chip — only if data exists */}
+      {hotelMadinah && (
+        <div className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 px-2.5 py-1.5 text-[11px]">
+          <Hotel className="w-3 h-3 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+          {hotelMadinah.name ? (
+            <>
+              <span className="font-semibold text-emerald-700 dark:text-emerald-300 max-w-[90px] truncate">
+                {hotelMadinah.name}
+              </span>
+              <StarDots count={hotelMadinah.star ?? 4} size="sm" />
+            </>
+          ) : (
+            <>
+              <span className="text-emerald-700 dark:text-emerald-300 font-medium">Madinah</span>
+              <StarDots count={hotelMadinah.star ?? 4} size="sm" />
+            </>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -187,24 +332,31 @@ interface PackageCardProps {
   pkg: PackageCardData;
   index?: number;
   showFeatures?: boolean;
+  cardDesign?: CardDesignSettings;
 }
 
-const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps) => {
+const PackageCard = ({
+  pkg,
+  index = 0,
+  showFeatures = false,
+  cardDesign,
+}: PackageCardProps) => {
   const { format: formatPrice } = useCurrency();
+
+  const imageRatio = cardDesign?.image_ratio ?? "landscape";
+  const infoLayout = cardDesign?.info_layout ?? "cards";
 
   const refDep = pickReferenceDeparture(pkg);
   const { price: lowestPrice, roomLabel } = globalLowestPrice(pkg);
   const hasDepartures = (pkg.departures?.length ?? 0) > 0;
   const isSoldOut = refDep?.status === "sold_out";
 
-  /* Hotel & airline from reference departure → package-level fallback */
   const hotelMakkah = refDep?.hotel_makkah ?? pkg.hotel_makkah ?? null;
   const hotelMadinah = refDep?.hotel_madinah ?? null;
   const displayAirline = refDep?.airline ?? pkg.airline ?? null;
   const hotelStar = hotelMakkah?.star ?? pkg.hotelStar ?? 4;
   const categoryName = pkg.category?.name ?? pkg.package_type ?? "Reguler";
 
-  /* Seat quota from reference departure */
   const quota = refDep?.quota ?? null;
   const remaining = refDep?.remaining_quota ?? null;
   const filled =
@@ -221,7 +373,6 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
   const status = remainingPct !== null ? seatStatus(remainingPct) : null;
   const isAlmostFull = remainingPct !== null && remainingPct <= 20;
 
-  /* Date display */
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const depDate = refDep ? new Date(refDep.departure_date) : null;
@@ -229,6 +380,19 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
   const isPastDep = depDate ? depDate < today : false;
   const daysUntil =
     depDate && !isPastDep ? differenceInCalendarDays(depDate, today) : null;
+
+  const isTransit =
+    refDep?.departure_type === "transit" &&
+    (refDep.flight_segments?.length ?? 0) > 0;
+
+  // Multiple upcoming departures (for date chips section)
+  const multiDates =
+    (pkg.departures?.length ?? 0) > 1
+      ? pkg.departures ?? []
+      : [];
+
+  // Image height classes
+  const imageHeightClass = imageRatio === "portrait" ? "h-72" : "h-48";
 
   return (
     <motion.div
@@ -282,7 +446,7 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
       </AnimatePresence>
 
       {/* ── Hero image ── */}
-      <div className="relative h-48 overflow-hidden flex-shrink-0">
+      <div className={`relative ${imageHeightClass} overflow-hidden flex-shrink-0`}>
         <img
           src={
             pkg.image_url ||
@@ -293,7 +457,7 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
           loading="lazy"
           decoding="async"
           width={600}
-          height={400}
+          height={imageRatio === "portrait" ? 640 : 400}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
@@ -304,8 +468,8 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
           </span>
         </div>
 
-        {/* Date chip — shows range if return_date available */}
-        {depDate && (
+        {/* Date chip — only shown when single departure (multi-date gets its own section in body) */}
+        {depDate && multiDates.length === 0 && (
           <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md border border-white/20 text-white text-xs px-2.5 py-1.5 rounded-xl flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-amber-300 flex-shrink-0" />
             <span className="font-medium whitespace-nowrap">
@@ -317,6 +481,16 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
                 </>
               )}
               {!retDate && format(depDate, " yyyy", { locale: idLocale })}
+            </span>
+          </div>
+        )}
+
+        {/* Multi-departure badge in image overlay */}
+        {multiDates.length > 0 && (
+          <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-md border border-white/20 text-white text-xs px-2.5 py-1.5 rounded-xl flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-amber-300 flex-shrink-0" />
+            <span className="font-medium whitespace-nowrap">
+              {multiDates.filter((d) => new Date(d.departure_date) >= today).length} Jadwal
             </span>
           </div>
         )}
@@ -341,17 +515,21 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
               <Calendar className="w-3.5 h-3.5" />
               {pkg.duration_days || 9} Hari
             </span>
-            {daysUntil !== null && daysUntil >= 0 && (
+            {/* Days-until countdown — only when single departure */}
+            {daysUntil !== null && daysUntil >= 0 && multiDates.length === 0 && (
               <span className="flex items-center gap-1">
                 <span className="text-amber-600 font-semibold">
-                  {daysUntil === 0
-                    ? "Hari ini!"
-                    : `${daysUntil} hari lagi`}
+                  {daysUntil === 0 ? "Hari ini!" : `${daysUntil} hari lagi`}
                 </span>
               </span>
             )}
           </div>
         </div>
+
+        {/* ── Multi-departure date chips ── */}
+        {multiDates.length > 0 && (
+          <DepartureDateChips departures={multiDates} />
+        )}
 
         {/* ── No departure state ── */}
         {!hasDepartures && (
@@ -361,8 +539,8 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
           </div>
         )}
 
-        {/* ── Airline + Hotel info ── */}
-        {hasDepartures && (
+        {/* ── Airline + Hotel info (CARDS layout) ── */}
+        {hasDepartures && infoLayout === "cards" && (
           <div className="space-y-2">
             {/* Airline */}
             {displayAirline ? (
@@ -373,15 +551,11 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
                 <div className="min-w-0">
                   <p className="text-[10px] text-muted-foreground leading-none mb-0.5">Maskapai</p>
                   <p className="text-xs font-semibold text-sky-700 dark:text-sky-300 truncate">
-                    {refDep?.departure_type === "transit" &&
-                    (refDep.flight_segments?.length ?? 0) > 0
-                      ? `${displayAirline.name} (Transit)`
-                      : displayAirline.name}
+                    {isTransit ? `${displayAirline.name} (Transit)` : displayAirline.name}
                   </p>
                 </div>
               </div>
             ) : (
-              /* placeholder keeps card height stable */
               <div className="flex items-center gap-2.5 rounded-xl bg-muted/30 border border-dashed border-border/50 px-3 py-2 opacity-50">
                 <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
                   <Plane className="w-3.5 h-3.5 text-muted-foreground -rotate-45" />
@@ -421,7 +595,7 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
               </div>
             )}
 
-            {/* Hotel Madinah — only rendered if data exists */}
+            {/* Hotel Madinah */}
             {hotelMadinah && (
               <div className="flex items-center gap-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 px-3 py-2">
                 <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
@@ -443,10 +617,20 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
           </div>
         )}
 
+        {/* ── Airline + Hotel info (COMPACT layout) ── */}
+        {hasDepartures && infoLayout === "compact" && (
+          <CompactInfoRow
+            airline={displayAirline}
+            hotelMakkah={hotelMakkah}
+            hotelMadinah={hotelMadinah}
+            hotelStar={hotelStar}
+            isTransit={isTransit}
+          />
+        )}
+
         {/* ── Seat progress bar ── */}
         {filledPct !== null && status !== null && quota !== null && (
           <div className="rounded-xl bg-muted/40 border border-border px-3 py-2.5 space-y-2">
-            {/* Row 1: "X / Y terisi" | badge | "Z%" */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
                 <Users className="w-3.5 h-3.5 flex-shrink-0" />
@@ -480,7 +664,6 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
               </div>
             </div>
 
-            {/* Row 2: progress bar */}
             <div className="relative h-2.5 w-full rounded-full bg-border overflow-hidden">
               <motion.div
                 className={`h-full rounded-full ${status.barColor} relative overflow-hidden`}
@@ -506,7 +689,6 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
               </motion.div>
             </div>
 
-            {/* Row 3: "Sisa N kursi" */}
             <p className="text-[11px] text-muted-foreground">
               Sisa{" "}
               <span className={`font-bold ${status.textColor}`}>{remaining}</span>{" "}

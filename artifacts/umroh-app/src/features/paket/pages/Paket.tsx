@@ -15,6 +15,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import PackageCard, { type PackageCardData } from "@/features/paket/components/PackageCard";
+import { useCardDesign } from "@/shared/hooks/useCardDesign";
 import SEO from "@/shared/components/seo/SEO";
 import BreadcrumbJsonLd from "@/shared/components/seo/BreadcrumbJsonLd";
 
@@ -40,6 +41,7 @@ interface FilterOption {
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
 const Paket = () => {
+  const { cardDesign } = useCardDesign();
   const [searchParams, setSearchParams] = useSearchParams();
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
@@ -538,7 +540,7 @@ const Paket = () => {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {filteredPackages.map((pkg, i) => (
-                      <PackageCard key={pkg.id} pkg={pkg} index={i} />
+                      <PackageCard key={pkg.id} pkg={pkg} index={i} cardDesign={cardDesign} />
                     ))}
                   </div>
                 )}
