@@ -81,11 +81,31 @@ function getLowestPriceFromDep(dep: Departure | null): number {
   return prices.length ? Math.min(...prices) : 0;
 }
 
-/* ── Seat bar helpers ─────────────────────────────────────────── */
-function seatStatus(pct: number) {
-  if (pct <= 20) return { label: "Hampir Penuh", color: "from-red-500 to-rose-600", text: "text-red-500", bg: "bg-red-50 dark:bg-red-950/30", dot: "bg-red-500" };
-  if (pct <= 50) return { label: "Mengisi Cepat", color: "from-amber-400 to-orange-500", text: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30", dot: "bg-amber-500" };
-  return { label: "Tersedia", color: "from-emerald-400 to-teal-500", text: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30", dot: "bg-emerald-500" };
+/* ── Seat bar helpers — status based on REMAINING % ──────────── */
+function seatStatus(remainingPct: number) {
+  if (remainingPct <= 20)
+    return {
+      label: "Hampir Penuh",
+      barColor: "bg-red-500",
+      textColor: "text-red-500",
+      dotColor: "bg-red-500",
+      dotPulse: true,
+    };
+  if (remainingPct <= 50)
+    return {
+      label: "Mengisi Cepat",
+      barColor: "bg-amber-500",
+      textColor: "text-amber-600",
+      dotColor: "bg-amber-500",
+      dotPulse: true,
+    };
+  return {
+    label: "Tersedia",
+    barColor: "bg-emerald-500",
+    textColor: "text-emerald-600",
+    dotColor: "bg-emerald-500",
+    dotPulse: false,
+  };
 }
 
 /* ── Star dots ─────────────────────────────────────────────────── */
@@ -115,16 +135,21 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
   const categoryName = pkg.category?.name ?? pkg.package_type ?? "Reguler";
   const hotelStar = hotelMakkah?.star ?? pkg.hotelStar ?? 4;
 
-  /* seat quota */
-  const remaining = cheapestDep?.remaining_quota ?? pkg.quota ?? null;
-  const total = cheapestDep?.quota ?? pkg.quota ?? null;
-  const seatPct =
+  /* seat quota — filled = total - remaining; bar shows % filled */
+  const remaining = cheapestDep?.remaining_quota ?? null;
+  const total = cheapestDep?.quota ?? null;
+  const filled = total !== null && remaining !== null ? Math.max(0, total - remaining) : null;
+  const filledPct =
+    total && filled !== null
+      ? Math.max(0, Math.min(100, Math.round((filled / total) * 100)))
+      : null;
+  const remainingPct =
     total && remaining !== null
       ? Math.max(0, Math.min(100, Math.round((remaining / total) * 100)))
       : null;
 
-  const status = seatPct !== null ? seatStatus(seatPct) : null;
-  const isAlmostFull = seatPct !== null && seatPct <= 20;
+  const status = remainingPct !== null ? seatStatus(remainingPct) : null;
+  const isAlmostFull = remainingPct !== null && remainingPct <= 20;
 
   const daysToDep = cheapestDep
     ? differenceInCalendarDays(new Date(cheapestDep.departure_date), new Date())
@@ -289,44 +314,68 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
           )}
         </div>
 
-        {/* ── Seat progress ── */}
-        {seatPct !== null && status && (
-          <div className={`rounded-xl ${status.bg} border border-current/10 px-3 py-2.5`}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Users className="w-3.5 h-3.5" />
-                <span>Ketersediaan Seat</span>
+        {/* ── Seat progress (reference style) ── */}
+        {filledPct !== null && status && total !== null && (
+          <div className="rounded-xl bg-muted/40 border border-border px-3 py-2.5 space-y-2">
+            {/* Row 1: icon + "X / Y terisi" | status badge | "Z%" */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
+                <Users className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="font-medium truncate">
+                  <span className="text-foreground font-semibold">{filled}</span>
+                  {" / "}
+                  <span className="text-foreground font-semibold">{total}</span>
+                  {" terisi"}
+                </span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${status.dot} animate-pulse`} />
-                <span className={`text-[11px] font-bold ${status.text}`}>{status.label}</span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* Status badge */}
+                <span
+                  className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border
+                    ${status.textColor}
+                    ${remainingPct! <= 20
+                      ? "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800"
+                      : remainingPct! <= 50
+                      ? "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800"
+                      : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800"
+                    }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${status.dotColor} ${status.dotPulse ? "animate-pulse" : ""}`}
+                  />
+                  {status.label}
+                </span>
+                {/* Percentage */}
+                <span className={`text-sm font-bold ${status.textColor}`}>
+                  {filledPct}%
+                </span>
               </div>
             </div>
 
-            {/* Custom gradient progress bar */}
-            <div className="relative h-2.5 w-full rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+            {/* Row 2: progress bar */}
+            <div className="relative h-2.5 w-full rounded-full bg-border overflow-hidden">
               <motion.div
-                className={`h-full rounded-full bg-gradient-to-r ${status.color} relative`}
+                className={`h-full rounded-full ${status.barColor} relative overflow-hidden`}
                 initial={{ width: 0 }}
-                whileInView={{ width: `${seatPct}%` }}
+                whileInView={{ width: `${filledPct}%` }}
                 viewport={{ once: true }}
-                transition={{ duration: 1, ease: "easeOut", delay: 0.2 + index * 0.08 }}
+                transition={{ duration: 1.1, ease: "easeOut", delay: 0.15 + index * 0.08 }}
               >
-                {/* Shimmer */}
-                <motion.div
-                  className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                {/* shimmer */}
+                <motion.span
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent"
                   animate={{ x: ["-100%", "200%"] }}
-                  transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2, ease: "easeInOut" }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 2.5, ease: "easeInOut" }}
                 />
               </motion.div>
             </div>
 
-            <div className="flex items-center justify-between mt-1.5">
-              <span className={`text-[11px] font-bold ${status.text}`}>
-                {remaining} seat tersisa
-              </span>
-              <span className="text-[10px] text-muted-foreground">dari {total} seat</span>
-            </div>
+            {/* Row 3: "Sisa N kursi" */}
+            <p className="text-[11px] text-muted-foreground">
+              Sisa{" "}
+              <span className={`font-bold ${status.textColor}`}>{remaining}</span>
+              {" kursi"}
+            </p>
           </div>
         )}
 
