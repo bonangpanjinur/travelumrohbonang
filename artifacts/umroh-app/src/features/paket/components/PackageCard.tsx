@@ -48,10 +48,14 @@ const PackageCard = ({ pkg, index = 0, showFeatures = false }: PackageCardProps)
   const { format: formatPrice } = useCurrency();
   // Calculate lowest price from departures if available
   const getLowestPrice = () => {
-    if (pkg.lowestPrice !== undefined) return pkg.lowestPrice;
-    if (!pkg.departures || pkg.departures.length === 0) return 0;
-    const allPrices = pkg.departures.flatMap((d) => d.prices?.map((p) => p.price) || []);
-    return allPrices.length > 0 ? Math.min(...allPrices) : 0;
+    const allPrices = (pkg.departures || [])
+      .flatMap((d) => d.prices?.map((p) => Number(p.price)) || [])
+      .filter((price) => Number.isFinite(price) && price > 0);
+
+    if (allPrices.length > 0) return Math.min(...allPrices);
+
+    const fallbackPrice = Number(pkg.lowestPrice);
+    return Number.isFinite(fallbackPrice) && fallbackPrice > 0 ? fallbackPrice : 0;
   };
 
   // Get next departure date
