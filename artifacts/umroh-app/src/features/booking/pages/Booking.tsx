@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/shared/hooks/useAuth";
 import Navbar from "@/shared/components/layout/Navbar";
@@ -98,10 +98,12 @@ const Booking = () => {
   const [picAgentId, setPicAgentId] = useState<string>("");
   const [myPoints, setMyPoints] = useState<number>(0);
   const [redeemPointsInput, setRedeemPointsInput] = useState<string>("");
+  // Guard: prevent re-fetching (and rooms reset) if auth object reference changes mid-session
+  const dataFetchedRef = useRef(false);
 
+  // Redirect unauthenticated users whenever auth state resolves
   useEffect(() => {
     if (authLoading) return;
-
     if (!user) {
       toast({
         title: "Login Diperlukan",
@@ -109,8 +111,13 @@ const Booking = () => {
         variant: "destructive",
       });
       navigate("/auth");
-      return;
     }
+  }, [authLoading, user, navigate, toast]);
+
+  // Fetch package/departure data exactly once after auth resolves
+  useEffect(() => {
+    if (authLoading || !user || dataFetchedRef.current) return;
+    dataFetchedRef.current = true;
 
     const fetchData = async () => {
       if (!slug || !departureId) {
@@ -149,7 +156,8 @@ const Booking = () => {
     };
 
     fetchData();
-  }, [slug, departureId, user, authLoading, navigate, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user?.id]);
 
   const updateRoomQuantity = (roomType: string, delta: number) => {
     setRooms((prev) =>
