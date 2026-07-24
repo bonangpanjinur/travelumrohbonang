@@ -20,7 +20,7 @@ import {
   sql,
   inArray,
 } from "@workspace/db";
-import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../lib/supabaseEnv";
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SERVER_KEY } from "../lib/supabaseEnv";
 import { shouldUseSupabaseHttp } from "../lib/dbFlags";
 
 const router = Router();
@@ -59,13 +59,16 @@ const PKG_EMBED_SELECT_COMPAT =
   ")";
 
 async function supabaseGet(path: string): Promise<any> {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Supabase not configured: SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY missing");
+  // Use service role key when available (bypasses RLS); fall back to anon key
+  // for public read endpoints (packages, categories, etc.).
+  const key = SUPABASE_SERVER_KEY;
+  if (!SUPABASE_URL || !key) {
+    throw new Error("Supabase not configured: SUPABASE_URL/SUPABASE_ANON_KEY missing");
   }
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: key,
+      Authorization: `Bearer ${key}`,
     },
     signal: AbortSignal.timeout(8000),
   });

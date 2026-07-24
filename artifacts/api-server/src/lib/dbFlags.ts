@@ -49,11 +49,13 @@ export function shouldUseSupabaseHttp(): boolean {
   }
 
   if (isLocalOnlyDbHost(effectiveUrl)) {
-    // Only fall back to Supabase HTTP when creds exist; otherwise use the
-    // direct pool (helium is reachable inside Replit).
-    const hasSupabaseCreds =
-      !!process.env.SUPABASE_URL && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-    return hasSupabaseCreds;
+    // Fall back to Supabase HTTP whenever SUPABASE_URL is set — the public
+    // anon key is enough for read endpoints, so we don't require the service
+    // role key here. Without SUPABASE_URL there's nothing to fall back to, so
+    // let the direct pool try (helium is reachable inside Replit).
+    const hasSupabaseUrl =
+      !!(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL);
+    return hasSupabaseUrl;
   }
 
   return false;
