@@ -602,7 +602,7 @@ router.get("/reviews/:packageId", async (req: Request, res: Response) => {
         userName: profiles.name,
       })
       .from(packageReviews)
-      .leftJoin(profiles, sql`${profiles.id}::text = ${packageReviews.userId}`)
+      .leftJoin(profiles, sql`${profiles.id}::text = ${packageReviews.userId}::text`)
       .where(and(eq(packageReviews.packageId, String(req.params.packageId)), eq(packageReviews.isApproved, true)))
       .orderBy(desc(packageReviews.createdAt));
     res.json({ data });

@@ -164,7 +164,9 @@ const PackageDetail = () => {
 
   const getLowestPrice = (prices: { room_type: string; price: number }[]) => {
     if (!prices || prices.length === 0) return 0;
-    return Math.min(...prices.map((p) => p.price));
+    const validPrices = prices.filter((p) => p.price > 0);
+    if (validPrices.length === 0) return 0;
+    return Math.min(...validPrices.map((p) => p.price));
   };
 
   const departures = pkg?.departures ?? [];
