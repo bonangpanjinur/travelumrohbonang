@@ -12,7 +12,7 @@
 | Batch 1 — Keamanan & Stabilitas Backend | 7 | ✅ 7 | 0 |
 | Prioritas Utama — UX Kritis | 4 | ✅ 4 | 0 |
 | P1 — Alur Tidak Optimal | 3 | ✅ 3 | 0 |
-| P2 — Penyempurnaan | 3 | ❌ 0 | 3 |
+| P2 — Penyempurnaan | 3 | ✅ 3 | 0 |
 
 ---
 

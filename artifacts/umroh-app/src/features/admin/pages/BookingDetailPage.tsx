@@ -19,10 +19,13 @@ import {
   AlertDialogHeader, AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/shared/components/ui/dialog";
+import {
   ArrowLeft, ChevronDown, CheckCircle2, XCircle, Trophy,
   Bed, Calendar, FileDown, ExternalLink, Loader2,
   Package, CreditCard, Banknote, AlertCircle, RefreshCw,
-  User, Phone, Building2, UserCheck,
+  User, Phone, Building2, UserCheck, AlertTriangle, ClipboardCheck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -105,6 +108,12 @@ const BookingDetailPage = () => {
     open: boolean; title: string; description?: string;
     onConfirm: () => void; destructive?: boolean;
   }>({ open: false, title: "", onConfirm: () => {} });
+  const [readinessDialog, setReadinessDialog] = useState<{
+    open: boolean;
+    action: (typeof VALID_TRANSITIONS)[string][number] | null;
+    checkJamaah: boolean;
+    checkRoom: boolean;
+  }>({ open: false, action: null, checkJamaah: false, checkRoom: false });
 
   const fetchBooking = async () => {
     if (!bookingId) return;
@@ -149,28 +158,37 @@ const BookingDetailPage = () => {
   const showConfirm = (title: string, description: string, onConfirm: () => void, destructive = false) =>
     setConfirmDialog({ open: true, title, description, onConfirm, destructive });
 
+  const doStatusChange = async (bookingId: string, newStatus: string, label: string) => {
+    setChangingStatus(true);
+    try {
+      await apiFetch(`/api/admin/bookings/${bookingId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      toast.success(`Status berhasil diubah ke "${label}"`);
+      fetchBooking();
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal mengubah status booking");
+    } finally {
+      setChangingStatus(false);
+    }
+  };
+
   const handleStatusChange = (newStatus: string) => {
     if (!booking) return;
     const action = VALID_TRANSITIONS[booking.status]?.find((t) => t.status === newStatus);
     if (!action) return;
+
+    // P2-2: Tampilkan readiness checklist sebelum menandai selesai
+    if (newStatus === "completed") {
+      setReadinessDialog({ open: true, action, checkJamaah: false, checkRoom: false });
+      return;
+    }
+
     showConfirm(
       `${action.label} booking ini?`,
       `Status akan berubah dari "${booking.status}" → "${newStatus}".`,
-      async () => {
-        setChangingStatus(true);
-        try {
-          await apiFetch(`/api/admin/bookings/${booking.id}/status`, {
-            method: "PATCH",
-            body: JSON.stringify({ status: newStatus }),
-          });
-          toast.success(`Status berhasil diubah ke "${action.label}"`);
-          fetchBooking();
-        } catch (e: any) {
-          toast.error(e?.message || "Gagal mengubah status booking");
-        } finally {
-          setChangingStatus(false);
-        }
-      },
+      () => doStatusChange(booking.id, newStatus, action.label),
       action.variant === "destructive",
     );
   };
@@ -513,6 +531,105 @@ const BookingDetailPage = () => {
         onOpenChange={setShowChangeDeparture}
         onSuccess={fetchBooking}
       />
+
+      {/* ── P2-2: Readiness check sebelum "Tandai Selesai" ──────────────── */}
+      <Dialog
+        open={readinessDialog.open}
+        onOpenChange={(o) => { if (!o) setReadinessDialog((d) => ({ ...d, open: false })); }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardCheck className="w-5 h-5 text-primary" />
+              Konfirmasi Tandai Selesai
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-1">
+            <p className="text-sm text-muted-foreground">
+              Periksa syarat berikut sebelum menandai booking sebagai <strong>Selesai</strong>.
+            </p>
+
+            {/* Check 1: Status Pembayaran */}
+            <div className={`flex items-start gap-3 p-3 rounded-lg border ${
+              booking?.paymentStatus === "paid"
+                ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
+            }`}>
+              {booking?.paymentStatus === "paid"
+                ? <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                : <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+              }
+              <div>
+                <p className="text-sm font-medium">Status Pembayaran</p>
+                <p className={`text-xs mt-0.5 ${booking?.paymentStatus === "paid" ? "text-green-700 dark:text-green-300" : "text-amber-700 dark:text-amber-300"}`}>
+                  {booking?.paymentStatus === "paid"
+                    ? "Lunas — semua pembayaran sudah diterima."
+                    : `Belum lunas (${booking?.paymentStatus === "partial" ? "baru sebagian" : "belum ada pembayaran"}) — pastikan sudah dikonfirmasi ke tim keuangan.`}
+                </p>
+              </div>
+            </div>
+
+            {/* Check 2: Data Jamaah (manual) */}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={readinessDialog.checkJamaah}
+                onChange={(e) => setReadinessDialog((d) => ({ ...d, checkJamaah: e.target.checked }))}
+                className="mt-1 w-4 h-4 accent-primary"
+              />
+              <div>
+                <p className="text-sm font-medium">Data jamaah sudah lengkap</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Nama, nomor paspor, dan data wajib lainnya sudah terisi untuk semua jamaah.
+                </p>
+              </div>
+            </label>
+
+            {/* Check 3: Kamar (manual) */}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={readinessDialog.checkRoom}
+                onChange={(e) => setReadinessDialog((d) => ({ ...d, checkRoom: e.target.checked }))}
+                className="mt-1 w-4 h-4 accent-primary"
+              />
+              <div>
+                <p className="text-sm font-medium">Kamar sudah di-assign</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Semua jamaah sudah mendapatkan kamar di hotel Makkah dan Madinah.
+                </p>
+              </div>
+            </label>
+          </div>
+
+          <DialogFooter>
+            <button
+              className="px-4 py-2 text-sm border rounded-lg hover:bg-muted transition-colors"
+              onClick={() => setReadinessDialog((d) => ({ ...d, open: false }))}
+            >
+              Batal
+            </button>
+            <button
+              disabled={!readinessDialog.checkJamaah || !readinessDialog.checkRoom}
+              onClick={() => {
+                setReadinessDialog((d) => ({ ...d, open: false }));
+                if (booking && readinessDialog.action) {
+                  const action = readinessDialog.action;
+                  showConfirm(
+                    `${action.label} booking ini?`,
+                    `Status akan berubah dari "${booking.status}" → "completed". Tindakan ini tidak dapat diurungkan.`,
+                    () => doStatusChange(booking.id, "completed", action.label),
+                  );
+                }
+              }}
+              className="px-4 py-2 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Tandai Selesai
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={confirmDialog.open}

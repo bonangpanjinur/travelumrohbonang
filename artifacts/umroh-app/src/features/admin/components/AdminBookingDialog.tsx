@@ -276,8 +276,14 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
 
   // ── Validation ────────────────────────────────────────────────────────────
 
+  // ── P2-3: Validasi format kontak pemesan ─────────────────────────────────
+  const isValidEmail = (v: string) => !v.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+  const isValidPhone = (v: string) => !v.trim() || /^(\+62|08)\d{7,}$/.test(v.trim().replace(/[\s\-()+]/g, ""));
+  const emailOk = isValidEmail(pemesanEmail);
+  const phoneOk = isValidPhone(pemesanPhone);
+
   const canStep2  = !!packageId && !!departureId;
-  const canStep3  = pemesanName.trim().length > 0;
+  const canStep3  = pemesanName.trim().length > 0 && emailOk && phoneOk;
   const canStep4  = jamaah.every((j) => j.name.trim() && j.roomType);
   const quotaOk   = selectedDeparture
     ? selectedDeparture.remainingQuota >= jamaah.length
@@ -569,18 +575,26 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
                 <Input
                   value={pemesanPhone}
                   onChange={(e) => setPemesanPhone(e.target.value)}
-                  placeholder="08xx..."
+                  placeholder="08xx... atau +62xx..."
                   type="tel"
+                  className={!phoneOk ? "border-destructive/60 focus-visible:ring-destructive/30" : ""}
                 />
+                {!phoneOk && (
+                  <p className="text-xs text-destructive">Format tidak valid. Gunakan awalan 08 atau +62, hanya angka.</p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label>Email</Label>
                 <Input
                   value={pemesanEmail}
                   onChange={(e) => setPemesanEmail(e.target.value)}
-                  placeholder="email@..."
+                  placeholder="email@domain.com"
                   type="email"
+                  className={!emailOk ? "border-destructive/60 focus-visible:ring-destructive/30" : ""}
                 />
+                {!emailOk && (
+                  <p className="text-xs text-destructive">Format email tidak valid. Contoh: nama@domain.com</p>
+                )}
               </div>
               <div className="space-y-1.5 col-span-2">
                 <Label>Nama Rombongan <span className="text-muted-foreground text-xs">(opsional)</span></Label>

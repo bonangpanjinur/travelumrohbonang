@@ -248,6 +248,52 @@ router.get("/recent", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/bookings/stats
+ * 4 KPI counts for the booking list summary cards.
+ */
+router.get("/stats", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        COUNT(*)::int
+          FILTER (WHERE b.status NOT IN ('cancelled', 'completed'))
+          AS active,
+        COUNT(*)::int
+          FILTER (WHERE b.status NOT IN ('cancelled', 'completed')
+            AND COALESCE(
+              (SELECT SUM(pt.amount) FROM booking_payments pt
+               WHERE pt.booking_id = b.id AND NOT pt.is_voided), 0) = 0)
+          AS waiting_payment,
+        COUNT(*)::int
+          FILTER (WHERE b.total_price > 0
+            AND COALESCE(
+              (SELECT SUM(pt.amount) FROM booking_payments pt
+               WHERE pt.booking_id = b.id AND NOT pt.is_voided), 0) >= b.total_price)
+          AS paid,
+        COUNT(*)::int
+          FILTER (WHERE b.status NOT IN ('cancelled', 'completed')
+            AND EXISTS (
+              SELECT 1 FROM package_departures pd
+              WHERE pd.id = b.departure_id
+                AND pd.departure_date BETWEEN CURRENT_DATE
+                AND CURRENT_DATE + INTERVAL '30 days'
+            ))
+          AS departing_soon
+      FROM bookings b
+    `);
+    const row = (result.rows?.[0] ?? {}) as Record<string, unknown>;
+    res.json({
+      active:          Number(row.active          ?? 0),
+      waitingPayment:  Number(row.waiting_payment  ?? 0),
+      paid:            Number(row.paid             ?? 0),
+      departingSoon:   Number(row.departing_soon   ?? 0),
+    });
+  } catch (e) {
+    sendAdminError(res, "GET /api/admin/bookings/stats", e);
+  }
+});
+
 router.get("/:id", async (req, res) => {
   try {
     const id = req.params.id as string;

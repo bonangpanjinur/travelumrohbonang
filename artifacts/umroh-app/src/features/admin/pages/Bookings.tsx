@@ -55,6 +55,7 @@ const AdminBookings = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showBulkDepartureModal, setShowBulkDepartureModal] = useState(false);
   const [bulkPendingAction, setBulkPendingAction] = useState<"confirmed" | "cancelled" | null>(null);
+  const [bookingStats, setBookingStats] = useState<{ active: number; waitingPayment: number; paid: number; departingSoon: number } | null>(null);
 
   // Jika semua booking yang dipilih berasal dari paket yang sama, gunakan packageId-nya
   // supaya modal hanya menampilkan keberangkatan paket tersebut.
@@ -153,6 +154,9 @@ const AdminBookings = () => {
         departureDate: d.departureDate,
       }))))
       .catch(() => { /* filter keberangkatan opsional */ });
+    apiFetch<{ active: number; waitingPayment: number; paid: number; departingSoon: number }>("/api/admin/bookings/stats")
+      .then(setBookingStats)
+      .catch(() => {});
   }, []);
 
   // Filter berubah → reset ke halaman pertama dan fetch ulang.
@@ -256,6 +260,28 @@ const AdminBookings = () => {
           </Button>
         </div>
       </div>
+
+      {/* ── Summary Cards ─────────────────────────────────────────────────── */}
+      {bookingStats && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="bg-card border border-border rounded-xl p-4">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Booking Aktif</p>
+            <p className="text-2xl font-bold mt-1">{bookingStats.active.toLocaleString("id-ID")}</p>
+          </div>
+          <div className="bg-card border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium uppercase tracking-wide">Menunggu Pembayaran</p>
+            <p className="text-2xl font-bold mt-1 text-amber-700 dark:text-amber-300">{bookingStats.waitingPayment.toLocaleString("id-ID")}</p>
+          </div>
+          <div className="bg-card border border-green-200 dark:border-green-800 rounded-xl p-4">
+            <p className="text-xs text-green-600 dark:text-green-400 font-medium uppercase tracking-wide">Lunas</p>
+            <p className="text-2xl font-bold mt-1 text-green-700 dark:text-green-300">{bookingStats.paid.toLocaleString("id-ID")}</p>
+          </div>
+          <div className="bg-card border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+            <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide">Berangkat ≤30 Hari</p>
+            <p className="text-2xl font-bold mt-1 text-blue-700 dark:text-blue-300">{bookingStats.departingSoon.toLocaleString("id-ID")}</p>
+          </div>
+        </div>
+      )}
 
       {/* ── Baris 2: Pencarian + Status Filter + Toggle Filter Lanjutan ────── */}
       <div className="flex flex-col sm:flex-row gap-2">
