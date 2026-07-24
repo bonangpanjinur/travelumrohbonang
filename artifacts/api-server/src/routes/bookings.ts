@@ -554,7 +554,8 @@ router.post(
       res
         .status(201)
         .json({ data: created.map((p) => BookingPilgrimSchema.parse(p)) });
-    } catch {
+    } catch (err) {
+      console.error("[bookings] POST /:id/pilgrims error:", err);
       res.status(500).json({ error: "Failed to create booking pilgrims" });
     }
   },
