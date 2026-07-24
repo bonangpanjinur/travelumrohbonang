@@ -29,7 +29,8 @@ const AdminBookings = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState(""); // nilai di input (langsung)
+  const [search, setSearch] = useState("");           // nilai ter-debounce (dikirim ke API)
   const [branchFilter, setBranchFilter] = useState("__all__");
   const [packageFilter, setPackageFilter] = useState("__all__");
   const [departureFilter, setDepartureFilter] = useState("__all_dep__");
@@ -85,12 +86,19 @@ const AdminBookings = () => {
     }
   };
 
+  // Debounce: tunda pengiriman ke API 300 ms setelah ketikan berhenti
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   const hasActiveFilters =
-    filter !== "all" || paymentFilter !== "all" || search !== "" || branchFilter !== "__all__" || packageFilter !== "__all__" || startDate !== "" || endDate !== "" || departureFilter !== "__all_dep__";
+    filter !== "all" || paymentFilter !== "all" || searchInput !== "" || branchFilter !== "__all__" || packageFilter !== "__all__" || startDate !== "" || endDate !== "" || departureFilter !== "__all_dep__";
 
   const resetFilters = () => {
     setFilter("all");
     setPaymentFilter("all");
+    setSearchInput("");
     setSearch("");
     setBranchFilter("__all__");
     setPackageFilter("__all__");
@@ -206,18 +214,15 @@ const AdminBookings = () => {
             <Plus className="w-4 h-4 mr-2" /> Tambah Booking
           </Button>
           <Button variant="outline" onClick={() => {
-            const headers = ["Kode Booking", "Nama", "Email", "Paket", "Total Harga", "Status", "Tanggal"];
-            const rows = bookings.map(b => [
-              b.bookingCode, b.profile?.name || "-", b.profile?.email || "-",
-              b.package?.title || "-", String(b.totalPrice),
-              b.status || "draft", b.createdAt ? new Date(b.createdAt).toISOString().slice(0, 10) : ""
-            ]);
-            exportToCsv("bookings", headers, rows);
-          }}>
-            <Download className="w-4 h-4 mr-2" /> Export CSV
-          </Button>
-          <Button variant="outline" onClick={() => {
-            const params = new URLSearchParams({ status: filter, search: search.trim(), branchId: branchFilter, packageId: packageFilter });
+            // Export semua data sesuai filter aktif (bukan hanya halaman ini)
+            const params = new URLSearchParams({
+              status: filter,
+              paymentStatus: paymentFilter,
+              search: search.trim(),
+              branchId: branchFilter,
+              packageId: packageFilter,
+            });
+            if (departureFilter !== "__all_dep__") params.set("departureId", departureFilter);
             if (startDate) params.set("startDate", startDate);
             if (endDate) params.set("endDate", endDate);
             window.open(`/api/admin/bookings/export.xlsx?${params}`, "_blank");
@@ -233,8 +238,8 @@ const AdminBookings = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Cari kode booking, nama, email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="pl-9"
           />
         </div>

@@ -435,11 +435,14 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
                           </Badge>
                         </div>
                         <div className="mt-1.5 flex flex-wrap gap-2 pl-6">
-                          {dep.prices.map((p) => (
+                          {dep.prices.filter((p) => p.price > 0).map((p) => (
                             <span key={p.roomType} className="text-xs text-muted-foreground">
                               {ROOM_LABELS[p.roomType] ?? p.roomType}: Rp {p.price.toLocaleString("id-ID")}
                             </span>
                           ))}
+                          {dep.prices.every((p) => p.price <= 0) && (
+                            <span className="text-xs text-amber-600 italic">Harga belum diatur</span>
+                          )}
                         </div>
                       </button>
                     ))}
@@ -505,7 +508,23 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
               </div>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex items-center justify-end gap-3 pt-2">
+              {!canStep2 && (
+                <ul className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5 mr-auto">
+                  {!packageId && (
+                    <li className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block flex-shrink-0" />
+                      Pilih paket Umroh
+                    </li>
+                  )}
+                  {packageId && !departureId && (
+                    <li className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block flex-shrink-0" />
+                      Pilih jadwal keberangkatan
+                    </li>
+                  )}
+                </ul>
+              )}
               <Button
                 disabled={!canStep2}
                 onClick={() => setStep(2)}
@@ -610,15 +629,23 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
               </div>
             </div>
 
-            <div className="flex justify-between pt-2">
+            <div className="flex justify-between items-center pt-2">
               <Button variant="outline" onClick={() => setStep(1)}>← Kembali</Button>
-              <Button
-                disabled={!canStep3}
-                onClick={() => setStep(3)}
-                className="gradient-gold text-primary"
-              >
-                Lanjut <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
+              <div className="flex items-center gap-3">
+                {!canStep3 && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block flex-shrink-0" />
+                    Nama pemesan wajib diisi
+                  </p>
+                )}
+                <Button
+                  disabled={!canStep3}
+                  onClick={() => setStep(3)}
+                  className="gradient-gold text-primary"
+                >
+                  Lanjut <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -702,7 +729,7 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
                         Tipe Kamar <span className="text-destructive">*</span>
                       </Label>
                       <div className="flex gap-2 flex-wrap">
-                        {(selectedDeparture?.prices || []).map((p) => (
+                        {(selectedDeparture?.prices || []).filter((p) => p.price > 0).map((p) => (
                           <button
                             key={p.roomType}
                             type="button"
@@ -719,6 +746,9 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
                             </span>
                           </button>
                         ))}
+                        {(selectedDeparture?.prices || []).every((p) => p.price <= 0) && (
+                          <p className="text-xs text-amber-600 italic">Harga kamar belum diatur untuk jadwal ini.</p>
+                        )}
                       </div>
                     </div>
                   </div>
