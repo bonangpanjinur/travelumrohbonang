@@ -36,6 +36,7 @@ import {
 import { validate } from "../../middlewares/validate";
 import { sendAdminError } from "../../lib/adminApiError";
 import { awardLoyaltyPointsForBooking } from "../../lib/loyalty";
+import { requireSuperAdmin } from "../../middlewares/requireAdmin";
 
 const router = Router();
 
@@ -1639,6 +1640,39 @@ router.get("/:id/passport-recommendation", async (req, res) => {
     res.send(pdfBuffer);
   } catch (e) {
     sendAdminError(res, "GET /api/admin/bookings/:id/passport-recommendation", e);
+  }
+});
+
+// ── DELETE /:id — hapus booking permanen (super admin only) ──────────────────
+router.delete("/:id", requireSuperAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [existing] = await db
+      .select({ id: bookings.id, bookingCode: bookings.bookingCode, departureId: bookings.departureId })
+      .from(bookings)
+      .where(eq(bookings.id, id));
+
+    if (!existing) {
+      res.status(404).json({ error: "Booking tidak ditemukan" });
+      return;
+    }
+
+    // Restore departure quota if booking had a departure
+    if (existing.departureId) {
+      await db
+        .update(packageDepartures)
+        .set({ remainingQuota: sql`${packageDepartures.remainingQuota} + 1` })
+        .where(eq(packageDepartures.id, existing.departureId));
+    }
+
+    // Delete booking — cascades to bookingRooms, bookingPilgrims,
+    // bookingPayments, bookingStatusLogs, pilgrimDocuments via DB constraints
+    await db.delete(bookings).where(eq(bookings.id, id));
+
+    res.json({ success: true, message: `Booking ${existing.bookingCode} berhasil dihapus` });
+  } catch (e) {
+    sendAdminError(res, "DELETE /api/admin/bookings/:id", e);
   }
 });
 

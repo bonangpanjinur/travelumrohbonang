@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/shared/hooks/useAuth";
 import { apiFetch } from "@/shared/lib/apiClient";
 import {
   Users, UserCheck, DollarSign, FileDown, Building2, UsersRound,
@@ -164,6 +165,8 @@ const BookingDetailPanel = ({
   isGroupBooking, groupName, groupPicName, groupPicPhone,
   standalone = false,
 }: BookingDetailPanelProps) => {
+  const { role } = useAuth();
+  const isSuperAdmin = role === "super_admin";
   const [pilgrims, setPilgrims] = useState<FullPilgrim[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
@@ -221,6 +224,9 @@ const BookingDetailPanel = ({
   const [notes, setNotes] = useState<string>("");
   const [editingNotes, setEditingNotes] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
+
+  // Delete booking (super admin only)
+  const [deletingBooking, setDeletingBooking] = useState(false);
 
   // Confirm dialog (replaces window.confirm)
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -362,6 +368,30 @@ const BookingDetailPanel = ({
     fetchDetails();
     onBookingChange?.();
     onBranchChange?.();
+  };
+
+  // ── Hapus Booking (super admin only) ────────────────────────────────────
+  const handleDeleteBooking = () => {
+    showConfirm(
+      "Hapus booking ini secara permanen?",
+      "Seluruh data booking termasuk jemaah, pembayaran, dan dokumen akan dihapus permanen dan tidak dapat dipulihkan.",
+      async () => {
+        setDeletingBooking(true);
+        try {
+          await apiFetch(`/api/admin/bookings/${bookingId}`, { method: "DELETE" });
+          toast.success("Booking berhasil dihapus");
+          onBookingChange?.();
+          if (standalone) {
+            navigate("/admin/bookings");
+          }
+        } catch (e: any) {
+          toast.error(e?.message || "Gagal menghapus booking");
+        } finally {
+          setDeletingBooking(false);
+        }
+      },
+      true,
+    );
   };
 
   // ── Ubah Status Booking ─────────────────────────────────────────────────
@@ -720,6 +750,14 @@ const BookingDetailPanel = ({
           {departureId && (
             <Button size="sm" variant="outline" onClick={() => navigate(`/admin/manifest?departureId=${departureId}`)}>
               <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Lihat Manifest
+            </Button>
+          )}
+          {isSuperAdmin && (
+            <Button size="sm" variant="destructive" onClick={handleDeleteBooking} disabled={deletingBooking}>
+              {deletingBooking
+                ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                : <Trash2 className="w-3.5 h-3.5 mr-1.5" />}
+              Hapus Booking
             </Button>
           )}
         </div>
