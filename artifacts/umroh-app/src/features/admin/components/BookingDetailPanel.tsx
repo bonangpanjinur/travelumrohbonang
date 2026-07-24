@@ -81,7 +81,7 @@ interface Payment {
   id: string;
   type: string;
   amount: number;
-  paidAt: string;
+  paidAt: string | null;
   method: string | null;
   referenceNumber: string | null;
   notes: string | null;
@@ -1350,7 +1350,9 @@ const BookingDetailPanel = ({
                       <div>
                         <p className="font-semibold tabular-nums">Rp {p.amount.toLocaleString("id-ID")}</p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(p.paidAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                          {p.paidAt && !isNaN(new Date(p.paidAt).getTime())
+                            ? new Date(p.paidAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                            : "—"}
                         </p>
                       </div>
                       <button
@@ -1408,7 +1410,9 @@ const BookingDetailPanel = ({
                       <tr key={ins.id}>
                         <td className="py-1.5 font-medium">#{ins.installmentNumber}</td>
                         <td className="py-1.5 text-muted-foreground">
-                          {new Date(ins.dueDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                          {ins.dueDate && !isNaN(new Date(ins.dueDate).getTime())
+                            ? new Date(ins.dueDate).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                            : "—"}
                         </td>
                         <td className="py-1.5 text-right tabular-nums font-medium">
                           Rp {ins.amount.toLocaleString("id-ID")}
@@ -1457,7 +1461,9 @@ const BookingDetailPanel = ({
               <li key={log.id} className="ml-4">
                 <div className="absolute w-2 h-2 bg-primary rounded-full -left-1 top-1.5 border border-background" />
                 <div className="text-xs text-muted-foreground">
-                  {new Date(log.createdAt).toLocaleString("id-ID")} · {log.changedBy ?? "system"}
+                  {log.createdAt && !isNaN(new Date(log.createdAt).getTime())
+                    ? new Date(log.createdAt).toLocaleString("id-ID")
+                    : "—"} · {log.changedBy ?? "system"}
                 </div>
                 <div className="text-sm mt-0.5">
                   {log.fromStatus ? (

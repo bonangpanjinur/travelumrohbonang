@@ -99,7 +99,12 @@ router.get("/", async (req, res) => {
       .where(eq(pilgrimEquipment.bookingId, bookingId!));
 
     res.json({ data: rows });
-  } catch (e) {
+  } catch (e: any) {
+    // Gracefully handle missing table (not yet migrated to prod DB)
+    if (e?.code === "42P01" || String(e?.message).includes("does not exist")) {
+      res.json({ data: [] });
+      return;
+    }
     console.error("[pilgrim-equipment GET /]", e);
     res.status(500).json({ error: "Failed to fetch pilgrim equipment" });
   }
