@@ -23,8 +23,8 @@ import {
   Loader2, Plus, Trash2, ChevronRight, Calendar, Package,
   UserRound, Users, CreditCard, Search,
 } from "lucide-react";
-import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { safeFormatDate } from "@/lib/utils";
 import { useFormDraft } from "../hooks/useFormDraft";
 import { FormDraftBanner } from "./FormDraftBanner";
 
@@ -34,11 +34,11 @@ interface Pkg { id: string; title: string }
 
 interface Departure {
   id: string;
-  departure_date: string;
-  return_date: string | null;
-  remaining_quota: number;
+  departureDate: string;
+  returnDate: string | null;
+  remainingQuota: number;
   quota: number;
-  prices: { room_type: string; price: number }[];
+  prices: { roomType: string; price: number }[];
 }
 
 interface Branch { id: string; name: string }
@@ -270,7 +270,7 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
 
   const getPriceForJamaah = (j: JamaahRow) => {
     if (!j.roomType || !selectedDeparture) return 0;
-    return selectedDeparture.prices.find((p) => p.room_type === j.roomType)?.price || 0;
+    return selectedDeparture.prices.find((p) => p.roomType === j.roomType)?.price || 0;
   };
   const totalPrice = jamaah.reduce((s, j) => s + getPriceForJamaah(j), 0);
 
@@ -280,7 +280,7 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
   const canStep3  = pemesanName.trim().length > 0;
   const canStep4  = jamaah.every((j) => j.name.trim() && j.roomType);
   const quotaOk   = selectedDeparture
-    ? selectedDeparture.remaining_quota >= jamaah.length
+    ? selectedDeparture.remainingQuota >= jamaah.length
     : true;
   const canSubmit = canStep2 && canStep3 && canStep4 && quotaOk;
 
@@ -423,21 +423,21 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-muted-foreground" />
                             <span className="font-medium text-sm">
-                              {format(new Date(dep.departure_date), "d MMMM yyyy", { locale: localeId })}
-                              {dep.return_date && ` — ${format(new Date(dep.return_date), "d MMMM yyyy", { locale: localeId })}`}
+                              {safeFormatDate(dep.departureDate, "d MMMM yyyy", { locale: localeId, fallback: "Tanggal tidak tersedia" })}
+                              {dep.returnDate && ` — ${safeFormatDate(dep.returnDate, "d MMMM yyyy", { locale: localeId, fallback: "Tanggal tidak tersedia" })}`}
                             </span>
                           </div>
                           <Badge
-                            variant={dep.remaining_quota <= 5 ? "destructive" : "secondary"}
+                            variant={dep.remainingQuota <= 5 ? "destructive" : "secondary"}
                             className="text-xs"
                           >
-                            Sisa {dep.remaining_quota}/{dep.quota} kursi
+                            Sisa {dep.remainingQuota}/{dep.quota} kursi
                           </Badge>
                         </div>
                         <div className="mt-1.5 flex flex-wrap gap-2 pl-6">
                           {dep.prices.map((p) => (
-                            <span key={p.room_type} className="text-xs text-muted-foreground">
-                              {ROOM_LABELS[p.room_type] ?? p.room_type}: Rp {p.price.toLocaleString("id-ID")}
+                            <span key={p.roomType} className="text-xs text-muted-foreground">
+                              {ROOM_LABELS[p.roomType] ?? p.roomType}: Rp {p.price.toLocaleString("id-ID")}
                             </span>
                           ))}
                         </div>
@@ -628,7 +628,7 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
           <div className="space-y-4">
             {!quotaOk && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
-                ⚠️ Sisa kuota {selectedDeparture?.remaining_quota} kursi, sudah ada {jamaah.length} jamaah.
+                ⚠️ Sisa kuota {selectedDeparture?.remainingQuota} kursi, sudah ada {jamaah.length} jamaah.
                 Kurangi jumlah jamaah atau pilih jadwal lain.
               </div>
             )}
@@ -704,16 +704,16 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
                       <div className="flex gap-2 flex-wrap">
                         {(selectedDeparture?.prices || []).map((p) => (
                           <button
-                            key={p.room_type}
+                            key={p.roomType}
                             type="button"
-                            onClick={() => updateJamaah(idx, "roomType", p.room_type)}
+                            onClick={() => updateJamaah(idx, "roomType", p.roomType)}
                             className={`px-3 py-1.5 rounded-md border text-xs font-medium transition-all ${
-                              j.roomType === p.room_type
+                              j.roomType === p.roomType
                                 ? "border-primary bg-primary/5 ring-1 ring-primary text-primary"
                                 : "border-border hover:border-primary/50"
                             }`}
                           >
-                            {ROOM_LABELS[p.room_type] ?? p.room_type}
+                            {ROOM_LABELS[p.roomType] ?? p.roomType}
                             <span className="ml-1.5 text-muted-foreground">
                               Rp {p.price.toLocaleString("id-ID")}
                             </span>
@@ -731,7 +731,7 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
               variant="outline"
               className="w-full gap-2"
               onClick={addJamaah}
-              disabled={!!(selectedDeparture && jamaah.length >= selectedDeparture.remaining_quota)}
+              disabled={!!(selectedDeparture && jamaah.length >= selectedDeparture.remainingQuota)}
             >
               <Plus className="w-4 h-4" /> Tambah Jamaah
             </Button>
@@ -764,7 +764,7 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Keberangkatan</span>
                     <span className="font-medium">
-                      {selectedDeparture && format(new Date(selectedDeparture.departure_date), "d MMM yyyy", { locale: localeId })}
+                      {selectedDeparture && safeFormatDate(selectedDeparture.departureDate, "d MMM yyyy", { locale: localeId, fallback: "Tanggal tidak tersedia" })}
                     </span>
                   </div>
                   <div className="flex justify-between">

@@ -16,3 +16,4 @@
 - [Backlog D-I completion](backlog-completion.md) — all 13 backlog items done; key patterns: paginatedIds dep string, literal routes before /:id, Navbar defaultLinks for /jadwal.
 - [FASE 1 schema migration](fase1-schema-migration.md) — hotel/airline moved from packages→package_departures; package_hotels→departure_hotels; run SQL migration before using new schema.
 - [FASE 2 backend API](fase2-backend-api.md) — POST/PATCH departures now handle hotelMakkahId, hotelMadinahId, extraHotels; GET admin/packages/:id includes hotel/airline/extra_hotels per departure; new GET+PUT departures/:id/extra-hotels endpoints; PackageDepartureSchema extended.
+- [Imported workspace dependency bootstrap](imported-workspace-dependency-bootstrap.md) — install the existing pnpm lockfile before diagnosing workflow failures in imported monorepos.
