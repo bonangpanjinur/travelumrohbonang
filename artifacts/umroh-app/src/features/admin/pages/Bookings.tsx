@@ -4,7 +4,15 @@ import BookingFilters from "@/features/admin/components/BookingFilters";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw, CheckSquare2, Filter, ArrowRightLeft } from "lucide-react";
+import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw, CheckSquare2, Filter, ArrowRightLeft, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/shared/components/ui/dialog";
 import BulkChangeDepartureModal from "@/features/admin/components/BulkChangeDepartureModal";
 
 interface PackageOption { id: string; title: string; }
@@ -46,6 +54,7 @@ const AdminBookings = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [showBulkDepartureModal, setShowBulkDepartureModal] = useState(false);
+  const [bulkPendingAction, setBulkPendingAction] = useState<"confirmed" | "cancelled" | null>(null);
 
   // Jika semua booking yang dipilih berasal dari paket yang sama, gunakan packageId-nya
   // supaya modal hanya menampilkan keberangkatan paket tersebut.
@@ -71,8 +80,24 @@ const AdminBookings = () => {
     exportToCsv(`bookings-selected-${selected.length}`, headers, rows);
   };
 
+  // Preview info for bulk confirmation dialog
+  const bulkPreview = useMemo(() => {
+    const selected = bookings.filter((b) => selectedIds.includes(b.id));
+    const totalJamaah = selected.reduce((s, b) => s + (b.pilgrimsCount ?? 1), 0);
+    const pkgNames = [...new Set(selected.map((b) => b.package?.title).filter(Boolean))];
+    const depDates = [...new Set(
+      selected
+        .map((b) => b.departure?.departureDate)
+        .filter(Boolean)
+        .map((d) => new Date(d!).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }))
+    )];
+    const hasPaid = selected.some((b) => b.paymentStatus === "paid");
+    return { selected, totalJamaah, pkgNames, depDates, hasPaid };
+  }, [selectedIds, bookings]);
+
   const handleBulkStatus = async (status: "confirmed" | "cancelled") => {
     if (selectedIds.length === 0) return;
+    setBulkPendingAction(null);
     try {
       const res = await apiFetch<{ updated: number }>("/api/admin/bookings/bulk-status", {
         method: "PATCH",
@@ -375,13 +400,13 @@ const AdminBookings = () => {
           <span className="text-sm font-medium">{selectedIds.length} booking dipilih</span>
           <div className="flex flex-wrap gap-2 ml-auto">
             <button
-              onClick={() => handleBulkStatus("confirmed")}
+              onClick={() => setBulkPendingAction("confirmed")}
               className="px-3 py-1.5 text-xs font-medium rounded bg-green-600 text-white hover:bg-green-700 transition-colors"
             >
               Konfirmasi Semua
             </button>
             <button
-              onClick={() => handleBulkStatus("cancelled")}
+              onClick={() => setBulkPendingAction("cancelled")}
               className="px-3 py-1.5 text-xs font-medium rounded bg-destructive text-white hover:bg-destructive/90 transition-colors"
             >
               Batalkan Semua
@@ -504,6 +529,74 @@ const AdminBookings = () => {
         onOpenChange={setBookingOpen}
         onSuccess={() => fetchBookings(0)}
       />
+
+      {/* ── Bulk Action Confirmation Dialog ─────────────────────────────── */}
+      <Dialog open={!!bulkPendingAction} onOpenChange={(o) => { if (!o) setBulkPendingAction(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {bulkPendingAction === "cancelled" && (
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+              )}
+              {bulkPendingAction === "confirmed" ? "Konfirmasi Booking" : "Batalkan Booking"}
+            </DialogTitle>
+            <DialogDescription>
+              {bulkPendingAction === "confirmed"
+                ? "Booking berikut akan diubah statusnya menjadi Dikonfirmasi."
+                : "Booking berikut akan diubah statusnya menjadi Dibatalkan. Tindakan ini tidak dapat diurungkan secara otomatis."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-1">
+            {/* Summary numbers */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-muted/60 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold">{bulkPreview.selected.length}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Booking dipilih</p>
+              </div>
+              <div className="bg-muted/60 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold">{bulkPreview.totalJamaah}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Total jamaah</p>
+              </div>
+            </div>
+
+            {/* Package / departure info */}
+            {bulkPreview.pkgNames.length > 0 && (
+              <div className="text-sm space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Paket</p>
+                <p className="font-medium">{bulkPreview.pkgNames.join(", ")}</p>
+              </div>
+            )}
+            {bulkPreview.depDates.length > 0 && (
+              <div className="text-sm space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Jadwal Keberangkatan</p>
+                <p>{bulkPreview.depDates.join(", ")}</p>
+              </div>
+            )}
+
+            {/* Warning if any booking is already paid */}
+            {bulkPreview.hasPaid && (
+              <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-300">
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>Ada booking yang sudah <strong>lunas</strong> di dalam pilihan ini. Pastikan perubahan status sudah dikoordinasikan dengan tim keuangan.</span>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkPendingAction(null)}>
+              Batal
+            </Button>
+            <Button
+              variant={bulkPendingAction === "cancelled" ? "destructive" : "default"}
+              onClick={() => bulkPendingAction && handleBulkStatus(bulkPendingAction)}
+              className={bulkPendingAction === "confirmed" ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+            >
+              {bulkPendingAction === "confirmed" ? "Ya, Konfirmasi" : "Ya, Batalkan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* BKG-F05: Pindah keberangkatan massal */}
       <BulkChangeDepartureModal

@@ -451,60 +451,23 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Skema Pembayaran</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {PAYMENT_SCHEMES.map((s) => (
-                    <button
-                      key={s.value}
-                      type="button"
-                      onClick={() => setPaymentScheme(s.value)}
-                      className={`p-2.5 rounded-lg border text-sm font-medium transition-all ${
-                        paymentScheme === s.value
-                          ? "border-primary bg-primary/5 ring-1 ring-primary"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Cabang</Label>
-                <Select value={branchId || "__none__"} onValueChange={(v) => setBranchId(v === "__none__" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Pilih cabang..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">— Tanpa cabang —</SelectItem>
-                    {branches.map((b) => (
-                      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Agen Referral</Label>
-                <Select value={agentId || "__none__"} onValueChange={(v) => setAgentId(v === "__none__" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Pilih agen..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">— Tanpa agen —</SelectItem>
-                    {agents.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>{a.name} ({a.referral_code})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Catatan Internal</Label>
-                <Input
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Catatan opsional..."
-                />
+            <div className="space-y-1.5">
+              <Label>Skema Pembayaran</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {PAYMENT_SCHEMES.map((s) => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => setPaymentScheme(s.value)}
+                    className={`p-2.5 rounded-lg border text-sm font-medium transition-all ${
+                      paymentScheme === s.value
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -626,6 +589,30 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
                   onChange={(e) => setGroupName(e.target.value)}
                   placeholder="cth: Rombongan Masjid Al-Ikhlas"
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Cabang <span className="text-muted-foreground text-xs">(opsional)</span></Label>
+                <Select value={branchId || "__none__"} onValueChange={(v) => setBranchId(v === "__none__" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Pilih cabang..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Tanpa cabang —</SelectItem>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Agen Referral <span className="text-muted-foreground text-xs">(opsional)</span></Label>
+                <Select value={agentId || "__none__"} onValueChange={(v) => setAgentId(v === "__none__" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Pilih agen..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Tanpa agen —</SelectItem>
+                    {agents.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.name} ({a.referral_code})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -844,6 +831,17 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
                   <span className="font-bold text-lg">Rp {totalPrice.toLocaleString("id-ID")}</span>
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Catatan Internal <span className="text-muted-foreground text-xs">(opsional)</span></Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Catatan internal untuk admin..."
+                rows={2}
+                className="resize-none"
+              />
             </div>
 
             <div className="flex justify-between pt-2">
