@@ -52,6 +52,12 @@
 }
 
 @layer base {
+  /* Prevent page-level horizontal scroll on all mobile browsers without
+     blocking touch-scroll inside child scroll containers (tabs, carousels, etc.) */
+  html {
+    overflow-x: hidden;
+  }
+
   :root {
     --background: 0 15% 97%;
     --foreground: 0 25% 12%;

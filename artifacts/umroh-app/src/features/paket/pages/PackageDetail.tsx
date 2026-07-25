@@ -343,7 +343,7 @@ const PackageDetail = () => {
   const galleryExtra = gallery.length - GALLERY_PREVIEW;
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background">
       <SEO
         title={pkg.title}
         description={pkg.description || `Paket ${pkg.title} dengan pelayanan premium dan bimbingan ibadah lengkap.`}
@@ -538,7 +538,7 @@ const PackageDetail = () => {
               {/* ── Tab Bar ──────────────────────────────────────────────── */}
               <div className="sticky top-[64px] z-20 bg-background/95 backdrop-blur-sm border-b border-border mb-8 -mx-4 sm:mx-0">
                 <div
-                  className="flex"
+                  className="flex px-4 sm:px-0"
                   style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}
                 >
                   {TABS.map((tab) => {
