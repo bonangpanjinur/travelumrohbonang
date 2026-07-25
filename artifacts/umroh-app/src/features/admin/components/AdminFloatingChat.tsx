@@ -1,16 +1,17 @@
 /**
  * AdminFloatingChat
  *
- * A floating action button (bottom-right) visible on every admin page.
- * Shows an unread-message badge. Clicking it opens a compact chat panel
- * where admins can browse conversations and reply without leaving the page.
+ * Rendered via ReactDOM.createPortal → document.body so it is never clipped
+ * by stacking contexts, overflow:hidden, or CSS transforms in the admin tree.
  *
- * Polls /api/admin/chats every 20 seconds for new messages.
+ * Shows a chat-bubble FAB at bottom-right on every admin page.
+ * Badge = conversations that arrived since the panel was last opened.
+ * Click to open a slide-up panel with conversation list + inline reply.
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { apiFetch } from "@/shared/lib/apiClient";
-import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Loader2, ChevronLeft, RefreshCw } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -25,21 +26,19 @@ interface Conversation {
   bookingCode: string;
   message: string;
   createdAt: string;
-  unread?: boolean;
 }
 
 interface ChatMessage {
   id: string;
   booking_id: string;
-  sender_id: string;
   sender_role: "admin" | "buyer";
   message: string;
   createdAt: string;
 }
 
-// ─── Mini ChatBox (inline, no card wrapper) ───────────────────────────────────
+// ─── Mini ChatBox ─────────────────────────────────────────────────────────────
 
-function MiniChatBox({ bookingId, onClose }: { bookingId: string; onClose: () => void }) {
+function MiniChatBox({ bookingId }: { bookingId: string }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
@@ -47,7 +46,7 @@ function MiniChatBox({ bookingId, onClose }: { bookingId: string; onClose: () =>
   const [loading, setLoading] = useState(true);
   const endRef = useRef<HTMLDivElement>(null);
 
-  const loadMessages = useCallback(async () => {
+  const load = useCallback(async () => {
     try {
       const { data } = await apiFetch<{ data: ChatMessage[] }>(
         `/api/cms/chat-messages?booking_id=${bookingId}`
@@ -62,10 +61,10 @@ function MiniChatBox({ bookingId, onClose }: { bookingId: string; onClose: () =>
 
   useEffect(() => {
     setLoading(true);
-    loadMessages();
-    const t = setInterval(loadMessages, 15_000);
+    load();
+    const t = setInterval(load, 15_000);
     return () => clearInterval(t);
-  }, [loadMessages]);
+  }, [load]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -85,8 +84,8 @@ function MiniChatBox({ bookingId, onClose }: { bookingId: string; onClose: () =>
         }),
       });
       setText("");
-      await loadMessages();
-    } catch (e: any) {
+      await load();
+    } catch {
       toast.error("Gagal mengirim pesan");
     } finally {
       setSending(false);
@@ -95,7 +94,6 @@ function MiniChatBox({ bookingId, onClose }: { bookingId: string; onClose: () =>
 
   return (
     <div className="flex flex-col h-full">
-      {/* messages */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
         {loading ? (
           <div className="flex justify-center py-8">
@@ -110,9 +108,7 @@ function MiniChatBox({ bookingId, onClose }: { bookingId: string; onClose: () =>
               <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div
                   className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${
-                    mine
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
+                    mine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
                   }`}
                 >
                   <div className="text-[10px] opacity-60 mb-0.5">
@@ -126,8 +122,6 @@ function MiniChatBox({ bookingId, onClose }: { bookingId: string; onClose: () =>
         )}
         <div ref={endRef} />
       </div>
-
-      {/* input */}
       <div className="border-t border-border p-2 flex gap-2 bg-background">
         <Input
           placeholder="Balas pesan..."
@@ -137,17 +131,8 @@ function MiniChatBox({ bookingId, onClose }: { bookingId: string; onClose: () =>
           disabled={sending}
           className="text-sm"
         />
-        <Button
-          onClick={send}
-          disabled={sending || !text.trim()}
-          size="icon"
-          className="shrink-0"
-        >
-          {sending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Send className="w-4 h-4" />
-          )}
+        <Button onClick={send} disabled={sending || !text.trim()} size="icon" className="shrink-0">
+          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </Button>
       </div>
     </div>
@@ -224,7 +209,6 @@ const AdminFloatingChat = () => {
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
-  // track which bookingIds were seen before the panel was last opened
   const seenIds = useRef<Set<string>>(new Set());
 
   const loadConversations = useCallback(async (silent = false) => {
@@ -242,25 +226,21 @@ const AdminFloatingChat = () => {
         createdAt: m.createdAt,
       }));
       setConversations(list);
-
-      // count bookingIds not yet seen
       const newIds = list.filter((c) => !seenIds.current.has(c.bookingId));
       setUnreadCount(newIds.length);
     } catch {
-      /* silent */
+      /* silent — button still renders */
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // initial load + polling
   useEffect(() => {
     loadConversations();
     const t = setInterval(() => loadConversations(true), POLL_INTERVAL);
     return () => clearInterval(t);
   }, [loadConversations]);
 
-  // when panel opens, mark all current as seen
   useEffect(() => {
     if (open) {
       seenIds.current = new Set(conversations.map((c) => c.bookingId));
@@ -268,140 +248,83 @@ const AdminFloatingChat = () => {
     }
   }, [open, conversations]);
 
-  return (
+  // ── Render via portal so it escapes any CSS stacking context in the tree ──
+  return createPortal(
     <>
-      {/* ── Floating trigger button ── */}
-      <motion.button
+      {/* ── FAB trigger ─────────────────────────────────────────────────── */}
+      <button
         onClick={() => setOpen((v) => !v)}
-        whileTap={{ scale: 0.9 }}
-        aria-label="Chat Jamaah"
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-2xl flex items-center justify-center hover:bg-primary/90 transition-colors"
+        aria-label={open ? "Tutup chat" : "Chat Jamaah"}
+        style={{ zIndex: 9999 }}
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-2xl flex items-center justify-center hover:opacity-90 active:scale-95 transition-all"
       >
-        <AnimatePresence mode="wait" initial={false}>
-          {open ? (
-            <motion.span
-              key="close"
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 90, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <X className="w-6 h-6" />
-            </motion.span>
-          ) : (
-            <motion.span
-              key="open"
-              initial={{ rotate: 90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -90, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <MessageCircle className="w-6 h-6" />
-            </motion.span>
-          )}
-        </AnimatePresence>
+        {open ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
 
         {/* unread badge */}
-        <AnimatePresence>
-          {unreadCount > 0 && !open && (
-            <motion.span
-              key="badge"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
-              className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow"
-            >
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </motion.button>
-
-      {/* ── Chat panel ── */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            key="chat-panel"
-            initial={{ opacity: 0, y: 24, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 24, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 320, damping: 28 }}
-            className="fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-3rem)] h-[480px] max-h-[calc(100vh-7rem)] bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-          >
-            {/* header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-primary text-primary-foreground rounded-t-2xl">
-              {selected ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setSelected(null)}
-                    className="hover:opacity-70 transition-opacity"
-                    aria-label="Kembali"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <div>
-                    <div className="text-sm font-semibold">Booking {selected.bookingCode}</div>
-                    <div className="text-[10px] opacity-70">Chat dengan jamaah</div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4" />
-                  <span className="text-sm font-semibold">Chat Jamaah</span>
-                  {conversations.length > 0 && (
-                    <span className="text-[10px] opacity-70">({conversations.length})</span>
-                  )}
-                </div>
-              )}
-              <button
-                onClick={() => setOpen(false)}
-                aria-label="Tutup"
-                className="hover:opacity-70 transition-opacity"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* body */}
-            <div className="flex-1 min-h-0">
-              <AnimatePresence mode="wait" initial={false}>
-                {selected ? (
-                  <motion.div
-                    key={`chat-${selected.bookingId}`}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.15 }}
-                    className="h-full"
-                  >
-                    <MiniChatBox
-                      bookingId={selected.bookingId}
-                      onClose={() => setSelected(null)}
-                    />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="list"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ duration: 0.15 }}
-                    className="h-full"
-                  >
-                    <ConversationList
-                      conversations={conversations}
-                      loading={loading}
-                      onSelect={setSelected}
-                      onRefresh={() => loadConversations()}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
+        {unreadCount > 0 && !open && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow pointer-events-none">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
         )}
-      </AnimatePresence>
-    </>
+      </button>
+
+      {/* ── Chat panel ──────────────────────────────────────────────────── */}
+      {open && (
+        <div
+          style={{ zIndex: 9998 }}
+          className="fixed bottom-24 right-6 w-[360px] max-w-[calc(100vw-3rem)] h-[480px] max-h-[calc(100vh-7rem)] bg-background border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        >
+          {/* header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-primary text-primary-foreground rounded-t-2xl shrink-0">
+            {selected ? (
+              <div className="flex items-center gap-2 min-w-0">
+                <button
+                  onClick={() => setSelected(null)}
+                  className="hover:opacity-70 transition-opacity shrink-0"
+                  aria-label="Kembali"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold truncate">Booking {selected.bookingCode}</div>
+                  <div className="text-[10px] opacity-70">Chat dengan jamaah</div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4 shrink-0" />
+                <span className="text-sm font-semibold">Chat Jamaah</span>
+                {conversations.length > 0 && (
+                  <span className="text-[10px] opacity-70">({conversations.length})</span>
+                )}
+              </div>
+            )}
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Tutup"
+              className="hover:opacity-70 transition-opacity shrink-0 ml-2"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* body */}
+          <div className="flex-1 min-h-0">
+            {selected ? (
+              <MiniChatBox bookingId={selected.bookingId} />
+            ) : (
+              <ConversationList
+                conversations={conversations}
+                loading={loading}
+                onSelect={setSelected}
+                onRefresh={() => loadConversations()}
+              />
+            )}
+          </div>
+        </div>
+      )}
+    </>,
+    document.body
   );
 };
 
