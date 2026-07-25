@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { useAuth } from "@/shared/hooks/useAuth";
@@ -12,7 +12,7 @@ import {
   Check, BookOpen, ChevronDown, ChevronUp, Images, X,
   ChevronLeft, ChevronRight, ArrowLeft, Shield,
   Package, FileCheck, UtensilsCrossed, GraduationCap,
-  BadgeCheck, Clock,
+  BadgeCheck, Clock, Info,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -94,6 +94,17 @@ const FACILITIES = [
   { icon: Shield,          label: "Asuransi Perjalanan" },
 ];
 
+// ── Tab definitions ──────────────────────────────────────────────────────────
+type TabId = "about" | "itinerary" | "accommodation" | "gallery" | "reviews";
+
+const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
+  { id: "about",         label: "Tentang",    icon: Info },
+  { id: "itinerary",    label: "Itinerary",  icon: BookOpen },
+  { id: "accommodation",label: "Akomodasi",  icon: Hotel },
+  { id: "gallery",      label: "Galeri",     icon: Images },
+  { id: "reviews",      label: "Ulasan",     icon: Star },
+];
+
 // ── Section title component ─────────────────────────────────────────────────
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <div className="flex items-center gap-3 mb-6">
@@ -118,6 +129,8 @@ const PackageDetail = () => {
   const [gallery, setGallery] = useState<{ id: string; image_url: string; caption: string | null }[]>([]);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [descExpanded, setDescExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>("about");
+  const tabContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -264,7 +277,7 @@ const PackageDetail = () => {
         description={pkg.description || `Paket ${pkg.title} dengan pelayanan premium dan bimbingan ibadah lengkap.`}
         image={pkg.image_url}
         sku={pkg.id}
-        price={departures.length ? Math.min(...departures.flatMap((d) => d.prices.map((p) => p.price))) : undefined}
+        price={(() => { const all = departures.flatMap((d) => d.prices.map((p) => p.price)).filter((p) => p > 0); return all.length ? Math.min(...all) : undefined; })()}
         currency="IDR"
         availability={departures.some((d) => d.remaining_quota > 0) ? "InStock" : "SoldOut"}
         validFrom={departures[0]?.departure_date}
@@ -348,293 +361,346 @@ const PackageDetail = () => {
           <div className="grid lg:grid-cols-3 gap-10 xl:gap-14">
 
             {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
-            <div className="lg:col-span-2 space-y-10">
-
-              {/* Description */}
-              <section>
-                <SectionTitle>Tentang Paket</SectionTitle>
-                <div className="relative">
-                  <p className={`text-muted-foreground leading-relaxed ${!descExpanded && descLong ? "line-clamp-4" : ""}`}>
-                    {descText}
-                  </p>
-                  {descLong && (
-                    <button
-                      onClick={() => setDescExpanded((v) => !v)}
-                      className="mt-2 text-sm font-medium text-gold hover:underline flex items-center gap-1"
-                    >
-                      {descExpanded ? "Lebih sedikit" : "Baca selengkapnya"}
-                      {descExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
-                  )}
+            <div className="lg:col-span-2">
+              {/* ── Tab Bar ──────────────────────────────────────────────── */}
+              <div className="sticky top-[64px] z-20 bg-background/95 backdrop-blur-sm border-b border-border mb-8 -mx-4 px-4 md:mx-0 md:px-0">
+                <div className="flex overflow-x-auto scrollbar-none">
+                  {TABS.map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          tabContentRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                        }}
+                        className={`flex items-center gap-1.5 px-4 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-all flex-shrink-0 ${
+                          isActive
+                            ? "border-gold text-gold"
+                            : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {tab.label}
+                      </button>
+                    );
+                  })}
                 </div>
-              </section>
+              </div>
 
-              {/* Accommodation */}
-              <section>
-                <SectionTitle>Akomodasi</SectionTitle>
-                {selectedDep ? (
-                  (selectedDep.hotel_makkah || selectedDep.hotel_madinah || extraHotels.length > 0) ? (
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      {selectedDep.hotel_makkah && (
-                        <HotelCard
-                          title="Hotel Makkah"
-                          name={selectedDep.hotel_makkah.name}
-                          star={selectedDep.hotel_makkah.star}
-                        />
-                      )}
-                      {selectedDep.hotel_madinah && (
-                        <HotelCard
-                          title="Hotel Madinah"
-                          name={selectedDep.hotel_madinah.name}
-                          star={selectedDep.hotel_madinah.star}
-                        />
-                      )}
-                      {extraHotels.map((eh) => (
-                        <HotelCard
-                          key={eh.id}
-                          title={eh.label || `Hotel ${eh.hotel?.city || "Tambahan"}`}
-                          name={eh.hotel?.name || "Hotel"}
-                          star={eh.hotel?.star}
-                          city={eh.hotel?.city ?? undefined}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">Hotel untuk keberangkatan ini belum ditentukan.</p>
-                  )
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">Pilih keberangkatan di samping untuk melihat informasi hotel.</p>
-                )}
-              </section>
+              {/* ── Tab Content ──────────────────────────────────────────── */}
+              <div ref={tabContentRef}>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.18 }}
+                  >
 
-              {/* Gallery */}
-              {gallery.length > 0 && (
-                <section>
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1 h-7 bg-gold rounded-full flex-shrink-0" />
-                      <h2 className="text-2xl font-display font-bold">Galeri Foto</h2>
-                    </div>
-                    {gallery.length > GALLERY_PREVIEW && (
-                      <button
-                        onClick={() => setLightboxIdx(0)}
-                        className="text-sm text-gold font-medium hover:underline flex items-center gap-1"
-                      >
-                        <Images className="w-4 h-4" />
-                        Lihat semua ({gallery.length})
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Featured layout */}
-                  {gallery.length === 1 ? (
-                    <button
-                      onClick={() => setLightboxIdx(0)}
-                      className="w-full overflow-hidden rounded-2xl aspect-video bg-muted border border-border group"
-                    >
-                      <img
-                        src={gallery[0].image_url}
-                        alt={gallery[0].caption || "Foto paket"}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                        onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
-                      />
-                    </button>
-                  ) : (
-                    <div className={`grid gap-2 ${gallery.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
-                      {/* Featured first photo */}
-                      <button
-                        onClick={() => setLightboxIdx(0)}
-                        className={`relative overflow-hidden rounded-2xl bg-muted border border-border group ${gallery.length >= 3 ? "row-span-2 col-span-2" : ""}`}
-                        style={{ aspectRatio: gallery.length >= 3 ? "auto" : "1" }}
-                      >
-                        {gallery.length >= 3 && <div className="absolute inset-0" style={{ paddingBottom: "calc(200% / 2 + 4px)" }} />}
-                        <img
-                          src={gallery[0].image_url}
-                          alt={gallery[0].caption || "Foto 1"}
-                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          loading="lazy"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-center justify-center">
-                          <Images className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                        {gallery[0].caption && (
-                          <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/70 to-transparent">
-                            <p className="text-white text-xs truncate">{gallery[0].caption}</p>
+                    {/* ── TENTANG tab ─────────────────────────────────── */}
+                    {activeTab === "about" && (
+                      <div className="space-y-10">
+                        {/* Description */}
+                        <section>
+                          <SectionTitle>Tentang Paket</SectionTitle>
+                          <div className="relative">
+                            <p className={`text-muted-foreground leading-relaxed ${!descExpanded && descLong ? "line-clamp-4" : ""}`}>
+                              {descText}
+                            </p>
+                            {descLong && (
+                              <button
+                                onClick={() => setDescExpanded((v) => !v)}
+                                className="mt-2 text-sm font-medium text-gold hover:underline flex items-center gap-1"
+                              >
+                                {descExpanded ? "Lebih sedikit" : "Baca selengkapnya"}
+                                {descExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                              </button>
+                            )}
                           </div>
-                        )}
-                      </button>
+                        </section>
 
-                      {/* Thumbnail photos */}
-                      {galleryVisible.slice(1).map((item, idx) => {
-                        const realIdx = idx + 1;
-                        const isLast = realIdx === galleryVisible.length - 1 && galleryExtra > 0;
-                        return (
-                          <button
-                            key={item.id}
-                            onClick={() => setLightboxIdx(realIdx)}
-                            className="relative overflow-hidden rounded-2xl aspect-square bg-muted border border-border group"
-                          >
-                            <img
-                              src={item.image_url}
-                              alt={item.caption || `Foto ${realIdx + 1}`}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                              loading="lazy"
-                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                            />
-                            {isLast ? (
-                              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-1">
-                                <Images className="w-6 h-6 text-white" />
-                                <span className="text-white font-bold text-lg">+{galleryExtra}</span>
-                                <span className="text-white/70 text-xs">foto lainnya</span>
+                        {/* Facilities */}
+                        <section>
+                          <SectionTitle>Fasilitas Termasuk</SectionTitle>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {FACILITIES.map(({ icon: Icon, label }) => (
+                              <div
+                                key={label}
+                                className="flex flex-col items-center gap-2 text-center p-4 rounded-xl bg-card border border-border hover:border-gold/40 hover:bg-gold/5 transition-all"
+                              >
+                                <div className="w-10 h-10 rounded-full bg-gold/10 border border-gold/20 flex items-center justify-center">
+                                  <Icon className="w-5 h-5 text-gold" />
+                                </div>
+                                <span className="text-xs font-medium leading-snug">{label}</span>
                               </div>
-                            ) : (
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-200" />
-                            )}
-                            {item.caption && !isLast && (
-                              <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 bg-gradient-to-t from-black/70 to-transparent">
-                                <p className="text-white text-[10px] truncate">{item.caption}</p>
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </section>
-              )}
+                            ))}
+                          </div>
+                        </section>
 
-              {/* Itinerary */}
-              <section>
-                <SectionTitle>Program Perjalanan</SectionTitle>
-                {selectedDeparture ? (
-                  <>
-                    {selectedDep && (
-                      <p className="text-sm text-muted-foreground mb-5 -mt-2">
-                        Itinerary untuk keberangkatan{" "}
-                        <span className="font-semibold text-foreground">
-                          {format(new Date(selectedDep.departure_date), "d MMMM yyyy", { locale: localeId })}
-                        </span>
-                      </p>
-                    )}
-                    {itineraryLoading ? (
-                      <div className="space-y-3">
-                        {[...Array(4)].map((_, i) => (
-                          <div key={i} className="bg-muted animate-pulse rounded-xl h-16" />
-                        ))}
+                        {/* Installment Calculator */}
+                        <section>
+                          <InstallmentCalculator
+                            defaultPrice={(() => {
+                              const allPrices = departures.flatMap((d) => d.prices.map((p) => p.price)).filter((p) => p > 0);
+                              return allPrices.length ? Math.min(...allPrices) : 30_000_000;
+                            })()}
+                          />
+                        </section>
                       </div>
-                    ) : itinerary && itinerary.days.length > 0 ? (
-                      <div>
-                        {itinerary.title && (
-                          <p className="text-sm font-medium text-gold mb-4">{itinerary.title}</p>
-                        )}
-                        {/* Timeline */}
-                        <div className="relative">
-                          {/* Vertical line */}
-                          <div className="absolute left-[19px] top-6 bottom-6 w-px bg-border" />
-                          <div className="space-y-2">
-                            {itinerary.days.map((day, idx) => {
-                              const isOpen = expandedDay === day.id;
-                              return (
-                                <motion.div key={day.id} initial={false} className="relative pl-11">
-                                  {/* Circle */}
-                                  <div className={`absolute left-0 top-3.5 w-10 h-10 rounded-full border-2 flex items-center justify-center flex-shrink-0 z-10 bg-background transition-all ${isOpen ? "border-gold bg-gold/10" : "border-border"}`}>
-                                    <span className={`text-xs font-bold transition-colors ${isOpen ? "text-gold" : "text-muted-foreground"}`}>{day.day_number}</span>
-                                  </div>
-                                  <div className={`border rounded-xl overflow-hidden transition-colors ${isOpen ? "border-gold/30 bg-gold/5" : "border-border bg-card"}`}>
-                                    <button
-                                      onClick={() => setExpandedDay(isOpen ? null : day.id)}
-                                      className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-muted/30 transition-colors"
-                                    >
-                                      <span className={`font-semibold text-sm ${isOpen ? "text-foreground" : ""}`}>
-                                        Hari {day.day_number}{day.title ? ` — ${day.title}` : ""}
-                                      </span>
-                                      {isOpen
-                                        ? <ChevronUp className="w-4 h-4 text-gold flex-shrink-0" />
-                                        : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
-                                    </button>
-                                    <AnimatePresence initial={false}>
-                                      {isOpen && (
-                                        <motion.div
-                                          key="content"
-                                          initial={{ height: 0, opacity: 0 }}
-                                          animate={{ height: "auto", opacity: 1 }}
-                                          exit={{ height: 0, opacity: 0 }}
-                                          transition={{ duration: 0.25, ease: "easeInOut" }}
-                                          className="overflow-hidden"
-                                        >
-                                          <div className="px-4 pb-4 pt-1">
-                                            {day.image_url && (
-                                              <img
-                                                src={day.image_url}
-                                                alt={day.title || `Hari ${day.day_number}`}
-                                                className="w-full h-44 object-cover rounded-lg mb-3"
-                                              />
-                                            )}
-                                            {day.description ? (
-                                              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                                                {day.description}
-                                              </p>
-                                            ) : (
-                                              <p className="text-sm text-muted-foreground italic">Detail program hari ini belum tersedia.</p>
-                                            )}
+                    )}
+
+                    {/* ── ITINERARY tab ───────────────────────────────── */}
+                    {activeTab === "itinerary" && (
+                      <section>
+                        <SectionTitle>Program Perjalanan</SectionTitle>
+                        {selectedDeparture ? (
+                          <>
+                            {selectedDep && (
+                              <p className="text-sm text-muted-foreground mb-5 -mt-2">
+                                Itinerary untuk keberangkatan{" "}
+                                <span className="font-semibold text-foreground">
+                                  {format(new Date(selectedDep.departure_date), "d MMMM yyyy", { locale: localeId })}
+                                </span>
+                              </p>
+                            )}
+                            {itineraryLoading ? (
+                              <div className="space-y-3">
+                                {[...Array(4)].map((_, i) => (
+                                  <div key={i} className="bg-muted animate-pulse rounded-xl h-16" />
+                                ))}
+                              </div>
+                            ) : itinerary && itinerary.days.length > 0 ? (
+                              <div>
+                                {itinerary.title && (
+                                  <p className="text-sm font-medium text-gold mb-4">{itinerary.title}</p>
+                                )}
+                                <div className="relative">
+                                  <div className="absolute left-[19px] top-6 bottom-6 w-px bg-border" />
+                                  <div className="space-y-2">
+                                    {itinerary.days.map((day) => {
+                                      const isOpen = expandedDay === day.id;
+                                      return (
+                                        <motion.div key={day.id} initial={false} className="relative pl-11">
+                                          <div className={`absolute left-0 top-3.5 w-10 h-10 rounded-full border-2 flex items-center justify-center flex-shrink-0 z-10 bg-background transition-all ${isOpen ? "border-gold bg-gold/10" : "border-border"}`}>
+                                            <span className={`text-xs font-bold transition-colors ${isOpen ? "text-gold" : "text-muted-foreground"}`}>{day.day_number}</span>
+                                          </div>
+                                          <div className={`border rounded-xl overflow-hidden transition-colors ${isOpen ? "border-gold/30 bg-gold/5" : "border-border bg-card"}`}>
+                                            <button
+                                              onClick={() => setExpandedDay(isOpen ? null : day.id)}
+                                              className="w-full flex items-center justify-between px-4 py-3.5 text-left hover:bg-muted/30 transition-colors"
+                                            >
+                                              <span className={`font-semibold text-sm ${isOpen ? "text-foreground" : ""}`}>
+                                                Hari {day.day_number}{day.title ? ` — ${day.title}` : ""}
+                                              </span>
+                                              {isOpen
+                                                ? <ChevronUp className="w-4 h-4 text-gold flex-shrink-0" />
+                                                : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
+                                            </button>
+                                            <AnimatePresence initial={false}>
+                                              {isOpen && (
+                                                <motion.div
+                                                  key="content"
+                                                  initial={{ height: 0, opacity: 0 }}
+                                                  animate={{ height: "auto", opacity: 1 }}
+                                                  exit={{ height: 0, opacity: 0 }}
+                                                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                                                  className="overflow-hidden"
+                                                >
+                                                  <div className="px-4 pb-4 pt-1">
+                                                    {day.image_url && (
+                                                      <img
+                                                        src={day.image_url}
+                                                        alt={day.title || `Hari ${day.day_number}`}
+                                                        className="w-full h-44 object-cover rounded-lg mb-3"
+                                                      />
+                                                    )}
+                                                    {day.description ? (
+                                                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                                                        {day.description}
+                                                      </p>
+                                                    ) : (
+                                                      <p className="text-sm text-muted-foreground italic">Detail program hari ini belum tersedia.</p>
+                                                    )}
+                                                  </div>
+                                                </motion.div>
+                                              )}
+                                            </AnimatePresence>
                                           </div>
                                         </motion.div>
-                                      )}
-                                    </AnimatePresence>
+                                      );
+                                    })}
                                   </div>
-                                </motion.div>
+                                </div>
+                                {itinerary.notes && (
+                                  <p className="text-xs text-muted-foreground mt-4 italic pl-11">{itinerary.notes}</p>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-border rounded-2xl bg-muted/30">
+                                <BookOpen className="w-10 h-10 text-muted-foreground/30 mb-3" />
+                                <p className="text-sm text-muted-foreground">Program perjalanan untuk keberangkatan ini belum tersedia.</p>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-border rounded-2xl bg-muted/30">
+                            <BookOpen className="w-10 h-10 text-muted-foreground/30 mb-3" />
+                            <p className="text-sm text-muted-foreground">Pilih keberangkatan di samping untuk melihat program perjalanan.</p>
+                          </div>
+                        )}
+                      </section>
+                    )}
+
+                    {/* ── AKOMODASI tab ───────────────────────────────── */}
+                    {activeTab === "accommodation" && (
+                      <section>
+                        <SectionTitle>Akomodasi</SectionTitle>
+                        {selectedDep ? (
+                          (selectedDep.hotel_makkah || selectedDep.hotel_madinah || extraHotels.length > 0) ? (
+                            <div className="grid sm:grid-cols-2 gap-4">
+                              {selectedDep.hotel_makkah && (
+                                <HotelCard
+                                  title="Hotel Makkah"
+                                  name={selectedDep.hotel_makkah.name}
+                                  star={selectedDep.hotel_makkah.star}
+                                />
+                              )}
+                              {selectedDep.hotel_madinah && (
+                                <HotelCard
+                                  title="Hotel Madinah"
+                                  name={selectedDep.hotel_madinah.name}
+                                  star={selectedDep.hotel_madinah.star}
+                                />
+                              )}
+                              {extraHotels.map((eh) => (
+                                <HotelCard
+                                  key={eh.id}
+                                  title={eh.label || `Hotel ${eh.hotel?.city || "Tambahan"}`}
+                                  name={eh.hotel?.name || "Hotel"}
+                                  star={eh.hotel?.star}
+                                  city={eh.hotel?.city ?? undefined}
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground italic">Hotel untuk keberangkatan ini belum ditentukan.</p>
+                          )
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic">Pilih keberangkatan di samping untuk melihat informasi hotel.</p>
+                        )}
+                      </section>
+                    )}
+
+                    {/* ── GALERI tab ──────────────────────────────────── */}
+                    {activeTab === "gallery" && (
+                      <section>
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-1 h-7 bg-gold rounded-full flex-shrink-0" />
+                            <h2 className="text-2xl font-display font-bold">Galeri Foto</h2>
+                          </div>
+                          {gallery.length > GALLERY_PREVIEW && (
+                            <button
+                              onClick={() => setLightboxIdx(0)}
+                              className="text-sm text-gold font-medium hover:underline flex items-center gap-1"
+                            >
+                              <Images className="w-4 h-4" />
+                              Lihat semua ({gallery.length})
+                            </button>
+                          )}
+                        </div>
+
+                        {gallery.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-border rounded-2xl bg-muted/30">
+                            <Images className="w-10 h-10 text-muted-foreground/30 mb-3" />
+                            <p className="text-sm text-muted-foreground">Galeri foto belum tersedia untuk paket ini.</p>
+                          </div>
+                        ) : gallery.length === 1 ? (
+                          <button
+                            onClick={() => setLightboxIdx(0)}
+                            className="w-full overflow-hidden rounded-2xl aspect-video bg-muted border border-border group"
+                          >
+                            <img
+                              src={gallery[0].image_url}
+                              alt={gallery[0].caption || "Foto paket"}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              loading="lazy"
+                              onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }}
+                            />
+                          </button>
+                        ) : (
+                          <div className={`grid gap-2 ${gallery.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                            <button
+                              onClick={() => setLightboxIdx(0)}
+                              className={`relative overflow-hidden rounded-2xl bg-muted border border-border group ${gallery.length >= 3 ? "row-span-2 col-span-2" : ""}`}
+                              style={{ aspectRatio: gallery.length >= 3 ? "auto" : "1" }}
+                            >
+                              {gallery.length >= 3 && <div className="absolute inset-0" style={{ paddingBottom: "calc(200% / 2 + 4px)" }} />}
+                              <img
+                                src={gallery[0].image_url}
+                                alt={gallery[0].caption || "Foto 1"}
+                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                loading="lazy"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-center justify-center">
+                                <Images className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                              {gallery[0].caption && (
+                                <div className="absolute bottom-0 left-0 right-0 px-3 py-2 bg-gradient-to-t from-black/70 to-transparent">
+                                  <p className="text-white text-xs truncate">{gallery[0].caption}</p>
+                                </div>
+                              )}
+                            </button>
+                            {galleryVisible.slice(1).map((item, idx) => {
+                              const realIdx = idx + 1;
+                              const isLast = realIdx === galleryVisible.length - 1 && galleryExtra > 0;
+                              return (
+                                <button
+                                  key={item.id}
+                                  onClick={() => setLightboxIdx(realIdx)}
+                                  className="relative overflow-hidden rounded-2xl aspect-square bg-muted border border-border group"
+                                >
+                                  <img
+                                    src={item.image_url}
+                                    alt={item.caption || `Foto ${realIdx + 1}`}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    loading="lazy"
+                                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                  />
+                                  {isLast ? (
+                                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-1">
+                                      <Images className="w-6 h-6 text-white" />
+                                      <span className="text-white font-bold text-lg">+{galleryExtra}</span>
+                                      <span className="text-white/70 text-xs">foto lainnya</span>
+                                    </div>
+                                  ) : (
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-200" />
+                                  )}
+                                  {item.caption && !isLast && (
+                                    <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 bg-gradient-to-t from-black/70 to-transparent">
+                                      <p className="text-white text-[10px] truncate">{item.caption}</p>
+                                    </div>
+                                  )}
+                                </button>
                               );
                             })}
                           </div>
-                        </div>
-                        {itinerary.notes && (
-                          <p className="text-xs text-muted-foreground mt-4 italic pl-11">{itinerary.notes}</p>
                         )}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-border rounded-2xl bg-muted/30">
-                        <BookOpen className="w-10 h-10 text-muted-foreground/30 mb-3" />
-                        <p className="text-sm text-muted-foreground">Program perjalanan untuk keberangkatan ini belum tersedia.</p>
-                      </div>
+                      </section>
                     )}
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-border rounded-2xl bg-muted/30">
-                    <BookOpen className="w-10 h-10 text-muted-foreground/30 mb-3" />
-                    <p className="text-sm text-muted-foreground">Pilih keberangkatan di samping untuk melihat program perjalanan.</p>
-                  </div>
-                )}
-              </section>
 
-              {/* Facilities */}
-              <section>
-                <SectionTitle>Fasilitas Termasuk</SectionTitle>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {FACILITIES.map(({ icon: Icon, label }) => (
-                    <div
-                      key={label}
-                      className="flex flex-col items-center gap-2 text-center p-4 rounded-xl bg-card border border-border hover:border-gold/40 hover:bg-gold/5 transition-all"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-gold/10 border border-gold/20 flex items-center justify-center">
-                        <Icon className="w-5 h-5 text-gold" />
-                      </div>
-                      <span className="text-xs font-medium leading-snug">{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </section>
+                    {/* ── ULASAN tab ──────────────────────────────────── */}
+                    {activeTab === "reviews" && (
+                      <PackageReviews packageId={pkg.id} packageTitle={pkg.title} />
+                    )}
 
-              {/* Installment Calculator */}
-              <section>
-                <InstallmentCalculator
-                  defaultPrice={departures.length ? Math.min(...departures.flatMap((d) => d.prices.map((p) => p.price))) : 30_000_000}
-                />
-              </section>
-
-              {/* Reviews */}
-              <PackageReviews packageId={pkg.id} packageTitle={pkg.title} />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
             </div>
 
             {/* ── RIGHT COLUMN — Sticky Booking Sidebar ───────────────────── */}
