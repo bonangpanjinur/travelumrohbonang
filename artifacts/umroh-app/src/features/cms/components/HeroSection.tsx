@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/shared/components/ui/button";
-import { ArrowRight, Star } from "lucide-react";
+import { ArrowRight, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useLanguage } from "@/shared/i18n/LanguageContext";
@@ -21,6 +21,12 @@ interface HeroSettings {
   secondary_button_text: string;
   secondary_button_url: string;
   secondary_button_enabled: boolean;
+}
+
+interface GallerySlide {
+  id: string;
+  image_url: string;
+  title: string | null;
 }
 
 const defaultSettings: HeroSettings = {
@@ -44,10 +50,18 @@ const defaultSettings: HeroSettings = {
   secondary_button_enabled: true,
 };
 
+const SLIDE_INTERVAL = 5000; // ms between auto-advance
+
 const HeroSection = () => {
   const [settings, setSettings] = useState<HeroSettings>(defaultSettings);
   const { language, translateDynamic } = useLanguage();
   const [translated, setTranslated] = useState({ title: "", highlight: "", subtitle: "", primaryBtn: "", secondaryBtn: "" });
+
+  // Slideshow state
+  const [slides, setSlides] = useState<GallerySlide[]>([]);
+  const [current, setCurrent] = useState(0);
+  const [direction, setDirection] = useState(1); // 1 = forward, -1 = backward
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -56,14 +70,60 @@ const HeroSection = () => {
         .select("value")
         .eq("key", "hero")
         .maybeSingle();
-
       if (data?.value) {
         setSettings({ ...defaultSettings, ...(data.value as object) });
       }
     };
 
+    const fetchGallery = async () => {
+      const { data } = await supabase
+        .from("gallery")
+        .select("id, image_url, title")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .limit(8);
+      if (data && data.length > 0) {
+        setSlides(data);
+      }
+    };
+
     fetchSettings();
+    fetchGallery();
   }, []);
+
+  // Auto-advance slideshow
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setDirection(1);
+      setCurrent((c) => (c + 1) % Math.max(slides.length, 1));
+    }, SLIDE_INTERVAL);
+  }, [slides.length]);
+
+  useEffect(() => {
+    if (slides.length > 1) {
+      startTimer();
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [slides.length, startTimer]);
+
+  const goTo = useCallback((idx: number) => {
+    setDirection(idx > current ? 1 : -1);
+    setCurrent(idx);
+    startTimer(); // reset timer on manual nav
+  }, [current, startTimer]);
+
+  const goPrev = useCallback(() => {
+    setDirection(-1);
+    setCurrent((c) => (c - 1 + slides.length) % slides.length);
+    startTimer();
+  }, [slides.length, startTimer]);
+
+  const goNext = useCallback(() => {
+    setDirection(1);
+    setCurrent((c) => (c + 1) % slides.length);
+    startTimer();
+  }, [slides.length, startTimer]);
 
   // Translate dynamic content when language changes
   useEffect(() => {
@@ -90,31 +150,61 @@ const HeroSection = () => {
     doTranslate();
   }, [language, settings, translateDynamic]);
 
-  const backgroundImage = settings.background_url || heroImg;
+  // Background: if gallery has images use slideshow, else fallback to settings/heroImg
+  const fallbackBg = settings.background_url || heroImg;
+  const hasSlides = slides.length > 0;
+
+  const slideVariants = {
+    enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? 80 : -80 }),
+    center: { opacity: 1, x: 0 },
+    exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? -80 : 80 }),
+  };
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
-      {/* Background Image */}
+      {/* ── Background Slideshow ── */}
       <div className="absolute inset-0">
-        <img
-          src={backgroundImage}
-          alt="Masjidil Haram, Makkah - tujuan utama perjalanan umroh"
-          className="w-full h-full object-cover"
-          loading="eager"
-          decoding="async"
-          fetchPriority="high"
-          width={1920}
-          height={1080}
-        />
-        <div 
+        {hasSlides ? (
+          <AnimatePresence initial={false} custom={direction}>
+            <motion.img
+              key={slides[current]?.id ?? current}
+              src={slides[current]?.image_url ?? fallbackBg}
+              alt={slides[current]?.title || "Hero umroh"}
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.7, ease: "easeInOut" }}
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+            />
+          </AnimatePresence>
+        ) : (
+          <img
+            src={fallbackBg}
+            alt="Masjidil Haram, Makkah - tujuan utama perjalanan umroh"
+            className="w-full h-full object-cover"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+            width={1920}
+            height={1080}
+          />
+        )}
+
+        {/* Overlay */}
+        <div
           className="absolute inset-0 bg-gradient-to-r from-primary via-primary/80 to-primary/50"
           style={{ opacity: settings.overlay_opacity / 100 }}
         />
         <div className="absolute inset-0 islamic-pattern opacity-30" />
       </div>
 
-      {/* Content */}
-      <div className="relative container-custom section-padding pt-32">
+      {/* ── Content ── */}
+      <div className="relative container-custom section-padding pt-32 pb-20">
         <div className="max-w-2xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -204,6 +294,43 @@ const HeroSection = () => {
           )}
         </div>
       </div>
+
+      {/* ── Slideshow Controls (only if gallery has images) ── */}
+      {hasSlides && slides.length > 1 && (
+        <>
+          {/* Prev / Next arrows */}
+          <button
+            onClick={goPrev}
+            aria-label="Slide sebelumnya"
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/30 hover:bg-black/50 border border-white/20 flex items-center justify-center text-white transition-all backdrop-blur-sm"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button
+            onClick={goNext}
+            aria-label="Slide berikutnya"
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/30 hover:bg-black/50 border border-white/20 flex items-center justify-center text-white transition-all backdrop-blur-sm"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+
+          {/* Pagination dots */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
+            {slides.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => goTo(idx)}
+                aria-label={`Ke slide ${idx + 1}`}
+                className={`transition-all duration-300 rounded-full ${
+                  idx === current
+                    ? "w-6 h-2 bg-gold"
+                    : "w-2 h-2 bg-white/40 hover:bg-white/70"
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 };

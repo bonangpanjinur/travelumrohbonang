@@ -372,18 +372,20 @@ const PackageDetail = () => {
 
       <main>
         {/* ══ HERO ══════════════════════════════════════════════════════════ */}
-        <div className="relative h-[65vh] min-h-[480px] overflow-hidden">
-          {/* Background image */}
-          <img
-            src={pkg.image_url || "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=1400&q=80"}
-            alt={pkg.title}
-            className="w-full h-full object-cover scale-105"
-            fetchPriority="high"
-            decoding="async"
-          />
-          {/* Gradient layers */}
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/95 via-primary/40 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/30 to-transparent" />
+        <div className="relative h-[65vh] min-h-[480px]">
+          {/* Background image — clipped independently so share dropdown isn't clipped */}
+          <div className="absolute inset-0 overflow-hidden">
+            <img
+              src={pkg.image_url || "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=1400&q=80"}
+              alt={pkg.title}
+              className="w-full h-full object-cover scale-105"
+              fetchPriority="high"
+              decoding="async"
+            />
+            {/* Gradient layers */}
+            <div className="absolute inset-0 bg-gradient-to-t from-primary/95 via-primary/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/30 to-transparent" />
+          </div>
 
           {/* Back link */}
           <div className="absolute top-24 left-0 right-0">
@@ -399,41 +401,43 @@ const PackageDetail = () => {
           </div>
 
           {/* Hero content */}
-          <div className="absolute bottom-0 left-0 right-0 pb-8 pt-16">
+          <div className="absolute bottom-0 left-0 right-0 pb-6 sm:pb-8 pt-16">
             <div className="container-custom">
-              <div className="flex items-end justify-between gap-4">
-                <div className="flex-1">
+              <div className="flex items-end justify-between gap-3 sm:gap-4">
+                <div className="flex-1 min-w-0">
                   {/* Category badge */}
-                  <span className="inline-block bg-gold text-primary text-xs font-bold px-3 py-1 rounded-full mb-4 uppercase tracking-wide">
+                  <span className="inline-block bg-gold text-primary text-xs font-bold px-3 py-1 rounded-full mb-3 uppercase tracking-wide">
                     {pkg.category?.name || pkg.package_type}
                   </span>
-                  <h1 className="text-3xl md:text-5xl font-display font-bold text-white leading-tight mb-4">
+                  <h1 className="text-2xl sm:text-3xl md:text-5xl font-display font-bold text-white leading-tight mb-3 sm:mb-4 break-words">
                     {pkg.title}
                   </h1>
                   {/* Quick-stat chips */}
-                  <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 text-white text-xs px-3 py-1.5 rounded-full">
-                      <Clock className="w-3.5 h-3.5 text-gold" />
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                    <span className="inline-flex items-center gap-1 sm:gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 text-white text-[11px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+                      <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold" />
                       {pkg.duration_days} Hari
                     </span>
-                    <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 text-white text-xs px-3 py-1.5 rounded-full">
-                      <Star className="w-3.5 h-3.5 text-gold fill-gold" />
+                    <span className="inline-flex items-center gap-1 sm:gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 text-white text-[11px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+                      <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold fill-gold" />
                       Bintang {displayHotelStar}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 text-white text-xs px-3 py-1.5 rounded-full">
-                      <Plane className="w-3.5 h-3.5 text-gold" />
-                      {selectedDep?.departure_type === "transit" ? "Penerbangan Transit" : displayAirline}
+                    <span className="inline-flex items-center gap-1 sm:gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 text-white text-[11px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+                      <Plane className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold" />
+                      <span className="max-w-[80px] sm:max-w-none truncate">
+                        {selectedDep?.departure_type === "transit" ? "Transit" : displayAirline}
+                      </span>
                     </span>
                     {departures.length > 0 && (
-                      <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 text-white text-xs px-3 py-1.5 rounded-full">
-                        <Calendar className="w-3.5 h-3.5 text-gold" />
-                        {departures.length} Jadwal Tersedia
+                      <span className="inline-flex items-center gap-1 sm:gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 text-white text-[11px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+                        <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold" />
+                        {departures.length} Jadwal
                       </span>
                     )}
                   </div>
                 </div>
-                <div className="flex-shrink-0 flex items-center gap-2">
-                  {/* Share button */}
+                <div className="flex-shrink-0 flex items-center gap-2 self-end pb-0.5">
+                  {/* Share button — panel opens upward so it clears the hero boundary */}
                   <div ref={shareRef} className="relative">
                     <button
                       onClick={() => setShareOpen((v) => !v)}
@@ -444,15 +448,15 @@ const PackageDetail = () => {
                       <span className="hidden sm:inline">Bagikan</span>
                     </button>
 
-                    {/* Share panel */}
+                    {/* Share panel — opens upward to avoid overflow clipping */}
                     <AnimatePresence>
                       {shareOpen && (
                         <motion.div
-                          initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                          initial={{ opacity: 0, scale: 0.95, y: 4 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 4 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute right-0 top-full mt-2 w-56 bg-card border border-border rounded-2xl shadow-xl overflow-hidden z-50"
+                          className="absolute right-0 bottom-full mb-2 w-56 bg-card border border-border rounded-2xl shadow-xl overflow-hidden z-50"
                         >
                           <div className="px-3 py-2.5 border-b border-border">
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Bagikan ke</p>
