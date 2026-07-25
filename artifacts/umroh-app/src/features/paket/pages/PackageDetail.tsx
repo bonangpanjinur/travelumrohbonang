@@ -110,9 +110,9 @@ const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
 
 // ── Section title component ─────────────────────────────────────────────────
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex items-center gap-3 mb-6">
-    <div className="w-1 h-7 bg-gold rounded-full flex-shrink-0" />
-    <h2 className="text-2xl font-display font-bold">{children}</h2>
+  <div className="mb-4 flex items-center gap-2.5 sm:mb-6 sm:gap-3">
+    <div className="h-6 w-1 flex-shrink-0 rounded-full bg-gold sm:h-7" />
+    <h2 className="text-xl font-display font-bold sm:text-2xl">{children}</h2>
   </div>
 );
 
@@ -372,7 +372,7 @@ const PackageDetail = () => {
 
       <main>
         {/* ══ HERO ══════════════════════════════════════════════════════════ */}
-        <div className="relative h-[65vh] min-h-[480px] w-full">
+        <div className="relative h-[380px] min-h-[380px] w-full sm:h-[480px] sm:min-h-[480px] lg:h-[65vh] lg:min-h-[520px]">
           {/* Background image — clipped independently so share dropdown isn't clipped */}
           <div className="absolute inset-0 overflow-hidden">
             <img
@@ -388,61 +388,61 @@ const PackageDetail = () => {
           </div>
 
           {/* Back link */}
-          <div className="absolute top-24 left-0 right-0">
-            <div className="container-custom px-4 sm:px-6">
+          <div className="absolute left-0 right-0 top-[4.5rem] sm:top-24">
+            <div className="container-custom px-3 sm:px-6">
               <Link
                 to="/paket"
-                className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors text-sm font-medium backdrop-blur-sm bg-white/10 px-3 py-1.5 rounded-full border border-white/20"
+                className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur-sm transition-colors hover:text-white sm:text-sm"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Semua Paket
+                <span className="hidden sm:inline">Semua </span>Paket
               </Link>
             </div>
           </div>
 
           {/* Hero content */}
-          <div className="absolute bottom-0 left-0 right-0 pb-6 sm:pb-8 pt-16">
-            <div className="container-custom px-4 sm:px-6">
-              <div className="flex items-end justify-between gap-3 sm:gap-4">
+          <div className="absolute bottom-0 left-0 right-0 pb-5 pt-20 sm:pb-8 sm:pt-16">
+            <div className="container-custom px-3 sm:px-6">
+              <div className="flex items-end justify-between gap-2 sm:gap-4">
                 <div className="flex-1 min-w-0">
                   {/* Category badge */}
-                  <span className="inline-block bg-gold text-primary text-xs font-bold px-3 py-1 rounded-full mb-3 uppercase tracking-wide">
+                  <span className="mb-2 inline-block rounded-full bg-gold px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-primary sm:mb-3 sm:px-3 sm:text-xs">
                     {pkg.category?.name || pkg.package_type}
                   </span>
-                  <h1 className="text-2xl sm:text-3xl md:text-5xl font-display font-bold text-white leading-tight mb-3 sm:mb-4 break-words">
+                  <h1 className="mb-2 break-words text-xl font-display font-bold leading-tight text-white sm:mb-4 sm:text-3xl md:text-5xl">
                     {pkg.title}
                   </h1>
                   {/* Quick-stat chips */}
-                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                    <span className="inline-flex items-center gap-1 sm:gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 text-white text-[11px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+                  <div className="flex max-w-full flex-wrap gap-1 sm:gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/15 px-2 py-1 text-[10px] text-white backdrop-blur-sm sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-xs">
                       <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold" />
                       {pkg.duration_days} Hari
                     </span>
-                    <span className="inline-flex items-center gap-1 sm:gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 text-white text-[11px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/15 px-2 py-1 text-[10px] text-white backdrop-blur-sm sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-xs">
                       <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold fill-gold" />
                       Bintang {displayHotelStar}
                     </span>
-                    <span className="inline-flex items-center gap-1 sm:gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 text-white text-[11px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+                    <span className="inline-flex max-w-[42%] items-center gap-1 rounded-full border border-white/20 bg-white/15 px-2 py-1 text-[10px] text-white backdrop-blur-sm sm:max-w-none sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-xs">
                       <Plane className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold" />
-                      <span className="max-w-[80px] sm:max-w-none truncate">
+                      <span className="truncate sm:max-w-none">
                         {selectedDep?.departure_type === "transit" ? "Transit" : displayAirline}
                       </span>
                     </span>
                     {departures.length > 0 && (
-                      <span className="inline-flex items-center gap-1 sm:gap-1.5 bg-white/15 backdrop-blur-sm border border-white/20 text-white text-[11px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/15 px-2 py-1 text-[10px] text-white backdrop-blur-sm sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-xs">
                         <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold" />
                         {departures.length} Jadwal
                       </span>
                     )}
                   </div>
                 </div>
-                <div className="flex-shrink-0 flex items-center gap-2 self-end pb-0.5">
+                <div className="flex flex-shrink-0 items-center gap-1.5 self-end pb-0.5 sm:gap-2">
                   {/* Share button — panel opens upward so it clears the hero boundary */}
                   <div ref={shareRef} className="relative">
                     <button
                       onClick={() => setShareOpen((v) => !v)}
                       aria-label="Bagikan paket"
-                      className="inline-flex items-center gap-1.5 backdrop-blur-sm bg-white/15 hover:bg-white/25 border border-white/20 text-white rounded-full px-3 py-2 text-sm font-medium transition-all"
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-white/20 bg-white/15 px-2.5 py-2 text-xs font-medium text-white backdrop-blur-sm transition-all hover:bg-white/25 sm:px-3 sm:text-sm"
                     >
                       <Share2 className="w-4 h-4" />
                       <span className="hidden sm:inline">Bagikan</span>
@@ -530,15 +530,15 @@ const PackageDetail = () => {
         </div>
 
         {/* ══ MAIN CONTENT ══════════════════════════════════════════════════ */}
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-16 md:pb-24">
-          <div className="grid lg:grid-cols-3 gap-8 lg:gap-10 xl:gap-14">
+        <div className="mx-auto w-full max-w-7xl px-3 pb-36 pt-5 sm:px-6 sm:pb-24 sm:pt-8 lg:px-8">
+          <div className="grid min-w-0 gap-7 lg:grid-cols-3 lg:gap-10 xl:gap-14">
 
             {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
-            <div className="lg:col-span-2">
+            <div className="min-w-0 lg:col-span-2">
               {/* ── Tab Bar ──────────────────────────────────────────────── */}
-              <div className="sticky top-[64px] z-20 bg-background/95 backdrop-blur-sm border-b border-border mb-8 -mx-4 sm:mx-0">
+              <div className="sticky top-14 z-20 -mx-3 mb-6 border-b border-border bg-background/95 backdrop-blur-sm sm:top-16 sm:mx-0 sm:mb-8">
                 <div
-                  className="flex px-4 sm:px-0"
+                  className="flex px-3 sm:px-0"
                   style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}
                 >
                   {TABS.map((tab) => {
@@ -551,7 +551,7 @@ const PackageDetail = () => {
                           setActiveTab(tab.id);
                           tabContentRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
                         }}
-                        className={`flex items-center gap-1.5 px-4 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-all flex-shrink-0 ${
+                        className={`flex min-h-12 flex-shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-xs font-medium transition-all sm:px-4 sm:py-3.5 sm:text-sm ${
                           isActive
                             ? "border-gold text-gold"
                             : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
@@ -599,16 +599,16 @@ const PackageDetail = () => {
                         {/* Facilities */}
                         <section>
                           <SectionTitle>Fasilitas Termasuk</SectionTitle>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
                             {FACILITIES.map(({ icon: Icon, label }) => (
                               <div
                                 key={label}
-                                className="flex flex-col items-center gap-2 text-center p-4 rounded-xl bg-card border border-border hover:border-gold/40 hover:bg-gold/5 transition-all"
+                                className="flex min-h-[126px] flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-3 text-center transition-all hover:border-gold/40 hover:bg-gold/5 sm:p-4"
                               >
-                                <div className="w-10 h-10 rounded-full bg-gold/10 border border-gold/20 flex items-center justify-center">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-gold/20 bg-gold/10 sm:h-10 sm:w-10">
                                   <Icon className="w-5 h-5 text-gold" />
                                 </div>
-                                <span className="text-xs font-medium leading-snug">{label}</span>
+                                <span className="text-[11px] font-medium leading-snug sm:text-xs">{label}</span>
                               </div>
                             ))}
                           </div>
