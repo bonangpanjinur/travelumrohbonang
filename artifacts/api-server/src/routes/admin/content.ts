@@ -12,6 +12,7 @@ import {
   navigationItems,
   floatingButtons,
   eq,
+  inArray,
 } from "@workspace/db";
 
 const router = Router();
@@ -76,6 +77,20 @@ const createCrudRoutes = (table: any, name: string) => {
 createCrudRoutes(blogPosts, "blog-posts");
 createCrudRoutes(pages, "pages");
 createCrudRoutes(gallery, "gallery");
+
+// Bulk delete for gallery
+router.post("/gallery/bulk-delete", async (req, res) => {
+  try {
+    const { ids } = req.body as { ids?: string[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "ids harus berupa array dan tidak boleh kosong" });
+    }
+    await db.delete(gallery).where(inArray(gallery.id, ids));
+    res.json({ message: `${ids.length} item dihapus` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to bulk delete gallery" });
+  }
+});
 createCrudRoutes(faqs, "faqs");
 createCrudRoutes(manasikMaterials, "manasik-materials");
 createCrudRoutes(services, "services");
