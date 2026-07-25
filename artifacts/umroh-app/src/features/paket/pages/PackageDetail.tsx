@@ -5,6 +5,7 @@ import { useAuth } from "@/shared/hooks/useAuth";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
 import { Button } from "@/shared/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar, Star, Users, Plane, Hotel, MapPin, ArrowRight,
@@ -173,7 +174,7 @@ const PackageDetail = () => {
 
   const handleBookNow = () => {
     if (!user) { navigate("/auth"); return; }
-    if (!selectedDeparture) return;
+    if (!selectedDeparture || !selectedDep || selectedDep.remaining_quota <= 0) return;
     navigate(`/booking/${slug}/${selectedDeparture}`);
   };
 
@@ -662,50 +663,76 @@ const PackageDetail = () => {
                       {departures.length === 0 ? (
                         <p className="text-muted-foreground text-sm">Belum ada jadwal keberangkatan tersedia.</p>
                       ) : (
-                        <div className="space-y-2 max-h-72 overflow-y-auto pr-1 -mr-1">
-                          {departures.map((dep) => {
-                            const isSelected = selectedDeparture === dep.id;
-                            const isSoldOut = dep.remaining_quota === 0;
-                            return (
-                              <button
-                                key={dep.id}
-                                onClick={() => !isSoldOut && setSelectedDeparture(dep.id)}
-                                disabled={isSoldOut}
-                                className={`w-full text-left p-3 rounded-xl border transition-all ${
-                                  isSelected
-                                    ? "border-gold bg-gold/10 shadow-sm"
-                                    : isSoldOut
-                                      ? "border-border bg-muted/50 opacity-50 cursor-not-allowed"
-                                      : "border-border hover:border-gold/50 hover:bg-muted/50"
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <div className={`font-semibold text-sm ${isSelected ? "text-foreground" : ""}`}>
-                                      {format(new Date(dep.departure_date), "d MMM yyyy", { locale: localeId })}
-                                    </div>
-                                    <div className={`text-xs mt-0.5 ${isSoldOut ? "text-destructive" : "text-muted-foreground"}`}>
-                                      {isSoldOut ? "Habis" : `Sisa ${dep.remaining_quota} kursi`}
-                                    </div>
-                                    {dep.departure_type === "transit" ? (
-                                      <div className="flex items-center gap-1 mt-1 text-xs text-amber-600">
-                                        <Plane className="w-3 h-3" />
-                                        <span>Transit</span>
-                                      </div>
-                                    ) : dep.airline ? (
-                                      <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                                        <Plane className="w-3 h-3" />
-                                        <span className="truncate">{dep.airline.name}</span>
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                  <div className={`text-xs font-bold flex-shrink-0 mt-0.5 ${isSelected ? "text-gold" : "text-muted-foreground"}`}>
-                                    {formatPrice(getLowestPrice(dep.prices))}
-                                  </div>
+                        <div className="space-y-3">
+                          <Select
+                            value={selectedDeparture ?? undefined}
+                            onValueChange={setSelectedDeparture}
+                          >
+                            <SelectTrigger className="h-auto min-h-12 rounded-xl border-border bg-background px-3 py-2.5 text-left">
+                              <SelectValue placeholder="Pilih tanggal keberangkatan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {departures.map((dep) => {
+                                const isSoldOut = dep.remaining_quota <= 0;
+                                return (
+                                  <SelectItem
+                                    key={dep.id}
+                                    value={dep.id}
+                                    disabled={isSoldOut}
+                                  >
+                                    <span className="flex items-center gap-2">
+                                      <span className="font-medium">
+                                        {format(new Date(dep.departure_date), "d MMM yyyy", { locale: localeId })}
+                                      </span>
+                                      <span className={isSoldOut ? "text-destructive" : "text-muted-foreground"}>
+                                        {isSoldOut ? "Habis" : `· Sisa ${dep.remaining_quota} kursi`}
+                                      </span>
+                                    </span>
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+
+                          {selectedDep && (
+                            <div className="rounded-xl border border-gold/30 bg-gold/5 p-3.5">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-xs text-muted-foreground">Jadwal terpilih</p>
+                                  <p className="font-semibold text-sm mt-0.5">
+                                    {format(new Date(selectedDep.departure_date), "d MMMM yyyy", { locale: localeId })}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Pulang {format(new Date(selectedDep.return_date), "d MMMM yyyy", { locale: localeId })}
+                                  </p>
                                 </div>
-                              </button>
-                            );
-                          })}
+                                <div className={`text-xs font-semibold text-right flex-shrink-0 ${selectedDep.remaining_quota <= 0 ? "text-destructive" : "text-gold"}`}>
+                                  {selectedDep.remaining_quota <= 0 ? "Kuota habis" : `${selectedDep.remaining_quota} kursi tersisa`}
+                                </div>
+                              </div>
+                              {(selectedDep.departure_type === "transit" || selectedDep.airline) && (
+                                <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gold/20 text-xs text-muted-foreground">
+                                  <Plane className="w-3.5 h-3.5 text-gold" />
+                                  <span>
+                                    {selectedDep.departure_type === "transit"
+                                      ? "Penerbangan transit"
+                                      : selectedDep.airline?.name}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <p className="text-[11px] text-muted-foreground">
+                            {departures.length} pilihan jadwal tersedia
+                          </p>
+                          {/*
+                            Keep sold-out dates visible in the dropdown so users understand
+                            the package's availability, while preventing selection.
+                          */}
+                          {departures.every((dep) => dep.remaining_quota <= 0) && (
+                            <p className="text-xs text-destructive">Semua jadwal keberangkatan sudah penuh.</p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -714,7 +741,7 @@ const PackageDetail = () => {
                     <div className="space-y-2 pt-1">
                       <Button
                         onClick={handleBookNow}
-                        disabled={!selectedDeparture}
+                        disabled={!selectedDeparture || !selectedDep || selectedDep.remaining_quota <= 0}
                         className="w-full gradient-gold text-primary font-bold h-11 text-base"
                       >
                         {user ? "Booking Sekarang" : "Login untuk Booking"}
@@ -882,7 +909,7 @@ const PackageDetail = () => {
       <StickyMobileCTA
         price={selectedDep ? getLowestPrice(selectedDep.prices) : (departures[0] ? getLowestPrice(departures[0].prices) : undefined)}
         onBook={handleBookNow}
-        disabled={!selectedDeparture}
+        disabled={!selectedDeparture || !selectedDep || selectedDep.remaining_quota <= 0}
       />
       <Footer />
     </div>
