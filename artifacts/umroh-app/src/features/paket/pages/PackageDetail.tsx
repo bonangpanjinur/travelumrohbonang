@@ -12,7 +12,7 @@ import {
   Check, BookOpen, ChevronDown, ChevronUp, Images, X,
   ChevronLeft, ChevronRight, ArrowLeft, Shield,
   Package, FileCheck, UtensilsCrossed, GraduationCap,
-  BadgeCheck, Clock, Info,
+  BadgeCheck, Clock, Info, Calculator,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -95,7 +95,7 @@ const FACILITIES = [
 ];
 
 // ── Tab definitions ──────────────────────────────────────────────────────────
-type TabId = "about" | "itinerary" | "accommodation" | "gallery" | "reviews";
+type TabId = "about" | "itinerary" | "accommodation" | "gallery" | "reviews" | "cicilan";
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: "about",         label: "Tentang",    icon: Info },
@@ -103,6 +103,7 @@ const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: "accommodation",label: "Akomodasi",  icon: Hotel },
   { id: "gallery",      label: "Galeri",     icon: Images },
   { id: "reviews",      label: "Ulasan",     icon: Star },
+  { id: "cicilan",      label: "Cicilan",    icon: Calculator },
 ];
 
 // ── Section title component ─────────────────────────────────────────────────
@@ -391,13 +392,11 @@ const PackageDetail = () => {
 
               {/* ── Tab Content ──────────────────────────────────────────── */}
               <div ref={tabContentRef}>
-                <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.18 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.15 }}
                   >
 
                     {/* ── TENTANG tab ─────────────────────────────────── */}
@@ -440,15 +439,6 @@ const PackageDetail = () => {
                           </div>
                         </section>
 
-                        {/* Installment Calculator */}
-                        <section>
-                          <InstallmentCalculator
-                            defaultPrice={(() => {
-                              const allPrices = departures.flatMap((d) => d.prices.map((p) => p.price)).filter((p) => p > 0);
-                              return allPrices.length ? Math.min(...allPrices) : 30_000_000;
-                            })()}
-                          />
-                        </section>
                       </div>
                     )}
 
@@ -698,8 +688,19 @@ const PackageDetail = () => {
                       <PackageReviews packageId={pkg.id} packageTitle={pkg.title} />
                     )}
 
+                    {/* ── CICILAN tab ─────────────────────────────────── */}
+                    {activeTab === "cicilan" && (
+                      <section>
+                        <InstallmentCalculator
+                          defaultPrice={(() => {
+                            const allPrices = departures.flatMap((d) => d.prices.map((p) => p.price)).filter((p) => p > 0);
+                            return allPrices.length ? Math.min(...allPrices) : 30_000_000;
+                          })()}
+                        />
+                      </section>
+                    )}
+
                   </motion.div>
-                </AnimatePresence>
               </div>
             </div>
 
