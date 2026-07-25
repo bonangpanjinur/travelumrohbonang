@@ -161,200 +161,211 @@ const Profile = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       
-      <main className="flex-1 pt-24 pb-16">
-        <div className="container-custom max-w-2xl">
+      <main className="flex-1 px-3 pt-20 pb-24 sm:px-5 sm:pt-24 sm:pb-16 lg:px-8">
+        <div className="container-custom max-w-5xl">
           <Button
             variant="ghost"
             onClick={() => navigate(-1)}
-            className="mb-6 gap-2"
+            className="mb-4 min-h-11 gap-2 px-2.5 sm:mb-6 sm:px-3"
           >
             <ArrowLeft className="w-4 h-4" />
             Kembali
           </Button>
 
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>Profil Saya</CardTitle>
-                  <CardDescription>
-                    Kelola informasi profil dan data pribadi Anda
-                  </CardDescription>
-                </div>
-                {role && (
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 ${
-                    isAdmin ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-accent/10 text-accent border border-accent/20'
-                  }`}>
-                    {isAdmin ? <ShieldCheck className="w-3 h-3" /> : <ShoppingBag className="w-3 h-3" />}
-                    {role.charAt(0).toUpperCase() + role.slice(1)}
-                  </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Avatar Section */}
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative">
-                  <Avatar className="w-24 h-24">
-                    <AvatarImage src={profile.avatar_url} alt={profile.name} />
-                    <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                      {profile.name?.charAt(0)?.toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <label
-                    htmlFor="avatar-upload"
-                    className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
-                  >
-                    {uploading ? (
-                      <Loader2 className="w-4 h-4 text-primary-foreground animate-spin" />
-                    ) : (
-                      <Camera className="w-4 h-4 text-primary-foreground" />
-                    )}
-                  </label>
-                  <input
-                    id="avatar-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                    className="hidden"
-                    disabled={uploading}
-                  />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Klik ikon kamera untuk mengubah foto profil
+          <header className="mb-6 sm:mb-8">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-accent">
+              Akun Saya
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0">
+                <h1 className="text-3xl font-semibold leading-tight text-foreground sm:text-4xl">
+                  Profil Saya
+                </h1>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
+                  Kelola informasi profil dan data pribadi Anda dengan mudah.
                 </p>
               </div>
-
-              {/* Form Fields */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nama Lengkap</Label>
-                  <Input
-                    id="name"
-                    value={profile.name}
-                    onChange={(e) =>
-                      setProfile((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                    placeholder="Masukkan nama lengkap"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={profile.email}
-                    disabled
-                    className="bg-muted"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Email tidak dapat diubah
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Nomor Telepon</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={profile.phone}
-                    onChange={(e) =>
-                      setProfile((prev) => ({ ...prev, phone: e.target.value }))
-                    }
-                    placeholder="Contoh: 08123456789"
-                  />
-                </div>
-
-                {/* Change Password Section */}
-                <div className="pt-4 border-t">
-                  <Label>Keamanan</Label>
-                  <p className="text-xs text-muted-foreground mt-1 mb-2">
-                    Ubah kata sandi untuk mengamankan akun Anda
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate("/forgot-password")}
-                    className="w-full"
-                  >
-                    Ubah Kata Sandi
-                  </Button>
-                </div>
-              </div>
-
-              {/* Role Specific Access Section */}
-              {(
-                <div className="pt-4 border-t space-y-4">
-                  {isAdmin && (
-                    <div>
-                      <Label className="text-primary flex items-center gap-2">
-                        <LayoutDashboard className="w-4 h-4" />
-                        Akses Administrator
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-1 mb-3">
-                        Anda memiliki hak akses untuk mengelola sistem.
-                      </p>
-                      <Link to="/admin">
-                        <Button variant="outline" className="w-full border-primary text-primary hover:bg-primary/5">
-                          Buka Dashboard Admin
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
-                  
-                  {!isAdmin && (
-                    <div>
-                      <Label className="text-accent flex items-center gap-2">
-                        <ShoppingBag className="w-4 h-4" />
-                        Pesanan Saya
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-1 mb-3">
-                        Lihat riwayat pemesanan dan status pembayaran Anda.
-                      </p>
-                      <Link to="/my-bookings">
-                        <Button variant="outline" className="w-full border-accent text-accent hover:bg-accent/5">
-                          Lihat Riwayat Pesanan
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
+              {role && (
+                <div className={`inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${
+                  isAdmin
+                    ? "border-primary/20 bg-primary/10 text-primary"
+                    : "border-accent/20 bg-accent/10 text-accent"
+                }`}>
+                  {isAdmin ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShoppingBag className="h-3.5 w-3.5" />}
+                  {role.charAt(0).toUpperCase() + role.slice(1)}
                 </div>
               )}
+            </div>
+          </header>
 
-              {/* Save Button */}
-              <Button
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Menyimpan...
-                  </>
+          <div className="grid gap-5 lg:grid-cols-[minmax(240px,0.72fr)_minmax(0,1.28fr)] lg:items-start lg:gap-6">
+            <Card className="overflow-hidden border-border/80 shadow-sm">
+              <div className="bg-primary px-5 py-6 text-primary-foreground sm:px-7 sm:py-8">
+                <div className="flex items-center gap-4 sm:flex-col sm:items-center sm:text-center">
+                  <div className="relative shrink-0">
+                    <Avatar className="h-20 w-20 border-4 border-primary-foreground/15 shadow-lg sm:h-28 sm:w-28">
+                      <AvatarImage src={profile.avatar_url} alt={profile.name} />
+                      <AvatarFallback className="bg-gold text-2xl font-semibold text-primary sm:text-4xl">
+                        {profile.name?.charAt(0)?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <label
+                      htmlFor="avatar-upload"
+                      className="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-gold text-primary shadow-md transition-colors hover:bg-gold-light sm:h-9 sm:w-9"
+                      aria-label="Ubah foto profil"
+                    >
+                      {uploading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
+                    </label>
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-semibold sm:text-xl">
+                      {profile.name || "Pengguna"}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-primary-foreground/70 sm:text-sm">
+                      {profile.email || "Email belum tersedia"}
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-5 text-center text-xs leading-5 text-primary-foreground/65">
+                  Klik ikon kamera untuk mengubah foto profil.
+                </p>
+              </div>
+              <CardContent className="space-y-3 p-4 sm:p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Akses cepat
+                </p>
+                {isAdmin ? (
+                  <Link to="/admin" className="block">
+                    <Button variant="outline" className="min-h-11 w-full justify-start gap-2 border-primary/30 text-primary hover:bg-primary/5">
+                      <LayoutDashboard className="h-4 w-4" />
+                      Buka Dashboard Admin
+                    </Button>
+                  </Link>
                 ) : (
-                  "Simpan Perubahan"
+                  <Link to="/my-bookings" className="block">
+                    <Button variant="outline" className="min-h-11 w-full justify-start gap-2 border-accent/40 text-accent hover:bg-accent/5">
+                      <ShoppingBag className="h-4 w-4" />
+                      Lihat Riwayat Pesanan
+                    </Button>
+                  </Link>
                 )}
-              </Button>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Privasi & Data Pribadi</CardTitle>
-              <CardDescription>Unduh salinan data pribadi Anda sesuai UU PDP.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  toast.error("Fitur unduh data belum tersedia");
-                }}
-              >
-                Unduh Data Saya (JSON)
-              </Button>
-            </CardContent>
-          </Card>
+            <div className="space-y-5">
+              <Card className="border-border/80 shadow-sm">
+                <CardHeader className="px-5 pb-3 pt-5 sm:px-7 sm:pt-7">
+                  <CardTitle className="text-xl sm:text-2xl">Informasi Pribadi</CardTitle>
+                  <CardDescription className="leading-5">
+                    Pastikan data Anda selalu terbaru untuk memudahkan proses pemesanan.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5 px-5 pb-5 sm:px-7 sm:pb-7">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nama Lengkap</Label>
+                    <Input
+                      id="name"
+                      value={profile.name}
+                      onChange={(e) =>
+                        setProfile((prev) => ({ ...prev, name: e.target.value }))
+                      }
+                      placeholder="Masukkan nama lengkap"
+                      className="h-11"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={profile.email}
+                      disabled
+                      className="h-11 bg-muted"
+                    />
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      Email tidak dapat diubah.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Nomor Telepon</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={profile.phone}
+                      onChange={(e) =>
+                        setProfile((prev) => ({ ...prev, phone: e.target.value }))
+                      }
+                      placeholder="Contoh: 08123456789"
+                      className="h-11"
+                    />
+                  </div>
+
+                  <div className="border-t pt-5">
+                    <Label>Keamanan</Label>
+                    <p className="mb-3 mt-1 text-xs leading-5 text-muted-foreground">
+                      Ubah kata sandi untuk mengamankan akun Anda.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate("/forgot-password")}
+                      className="min-h-11 w-full sm:w-auto"
+                    >
+                      Ubah Kata Sandi
+                    </Button>
+                  </div>
+
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="min-h-11 w-full"
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Menyimpan...
+                      </>
+                    ) : (
+                      "Simpan Perubahan"
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/80 shadow-sm">
+                <CardHeader className="px-5 pb-3 pt-5 sm:px-7 sm:pt-6">
+                  <CardTitle className="text-xl sm:text-2xl">Privasi & Data Pribadi</CardTitle>
+                  <CardDescription className="leading-5">
+                    Unduh salinan data pribadi Anda sesuai UU PDP.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="px-5 pb-5 sm:px-7 sm:pb-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      toast.error("Fitur unduh data belum tersedia");
+                    }}
+                    className="min-h-11 w-full sm:w-auto"
+                  >
+                    Unduh Data Saya (JSON)
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </main>
 
