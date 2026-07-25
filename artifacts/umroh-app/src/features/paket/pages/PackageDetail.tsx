@@ -370,9 +370,9 @@ const PackageDetail = () => {
       />
       <Navbar />
 
-      <main className="overflow-x-hidden">
+      <main>
         {/* ══ HERO ══════════════════════════════════════════════════════════ */}
-        <div className="relative h-[65vh] min-h-[480px]">
+        <div className="relative h-[65vh] min-h-[480px] w-full">
           {/* Background image — clipped independently so share dropdown isn't clipped */}
           <div className="absolute inset-0 overflow-hidden">
             <img
@@ -530,14 +530,17 @@ const PackageDetail = () => {
         </div>
 
         {/* ══ MAIN CONTENT ══════════════════════════════════════════════════ */}
-        <div className="container-custom section-padding">
-          <div className="grid lg:grid-cols-3 gap-10 xl:gap-14">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-16 md:pb-24">
+          <div className="grid lg:grid-cols-3 gap-8 lg:gap-10 xl:gap-14">
 
             {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
             <div className="lg:col-span-2">
               {/* ── Tab Bar ──────────────────────────────────────────────── */}
-              <div className="sticky top-[64px] z-20 bg-background/95 backdrop-blur-sm border-b border-border mb-8 -mx-4 px-4 md:mx-0 md:px-0">
-                <div className="flex overflow-x-auto scrollbar-none">
+              <div className="sticky top-[64px] z-20 bg-background/95 backdrop-blur-sm border-b border-border mb-8 -mx-4 sm:mx-0">
+                <div
+                  className="flex"
+                  style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", msOverflowStyle: "none" }}
+                >
                   {TABS.map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
