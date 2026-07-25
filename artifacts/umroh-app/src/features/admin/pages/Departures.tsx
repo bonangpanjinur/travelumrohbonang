@@ -11,8 +11,11 @@ import { useToast } from "@/shared/hooks/use-toast";
 import {
   Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search,
   Images, FileDown, Copy, ArrowRight, Plane, ChevronRight, ClipboardList, RefreshCw, Activity,
-  Wallet, CheckSquare, Hotel, X, BookOpen,
+  Wallet, CheckSquare, Hotel, X, BookOpen, MoreHorizontal,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import AdminPagination from "@/features/admin/components/AdminPagination";
@@ -927,8 +930,9 @@ const AdminDepartures = () => {
                   </div>
 
                   {/* Card Footer — Actions */}
-                  <div className="px-4 py-3 bg-muted/30 border-t border-border/60 flex items-center justify-between">
-                    <div className="flex items-center gap-0.5">
+                  <div className="px-4 py-2.5 bg-muted/30 border-t border-border/60 flex items-center justify-between gap-2">
+                    {/* Quick actions — always visible */}
+                    <div className="flex items-center gap-0.5 shrink-0">
                       <Button
                         variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
                         title="Galeri Foto" onClick={() => setGalleryDep(dep)}
@@ -943,33 +947,10 @@ const AdminDepartures = () => {
                       </Button>
                       <Button
                         variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        title="Duplikat Keberangkatan"
-                        onClick={async () => {
-                          try {
-                            await apiFetch(`/api/admin/departures/${dep.id}/clone`, { method: "POST" });
-                            toast({ title: "Keberangkatan berhasil diduplikat" });
-                            fetchData();
-                          } catch (err: any) {
-                            toast({ title: "Gagal menduplikat", description: err?.message, variant: "destructive" });
-                          }
-                        }}
+                        title="Lihat Manifest"
+                        onClick={() => navigate(`/admin/manifest?departureId=${dep.id}`)}
                       >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        title="Sinkronkan Quota"
-                        onClick={async () => {
-                          try {
-                            const result = await apiFetch<{ filled: number; remaining: number }>(`/api/admin/departures/${dep.id}/sync-quota`, { method: "POST" });
-                            toast({ title: `Quota disinkronkan: ${result.filled} booking aktif, sisa ${result.remaining} kursi` });
-                            fetchData();
-                          } catch (err: any) {
-                            toast({ title: "Gagal sinkronisasi quota", description: err?.message, variant: "destructive" });
-                          }
-                        }}
-                      >
-                        <RefreshCw className="w-4 h-4" />
+                        <ClipboardList className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
@@ -978,37 +959,57 @@ const AdminDepartures = () => {
                       >
                         <FileDown className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        title="Lihat Manifest"
-                        onClick={() => navigate(`/admin/manifest?departureId=${dep.id}`)}
-                      >
-                        <ClipboardList className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        title="Dashboard Kesiapan"
-                        onClick={() => navigate(`/admin/departure-readiness?departureId=${dep.id}`)}
-                      >
-                        <Activity className="w-4 h-4" />
-                      </Button>
-                      {/* KB-F04: Tombol Keuangan & Checklist */}
-                      <Button
-                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        title="Laporan Keuangan Keberangkatan"
-                        onClick={() => navigate(`/admin/departure-finance?departureId=${dep.id}`)}
-                      >
-                        <Wallet className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        title="Checklist Keberangkatan"
-                        onClick={() => navigate(`/admin/departure-checklist?departureId=${dep.id}`)}
-                      >
-                        <CheckSquare className="w-4 h-4" />
-                      </Button>
+
+                      {/* More actions dropdown */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Aksi Lainnya">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-52">
+                          <DropdownMenuItem onClick={() => navigate(`/admin/departure-readiness?departureId=${dep.id}`)}>
+                            <Activity className="w-4 h-4 mr-2" /> Dashboard Kesiapan
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/admin/departure-finance?departureId=${dep.id}`)}>
+                            <Wallet className="w-4 h-4 mr-2" /> Laporan Keuangan
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/admin/departure-checklist?departureId=${dep.id}`)}>
+                            <CheckSquare className="w-4 h-4 mr-2" /> Checklist Keberangkatan
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              try {
+                                await apiFetch(`/api/admin/departures/${dep.id}/clone`, { method: "POST" });
+                                toast({ title: "Keberangkatan berhasil diduplikat" });
+                                fetchData();
+                              } catch (err: any) {
+                                toast({ title: "Gagal menduplikat", description: err?.message, variant: "destructive" });
+                              }
+                            }}
+                          >
+                            <Copy className="w-4 h-4 mr-2" /> Duplikat
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              try {
+                                const result = await apiFetch<{ filled: number; remaining: number }>(`/api/admin/departures/${dep.id}/sync-quota`, { method: "POST" });
+                                toast({ title: `Quota disinkronkan: ${result.filled} booking aktif, sisa ${result.remaining} kursi` });
+                                fetchData();
+                              } catch (err: any) {
+                                toast({ title: "Gagal sinkronisasi quota", description: err?.message, variant: "destructive" });
+                              }
+                            }}
+                          >
+                            <RefreshCw className="w-4 h-4 mr-2" /> Sinkronkan Quota
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <div className="flex items-center gap-1">
+
+                    {/* Primary actions */}
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="outline" size="sm" className="h-8 gap-1.5 text-xs"
                         onClick={() => handleEdit(dep)}
@@ -1018,6 +1019,7 @@ const AdminDepartures = () => {
                       <Button
                         variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => requestDelete(dep.id)}
+                        title="Hapus"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
