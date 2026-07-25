@@ -64,20 +64,28 @@ router.get("/package/:packageId", async (req, res) => {
 
 router.post("/package", async (req, res) => {
   try {
+    const { package_id, image_url, caption, sort_order } = req.body;
+    if (!package_id) return res.status(400).json({ error: "package_id diperlukan" });
+    if (!image_url) return res.status(400).json({ error: "image_url diperlukan" });
     const [created] = await db
       .insert(packageGallery)
       .values({
         id: crypto.randomUUID(),
-        packageId: req.body.package_id,
-        imageUrl: req.body.image_url,
-        caption: req.body.caption ?? null,
-        sortOrder: req.body.sort_order ?? 0,
+        packageId: package_id,
+        imageUrl: image_url,
+        caption: caption ?? null,
+        sortOrder: sort_order ?? 0,
         createdAt: new Date(),
       })
       .returning();
     res.status(201).json(created);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to add package gallery item" });
+  } catch (err: any) {
+    console.error("[gallery] POST /package error:", err?.message, err?.code, err?.detail);
+    // Table may not exist yet — give a clearer message
+    if (err?.code === "42P01") {
+      return res.status(500).json({ error: "Tabel package_gallery belum ada. Jalankan: cd lib/db && pnpm drizzle-kit push" });
+    }
+    res.status(500).json({ error: err?.message ?? "Gagal menyimpan foto galeri" });
   }
 });
 
