@@ -6,7 +6,7 @@ import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
 import { Button } from "@/shared/components/ui/button";
 import { motion } from "framer-motion";
-import { Calendar, Star, Users, Plane, Hotel, MapPin, ArrowRight, Check, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, Star, Users, Plane, Hotel, MapPin, ArrowRight, Check, BookOpen, ChevronDown, ChevronUp, Images, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import SEO from "@/shared/components/seo/SEO";
@@ -88,6 +88,8 @@ const PackageDetail = () => {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const [itineraryLoading, setItineraryLoading] = useState(false);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  const [gallery, setGallery] = useState<{ id: string; image_url: string; caption: string | null }[]>([]);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -151,6 +153,19 @@ const PackageDetail = () => {
     };
 
     fetchItinerary();
+  }, [selectedDeparture]);
+
+  // Fetch gallery whenever selected departure changes
+  useEffect(() => {
+    if (!selectedDeparture) {
+      setGallery([]);
+      return;
+    }
+    apiFetch<{ data: { id: string; image_url: string; caption: string | null }[] }>(
+      `/api/packages/gallery/${encodeURIComponent(selectedDeparture)}`,
+    )
+      .then((res) => setGallery(res.data ?? []))
+      .catch(() => setGallery([]));
   }, [selectedDeparture]);
 
   const handleBookNow = () => {
@@ -395,6 +410,37 @@ const PackageDetail = () => {
                 )}
               </div>
 
+              {/* ── Gallery ── */}
+              {gallery.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-display font-bold mb-4">Galeri Foto</h2>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    {gallery.map((item, idx) => (
+                      <button
+                        key={item.id}
+                        onClick={() => setLightboxIdx(idx)}
+                        className="relative group overflow-hidden rounded-xl aspect-square bg-muted border border-border focus:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+                      >
+                        <img
+                          src={item.image_url}
+                          alt={item.caption || `Foto ${idx + 1}`}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
+                          <Images className="w-7 h-7 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                        </div>
+                        {item.caption && (
+                          <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 bg-gradient-to-t from-black/70 to-transparent">
+                            <p className="text-white text-[10px] truncate">{item.caption}</p>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Itinerary */}
               <div>
                 <h2 className="text-2xl font-display font-bold mb-2">Program Perjalanan</h2>
@@ -628,6 +674,61 @@ const PackageDetail = () => {
           intro="Pelajari tips persiapan, tata cara, dan informasi penting sebelum berangkat umroh."
         />
       </main>
+      {/* ── Lightbox ── */}
+      {lightboxIdx !== null && gallery.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setLightboxIdx(null)}
+        >
+          {/* Close */}
+          <button
+            onClick={() => setLightboxIdx(null)}
+            className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+          >
+            <X className="w-8 h-8" />
+          </button>
+
+          {/* Prev */}
+          {gallery.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIdx((i) => (i! - 1 + gallery.length) % gallery.length);
+              }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition-colors bg-black/40 rounded-full p-2"
+            >
+              <ChevronLeft className="w-7 h-7" />
+            </button>
+          )}
+
+          {/* Image */}
+          <div className="relative max-w-4xl w-full max-h-[85vh] flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={gallery[lightboxIdx].image_url}
+              alt={gallery[lightboxIdx].caption || `Foto ${lightboxIdx + 1}`}
+              className="max-h-[75vh] max-w-full object-contain rounded-xl shadow-2xl"
+            />
+            {gallery[lightboxIdx].caption && (
+              <p className="text-white/80 text-sm text-center">{gallery[lightboxIdx].caption}</p>
+            )}
+            <p className="text-white/40 text-xs">{lightboxIdx + 1} / {gallery.length}</p>
+          </div>
+
+          {/* Next */}
+          {gallery.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIdx((i) => (i! + 1) % gallery.length);
+              }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition-colors bg-black/40 rounded-full p-2"
+            >
+              <ChevronRight className="w-7 h-7" />
+            </button>
+          )}
+        </div>
+      )}
+
       <StickyMobileCTA
         price={selectedDep ? getLowestPrice(selectedDep.prices) : (departures[0] ? getLowestPrice(departures[0].prices) : undefined)}
         onBook={handleBookNow}

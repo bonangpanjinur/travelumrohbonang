@@ -11,7 +11,7 @@ import { useToast } from "@/shared/hooks/use-toast";
 import {
   Plus, Pencil, Trash2, Calendar, Users, DollarSign, Search,
   Images, FileDown, Copy, ArrowRight, Plane, ChevronRight, ClipboardList, RefreshCw, Activity,
-  Wallet, CheckSquare, Hotel, X,
+  Wallet, CheckSquare, Hotel, X, BookOpen,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -20,6 +20,7 @@ import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 import { Dialog as GalleryDialog, DialogContent as GalleryDialogContent, DialogHeader as GalleryDialogHeader, DialogTitle as GalleryDialogTitle } from "@/shared/components/ui/dialog";
 import DepartureGalleryPanel from "@/features/admin/components/DepartureGalleryPanel";
+import DepartureItineraryPanel from "@/features/admin/components/DepartureItineraryPanel";
 import { useDeleteConfirm } from "@/features/admin/hooks/useDeleteConfirm";
 
 interface Package { id: string; title: string }
@@ -171,6 +172,7 @@ const AdminDepartures = () => {
   const [editing, setEditing] = useState<Departure | null>(null);
   const [search, setSearch] = useState("");
   const [galleryDep, setGalleryDep] = useState<Departure | null>(null);
+  const [itineraryDep, setItineraryDep] = useState<Departure | null>(null);
   const [manifestSummaries, setManifestSummaries] = useState<Record<string, ManifestSummary>>({});
   const { toast } = useToast();
   const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
@@ -935,6 +937,12 @@ const AdminDepartures = () => {
                       </Button>
                       <Button
                         variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        title="Kelola Itinerary" onClick={() => setItineraryDep(dep)}
+                      >
+                        <BookOpen className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
                         title="Duplikat Keberangkatan"
                         onClick={async () => {
                           try {
@@ -1023,6 +1031,23 @@ const AdminDepartures = () => {
           <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
         </>
       )}
+
+      {/* Itinerary Dialog */}
+      <GalleryDialog open={!!itineraryDep} onOpenChange={(o) => !o && setItineraryDep(null)}>
+        <GalleryDialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <GalleryDialogHeader>
+            <GalleryDialogTitle>
+              Program Perjalanan — {itineraryDep?.package?.title || safeFormatDate(itineraryDep?.departureDate ?? null, "d MMM yyyy")}
+            </GalleryDialogTitle>
+          </GalleryDialogHeader>
+          {itineraryDep && (
+            <DepartureItineraryPanel
+              departureId={itineraryDep.id}
+              departureLabel={`${itineraryDep.package?.title ?? "Tanpa Paket"} · ${safeFormatDate(itineraryDep.departureDate, "d MMM yyyy")}`}
+            />
+          )}
+        </GalleryDialogContent>
+      </GalleryDialog>
 
       {/* Gallery Dialog */}
       <GalleryDialog open={!!galleryDep} onOpenChange={(o) => !o && setGalleryDep(null)}>
