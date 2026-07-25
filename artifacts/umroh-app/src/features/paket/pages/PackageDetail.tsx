@@ -155,18 +155,15 @@ const PackageDetail = () => {
     fetchItinerary();
   }, [selectedDeparture]);
 
-  // Fetch gallery whenever selected departure changes
+  // Fetch package-level gallery once when package is loaded
   useEffect(() => {
-    if (!selectedDeparture) {
-      setGallery([]);
-      return;
-    }
+    if (!pkg?.id) return;
     apiFetch<{ data: { id: string; image_url: string; caption: string | null }[] }>(
-      `/api/packages/gallery/${encodeURIComponent(selectedDeparture)}`,
+      `/api/packages/gallery/by-package/${encodeURIComponent(pkg.id)}`,
     )
       .then((res) => setGallery(res.data ?? []))
       .catch(() => setGallery([]));
-  }, [selectedDeparture]);
+  }, [pkg?.id]);
 
   const handleBookNow = () => {
     if (!user) {

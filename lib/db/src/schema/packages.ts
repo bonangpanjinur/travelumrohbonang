@@ -106,6 +106,17 @@ export const departureGallery = pgTable("departure_gallery", {
   index("idx_departure_gallery_departure_id").on(t.departureId),
 ]);
 
+export const packageGallery = pgTable("package_gallery", {
+  id: text("id").primaryKey(),
+  packageId: text("package_id").notNull().references(() => packages.id, { onDelete: "cascade" }),
+  imageUrl: text("image_url").notNull(),
+  caption: text("caption"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+}, (t) => [
+  index("idx_package_gallery_package_id").on(t.packageId),
+]);
+
 export const packageCosts = pgTable("package_costs", {
   id: text("id").primaryKey(),
   packageId: text("package_id").notNull().references(() => packages.id, { onDelete: "cascade" }),

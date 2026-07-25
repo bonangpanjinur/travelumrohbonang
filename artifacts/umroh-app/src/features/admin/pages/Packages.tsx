@@ -10,10 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Badge } from "@/shared/components/ui/badge";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Search, Download, ExternalLink, Copy, Package, CheckCircle2, XCircle, Calendar } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Search, Download, ExternalLink, Copy, Package, CheckCircle2, XCircle, Calendar, Images } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import { Link } from "react-router-dom";
 import PackageCommissions from "@/features/admin/components/PackageCommissions";
+import PackageGalleryPanel from "@/features/admin/components/PackageGalleryPanel";
+import { Dialog as GalleryDialog, DialogContent as GalleryDialogContent, DialogHeader as GalleryDialogHeader, DialogTitle as GalleryDialogTitle } from "@/shared/components/ui/dialog";
 import AdminPagination from "@/features/admin/components/AdminPagination";
 import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
@@ -81,6 +83,7 @@ const AdminPackages = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Package | null>(null);
   const [expandedCommission, setExpandedCommission] = useState<string | null>(null);
+  const [galleryPkg, setGalleryPkg] = useState<Package | null>(null);
   const [uploading, setUploading] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
@@ -684,6 +687,9 @@ const AdminPackages = () => {
                               <Eye className="w-4 h-4" />
                             </Button>
                           </Link>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Galeri Foto" onClick={() => setGalleryPkg(pkg)}>
+                            <Images className="w-4 h-4" />
+                          </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8" title="Duplikat" onClick={() => handleClone(pkg)}>
                             <Copy className="w-4 h-4" />
                           </Button>
@@ -713,6 +719,17 @@ const AdminPackages = () => {
           <AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
         </>
       )}
+      {/* Gallery Dialog */}
+      <GalleryDialog open={!!galleryPkg} onOpenChange={(o) => !o && setGalleryPkg(null)}>
+        <GalleryDialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <GalleryDialogHeader>
+            <GalleryDialogTitle>Galeri Foto — {galleryPkg?.title}</GalleryDialogTitle>
+          </GalleryDialogHeader>
+          {galleryPkg && (
+            <PackageGalleryPanel packageId={galleryPkg.id} packageTitle={galleryPkg.title} />
+          )}
+        </GalleryDialogContent>
+      </GalleryDialog>
     </div>
   );
 };

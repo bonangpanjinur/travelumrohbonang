@@ -6,6 +6,7 @@ import {
   departurePrices,
   departureHotels,
   departureGallery,
+  packageGallery,
   hotels,
   airlines,
   airports,
@@ -370,30 +371,23 @@ router.get("/itinerary/:departureId", async (req: Request, res: Response) => {
   }
 });
 
-// ── GET /api/packages/gallery/:departureId ──────────────────────────────────
-// Public: fetch gallery images for a given departure
-router.get("/gallery/:departureId", async (req: Request, res: Response) => {
+// ── GET /api/packages/gallery/by-package/:packageId ─────────────────────────
+// Public: fetch package-level gallery photos (managed from admin Paket menu).
+// Always uses Drizzle directly — this table lives only in the Replit DB.
+router.get("/gallery/by-package/:packageId", async (req: Request, res: Response) => {
   try {
-    const { departureId } = req.params;
-
-    if (USE_SUPABASE_HTTP) {
-      const rows = await supabaseGet(
-        `departure_gallery?departure_id=eq.${encodeURIComponent(departureId)}&select=id,image_url,caption,sort_order&order=sort_order.asc`,
-      );
-      res.json({ data: rows ?? [] });
-      return;
-    }
+    const { packageId } = req.params;
 
     const rows = await db
       .select({
-        id: departureGallery.id,
-        imageUrl: departureGallery.imageUrl,
-        caption: departureGallery.caption,
-        sortOrder: departureGallery.sortOrder,
+        id: packageGallery.id,
+        imageUrl: packageGallery.imageUrl,
+        caption: packageGallery.caption,
+        sortOrder: packageGallery.sortOrder,
       })
-      .from(departureGallery)
-      .where(eq(departureGallery.departureId, departureId))
-      .orderBy(asc(departureGallery.sortOrder));
+      .from(packageGallery)
+      .where(eq(packageGallery.packageId, packageId))
+      .orderBy(asc(packageGallery.sortOrder));
 
     res.json({
       data: rows.map((r) => ({
@@ -404,7 +398,7 @@ router.get("/gallery/:departureId", async (req: Request, res: Response) => {
       })),
     });
   } catch (err) {
-    console.error("[packages] gallery error:", err);
+    console.error("[packages] package gallery error:", err);
     res.status(500).json({ error: "Failed to fetch gallery" });
   }
 });
