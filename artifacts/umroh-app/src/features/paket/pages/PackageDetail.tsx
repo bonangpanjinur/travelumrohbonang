@@ -343,7 +343,7 @@ const PackageDetail = () => {
   const galleryExtra = gallery.length - GALLERY_PREVIEW;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <SEO
         title={pkg.title}
         description={pkg.description || `Paket ${pkg.title} dengan pelayanan premium dan bimbingan ibadah lengkap.`}
@@ -370,7 +370,7 @@ const PackageDetail = () => {
       />
       <Navbar />
 
-      <main>
+      <main className="overflow-x-hidden">
         {/* ══ HERO ══════════════════════════════════════════════════════════ */}
         <div className="relative h-[65vh] min-h-[480px]">
           {/* Background image — clipped independently so share dropdown isn't clipped */}
@@ -389,7 +389,7 @@ const PackageDetail = () => {
 
           {/* Back link */}
           <div className="absolute top-24 left-0 right-0">
-            <div className="container-custom">
+            <div className="container-custom px-4 sm:px-6">
               <Link
                 to="/paket"
                 className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors text-sm font-medium backdrop-blur-sm bg-white/10 px-3 py-1.5 rounded-full border border-white/20"
@@ -402,7 +402,7 @@ const PackageDetail = () => {
 
           {/* Hero content */}
           <div className="absolute bottom-0 left-0 right-0 pb-6 sm:pb-8 pt-16">
-            <div className="container-custom">
+            <div className="container-custom px-4 sm:px-6">
               <div className="flex items-end justify-between gap-3 sm:gap-4">
                 <div className="flex-1 min-w-0">
                   {/* Category badge */}
