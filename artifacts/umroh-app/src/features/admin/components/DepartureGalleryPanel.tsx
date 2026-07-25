@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
@@ -21,13 +21,18 @@ interface Props {
   departureLabel: string;
 }
 
+const PLACEHOLDER =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='14' fill='%239ca3af'%3EGambar tidak tersedia%3C/text%3E%3C/svg%3E";
+
 const DepartureGalleryPanel = ({ departureId, departureLabel }: Props) => {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>("");
   const [caption, setCaption] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [toDelete, setToDelete] = useState<GalleryItem | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadItems();
@@ -36,7 +41,9 @@ const DepartureGalleryPanel = ({ departureId, departureLabel }: Props) => {
   const loadItems = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch<{ data: GalleryItem[] }>(`/api/admin/gallery/departure/${departureId}`);
+      const res = await apiFetch<{ data: GalleryItem[] }>(
+        `/api/admin/gallery/departure/${departureId}`,
+      );
       setItems(res.data || []);
     } catch {
       toast.error("Gagal memuat galeri");
@@ -45,33 +52,49 @@ const DepartureGalleryPanel = ({ departureId, departureLabel }: Props) => {
   };
 
   const handleUpload = async () => {
-    if (!file) return void toast.error("Pilih file terlebih dahulu");
+    if (files.length === 0) return void toast.error("Pilih file terlebih dahulu");
     setUploading(true);
-    try {
-      const ext = file.name.split(".").pop();
-      const path = `departures/${departureId}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("gallery").upload(path, file);
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("gallery").getPublicUrl(path);
-      
-      await apiFetch("/api/admin/gallery", {
-        method: "POST",
-        body: JSON.stringify({
-          departure_id: departureId,
-          image_url: pub.publicUrl,
-          caption: caption || null,
-          sort_order: items.length,
-        }),
-      });
-      
-      toast.success("Foto berhasil diupload");
-      setFile(null);
+    let successCount = 0;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      setUploadProgress(`Mengupload ${i + 1}/${files.length}…`);
+      try {
+        const ext = file.name.split(".").pop();
+        const path = `departures/${departureId}/${Date.now()}-${i}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("gallery")
+          .upload(path, file);
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage
+          .from("gallery")
+          .getPublicUrl(path);
+
+        await apiFetch("/api/admin/gallery", {
+          method: "POST",
+          body: JSON.stringify({
+            departure_id: departureId,
+            image_url: pub.publicUrl,
+            caption: caption || null,
+            sort_order: items.length + i,
+          }),
+        });
+        successCount++;
+      } catch (e: any) {
+        toast.error(`Gagal upload "${file.name}": ${e.message ?? "error"}`);
+      }
+    }
+    setUploading(false);
+    setUploadProgress("");
+    if (successCount > 0) {
+      toast.success(
+        successCount === files.length
+          ? `${successCount} foto berhasil diupload`
+          : `${successCount} dari ${files.length} foto berhasil diupload`,
+      );
+      setFiles([]);
       setCaption("");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       loadItems();
-    } catch (e: any) {
-      toast.error(e.message || "Gagal upload foto");
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -87,45 +110,88 @@ const DepartureGalleryPanel = ({ departureId, departureLabel }: Props) => {
     setToDelete(null);
   };
 
+  const removeFile = (idx: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   return (
     <div className="space-y-4">
-      <div>
-        <p className="text-sm text-muted-foreground font-medium">{departureLabel}</p>
-      </div>
+      <p className="text-sm text-muted-foreground font-medium">{departureLabel}</p>
 
       <div className="bg-muted/40 rounded-lg p-4 space-y-3">
         <p className="text-sm font-medium">Upload Foto Baru</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-          <div className="space-y-1">
-            <Label className="text-xs">File Foto</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="text-xs h-9"
-              />
-              {file && (
-                <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0" onClick={() => setFile(null)}>
-                  <X className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Caption (opsional)</Label>
-            <Input
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Keterangan foto"
-              className="h-9"
-            />
-          </div>
-          <Button onClick={handleUpload} disabled={uploading || !file} size="sm" className="gradient-gold text-primary">
-            {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-            Upload
-          </Button>
+
+        {/* File picker */}
+        <div className="space-y-1">
+          <Label className="text-xs">
+            File Foto{" "}
+            <span className="text-muted-foreground font-normal">
+              (bisa pilih lebih dari 1)
+            </span>
+          </Label>
+          <Input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => {
+              const picked = Array.from(e.target.files ?? []);
+              setFiles((prev) => [...prev, ...picked]);
+            }}
+            className="text-xs h-9"
+          />
         </div>
+
+        {/* Selected file chips */}
+        {files.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {files.map((f, i) => (
+              <span
+                key={i}
+                className="flex items-center gap-1 bg-background border border-border rounded-full px-3 py-1 text-xs"
+              >
+                {f.name}
+                <button
+                  type="button"
+                  onClick={() => removeFile(i)}
+                  className="text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Caption */}
+        <div className="space-y-1">
+          <Label className="text-xs">Caption (opsional, berlaku untuk semua foto)</Label>
+          <Input
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            placeholder="Keterangan foto"
+            className="h-9"
+          />
+        </div>
+
+        <Button
+          onClick={handleUpload}
+          disabled={uploading || files.length === 0}
+          size="sm"
+          className="gradient-gold text-primary"
+        >
+          {uploading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              {uploadProgress || "Mengupload…"}
+            </>
+          ) : (
+            <>
+              <Upload className="w-4 h-4 mr-2" />
+              {files.length > 1 ? `Upload ${files.length} Foto` : "Upload"}
+            </>
+          )}
+        </Button>
       </div>
 
       {loading ? (
@@ -139,14 +205,22 @@ const DepartureGalleryPanel = ({ departureId, departureLabel }: Props) => {
         </div>
       ) : (
         <div>
-          <p className="text-sm font-medium mb-3 text-muted-foreground">{items.length} foto</p>
+          <p className="text-sm font-medium mb-3 text-muted-foreground">
+            {items.length} foto
+          </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {items.map((it) => (
-              <div key={it.id} className="relative group rounded-lg overflow-hidden border bg-muted">
+              <div
+                key={it.id}
+                className="relative group rounded-lg overflow-hidden border bg-muted"
+              >
                 <img
                   src={it.image_url}
                   alt={it.caption || "foto keberangkatan"}
                   className="w-full aspect-square object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = PLACEHOLDER;
+                  }}
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-start justify-end p-2">
                   <Button
@@ -159,7 +233,9 @@ const DepartureGalleryPanel = ({ departureId, departureLabel }: Props) => {
                   </Button>
                 </div>
                 {it.caption && (
-                  <div className="px-2 py-1.5 text-xs truncate bg-background border-t">{it.caption}</div>
+                  <div className="px-2 py-1.5 text-xs truncate bg-background border-t">
+                    {it.caption}
+                  </div>
                 )}
               </div>
             ))}

@@ -423,6 +423,10 @@ const PackageDetail = () => {
                           alt={item.caption || `Foto ${idx + 1}`}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                           loading="lazy"
+                          onError={(e) => {
+                            const el = e.target as HTMLImageElement;
+                            el.style.display = "none";
+                          }}
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
                           <Images className="w-7 h-7 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
