@@ -1008,6 +1008,7 @@ const PackageDetail = () => {
                           startPrice: selectedDep
                             ? getLowestPrice(selectedDep.prices)
                             : departures[0] ? getLowestPrice(departures[0].prices) : 0,
+                          pageUrl: typeof window !== "undefined" ? window.location.href : undefined,
                         }}
                       />
                     </div>
