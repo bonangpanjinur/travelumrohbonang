@@ -15,7 +15,13 @@ interface PromoData {
   brandPhone?: string;
 }
 
-async function loadHeroImage(src: string, targetRatio: number): Promise<string> {
+interface LoadedHeroImage {
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+async function loadHeroImage(src: string): Promise<LoadedHeroImage> {
   const response = await fetch(src, { mode: "cors" });
   if (!response.ok) throw new Error(`Hero image request failed (${response.status})`);
 
@@ -28,24 +34,22 @@ async function loadHeroImage(src: string, targetRatio: number): Promise<string> 
       element.src = objectUrl;
     });
 
-    // Crop the source like object-cover so portrait hero artwork stays readable.
+    // Re-encode the source for jsPDF while preserving its original dimensions.
+    // Do not crop or stretch the package artwork: the database image is the
+    // source of truth for the brochure's visual.
     const canvas = document.createElement("canvas");
-    canvas.width = 1400;
-    canvas.height = Math.round(canvas.width / targetRatio);
-    const sourceRatio = image.naturalWidth / image.naturalHeight;
-    let sx = 0;
-    let sy = 0;
-    let sw = image.naturalWidth;
-    let sh = image.naturalHeight;
-    if (sourceRatio > targetRatio) {
-      sw = image.naturalHeight * targetRatio;
-      sx = (image.naturalWidth - sw) / 2;
-    } else {
-      sh = image.naturalWidth / targetRatio;
-      sy = (image.naturalHeight - sh) / 2;
-    }
-    canvas.getContext("2d")?.drawImage(image, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.9);
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Hero image canvas is unavailable");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0);
+    return {
+      dataUrl: canvas.toDataURL("image/jpeg", 0.92),
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+    };
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
@@ -71,39 +75,55 @@ export async function generatePromoPdf(d: PromoData): Promise<Blob> {
   doc.setTextColor(40, 40, 40);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
-  doc.text(d.packageTitle, 40, 105, { maxWidth: w - 80 });
+  const titleLines = doc.splitTextToSize(d.packageTitle, w - 80);
+  doc.text(titleLines, 40, 105);
 
   // Hero image from the package detail page.
-  const heroX = 40;
-  const heroY = 122;
-  const heroW = w - 80;
-  const heroH = 210;
+  const heroY = 122 + Math.max(0, titleLines.length - 1) * 26;
+  const maxHeroW = w - 80;
+  // Leave enough room for wide brochure artwork to fill the page width while
+  // still preventing unusually tall database images from pushing every detail
+  // section off the A4 page.
+  const maxHeroH = 340;
+  let heroX = 40;
+  let heroW = maxHeroW;
+  let heroH = maxHeroH;
   if (d.packageImage) {
     try {
-      const heroDataUrl = await loadHeroImage(d.packageImage, heroW / heroH);
-      doc.addImage(heroDataUrl, "JPEG", heroX, heroY, heroW, heroH, undefined, "FAST");
+      const hero = await loadHeroImage(d.packageImage);
+      const scale = Math.min(maxHeroW / hero.width, maxHeroH / hero.height);
+      heroW = hero.width * scale;
+      heroH = hero.height * scale;
+      heroX = (w - heroW) / 2;
+      doc.addImage(hero.dataUrl, "JPEG", heroX, heroY, heroW, heroH, undefined, "FAST");
     } catch {
       // Keep the brochure downloadable even when a remote image blocks CORS.
       doc.setFillColor(245, 240, 232);
-      doc.roundedRect(heroX, heroY, heroW, heroH, 8, 8, "F");
+      doc.roundedRect(40, heroY, maxHeroW, maxHeroH, 8, 8, "F");
       doc.setTextColor(120, 20, 20);
       doc.setFontSize(12);
-      doc.text("Gambar paket tersedia di halaman detail", w / 2, heroY + heroH / 2, { align: "center" });
+      doc.text("Gambar paket tersedia di halaman detail", w / 2, heroY + maxHeroH / 2, { align: "center" });
+      heroX = 40;
+      heroW = maxHeroW;
+      heroH = maxHeroH;
     }
+  } else {
+    heroH = 0;
   }
 
   // Price strip
+  const priceY = heroY + heroH + 18;
   doc.setFillColor(245, 230, 200);
-  doc.rect(40, 345, w - 80, 50, "F");
+  doc.rect(40, priceY, w - 80, 50, "F");
   doc.setTextColor(80, 50, 0);
   doc.setFontSize(11);
-  doc.text("Mulai dari", 56, 365);
+  doc.text("Mulai dari", 56, priceY + 20);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  doc.text(`Rp ${d.startPrice.toLocaleString("id-ID")}`, 56, 385);
+  doc.text(`Rp ${d.startPrice.toLocaleString("id-ID")}`, 56, priceY + 40);
 
   // Details
-  let y = 425;
+  let y = priceY + 80;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(60, 60, 60);
