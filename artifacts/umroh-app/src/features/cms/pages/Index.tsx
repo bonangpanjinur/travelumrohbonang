@@ -12,7 +12,6 @@ import BlogSection from "@/features/cms/components/BlogSection";
 import FAQSection from "@/features/cms/components/FAQSection";
 import CTASection from "@/features/cms/components/CTASection";
 import Footer from "@/shared/components/layout/Footer";
-import FloatingButtons from "@/shared/components/common/FloatingButtons";
 import SEO from "@/shared/components/seo/SEO";
 import LocalBusinessJsonLd from "@/shared/components/seo/LocalBusinessJsonLd";
 
@@ -64,7 +63,6 @@ const Index = () => {
         <CTASection />
       </main>
       <Footer />
-      <FloatingButtons />
     </div>
   );
 };

@@ -145,6 +145,7 @@ import { useEffect } from "react";
 import { installGlobalErrorHandlers } from "@/shared/lib/errorLogger";
 import ErrorBoundary from "@/shared/components/common/ErrorBoundary";
 import MobileBottomNav from "@/shared/components/layout/MobileBottomNav";
+import GlobalFloatingWidgets from "@/shared/components/common/GlobalFloatingWidgets";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
@@ -166,6 +167,7 @@ const AppContent = () => {
     <>
       <ImpersonationBanner />
       <MobileBottomNav />
+      <GlobalFloatingWidgets />
       <Routes>
       {/* Public Routes */}
       <Route path="/" element={<Index />} />

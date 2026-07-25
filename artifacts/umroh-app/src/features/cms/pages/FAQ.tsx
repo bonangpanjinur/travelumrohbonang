@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/shared/integrations/supabase/client";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
-import FloatingButtons from "@/shared/components/common/FloatingButtons";
 import SEO from "@/shared/components/seo/SEO";
 import {
   Accordion,
@@ -140,7 +139,6 @@ const FAQPage = () => {
       </section>
 
       <Footer />
-      <FloatingButtons />
     </div>
   );
 };
