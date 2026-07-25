@@ -50,10 +50,12 @@ export default function ChatBox({ bookingId, asAdmin = false }: Props) {
     if (!text.trim() || !user) return;
     setSending(true);
     try {
-      await apiFetch("/api/admin/chats", {
+      // Buyers use the public CMS endpoint; admins use the staff-only admin endpoint
+      const endpoint = senderRole === "admin" ? "/api/admin/chats" : "/api/cms/chat-messages";
+      await apiFetch(endpoint, {
         method: "POST",
         body: JSON.stringify({
-          bookingId, senderId: user.id, senderRole: senderRole, message: text.trim(),
+          bookingId, senderId: user.id, senderRole, message: text.trim(),
         }),
       });
       setText("");

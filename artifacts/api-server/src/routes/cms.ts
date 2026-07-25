@@ -212,7 +212,52 @@ router.get("/services", async (req, res) => {
   }
 });
 
-// Chat Messages (Scoped by booking — auth + ownership required, see P0-1 fix 2026-07-08)
+// Chat Messages — POST: buyer sends a message (auth + booking ownership required)
+router.post("/chat-messages", requireAuth, async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ error: "Authentication required" });
+
+    const { bookingId, message } = req.body as { bookingId?: string; message?: string };
+    if (!bookingId || !message?.trim()) {
+      return res.status(400).json({ error: "bookingId and message are required" });
+    }
+
+    // Verify the booking belongs to this user (or the caller is staff)
+    const [booking] = await db
+      .select({ id: bookings.id, userId: bookings.userId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+
+    const isOwner = booking.userId === req.user.id;
+    const isStaff = STAFF_ROLES.has(req.user.role as string);
+    if (!isOwner && !isStaff) {
+      return res.status(403).json({ error: "Not authorized to send messages for this booking" });
+    }
+
+    const senderRole = isStaff ? "admin" : "buyer";
+
+    const [item] = await db
+      .insert(chatMessages)
+      .values({
+        id: crypto.randomUUID(),
+        bookingId,
+        senderId: req.user.id,
+        senderRole,
+        message: message.trim(),
+        createdAt: new Date(),
+      })
+      .returning();
+
+    res.status(201).json({ data: item });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to send message" });
+  }
+});
+
+// Chat Messages — GET: fetch messages (auth + ownership required, see P0-1 fix 2026-07-08)
 router.get("/chat-messages", requireAuth, async (req, res) => {
   try {
     if (!req.user) {
