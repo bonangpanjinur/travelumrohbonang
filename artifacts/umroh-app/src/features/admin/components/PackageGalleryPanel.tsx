@@ -55,19 +55,14 @@ const PackageGalleryPanel = ({ packageId, packageTitle }: Props) => {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("folder", `packages/${packageId}`);
-      const res = await fetch("/api/admin/uploads/image", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Upload gagal");
-      const data = await res.json();
-      await saveItem(data.url || data.imageUrl || data.image_url);
+      const data = await apiFetch<{ url: string; imageUrl?: string; image_url?: string }>(
+        "/api/admin/uploads/image",
+        { method: "POST", body: formData },
+      );
+      await saveItem(data.url || data.imageUrl || data.image_url || "");
       setFile(null);
     } catch (e: any) {
-      // Fallback: inform user to use URL mode
-      toast.error("Upload file gagal — gunakan mode URL");
-      setInputMode("url");
+      toast.error(e.message || "Gagal upload gambar");
     } finally {
       setUploading(false);
     }
