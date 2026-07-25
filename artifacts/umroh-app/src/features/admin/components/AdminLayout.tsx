@@ -11,6 +11,7 @@ import { AdminHealthBanner } from "./AdminHealthBanner";
 import { AdminSessionTimeoutModal } from "./AdminSessionTimeoutModal";
 import { AdminThemeContext, useAdminThemeProvider } from "@/features/admin/hooks/useAdminTheme";
 import { FeatureFlagsProvider } from "@/features/admin/hooks/useFeatureFlags";
+import AdminFloatingChat from "./AdminFloatingChat";
 
 const AdminLayout = () => {
   const { role, signOut } = useAuth();
@@ -94,6 +95,9 @@ const AdminLayout = () => {
 
       {/* Session expiry warning modal */}
       <AdminSessionTimeoutModal />
+
+      {/* Floating chat widget — visible on all admin pages */}
+      <AdminFloatingChat />
     </div>
     </FeatureFlagsProvider>
     </AdminThemeContext.Provider>
