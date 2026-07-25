@@ -12,7 +12,7 @@ import {
   Check, BookOpen, ChevronDown, ChevronUp, Images, X,
   ChevronLeft, ChevronRight, ArrowLeft, Shield,
   Package, FileCheck, UtensilsCrossed, GraduationCap,
-  BadgeCheck, Clock, Info, Calculator,
+  BadgeCheck, Clock, Info, Calculator, MessageCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -190,6 +190,24 @@ const PackageDetail = () => {
     if (!user) { navigate("/auth"); return; }
     if (!selectedDeparture || !selectedDep || selectedDep.remaining_quota <= 0) return;
     navigate(`/booking/${slug}/${selectedDeparture}`);
+  };
+
+  const handleKonsultasi = () => {
+    const waNumber = (tenant?.whatsapp_number ?? tenant?.phone ?? "").replace(/\D/g, "");
+    const depDate = selectedDep
+      ? format(new Date(selectedDep.departure_date), "d MMMM yyyy", { locale: localeId })
+      : "";
+    const lines = [
+      `Halo, saya ingin konsultasi mengenai paket umroh:`,
+      `📦 *${pkg?.title}*`,
+      depDate ? `🗓️ Keberangkatan: ${depDate}` : "",
+      ``,
+      `Mohon informasi lebih lanjut, terima kasih.`,
+    ].filter(Boolean).join("\n");
+    const url = waNumber
+      ? `https://wa.me/${waNumber}?text=${encodeURIComponent(lines)}`
+      : `https://wa.me/?text=${encodeURIComponent(lines)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const getLowestPrice = (prices: { room_type: string; price: number }[]) => {
@@ -813,6 +831,14 @@ const PackageDetail = () => {
                       >
                         {user ? "Booking Sekarang" : "Login untuk Booking"}
                         <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                      <Button
+                        onClick={handleKonsultasi}
+                        variant="outline"
+                        className="w-full h-11 border-gold/40 text-gold hover:bg-gold/5 hover:border-gold font-semibold gap-2"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        Konsultasi Paket
                       </Button>
                       <PromoPdfButton
                         packageData={{
