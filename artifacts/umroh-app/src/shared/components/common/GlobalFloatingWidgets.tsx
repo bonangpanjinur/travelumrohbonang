@@ -12,6 +12,7 @@
  */
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import GuestChatWidget from "@/shared/components/chat/GuestChatWidget";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { motion, AnimatePresence } from "framer-motion";
@@ -79,11 +80,31 @@ const GlobalFloatingWidgets = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const showScrollTop = useScrollY(400);
 
-  // Hide entirely on admin pages
-  if (pathname.startsWith("/admin")) return null;
+  // Hide entirely on admin and auth pages
+  if (pathname.startsWith("/admin") || pathname.startsWith("/auth")) return null;
+
+  // Pages that are fully authenticated — guest chat widget not relevant there
+  const isAuthenticatedRoute =
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/my-") ||
+    pathname.startsWith("/booking") ||
+    pathname.startsWith("/wishlist") ||
+    pathname.startsWith("/loyalty") ||
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/agent-") ||
+    pathname.startsWith("/branch-dashboard") ||
+    pathname.startsWith("/account") ||
+    pathname.startsWith("/contract") ||
+    pathname.startsWith("/tabungan") ||
+    pathname.startsWith("/e-ticket") ||
+    pathname.startsWith("/refund-request") ||
+    pathname === "/chat";
 
   return (
     <>
+      {/* ── Guest chat widget — shown on all public pages ────────────────── */}
+      {!isAuthenticatedRoute && <GuestChatWidget />}
+
       {/* ── Scroll-to-top ───────────────────────────────────────────────── */}
       <AnimatePresence>
         {showScrollTop && (

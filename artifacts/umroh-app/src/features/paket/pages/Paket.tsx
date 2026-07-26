@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo, useRef } from "react";
-import GuestChatWidget from "@/shared/components/chat/GuestChatWidget";
 import { useSearchParams } from "react-router-dom";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
@@ -554,7 +553,6 @@ const Paket = () => {
       <Footer />
 
       {/* Guest chat widget — tamu/calon jemaah; hidden for logged-in users */}
-      <GuestChatWidget />
     </div>
   );
 };
