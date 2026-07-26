@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, User, LogOut, ChevronDown, LayoutDashboard, Ticket, UserCircle, LayoutGrid } from "lucide-react";
+import { Menu, X, User, LogOut, ChevronDown, LayoutDashboard, Ticket, UserCircle, LayoutGrid, MessageCircle } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/shared/hooks/useAuth";
@@ -336,6 +336,15 @@ const Navbar = () => {
                     {t("nav.my_dashboard")}
                   </Link>
                 </DropdownMenuItem>
+
+                {!isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/chat" className="flex items-center gap-2 cursor-pointer">
+                      <MessageCircle className="w-4 h-4" />
+                      {t("nav.chat_admin")}
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 
                 {isAdmin && (
                   <>
@@ -439,6 +448,17 @@ const Navbar = () => {
                     <LayoutDashboard className="w-4 h-4" />
                     {t("nav.my_dashboard")}
                   </Link>
+
+                  {!isAdmin && (
+                    <Link 
+                      to="/chat" 
+                      onClick={() => setIsOpen(false)} 
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary-foreground/80 hover:text-gold hover:bg-primary-foreground/10 rounded-lg"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      {t("nav.chat_admin")}
+                    </Link>
+                  )}
 
                   {isAdmin && (
                     <div className="pt-2 mt-2 border-t border-primary-foreground/5">

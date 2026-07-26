@@ -182,7 +182,7 @@ export const FEATURE_DEFINITIONS: FeatureDef[] = [
     description: "Komunikasi real-time antara admin dan jamaah.",
     category: "CRM & Marketing",
     icon: MessageCircle,
-    routes: ["/admin/chats"],
+    routes: ["/admin/chat"],
   },
   {
     id: "social_kit",
