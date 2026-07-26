@@ -446,19 +446,19 @@ export const chatAuth = async (req, res, next) => {
 
 ---
 
-### Sprint 2 — Admin Inbox Full Page (UI Admin)
-**Estimasi: 3–4 hari**
+### Sprint 2 — Admin Inbox Full Page (UI Admin) ✅ SELESAI
+**Selesai: 26 Juli 2026**
 
 **Goal:** Admin bisa melihat dan membalas semua percakapan secara real-time di halaman `/admin/chat`.
 
 **Hook baru:**
-- [ ] `artifacts/umroh-app/src/features/admin/hooks/useAdminInbox.ts`
+- [x] `artifacts/umroh-app/src/features/admin/hooks/useAdminInbox.ts`
   - Fetch percakapan via `GET /api/admin/conversations`
   - Subscribe Supabase realtime channel `admin_inbox` untuk INSERT baru di `conversation_messages` dan `conversations`
   - Update unread badge tanpa refresh
 
 **Komponen baru:**
-- [ ] `artifacts/umroh-app/src/features/admin/pages/ChatInbox.tsx` (halaman baru)
+- [x] `artifacts/umroh-app/src/features/admin/pages/ChatInbox.tsx` (halaman baru)
   - Layout: dua kolom (list kiri, chat kanan)
   - Left panel: daftar percakapan dengan tabs filter (Semua / Tamu / Member / Belum Dibalas)
   - Left panel: search bar (nama, no HP, kata kunci pesan)
@@ -469,13 +469,15 @@ export const chatAuth = async (req, res, next) => {
   - Pesan baru muncul real-time (supabase subscription)
 
 **Routing:**
-- [ ] Tambah route `/admin/chat` di `App.tsx`
-- [ ] Tambah link "Chat" di sidebar admin (`AdminLayout`)
+- [x] Tambah route `/admin/chat` di `App.tsx`
+- [x] Route `/admin/chats` lama redirect ke `/admin/chat`
+- [x] Update link sidebar admin ke `/admin/chat` (`adminMenuConfig.ts`)
 
 **Done criteria:**
-- Admin bisa melihat semua percakapan (tamu + jemaah + booking)
-- Pesan baru dari user muncul di panel admin tanpa refresh
-- Admin bisa membalas dan pesan langsung terkirim
+- ✅ Admin bisa melihat semua percakapan (tamu + jemaah + booking)
+- ✅ Pesan baru dari user muncul di panel admin tanpa refresh (Supabase realtime)
+- ✅ Admin bisa membalas dan pesan langsung terkirim
+- ✅ TypeScript typecheck bersih
 
 ---
 

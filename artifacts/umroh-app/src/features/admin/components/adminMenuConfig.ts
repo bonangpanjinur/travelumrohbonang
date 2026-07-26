@@ -188,7 +188,7 @@ export const menuGroups: MenuGroup[] = [
     labelKey: "menu.group.communication",
     icon: MessageCircle,
     items: [
-      { label: "Chat Jamaah", labelKey: "menu.pilgrim_chat", href: "/admin/chats", icon: MessageCircle, roles: ALL_STAFF, featureId: "chats" },
+      { label: "Chat Jamaah", labelKey: "menu.pilgrim_chat", href: "/admin/chat", icon: MessageCircle, roles: ALL_STAFF, featureId: "chats" },
     ],
   },
   {

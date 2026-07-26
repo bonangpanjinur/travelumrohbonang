@@ -93,6 +93,7 @@ import AdminSystemHealth from "./features/admin/pages/SystemHealth";
 import AdminSlugRedirects from "./features/admin/pages/SlugRedirects";
 import AdminRoleManagement from "./features/admin/pages/RoleManagement";
 import AdminChats from "./features/admin/pages/Chats";
+import ChatInbox from "./features/admin/pages/ChatInbox";
 import AgentCommissions from "./features/agent/pages/AgentCommissions";
 import RefundRequest from "./features/booking/pages/RefundRequest";
 import ETicket from "./features/booking/pages/ETicket";
@@ -277,7 +278,8 @@ const AppContent = () => {
           <Route path="audit-logs" element={<AdminAuditLogs />} />
           <Route path="system-health" element={<AdminSystemHealth />} />
           <Route path="role-management" element={<AdminRoleManagement />} />
-          <Route path="chats" element={<AdminChats />} />
+          <Route path="chats" element={<Navigate to="/admin/chat" replace />} />
+          <Route path="chat" element={<ChatInbox />} />
           <Route path="leaderboard" element={<AdminLeaderboard />} />
           <Route path="currencies" element={<AdminCurrencies />} />
           <Route path="reviews" element={<AdminReviews />} />
