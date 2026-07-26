@@ -1,13 +1,17 @@
 /**
- * useAdminInbox — Sprint 2 (chat_architecture.md §6)
+ * useAdminInbox — Sprint 2 + Sprint 6 Polish (chat_architecture.md §6)
  *
  * Fetches all conversations for the admin inbox and subscribes to Supabase
  * realtime for live updates (new conversations + new messages → badge update).
+ *
+ * Sprint 6 additions:
+ * - Browser Notification API when admin tab is hidden
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { apiFetch } from "@/shared/lib/apiClient";
+import { useBrowserNotifications } from "./useBrowserNotifications";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -65,11 +69,16 @@ export function useAdminInbox() {
     search: "",
   });
 
+  const { notify } = useBrowserNotifications();
+
   // Unique mount ID to avoid duplicate realtime channels under React Strict Mode
   const mountId = useMemo(
     () => `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     [],
   );
+
+  // Track the last notification we showed so we don't re-notify on re-render
+  const notifiedMsgIds = useRef<Set<string>>(new Set());
 
   const fetchConversations = useCallback(async (f?: InboxFilter) => {
     const active = f ?? filter;
@@ -126,13 +135,27 @@ export function useAdminInbox() {
           );
         },
       )
-      // New message in any conversation → re-sort by last_message_at
+      // New message in any conversation → browser notification if tab hidden
+      // NOTE: Supabase Realtime payload.new is raw DB row → snake_case column names
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "conversation_messages" },
-        (_payload) => {
-          // The conversation UPDATE event will carry the new preview/unread;
-          // nothing extra needed here for the list view.
+        (payload) => {
+          const msg = payload.new as {
+            id: string;
+            sender_type: string;
+            sender_name: string;
+            message: string;
+          };
+          // Only notify for messages from user/guest (not admin's own messages)
+          if (msg.sender_type === "admin") return;
+          if (notifiedMsgIds.current.has(msg.id)) return;
+          notifiedMsgIds.current.add(msg.id);
+
+          notify(
+            `Pesan baru dari ${msg.sender_name}`,
+            (msg.message ?? "").slice(0, 100),
+          );
         },
       )
       .subscribe();
@@ -140,7 +163,7 @@ export function useAdminInbox() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [mountId]);
+  }, [mountId, notify]);
 
   const totalUnread = conversations.reduce((n, c) => n + (c.unread_admin ?? 0), 0);
 
@@ -202,6 +225,23 @@ export function useConversationMessages(conversationId: string | null) {
             if (prev.find((m) => m.id === msg.id)) return prev;
             return [...prev, msg];
           });
+        },
+      )
+      // Listen for isRead updates on messages (for ✓✓ ticks)
+      // NOTE: Supabase Realtime payload.new is raw DB row → snake_case column names
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "conversation_messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const updated = payload.new as { id: string; is_read: boolean };
+          setMessages((prev) =>
+            prev.map((m) => (m.id === updated.id ? { ...m, isRead: updated.is_read } : m)),
+          );
         },
       )
       .subscribe();

@@ -1,16 +1,17 @@
 /**
- * ChatInbox — Admin full-page chat inbox (Sprint 2)
+ * ChatInbox — Admin full-page chat inbox (Sprint 2 + Sprint 6 Polish)
  * Route: /admin/chat
  *
- * Layout: two columns
- *   Left  — conversation list with filter tabs + search
- *   Right — selected conversation: messages + reply input
+ * Sprint 6 additions:
+ * - Timestamp format via chatTime utility ("Baru saja", "5 menit lalu", etc.)
+ * - Read ticks ✓ / ✓✓ on admin messages
+ * - Typing indicator via Supabase presence
+ * - Error state & improved empty state
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { formatDistanceToNow, format, isToday, isYesterday } from "date-fns";
-import { id as localeId } from "date-fns/locale";
-import { Send, Search, X, UserCheck, CheckCircle, MessageCircle, RefreshCw } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { getDayLabel, formatBubbleTime, formatConvTime } from "@/shared/lib/chatTime";
+import { Send, Search, X, UserCheck, CheckCircle, MessageCircle, RefreshCw, Check } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
@@ -19,42 +20,17 @@ import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { cn } from "@/shared/lib/utils";
 import { apiFetch } from "@/shared/lib/apiClient";
+import { supabase } from "@/shared/integrations/supabase/client";
 import {
   useAdminInbox,
   useConversationMessages,
   type AdminConversation,
   type ConvType,
+  type ConvMessage,
 } from "../hooks/useAdminInbox";
 import { useAuth } from "@/shared/hooks/useAuth";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatMsgTime(dateStr: string | null | undefined): string {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "";
-  if (isToday(d)) return format(d, "HH:mm");
-  if (isYesterday(d)) return "Kemarin";
-  return format(d, "dd MMM", { locale: localeId });
-}
-
-function formatBubbleTime(dateStr: string | null | undefined): string {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "";
-  return format(d, "HH:mm");
-}
-
-function relativeTime(dateStr: string | null | undefined): string {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "";
-  try {
-    return formatDistanceToNow(d, { addSuffix: true, locale: localeId });
-  } catch {
-    return "";
-  }
-}
 
 function getDisplayName(conv: AdminConversation): string {
   if (conv.type === "guest") return conv.guest_name ?? "Tamu";
@@ -122,7 +98,7 @@ function ConvItem({
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
           <span className="text-xs text-muted-foreground">
-            {formatMsgTime(conv.last_message_at ?? conv.created_at)}
+            {formatConvTime(conv.last_message_at ?? conv.created_at)}
           </span>
           {hasUnread && (
             <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
@@ -138,10 +114,32 @@ function ConvItem({
   );
 }
 
+// ── Read tick ─────────────────────────────────────────────────────────────────
+
+function ReadTick({ isRead }: { isRead: boolean }) {
+  if (isRead) {
+    // ✓✓ delivered/read
+    return (
+      <span className="inline-flex items-center gap-0 text-blue-300" title="Dibaca">
+        <Check className="w-3 h-3 -mr-1.5" strokeWidth={3} />
+        <Check className="w-3 h-3" strokeWidth={3} />
+      </span>
+    );
+  }
+  // ✓ sent
+  return (
+    <span className="inline-flex text-white/60" title="Terkirim">
+      <Check className="w-3 h-3" strokeWidth={3} />
+    </span>
+  );
+}
+
 // ── Message bubble ────────────────────────────────────────────────────────────
 
-function MessageBubble({ msg }: { msg: { senderType: string; senderName: string; message: string; createdAt: string } }) {
+function MessageBubble({ msg }: { msg: ConvMessage }) {
   const isAdmin = msg.senderType === "admin";
+  const bubbleTime = formatBubbleTime(msg.createdAt);
+
   return (
     <div className={cn("flex flex-col gap-0.5 mb-3", isAdmin ? "items-end" : "items-start")}>
       <span className="text-xs text-muted-foreground px-1">{msg.senderName}</span>
@@ -155,7 +153,39 @@ function MessageBubble({ msg }: { msg: { senderType: string; senderName: string;
       >
         {msg.message}
       </div>
-      <span className="text-xs text-muted-foreground px-1">{formatBubbleTime(msg.createdAt)}</span>
+      <div className="flex items-center gap-1 px-1">
+        <span className="text-xs text-muted-foreground">{bubbleTime}</span>
+        {isAdmin && <ReadTick isRead={msg.isRead} />}
+      </div>
+    </div>
+  );
+}
+
+// ── Day separator ─────────────────────────────────────────────────────────────
+
+function DaySeparator({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 my-4">
+      <div className="flex-1 h-px bg-gray-200" />
+      <span className="text-xs text-muted-foreground bg-gray-50 px-2 whitespace-nowrap">
+        {label}
+      </span>
+      <div className="flex-1 h-px bg-gray-200" />
+    </div>
+  );
+}
+
+// ── Typing indicator ──────────────────────────────────────────────────────────
+
+function TypingDots() {
+  return (
+    <div className="flex items-end gap-1.5 mb-3">
+      <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-2.5 flex gap-1 items-center">
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+      </div>
+      <span className="text-xs text-muted-foreground mb-1">mengetik…</span>
     </div>
   );
 }
@@ -180,8 +210,19 @@ function ChatPanel({
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [peerTyping, setPeerTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Keep a ref to the subscribed presence channel so broadcastTyping uses the same instance
+  const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // Unique channel ID per admin + conversation
+  const presenceKey = useMemo(
+    () => `admin-${currentUserId ?? "anon"}-${Date.now()}`,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [conv.id, currentUserId],
+  );
 
   const name = getDisplayName(conv);
 
@@ -195,8 +236,64 @@ function ChatPanel({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
+  // ── Supabase presence — typing indicator ──────────────────────────────────
+  useEffect(() => {
+    const ch = supabase
+      .channel(`chat-typing-${conv.id}`)
+      .on("presence", { event: "sync" }, () => {
+        const state = ch.presenceState<{ typing?: boolean; role?: string }>();
+        const anyUserTyping = Object.values(state).some((presences) =>
+          presences.some((p) => p.typing && p.role !== "admin"),
+        );
+        setPeerTyping(anyUserTyping);
+      })
+      .on("presence", { event: "join" }, ({ newPresences }) => {
+        if (newPresences.some((p: any) => p.typing && p.role !== "admin")) {
+          setPeerTyping(true);
+        }
+      })
+      .on("presence", { event: "leave" }, () => {
+        const state = ch.presenceState<{ typing?: boolean; role?: string }>();
+        const anyUserTyping = Object.values(state).some((presences) =>
+          presences.some((p) => p.typing && p.role !== "admin"),
+        );
+        setPeerTyping(anyUserTyping);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await ch.track({ role: "admin", typing: false, key: presenceKey });
+        }
+      });
+
+    // Store the subscribed channel instance in the ref
+    presenceChannelRef.current = ch;
+
+    return () => {
+      presenceChannelRef.current = null;
+      supabase.removeChannel(ch);
+    };
+  }, [conv.id, presenceKey]);
+
+  // Broadcast typing state using the already-subscribed channel ref
+  const broadcastTyping = useCallback(
+    (typing: boolean) => {
+      presenceChannelRef.current?.track({ role: "admin", typing, key: presenceKey });
+    },
+    [presenceKey],
+  );
+
+  const handleDraftChange = (val: string) => {
+    setDraft(val);
+    broadcastTyping(val.length > 0);
+    clearTimeout(typingTimeout.current);
+    if (val.length > 0) {
+      typingTimeout.current = setTimeout(() => broadcastTyping(false), 3000);
+    }
+  };
+
   const handleSend = useCallback(async () => {
     if (!draft.trim() || sending) return;
+    broadcastTyping(false);
     setSending(true);
     try {
       await sendMessage(draft.trim());
@@ -207,7 +304,7 @@ function ChatPanel({
     } finally {
       setSending(false);
     }
-  }, [draft, sending, sendMessage]);
+  }, [draft, sending, sendMessage, broadcastTyping]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -247,6 +344,23 @@ function ChatPanel({
     }
   };
 
+  // Group messages by day
+  const grouped: Array<
+    { kind: "sep"; label: string } | { kind: "msg"; msg: ConvMessage }
+  > = useMemo(() => {
+    const result: Array<{ kind: "sep"; label: string } | { kind: "msg"; msg: ConvMessage }> = [];
+    let lastDay = "";
+    for (const msg of messages) {
+      const dayLabel = getDayLabel(msg.createdAt);
+      if (dayLabel && dayLabel !== lastDay) {
+        result.push({ kind: "sep", label: dayLabel });
+        lastDay = dayLabel;
+      }
+      result.push({ kind: "msg", msg });
+    }
+    return result;
+  }, [messages]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -271,9 +385,6 @@ function ChatPanel({
             {conv.assigned_admin_id && (
               <span className="text-xs text-muted-foreground">👤 Ditangani admin</span>
             )}
-            <span className="text-xs text-muted-foreground">
-              Dibuka {relativeTime(conv.created_at)}
-            </span>
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -308,15 +419,24 @@ function ChatPanel({
       <ScrollArea className="flex-1 px-4 py-3 bg-gray-50">
         {loading ? (
           <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-            Memuat pesan...
+            Memuat pesan…
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-            <MessageCircle className="w-8 h-8 mb-2 opacity-30" />
+          <div className="flex flex-col items-center justify-center h-32 text-muted-foreground gap-2">
+            <MessageCircle className="w-8 h-8 opacity-30" />
             <span className="text-sm">Belum ada pesan</span>
           </div>
         ) : (
-          messages.map((msg) => <MessageBubble key={msg.id} msg={msg} />)
+          <>
+            {grouped.map((item, idx) =>
+              item.kind === "sep" ? (
+                <DaySeparator key={`sep-${idx}`} label={item.label} />
+              ) : (
+                <MessageBubble key={item.msg.id} msg={item.msg} />
+              ),
+            )}
+            {peerTyping && <TypingDots />}
+          </>
         )}
         <div ref={bottomRef} />
       </ScrollArea>
@@ -336,7 +456,7 @@ function ChatPanel({
               ref={textareaRef}
               placeholder="Ketik balasan… (Enter kirim, Shift+Enter baris baru)"
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => handleDraftChange(e.target.value)}
               onKeyDown={handleKeyDown}
               className="resize-none min-h-[60px] max-h-[120px] text-sm"
               rows={2}
@@ -434,7 +554,7 @@ export default function ChatInbox() {
               <TabsTrigger value="all" className="flex-1 text-xs px-1">Semua</TabsTrigger>
               <TabsTrigger value="guest" className="flex-1 text-xs px-1">Tamu</TabsTrigger>
               <TabsTrigger value="member" className="flex-1 text-xs px-1">Member</TabsTrigger>
-              <TabsTrigger value="unread" className="flex-1 text-xs px-1">Belum Dibls</TabsTrigger>
+              <TabsTrigger value="unread" className="flex-1 text-xs px-1">Belum Dibaca</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -464,12 +584,13 @@ export default function ChatInbox() {
         <ScrollArea className="flex-1">
           {loading ? (
             <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-              Memuat...
+              Memuat…
             </div>
           ) : conversations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-              <MessageCircle className="w-8 h-8 mb-2 opacity-30" />
-              <span className="text-sm">Tidak ada percakapan</span>
+            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground gap-2 px-4 text-center">
+              <MessageCircle className="w-10 h-10 opacity-20" />
+              <span className="text-sm font-medium">Belum ada percakapan</span>
+              <span className="text-xs">Percakapan dari tamu &amp; jemaah akan muncul di sini</span>
             </div>
           ) : (
             conversations.map((conv) => (
@@ -495,10 +616,12 @@ export default function ChatInbox() {
             currentUserId={user?.id}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground">
-            <MessageCircle className="w-16 h-16 mb-4 opacity-20" />
-            <p className="text-base font-medium mb-1">Pilih percakapan</p>
-            <p className="text-sm">Klik percakapan di sebelah kiri untuk mulai membalas</p>
+          <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
+            <MessageCircle className="w-16 h-16 opacity-20" />
+            <div className="text-center">
+              <p className="text-base font-medium mb-1">Pilih percakapan</p>
+              <p className="text-sm">Klik percakapan di sebelah kiri untuk mulai membalas</p>
+            </div>
           </div>
         )}
       </div>

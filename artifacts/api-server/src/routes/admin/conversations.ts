@@ -236,6 +236,19 @@ router.patch("/:id/read", requireAuth, async (req, res) => {
       .update(conversations)
       .set({ unreadAdmin: 0 })
       .where(eq(conversations.id, id));
+
+    // Mark non-admin messages as read (for ✓✓ ticks visible to guest/member)
+    await db
+      .update(conversationMessages)
+      .set({ isRead: true })
+      .where(
+        and(
+          eq(conversationMessages.conversationId, id),
+          sql`sender_type != 'admin'`,
+          sql`is_read = false`,
+        ),
+      );
+
     return res.json({ ok: true });
   } catch (err) {
     console.error("[admin/conversations/:id/read PATCH]", err);

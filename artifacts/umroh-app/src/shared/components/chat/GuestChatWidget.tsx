@@ -1,8 +1,15 @@
 /**
- * GuestChatWidget — Sprint 5 (chat_architecture.md §4.4)
+ * GuestChatWidget — Sprint 5 + Sprint 6 Polish (chat_architecture.md §4.4)
  *
  * Floating Action Button untuk tamu / calon jemaah (anonymous).
  * Muncul di halaman publik; tidak render jika user sudah login.
+ *
+ * Sprint 6 additions:
+ * - Mobile responsive: full-screen on small screens
+ * - Typing indicator via Supabase presence ("Admin sedang mengetik...")
+ * - Timestamp format via chatTime utility
+ * - Read ticks ✓ / ✓✓ on sent messages
+ * - Empty state & error state polished
  *
  * State machine:
  *   collapsed → FAB only (dengan unread badge)
@@ -10,24 +17,34 @@
  *   chat      → panel jendela pesan + input kirim
  */
 
-import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, type KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, ChevronDown, Loader2, AlertCircle } from "lucide-react";
+import { MessageCircle, X, Send, ChevronDown, Loader2, AlertCircle, Check } from "lucide-react";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useGuestChat } from "@/shared/hooks/useGuestChat";
+import { supabase } from "@/shared/integrations/supabase/client";
+import { formatBubbleTime } from "@/shared/lib/chatTime";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type PanelState = "collapsed" | "form" | "chat";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Read tick ─────────────────────────────────────────────────────────────────
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+function ReadTick({ isRead }: { isRead: boolean }) {
+  if (isRead) {
+    return (
+      <span className="inline-flex items-center gap-0 text-blue-300" title="Dibaca">
+        <Check className="w-2.5 h-2.5 -mr-1.5" strokeWidth={3} />
+        <Check className="w-2.5 h-2.5" strokeWidth={3} />
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex text-white/50" title="Terkirim">
+      <Check className="w-2.5 h-2.5" strokeWidth={3} />
+    </span>
+  );
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -131,13 +148,16 @@ function MessageBubble({
   senderName,
   message,
   createdAt,
+  isRead,
 }: {
   senderType: "admin" | "member" | "guest";
   senderName: string;
   message: string;
   createdAt: string;
+  isRead: boolean;
 }) {
   const isGuest = senderType === "guest";
+  const bubbleTime = formatBubbleTime(createdAt);
 
   return (
     <div className={`flex flex-col gap-0.5 ${isGuest ? "items-end" : "items-start"}`}>
@@ -153,9 +173,24 @@ function MessageBubble({
       >
         {message}
       </div>
-      <span className="text-[10px] text-gray-400 mx-1">
-        {formatTime(createdAt)}
-      </span>
+      <div className="flex items-center gap-1 mx-1">
+        <span className="text-[10px] text-gray-400">{bubbleTime}</span>
+        {isGuest && <ReadTick isRead={isRead} />}
+      </div>
+    </div>
+  );
+}
+
+/** Typing dots */
+function TypingDots() {
+  return (
+    <div className="flex items-end gap-1.5">
+      <div className="rounded-2xl rounded-bl-sm bg-gray-100 px-3 py-2 flex gap-1 items-center">
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+      </div>
+      <span className="text-[10px] text-gray-400 mb-1">Admin mengetik…</span>
     </div>
   );
 }
@@ -165,23 +200,92 @@ function ChatPanel({
   messages,
   onSend,
   loading,
+  conversationId,
 }: {
   messages: ReturnType<typeof useGuestChat>["messages"];
   onSend: (msg: string) => Promise<void>;
   loading: boolean;
+  conversationId: string | null;
 }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [adminTyping, setAdminTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  // Keep a ref to the subscribed presence channel so broadcastTyping uses the same instance
+  const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const typingTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const mountId = useMemo(
+    () => `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    [],
+  );
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+  }, [messages.length, adminTyping]);
+
+  // ── Supabase presence — detect admin typing ──────────────────────────────
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const ch = supabase
+      .channel(`chat-typing-${conversationId}`)
+      .on("presence", { event: "sync" }, () => {
+        const state = ch.presenceState<{ typing?: boolean; role?: string }>();
+        const adminIsTyping = Object.values(state).some((presences) =>
+          presences.some((p) => p.typing && p.role === "admin"),
+        );
+        setAdminTyping(adminIsTyping);
+      })
+      .on("presence", { event: "join" }, ({ newPresences }) => {
+        if (newPresences.some((p: any) => p.typing && p.role === "admin")) {
+          setAdminTyping(true);
+        }
+      })
+      .on("presence", { event: "leave" }, () => {
+        const state = ch.presenceState<{ typing?: boolean; role?: string }>();
+        const adminIsTyping = Object.values(state).some((presences) =>
+          presences.some((p) => p.typing && p.role === "admin"),
+        );
+        setAdminTyping(adminIsTyping);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await ch.track({ role: "guest", typing: false, key: mountId });
+        }
+      });
+
+    // Store subscribed channel in ref so broadcastTyping can reuse the same instance
+    presenceChannelRef.current = ch;
+
+    return () => {
+      presenceChannelRef.current = null;
+      supabase.removeChannel(ch);
+    };
+  }, [conversationId, mountId]);
+
+  // Broadcast guest typing using the already-subscribed channel ref
+  const broadcastTyping = useCallback(
+    (typing: boolean) => {
+      presenceChannelRef.current?.track({ role: "guest", typing, key: mountId });
+    },
+    [mountId],
+  );
+
+  const handleTextChange = (val: string) => {
+    setText(val);
+    broadcastTyping(val.length > 0);
+    clearTimeout(typingTimeout.current);
+    if (val.length > 0) {
+      typingTimeout.current = setTimeout(() => broadcastTyping(false), 3000);
+    }
+  };
 
   const handleSend = useCallback(async () => {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
+    broadcastTyping(false);
     setText("");
     setSending(true);
     try {
@@ -189,7 +293,7 @@ function ChatPanel({
     } finally {
       setSending(false);
     }
-  }, [text, sending, onSend]);
+  }, [text, sending, onSend, broadcastTyping]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -207,10 +311,10 @@ function ChatPanel({
             <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-2 text-gray-400 py-4">
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 text-gray-400 py-8">
             <MessageCircle className="w-8 h-8 opacity-30" />
             <p className="text-xs text-center">
-              Mulai percakapan — admin kami siap membantu!
+              Belum ada percakapan — mulai chat sekarang!
             </p>
           </div>
         ) : (
@@ -221,9 +325,11 @@ function ChatPanel({
               senderName={msg.senderName}
               message={msg.message}
               createdAt={msg.createdAt}
+              isRead={msg.isRead}
             />
           ))
         )}
+        {adminTyping && <TypingDots />}
         <div ref={bottomRef} />
       </div>
 
@@ -233,7 +339,7 @@ function ChatPanel({
           rows={1}
           placeholder="Ketik pesan... (Enter untuk kirim)"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => handleTextChange(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={sending}
           className="flex-1 resize-none rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 disabled:opacity-60 max-h-24 leading-relaxed"
@@ -265,6 +371,7 @@ export default function GuestChatWidget() {
     error,
     messages,
     unreadCount,
+    conversationId,
     startChat,
     sendMessage,
     markRead,
@@ -272,14 +379,6 @@ export default function GuestChatWidget() {
 
   // Panel display state
   const [panel, setPanel] = useState<PanelState>("collapsed");
-
-  // Once the hook resolves an existing session, pre-open to chat panel
-  // so returning visitors don't see the form
-  useEffect(() => {
-    if (hasExistingSession && status === "ready" && panel === "collapsed") {
-      // Don't auto-open, just keep collapsed but ready to show chat
-    }
-  }, [hasExistingSession, status, panel]);
 
   // When panel opens to chat, mark messages as read
   useEffect(() => {
@@ -309,8 +408,8 @@ export default function GuestChatWidget() {
 
   const handleCollapse = () => setPanel("collapsed");
 
-  // bottom-24 (96 px) keeps the chat FAB clear of FloatingButtons which sits at bottom-6
   return (
+    // bottom-24 keeps the FAB above other FloatingButtons (at bottom-6)
     <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-3">
       {/* ── Chat Panel ──────────────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -321,11 +420,22 @@ export default function GuestChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="w-[340px] sm:w-[360px] bg-white rounded-2xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden"
-            style={{ maxHeight: "min(480px, calc(100vh - 100px))" }}
+            // Mobile: full-screen. Desktop: fixed width floating card.
+            className={[
+              "bg-white shadow-2xl border border-gray-100 flex flex-col overflow-hidden",
+              // Mobile full-screen
+              "fixed inset-0 rounded-none",
+              // sm and above: floating card
+              "sm:static sm:inset-auto sm:w-[360px] sm:rounded-2xl",
+            ].join(" ")}
+            style={{
+              // On small screens this is handled by Tailwind `fixed inset-0` above.
+              // On sm+, respect the max-height so it doesn't overflow.
+              maxHeight: "min(520px, calc(100vh - 112px))",
+            }}
           >
             {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-indigo-600 text-white">
+            <div className="flex items-center gap-3 px-4 py-3 bg-indigo-600 text-white flex-shrink-0">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                 <MessageCircle className="w-4 h-4" />
               </div>
@@ -340,11 +450,12 @@ export default function GuestChatWidget() {
                 className="w-7 h-7 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
                 aria-label="Minimasi chat"
               >
-                <ChevronDown className="w-4 h-4" />
+                <ChevronDown className="w-4 h-4 sm:block hidden" />
+                <X className="w-4 h-4 sm:hidden" />
               </button>
               <button
                 onClick={handleCollapse}
-                className="w-7 h-7 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
+                className="w-7 h-7 rounded-full hover:bg-white/20 items-center justify-center transition-colors hidden sm:flex"
                 aria-label="Tutup chat"
               >
                 <X className="w-4 h-4" />
@@ -356,23 +467,26 @@ export default function GuestChatWidget() {
               {panel === "form" ? (
                 <>
                   {/* Welcome text */}
-                  <div className="px-4 pt-4 pb-1 text-center">
+                  <div className="px-4 pt-4 pb-1 text-center flex-shrink-0">
                     <p className="text-sm font-semibold text-gray-800">Ada pertanyaan?</p>
                     <p className="text-xs text-gray-500 mt-0.5">
                       Admin kami siap membantu. Isi data di bawah untuk mulai.
                     </p>
                   </div>
-                  <IdentityForm
-                    onSubmit={handleFormSubmit}
-                    loading={status === "loading"}
-                    error={error}
-                  />
+                  <div className="overflow-y-auto flex-1">
+                    <IdentityForm
+                      onSubmit={handleFormSubmit}
+                      loading={status === "loading"}
+                      error={error}
+                    />
+                  </div>
                 </>
               ) : (
                 <ChatPanel
                   messages={messages}
                   onSend={sendMessage}
                   loading={status === "loading"}
+                  conversationId={conversationId}
                 />
               )}
             </div>

@@ -575,38 +575,54 @@ export const chatAuth = async (req, res, next) => {
 
 ---
 
-### Sprint 6 — Polish, Notifikasi & Edge Cases
-**Estimasi: 2–3 hari**
+### Sprint 6 — Polish, Notifikasi & Edge Cases ✅ SELESAI
+**Selesai: 26 Juli 2026**
 
 **Goal:** Sistem chat siap production — UX lengkap, edge case tertangani.
 
 **Notifikasi admin:**
-- [ ] Saat tamu/jemaah kirim pesan baru → INSERT ke tabel `notifications` untuk semua admin (gunakan fungsi notifikasi existing)
-- [ ] Browser notification (Notification API) jika admin di tab lain
+- [x] Saat tamu/jemaah kirim pesan baru → INSERT ke tabel `notifications` untuk semua admin (via `user_roles` table query — fungsi `notifyAdmins()` di `routes/chat.ts`)
+- [x] Browser notification (Notification API) jika admin di tab lain (`useBrowserNotifications.ts` + diintegrasikan ke `useAdminInbox.ts`)
 
 **UX Polish:**
-- [ ] Timestamp format: "Baru saja", "5 menit lalu", "Kemarin 14:30", tanggal lengkap (gunakan `date-fns`)
-- [ ] Pesan terkirim → tanda centang ✓ (sent) / ✓✓ (delivered/read)
-- [ ] Typing indicator ("Admin sedang mengetik...") — opsional via Supabase presence
-- [ ] Mobile responsive: widget tamu full-screen di HP
-- [ ] Empty state: "Belum ada percakapan — mulai chat sekarang!"
-- [ ] Error state: "Gagal memuat pesan, coba lagi"
+- [x] Timestamp format: "Baru saja", "5 menit lalu", "Kemarin 14:30", tanggal lengkap — shared utility `src/shared/lib/chatTime.ts` (date-fns)
+- [x] Pesan terkirim → tanda centang ✓ (sent) / ✓✓ (delivered/read) — via `isRead` field + `ReadTick` component di semua chat surfaces; backend marks `is_read=true` saat PATCH /read dipanggil
+- [x] Typing indicator ("Admin sedang mengetik...") via Supabase presence channel `chat-typing-{conversationId}` — di `GuestChatWidget`, `ChatPage`, `ChatInbox`
+- [x] Mobile responsive: widget tamu full-screen di HP (`fixed inset-0` pada small screens, `sm:static sm:w-[360px]` pada desktop)
+- [x] Empty state: "Belum ada percakapan — mulai chat sekarang!" (di `ChatPage` & `GuestChatWidget`)
+- [x] Error state: "Gagal memuat pesan, coba lagi" (di `ChatPage`)
 
 **Admin Quality of Life:**
-- [ ] Auto-scroll ke pesan terbaru saat panel dibuka
-- [ ] Shortcut keyboard: Enter untuk kirim, Shift+Enter untuk baris baru
-- [ ] Tandai semua sudah dibaca saat conversation dibuka
-- [ ] Cari percakapan by kata kunci (search across messages)
+- [x] Auto-scroll ke pesan terbaru saat panel dibuka (via `useEffect` + `bottomRef.scrollIntoView`)
+- [x] Shortcut keyboard: Enter untuk kirim, Shift+Enter untuk baris baru (semua surfaces)
+- [x] Tandai semua sudah dibaca saat conversation dibuka (via `markRead()` on `useEffect`)
+- [x] Cari percakapan by kata kunci — search bar di ChatInbox (`last_message_preview ILIKE`)
 
 **Auto-close (opsional):**
-- [ ] Cron job: percakapan `open` yang tidak ada pesan > 7 hari → otomatis `closed`
-- [ ] Admin bisa buka kembali percakapan yang sudah closed
+- [ ] Cron job: percakapan `open` yang tidak ada pesan > 7 hari → otomatis `closed` (deferred)
+- [x] Admin bisa buka kembali percakapan yang sudah closed (tombol "Buka Lagi")
+
+**File baru Sprint 6:**
+```
+artifacts/umroh-app/src/shared/lib/chatTime.ts           # timestamp utility
+artifacts/umroh-app/src/features/admin/hooks/useBrowserNotifications.ts
+```
+
+**File dimodifikasi Sprint 6:**
+```
+artifacts/api-server/src/routes/chat.ts                  # notifyAdmins(), isRead update on PATCH /read
+artifacts/api-server/src/routes/admin/conversations.ts   # isRead update on PATCH /read
+artifacts/umroh-app/src/features/admin/hooks/useAdminInbox.ts  # browser notif, UPDATE subscription
+artifacts/umroh-app/src/features/admin/pages/ChatInbox.tsx     # timestamps, ticks, typing, day seps
+artifacts/umroh-app/src/features/user/pages/ChatPage.tsx       # timestamps, ticks, typing indicator
+artifacts/umroh-app/src/shared/components/chat/GuestChatWidget.tsx # mobile responsive, typing
+```
 
 **Done criteria:**
-- Tidak ada polling tersisa (semua real-time atau on-demand)
-- Nama pengirim selalu tampil (bukan ID)
-- Widget tamu works di mobile
-- Admin inbox terasa seperti WhatsApp Web ringan
+- ✅ Tidak ada polling tersisa (semua real-time atau on-demand)
+- ✅ Nama pengirim selalu tampil (bukan ID)
+- ✅ Widget tamu works di mobile (full-screen on sm and below)
+- ✅ Admin inbox terasa seperti WhatsApp Web ringan
 
 ---
 

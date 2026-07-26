@@ -1,39 +1,44 @@
 /**
  * ChatPage — Halaman chat jemaah (logged-in) dengan admin
  * Route: /chat
- * Sprint 4 (chat_architecture.md §6)
+ * Sprint 4 + Sprint 6 Polish (chat_architecture.md §6)
+ *
+ * Sprint 6 additions:
+ * - Timestamp format via chatTime utility
+ * - Read ticks ✓ / ✓✓ on sent messages
+ * - Typing indicator via Supabase presence
+ * - Error & empty states polished
  */
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { format, isToday, isYesterday } from "date-fns";
-import { id as localeId } from "date-fns/locale";
-import { Send, MessageCircle, AlertCircle, Loader2, Clock } from "lucide-react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { getDayLabel, formatBubbleTime } from "@/shared/lib/chatTime";
+import { Send, MessageCircle, AlertCircle, Loader2, Clock, Check } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { cn } from "@/shared/lib/utils";
+import { supabase } from "@/shared/integrations/supabase/client";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
 import { useMyChat, type MyChatMessage } from "../hooks/useMyChat";
 import { useAuth } from "@/shared/hooks/useAuth";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Read tick ─────────────────────────────────────────────────────────────────
 
-function formatBubbleTime(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "";
-  if (isToday(d)) return format(d, "HH:mm");
-  if (isYesterday(d)) return `Kemarin ${format(d, "HH:mm")}`;
-  return format(d, "d MMM HH:mm", { locale: localeId });
-}
-
-/** Group messages by day label */
-function getDayLabel(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "";
-  if (isToday(d)) return "Hari ini";
-  if (isYesterday(d)) return "Kemarin";
-  return format(d, "EEEE, d MMMM yyyy", { locale: localeId });
+function ReadTick({ isRead }: { isRead: boolean }) {
+  if (isRead) {
+    return (
+      <span className="inline-flex items-center gap-0 text-blue-300" title="Dibaca">
+        <Check className="w-3 h-3 -mr-1.5" strokeWidth={3} />
+        <Check className="w-3 h-3" strokeWidth={3} />
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex text-primary-foreground/50" title="Terkirim">
+      <Check className="w-3 h-3" strokeWidth={3} />
+    </span>
+  );
 }
 
 // ── Message bubble ────────────────────────────────────────────────────────────
@@ -41,6 +46,8 @@ function getDayLabel(dateStr: string): string {
 function Bubble({ msg, myUserId }: { msg: MyChatMessage; myUserId?: string }) {
   const isMe = msg.senderType === "member" ||
     (msg.senderId != null && msg.senderId === myUserId);
+  const bubbleTime = formatBubbleTime(msg.createdAt);
+
   return (
     <div className={cn("flex flex-col gap-0.5 mb-3", isMe ? "items-end" : "items-start")}>
       <span className="text-xs text-muted-foreground px-1">{msg.senderName}</span>
@@ -54,9 +61,10 @@ function Bubble({ msg, myUserId }: { msg: MyChatMessage; myUserId?: string }) {
       >
         {msg.message}
       </div>
-      <span className="text-[10px] text-muted-foreground px-1">
-        {msg.createdAt ? formatBubbleTime(msg.createdAt) : ""}
-      </span>
+      <div className="flex items-center gap-1 px-1">
+        <span className="text-[10px] text-muted-foreground">{bubbleTime}</span>
+        {isMe && <ReadTick isRead={msg.isRead} />}
+      </div>
     </div>
   );
 }
@@ -75,15 +83,39 @@ function DaySeparator({ label }: { label: string }) {
   );
 }
 
+// ── Typing dots ───────────────────────────────────────────────────────────────
+
+function TypingDots() {
+  return (
+    <div className="flex items-end gap-1.5 mb-3">
+      <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm px-4 py-2.5 flex gap-1 items-center shadow-sm">
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
+        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+      </div>
+      <span className="text-xs text-muted-foreground mb-1">Admin sedang mengetik…</span>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ChatPage() {
   const { user } = useAuth();
-  const { messages, loading, startError, sendMessage, markRead } = useMyChat();
+  const { conversationId, messages, loading, startError, sendMessage, markRead } = useMyChat();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [adminTyping, setAdminTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Keep a ref to the subscribed presence channel so broadcastTyping uses the same instance
+  const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  const mountId = useMemo(
+    () => `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    [],
+  );
 
   // Mark as read when page is opened
   useEffect(() => {
@@ -95,8 +127,66 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
+  // ── Supabase presence — detect admin typing ────────────────────────────────
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const ch = supabase
+      .channel(`chat-typing-${conversationId}`)
+      .on("presence", { event: "sync" }, () => {
+        const state = ch.presenceState<{ typing?: boolean; role?: string }>();
+        const adminIsTyping = Object.values(state).some((presences) =>
+          presences.some((p) => p.typing && p.role === "admin"),
+        );
+        setAdminTyping(adminIsTyping);
+      })
+      .on("presence", { event: "join" }, ({ newPresences }) => {
+        if (newPresences.some((p: any) => p.typing && p.role === "admin")) {
+          setAdminTyping(true);
+        }
+      })
+      .on("presence", { event: "leave" }, () => {
+        const state = ch.presenceState<{ typing?: boolean; role?: string }>();
+        const adminIsTyping = Object.values(state).some((presences) =>
+          presences.some((p) => p.typing && p.role === "admin"),
+        );
+        setAdminTyping(adminIsTyping);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await ch.track({ role: "member", typing: false, key: mountId });
+        }
+      });
+
+    // Store subscribed channel in ref so broadcastTyping can reuse the same instance
+    presenceChannelRef.current = ch;
+
+    return () => {
+      presenceChannelRef.current = null;
+      supabase.removeChannel(ch);
+    };
+  }, [conversationId, mountId]);
+
+  // Broadcast member typing state using the already-subscribed channel ref
+  const broadcastTyping = useCallback(
+    (typing: boolean) => {
+      presenceChannelRef.current?.track({ role: "member", typing, key: mountId });
+    },
+    [mountId],
+  );
+
+  const handleDraftChange = (val: string) => {
+    setDraft(val);
+    broadcastTyping(val.length > 0);
+    clearTimeout(typingTimeout.current);
+    if (val.length > 0) {
+      typingTimeout.current = setTimeout(() => broadcastTyping(false), 3000);
+    }
+  };
+
   const handleSend = useCallback(async () => {
     if (!draft.trim() || sending) return;
+    broadcastTyping(false);
     setSending(true);
     try {
       await sendMessage(draft.trim());
@@ -107,7 +197,7 @@ export default function ChatPage() {
     } finally {
       setSending(false);
     }
-  }, [draft, sending, sendMessage]);
+  }, [draft, sending, sendMessage, broadcastTyping]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -117,18 +207,22 @@ export default function ChatPage() {
   };
 
   // Build grouped messages with day separators
-  const grouped: Array<{ type: "separator"; label: string } | { type: "message"; msg: MyChatMessage }> = [];
-  let lastDay = "";
-  for (const msg of messages) {
-    if (msg.createdAt) {
-      const dayLabel = getDayLabel(msg.createdAt);
-      if (dayLabel && dayLabel !== lastDay) {
-        grouped.push({ type: "separator", label: dayLabel });
-        lastDay = dayLabel;
+  const grouped: Array<{ type: "separator"; label: string } | { type: "message"; msg: MyChatMessage }> =
+    useMemo(() => {
+      const result: Array<{ type: "separator"; label: string } | { type: "message"; msg: MyChatMessage }> = [];
+      let lastDay = "";
+      for (const msg of messages) {
+        if (msg.createdAt) {
+          const dayLabel = getDayLabel(msg.createdAt);
+          if (dayLabel && dayLabel !== lastDay) {
+            result.push({ type: "separator", label: dayLabel });
+            lastDay = dayLabel;
+          }
+        }
+        result.push({ type: "message", msg });
       }
-    }
-    grouped.push({ type: "message", msg });
-  }
+      return result;
+    }, [messages]);
 
   return (
     <div className="min-h-screen bg-muted/30 flex flex-col">
@@ -160,7 +254,10 @@ export default function ChatPage() {
             {startError && (
               <div className="flex flex-col items-center justify-center flex-1 gap-3 text-center p-8">
                 <AlertCircle className="w-10 h-10 text-destructive opacity-60" />
-                <p className="text-sm text-muted-foreground">{startError}</p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  Gagal memuat pesan, coba lagi
+                </p>
+                <p className="text-xs text-muted-foreground">{startError}</p>
                 <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
                   Coba Lagi
                 </Button>
@@ -188,8 +285,8 @@ export default function ChatPage() {
                         Halo{user?.firstName ? `, ${user.firstName}` : ""}! 👋
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Admin kami siap membantu.<br />
-                        Ketik pesan pertama Anda di bawah.
+                        Belum ada percakapan — mulai chat sekarang!<br />
+                        Admin kami siap membantu.
                       </p>
                     </div>
                   </div>
@@ -202,6 +299,7 @@ export default function ChatPage() {
                         <Bubble key={item.msg.id} msg={item.msg} myUserId={user?.id} />
                       ),
                     )}
+                    {adminTyping && <TypingDots />}
                   </>
                 )}
                 <div ref={bottomRef} />
@@ -215,7 +313,7 @@ export default function ChatPage() {
                   ref={textareaRef}
                   placeholder="Ketik pesan… (Enter kirim, Shift+Enter baris baru)"
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
+                  onChange={(e) => handleDraftChange(e.target.value)}
                   onKeyDown={handleKeyDown}
                   disabled={loading || sending}
                   className="resize-none min-h-[60px] max-h-[120px] text-sm"

@@ -8,13 +8,53 @@
  */
 
 import { Router } from "express";
-import { db, conversations, conversationMessages } from "@workspace/db";
+import { db, conversations, conversationMessages, notifications } from "@workspace/db";
 import { eq, asc, sql } from "drizzle-orm";
 import { chatAuth } from "../middlewares/chatAuth";
 import { generalLimiter, writeLimiter } from "../middlewares/rateLimiter";
 import { SUPABASE_URL, SUPABASE_SERVER_KEY } from "../lib/supabaseEnv";
 
 const router = Router();
+
+// ── Admin notification helper ─────────────────────────────────────────────────
+const ADMIN_ROLES = new Set(["super_admin", "admin", "branch_manager", "staff"]);
+
+/**
+ * Insert an in-app notification for every admin user so they see the new chat
+ * message in their notification bell (useAdminNotifications.ts).
+ * Never throws — swallows errors to avoid blocking the HTTP response.
+ */
+async function notifyAdmins({
+  conversationId,
+  senderName,
+  preview,
+}: {
+  conversationId: string;
+  senderName: string;
+  preview: string;
+}): Promise<void> {
+  try {
+    // Query user_roles table directly — profiles table has no role column
+    const adminRows = await db.execute(
+      sql`SELECT user_id FROM user_roles WHERE role = ANY(ARRAY['super_admin','admin','branch_manager','staff']) LIMIT 50`,
+    );
+    const adminIds = (adminRows.rows as { user_id: string }[]).map((r) => r.user_id);
+    if (adminIds.length === 0) return;
+
+    const notifValues = adminIds.map((userId) => ({
+      id: crypto.randomUUID(),
+      userId,
+      title: `Pesan baru dari ${senderName}`,
+      message: preview,
+      isRead: false,
+      createdAt: new Date(),
+    }));
+
+    await db.insert(notifications).values(notifValues);
+  } catch (err) {
+    console.error("[chat] notifyAdmins error:", err);
+  }
+}
 
 // ── POST /chat/start ─────────────────────────────────────────────────────────
 router.post("/start", writeLimiter, async (req, res) => {
@@ -215,6 +255,14 @@ router.post("/conversations/:id/messages", writeLimiter, chatAuth, async (req, r
           unreadAdmin: sql`unread_admin + 1`,
         } as any)
         .where(eq(conversations.id, id));
+
+      // ── Notify all admin users ─────────────────────────────────────────────
+      // Fire-and-forget: do not let notification errors block the response.
+      notifyAdmins({
+        conversationId: id,
+        senderName,
+        preview: message.trim().slice(0, 80),
+      }).catch((err) => console.error("[chat] notifyAdmins failed:", err));
     }
 
     return res.status(201).json({ data: inserted });
@@ -229,6 +277,19 @@ router.patch("/conversations/:id/read", generalLimiter, chatAuth, async (req, re
   try {
     const { id } = req.params;
 
+    // ── Ownership check (same as GET/POST message routes) ─────────────────
+    if (req.chatRole === "guest" && req.guestConversationId !== id) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    if (req.chatRole === "member") {
+      const conv = await db.query.conversations.findFirst({
+        where: eq(conversations.id, id),
+      });
+      if (!conv || conv.userId !== req.chatUserId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+    }
+
     const resetField =
       req.chatRole === "admin" ? { unreadAdmin: 0 } : { unreadUser: 0 };
 
@@ -236,6 +297,16 @@ router.patch("/conversations/:id/read", generalLimiter, chatAuth, async (req, re
       .update(conversations)
       .set(resetField)
       .where(eq(conversations.id, id));
+
+    // Also mark individual admin messages as read (for ✓✓ ticks on admin side)
+    if (req.chatRole !== "admin") {
+      await db
+        .update(conversationMessages)
+        .set({ isRead: true })
+        .where(
+          sql`conversation_id = ${id} AND sender_type = 'admin' AND is_read = false`,
+        );
+    }
 
     return res.json({ ok: true });
   } catch (err) {
