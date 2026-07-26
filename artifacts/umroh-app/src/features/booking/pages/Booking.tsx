@@ -101,6 +101,12 @@ const Booking = () => {
   // Guard: prevent re-fetching (and rooms reset) if auth object reference changes mid-session
   const dataFetchedRef = useRef(false);
 
+  // Each booking step is rendered in the same route. Reset the document
+  // position so the next step always starts at the top on mobile and desktop.
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [step]);
+
   // Redirect unauthenticated users whenever auth state resolves
   useEffect(() => {
     if (authLoading) return;
