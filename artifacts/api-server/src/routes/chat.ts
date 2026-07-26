@@ -111,21 +111,28 @@ router.post("/start", writeLimiter, async (req, res) => {
     }
 
     // ── Logged-in member flow ───────────────────────────────────────────────
-    const token = bearer!.slice(7).trim();
-    if (!SUPABASE_URL || !SUPABASE_SERVER_KEY) {
-      return res.status(503).json({ error: "Auth service unavailable" });
+    // Fast path: authMiddleware already validated the JWT and set req.user.
+    // Use it directly to avoid a duplicate Supabase round-trip (and to make
+    // member chat work even when Supabase is not configured on this instance).
+    let userId: string | undefined = req.user?.id;
+
+    if (!userId) {
+      // Fallback: validate JWT against Supabase (production path with credentials)
+      const token = bearer!.slice(7).trim();
+      if (!SUPABASE_URL || !SUPABASE_SERVER_KEY) {
+        return res.status(503).json({ error: "Auth service unavailable" });
+      }
+      const authRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: SUPABASE_SERVER_KEY,
+        },
+      });
+      if (!authRes.ok) return res.status(401).json({ error: "Token tidak valid" });
+      const authData = (await authRes.json()) as { id?: string };
+      userId = authData.id;
     }
 
-    const authRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        apikey: SUPABASE_SERVER_KEY,
-      },
-    });
-    if (!authRes.ok) return res.status(401).json({ error: "Token tidak valid" });
-
-    const authData = (await authRes.json()) as { id?: string };
-    const userId = authData.id;
     if (!userId) return res.status(401).json({ error: "Token tidak valid" });
 
     // Find or create member conversation

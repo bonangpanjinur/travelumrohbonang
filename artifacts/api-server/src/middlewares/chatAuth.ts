@@ -72,6 +72,21 @@ async function resolveUserFromJwt(
 const ADMIN_ROLES = new Set(["super_admin", "admin", "branch_manager", "staff"]);
 
 export async function chatAuth(req: Request, res: Response, next: NextFunction) {
+  // ── 0. Fast path: authMiddleware already resolved this user ───────────────
+  // authMiddleware runs on every request and sets req.user when the JWT is
+  // valid. Re-validating against Supabase here would be a duplicate round-trip.
+  // Using req.user directly also means chat works even when Supabase is not
+  // configured on this Replit instance (authMiddleware has its own fallbacks).
+  if (req.user) {
+    req.chatUserId = req.user.id;
+    req.chatUserName =
+      req.user.firstName
+        ? `${req.user.firstName} ${req.user.lastName ?? ""}`.trim()
+        : (req.user.email ?? "User");
+    req.chatRole = ADMIN_ROLES.has(req.user.role) ? "admin" : "member";
+    return next();
+  }
+
   // ── 1. Try JWT ────────────────────────────────────────────────────────────
   const bearer = req.headers["authorization"];
   if (bearer?.startsWith("Bearer ")) {
