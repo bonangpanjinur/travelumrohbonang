@@ -13,7 +13,7 @@
 
 import type { Request, Response, NextFunction } from "express";
 import { db, conversations } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { SUPABASE_URL, SUPABASE_SERVER_KEY } from "../lib/supabaseEnv";
 
 // Extend Express Request with guest fields
@@ -46,15 +46,23 @@ async function resolveUserFromJwt(
     const id = data.id;
     if (!id) return null;
 
-    // Look up role from profiles
-    const profile = await db.query.profiles
-      .findFirst({ where: (p, { eq }) => eq(p.id, id) })
-      .catch(() => null);
+    // Look up role from user_roles (profiles has no role column)
+    const [profileRow, roleRow] = await Promise.all([
+      db.query.profiles
+        .findFirst({ where: (p, { eq }) => eq(p.id, id) })
+        .catch(() => null),
+      db.execute(
+        sql`SELECT role FROM user_roles WHERE user_id = ${id} LIMIT 1`,
+      ).catch(() => null),
+    ]);
+
+    const role =
+      ((roleRow?.rows as { role: string }[] | undefined)?.[0]?.role) ?? "user";
 
     return {
       id,
-      name: profile?.name ?? data.user_metadata?.name ?? "User",
-      role: (profile as any)?.role ?? "user",
+      name: profileRow?.name ?? data.user_metadata?.name ?? "User",
+      role,
     };
   } catch {
     return null;
