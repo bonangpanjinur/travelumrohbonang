@@ -22,3 +22,4 @@ export * from "./visa";
 export * from "./checklists";
 export * from "./documents";
 export * from "./budgets";
+export * from "./chat";

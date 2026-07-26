@@ -405,39 +405,44 @@ export const chatAuth = async (req, res, next) => {
 
 ## 6. Rencana Sprint
 
-### Sprint 1 — Fondasi Database & API (Backend Only)
-**Estimasi: 2–3 hari**
+### Sprint 1 — Fondasi Database & API (Backend Only) ✅ SELESAI
+**Selesai: 26 Juli 2026**
 
 **Goal:** API siap, bisa diuji via curl/Postman. Belum ada UI baru.
 
 **DB Changes:**
-- [ ] Tambah tabel `conversations` di `lib/db/src/schema/chat.ts` (file baru)
-- [ ] Tambah tabel `conversation_messages` di file yang sama
-- [ ] Export dari `lib/db/src/index.ts`
-- [ ] Jalankan `pnpm drizzle-kit push` ke Supabase
+- [x] Tambah tabel `conversations` di `lib/db/src/schema/chat.ts` (file baru)
+- [x] Tambah tabel `conversation_messages` di file yang sama
+- [x] Export dari `lib/db/src/schema/index.ts`
+- [x] Jalankan `pnpm drizzle-kit push` → tabel berhasil dibuat di PostgreSQL
 
 **API:**
-- [ ] File baru: `artifacts/api-server/src/routes/chat.ts` (publik)
+- [x] File baru: `artifacts/api-server/src/routes/chat.ts` (publik)
   - `POST /api/chat/start` → buat/resume conversation (guest atau member)
   - `GET /api/chat/conversations/:id/messages`
   - `POST /api/chat/conversations/:id/messages`
   - `PATCH /api/chat/conversations/:id/read`
-- [ ] File baru: `artifacts/api-server/src/routes/admin/conversations.ts`
+- [x] File baru: `artifacts/api-server/src/routes/admin/conversations.ts`
   - `GET /api/admin/conversations` (dengan filter: type, status, unread)
+  - `GET /api/admin/conversations/:id` (detail + member name)
   - `GET /api/admin/conversations/:id/messages`
   - `POST /api/admin/conversations/:id/messages` (balas)
   - `PATCH /api/admin/conversations/:id` (close, assign)
-- [ ] Middleware `chatAuth` untuk validasi JWT atau guest token
-- [ ] Mount semua route di `artifacts/api-server/src/index.ts`
+  - `PATCH /api/admin/conversations/:id/read` (reset unread_admin)
+- [x] Middleware `artifacts/api-server/src/middlewares/chatAuth.ts` → JWT atau X-Guest-Token
+- [x] Mount `/api/chat` di `artifacts/api-server/src/routes/index.ts`
+- [x] Mount `/api/admin/conversations` di `artifacts/api-server/src/routes/admin/index.ts`
 
 **Supabase Realtime:**
 - [ ] Aktifkan `REPLICA IDENTITY FULL` pada tabel `conversation_messages` via SQL di Supabase dashboard
 - [ ] Pastikan RLS policy di Supabase mengizinkan `postgres_changes` subscription (atau bypass via service role dari backend)
+> ⚠️ Item Realtime membutuhkan akses Supabase Dashboard — perlu dilakukan manual oleh owner project
 
-**Done criteria:**
-- `POST /api/chat/start` tanpa token → dapat `conversationId` + `guestToken`
-- `POST /api/chat/conversations/:id/messages` dengan `X-Guest-Token` → pesan tersimpan
-- `GET /api/admin/conversations` dengan JWT admin → tampil percakapan
+**Done criteria — semua terpenuhi ✅:**
+- ✅ `POST /api/chat/start` tanpa token → dapat `conversationId` + `guestToken`
+- ✅ `POST /api/chat/conversations/:id/messages` dengan `X-Guest-Token` → pesan tersimpan
+- ✅ `GET /api/admin/conversations` tanpa JWT → 401 (protected); dengan JWT admin → data percakapan
+- ✅ Resume session: `POST /api/chat/start` dengan token yang sama → `resumed: true`, ID sama
 
 ---
 

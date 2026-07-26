@@ -75,6 +75,10 @@ router.use("/wishlists", wishlistsRouter);
 
 router.use("/pilgrim-testimonials", strictLimiter, pilgrimTestimonialsRouter);
 
+// ── Chat (public + guest — Sprint 1 chat_architecture.md) ────────────────────
+import chatRouter from "./chat";
+router.use("/chat", chatRouter);
+
 // Payment gateway webhooks — PUBLIC (server-to-server from Midtrans/Xendit, no JWT)
 // Signature verification happens inside the router.
 // Configure Midtrans notification URL: https://<host>/api/payments/webhook/midtrans

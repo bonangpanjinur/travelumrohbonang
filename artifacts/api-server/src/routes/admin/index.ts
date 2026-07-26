@@ -180,4 +180,8 @@ router.use("/accounting-export", requireFinance, adminAccountingExportRouter);
 // ── F-12: Budget & Proyeksi Cash Flow ────────────────────────────────────────
 router.use("/budget", requireFinance, adminBudgetRouter);
 
+// ── Chat: Inbox Terpadu (Sprint 1 — chat_architecture.md) ────────────────────
+import adminConversationsRouter from "./conversations";
+router.use("/conversations", requireStaff, adminConversationsRouter);
+
 export default router;
