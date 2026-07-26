@@ -2,7 +2,7 @@ import { Toaster } from "@/shared/components/ui/toaster";
 import { Toaster as Sonner } from "@/shared/components/ui/sonner";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/shared/hooks/useAuth";
 import { LanguageProvider } from "@/shared/i18n/LanguageContext";
@@ -147,6 +147,21 @@ import ErrorBoundary from "@/shared/components/common/ErrorBoundary";
 import MobileBottomNav from "@/shared/components/layout/MobileBottomNav";
 import GlobalFloatingWidgets from "@/shared/components/common/GlobalFloatingWidgets";
 const queryClient = new QueryClient();
+
+/**
+ * React Router keeps the existing document mounted during navigation, so the
+ * browser can otherwise carry the previous page's scroll position into the
+ * next page (especially from the long package detail page into booking).
+ */
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
 
 const AppContent = () => {
   useDynamicFavicon();
@@ -332,6 +347,7 @@ const App = () => (
                   <Toaster />
                   <Sonner />
                   <BrowserRouter>
+                    <ScrollToTop />
                     <ErrorBoundary>
                       <AppContent />
                     </ErrorBoundary>
