@@ -25,6 +25,21 @@ router.post("/start", writeLimiter, async (req, res) => {
 
     // ── Guest flow ──────────────────────────────────────────────────────────
     if (!hasJwt) {
+      // ── Resume FIRST — check token before validating name/phone ──────────
+      // Returning visitors send X-Guest-Token with an empty body so they
+      // never have to fill the form again. The name/phone check must come
+      // AFTER this lookup, otherwise returning guests get a spurious 400.
+      if (guestToken) {
+        const existing = await db.query.conversations.findFirst({
+          where: eq(conversations.guestToken, guestToken),
+        });
+        if (existing) {
+          return res.json({ conversationId: existing.id, guestToken, resumed: true });
+        }
+        // Token not found (stale) — fall through to create a new conversation
+      }
+
+      // New guest — name and phone are required
       const { name, phone, email } = req.body as {
         name?: string;
         phone?: string;
@@ -33,16 +48,6 @@ router.post("/start", writeLimiter, async (req, res) => {
 
       if (!name?.trim() || !phone?.trim()) {
         return res.status(400).json({ error: "name dan phone wajib diisi" });
-      }
-
-      // Resume existing guest session via token in header
-      if (guestToken) {
-        const existing = await db.query.conversations.findFirst({
-          where: eq(conversations.guestToken, guestToken),
-        });
-        if (existing) {
-          return res.json({ conversationId: existing.id, guestToken, resumed: true });
-        }
       }
 
       // Create new guest conversation

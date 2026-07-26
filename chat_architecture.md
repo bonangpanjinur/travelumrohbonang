@@ -533,40 +533,45 @@ export const chatAuth = async (req, res, next) => {
 
 ---
 
-### Sprint 5 — Chat Widget Tamu / Calon Jemaah (Anonymous)
-**Estimasi: 3–4 hari**
+### Sprint 5 — Chat Widget Tamu / Calon Jemaah (Anonymous) ✅ SELESAI
+**Selesai: 26 Juli 2026**
 
 **Goal:** Pengunjung biasa (belum punya akun) bisa mulai chat dari halaman publik — paket, home, dsb.
 
 **Hook baru:**
-- [ ] `artifacts/umroh-app/src/shared/hooks/useGuestChat.ts`
-  - Cek `localStorage` untuk `guest_token`
-  - Jika ada → langsung resume conversation
-  - Jika tidak ada → tampilkan form identitas
-  - Subscribe real-time untuk pesan baru
+- [x] `artifacts/umroh-app/src/shared/hooks/useGuestChat.ts`
+  - Cek `localStorage` untuk `vins_guest_chat_token`
+  - Jika ada → auto-resume via `POST /api/chat/start` (X-Guest-Token header)
+  - Jika tidak ada → expose `startChat({name, phone, email?})` untuk form submit
+  - Subscribe Supabase realtime `postgres_changes` untuk pesan baru
+  - Custom `guestFetch` (tanpa JWT, dengan X-Guest-Token) — tidak pakai `apiFetch`
 
 **Komponen baru:**
-- [ ] `artifacts/umroh-app/src/shared/components/chat/GuestChatWidget.tsx`
-  - FAB (floating action button) di pojok kanan bawah
+- [x] `artifacts/umroh-app/src/shared/components/chat/GuestChatWidget.tsx`
+  - FAB (floating action button) di pojok kanan bawah, z-50
   - State 1: Panel form identitas (nama*, no HP*, email opsional)
-  - State 2: Panel chat (jendela pesan + input kirim)
-  - State 3: Collapsed (hanya FAB dengan badge jika ada pesan masuk)
+  - State 2: Panel chat (jendela pesan + input kirim, Enter = kirim)
+  - State 3: Collapsed (hanya FAB dengan unread badge merah)
   - Guest token disimpan ke `localStorage('vins_guest_chat_token')`
-  - Animasi buka/tutup smooth
+  - Animasi buka/tutup smooth via `framer-motion AnimatePresence`
+  - Auto-scroll ke pesan terbaru saat chat dibuka
+  - Mark as read otomatis saat panel chat dibuka
 
 **Integrasi:**
-- [ ] Render `GuestChatWidget` di:
+- [x] Render `GuestChatWidget` di:
   - `TenantClassicTemplate.tsx`
   - `TenantModernTemplate.tsx`
   - `TenantPremiumTemplate.tsx`
-  - Halaman publik lain (packages list, packages detail)
-- [ ] Jangan render jika user sudah login (tampilkan `useMyChat` versi jemaah)
+  - `features/paket/pages/Paket.tsx` (daftar paket publik)
+  - `features/paket/pages/PackageDetail.tsx` (detail paket)
+- [x] Widget return `null` jika user sudah login (`useAuth().user !== null`)
 
-**Done criteria:**
-- Tamu bisa isi nama + HP → mulai chat
-- Jika buka browser lagi → chat lama muncul kembali (via localStorage token)
-- Pesan admin muncul real-time
-- Admin dapat melihat nama + HP tamu di inbox
+**Done criteria — semua terpenuhi ✅:**
+- ✅ Tamu bisa isi nama + HP → mulai chat
+- ✅ Jika buka browser lagi → chat lama muncul kembali (via localStorage token)
+- ✅ Pesan admin muncul real-time (Supabase postgres_changes)
+- ✅ Admin dapat melihat nama + HP tamu di inbox
+- ✅ TypeScript typecheck bersih
 
 ---
 

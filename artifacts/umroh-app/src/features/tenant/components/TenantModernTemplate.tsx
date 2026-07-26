@@ -9,6 +9,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { type TenantSite } from "@/shared/hooks/useTenant";
 import FloatingButtons from "@/shared/components/common/FloatingButtons";
+import GuestChatWidget from "@/shared/components/chat/GuestChatWidget";
 
 interface PackageData {
   id: string;
@@ -453,6 +454,9 @@ const TenantModernTemplate = ({ tenant, packages }: Props) => {
 
       {/* ── Floating contact button ────────────────────────────────────────── */}
       <FloatingButtons fallbackWhatsapp={tenant.whatsapp_number || undefined} />
+
+      {/* ── Guest chat widget (tamu/calon jemaah; hidden for logged-in users) */}
+      <GuestChatWidget />
     </div>
   );
 };

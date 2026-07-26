@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import GuestChatWidget from "@/shared/components/chat/GuestChatWidget";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { useAuth } from "@/shared/hooks/useAuth";
@@ -1173,6 +1174,9 @@ const PackageDetail = () => {
         disabled={!selectedDeparture || !selectedDep || selectedDep.remaining_quota <= 0}
       />
       <Footer />
+
+      {/* Guest chat widget — tamu/calon jemaah; hidden for logged-in users */}
+      <GuestChatWidget />
     </div>
   );
 };
