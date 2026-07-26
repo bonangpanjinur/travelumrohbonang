@@ -94,6 +94,7 @@ import AdminSlugRedirects from "./features/admin/pages/SlugRedirects";
 import AdminRoleManagement from "./features/admin/pages/RoleManagement";
 import AdminChats from "./features/admin/pages/Chats";
 import ChatInbox from "./features/admin/pages/ChatInbox";
+import ChatPage from "./features/user/pages/ChatPage";
 import AgentCommissions from "./features/agent/pages/AgentCommissions";
 import RefundRequest from "./features/booking/pages/RefundRequest";
 import ETicket from "./features/booking/pages/ETicket";
@@ -211,6 +212,7 @@ const AppContent = () => {
         <Route path="/account/2fa" element={<Account2FA />} />
         <Route path="/contract/:bookingId" element={<ContractSign />} />
         <Route path="/tabungan" element={<MySavings />} />
+        <Route path="/chat" element={<ChatPage />} />
       </Route>
       <Route path="/galeri" element={<Gallery />} />
       <Route path="/blog" element={<Blog />} />

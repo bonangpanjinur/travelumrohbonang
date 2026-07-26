@@ -18,7 +18,6 @@ import EmptyState from "@/shared/components/ui/empty-state";
 import { useToast } from "@/shared/hooks/use-toast";
 import BookingItinerary from "@/features/booking/components/BookingItinerary";
 import InstallmentSchedule from "@/features/booking/components/InstallmentSchedule";
-import ChatBox from "@/features/cms/components/ChatBox";
 import { useCurrency } from "@/shared/hooks/useCurrency";
 
 const statusColors: Record<string, string> = {
@@ -42,8 +41,6 @@ const MyBookings = () => {
   const { toast } = useToast();
   const [signedMap, setSignedMap] = useState<Record<string, boolean>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [chatOpen, setChatOpen] = useState<string | null>(null);
-
   const { bookings, loading, error } = useMyBookings(user?.id);
 
   useEffect(() => {
@@ -208,18 +205,10 @@ const MyBookings = () => {
                     <Link to="/refund-request" className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary min-h-[44px] px-1">
                       <Receipt className="w-3.5 h-3.5" />Ajukan Refund
                     </Link>
-                    <button
-                      type="button"
-                      onClick={() => setChatOpen(chatOpen === b.id ? null : b.id)}
-                      aria-expanded={chatOpen === b.id}
-                      className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary min-h-[44px] px-1"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />{chatOpen === b.id ? "Tutup" : "Buka"} Chat CS
-                    </button>
+                    <Link to="/chat" className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary min-h-[44px] px-1">
+                      <MessageCircle className="w-3.5 h-3.5" />Hubungi Admin
+                    </Link>
                   </div>
-                  {chatOpen === b.id && (
-                    <div className="mt-3"><ChatBox bookingId={b.id} /></div>
-                  )}
                 </motion.div>
               ))}
             </div>

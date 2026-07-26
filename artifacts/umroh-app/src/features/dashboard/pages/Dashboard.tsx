@@ -5,7 +5,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { 
   CreditCard, FileText, Plane, User, 
   CheckCircle2, Clock, LogOut, Crown, Upload, Briefcase, Building2,
-  CalendarClock, AlertCircle,
+  CalendarClock, AlertCircle, MessageCircle,
 } from "lucide-react";
 import { useInstallments } from "@/features/booking/hooks/useInstallments";
 import { useCurrency } from "@/shared/hooks/useCurrency";
@@ -260,6 +260,14 @@ const Dashboard = () => {
         icon: Upload,
         onClick: () => navigate('/my-documents'),
         colorClass: "bg-teal-100 text-teal-600",
+      },
+      {
+        key: "chat",
+        title: "Chat Admin",
+        description: "Tanya seputar umroh",
+        icon: MessageCircle,
+        onClick: () => navigate('/chat'),
+        colorClass: "bg-green-100 text-green-600",
       },
     ];
     if (isAgent) {

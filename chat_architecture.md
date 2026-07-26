@@ -501,33 +501,35 @@ export const chatAuth = async (req, res, next) => {
 
 ---
 
-### Sprint 4 — Chat Widget Jemaah (Logged-in)
-**Estimasi: 2–3 hari**
+### Sprint 4 — Chat Widget Jemaah (Logged-in) ✅ SELESAI
+**Selesai: 26 Juli 2026**
 
 **Goal:** Jemaah yang sudah login bisa buka chat dengan admin — baik dari menu profil maupun dari halaman detail booking.
 
 **Hook baru:**
-- [ ] `artifacts/umroh-app/src/features/user/hooks/useMyChat.ts`
+- [x] `artifacts/umroh-app/src/features/user/hooks/useMyChat.ts`
   - Buat atau ambil conversation milik user (type='member')
   - Subscribe real-time untuk pesan baru
   - Mark as read otomatis saat panel dibuka
 
 **Komponen baru:**
-- [ ] `artifacts/umroh-app/src/features/user/pages/ChatPage.tsx`
+- [x] `artifacts/umroh-app/src/features/user/pages/ChatPage.tsx`
   - Header: "Chat dengan Admin"
-  - Body: scroll area pesan, bubble kanan (milik user) / kiri (admin)
-  - Input + kirim
-  - Status: admin "Sedang Online" / "Biasanya membalas dalam 1 jam"
+  - Body: scroll area pesan, bubble kanan (milik user) / kiri (admin), pemisah hari
+  - Input + kirim (Enter kirim, Shift+Enter baris baru)
+  - Status: "Biasanya membalas dalam 1 jam"
 
 **Integrasi:**
-- [ ] Tambah menu "💬 Chat Admin" di dashboard jemaah / sidebar user
-- [ ] Tambah tombol "Hubungi Admin" di halaman `MyBookings` → buka halaman chat
-- [ ] Pastikan `senderName` tampil nama dari `profiles.name`
+- [x] Tambah route `/chat` di `App.tsx` (protected, hanya user login)
+- [x] Tambah quick action "Chat Admin" di dashboard jemaah (`Dashboard.tsx`)
+- [x] Ganti "Buka Chat CS" di `MyBookings.tsx` → link "Hubungi Admin" ke `/chat`
+- [x] `senderName` ditangani server-side dari `profiles.name` (via POST /api/chat/start)
 
 **Done criteria:**
-- Jemaah login bisa buka halaman chat dan kirim pesan
-- Pesan admin muncul real-time tanpa refresh
-- Nama jemaah (bukan ID) tampil di sisi admin
+- ✅ Jemaah login bisa buka halaman chat dan kirim pesan
+- ✅ Pesan admin muncul real-time tanpa refresh (Supabase realtime)
+- ✅ Nama jemaah (bukan ID) tampil di sisi admin
+- ✅ TypeScript typecheck bersih
 
 ---
 
