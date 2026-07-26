@@ -895,6 +895,34 @@ const PackageDetail = () => {
                     </div>
                   )}
 
+                  {/* Package summary comes before the booking decision so users
+                      can scan the key offer details in the same card. */}
+                  <div className="border-b border-border bg-muted/20 px-5 py-4">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Ringkasan Paket
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      {[
+                        { icon: Clock, label: "Durasi", value: `${pkg.duration_days} Hari` },
+                        { icon: Star, label: "Hotel", value: `Bintang ${displayHotelStar}` },
+                        {
+                          icon: Plane,
+                          label: "Maskapai",
+                          value: selectedDep?.departure_type === "transit" ? "Transit" : displayAirline,
+                        },
+                        { icon: Calendar, label: "Jadwal", value: `${departures.length} keberangkatan` },
+                      ].map(({ icon: Icon, label, value }) => (
+                        <div key={label} className="flex min-w-0 items-start gap-2">
+                          <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-gold" />
+                          <div className="min-w-0">
+                            <p className="text-[11px] text-muted-foreground">{label}</p>
+                            <p className="truncate text-sm font-semibold" title={value}>{value}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="p-5 space-y-4">
                     {/* Departure selector */}
                     <div>
@@ -1029,24 +1057,6 @@ const PackageDetail = () => {
                   </div>
                 </div>
 
-                {/* Quick info summary card */}
-                <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ringkasan Paket</p>
-                  {[
-                    { icon: Clock,  label: "Durasi",      value: `${pkg.duration_days} Hari` },
-                    { icon: Star,   label: "Hotel",       value: `Bintang ${displayHotelStar}` },
-                    { icon: Plane,  label: "Maskapai",    value: selectedDep?.departure_type === "transit" ? "Transit" : displayAirline },
-                    { icon: Calendar, label: "Jadwal",    value: `${departures.length} keberangkatan` },
-                  ].map(({ icon: Icon, label, value }) => (
-                    <div key={label} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Icon className="w-4 h-4 text-gold flex-shrink-0" />
-                        {label}
-                      </div>
-                      <span className="font-semibold text-right">{value}</span>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
