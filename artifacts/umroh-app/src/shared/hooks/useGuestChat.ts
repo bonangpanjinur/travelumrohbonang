@@ -151,7 +151,19 @@ export function useGuestChat() {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          const msg = payload.new as GuestMessage;
+          // Supabase Realtime delivers raw DB column names (snake_case);
+          // map to the camelCase interface before use.
+          const raw = payload.new as Record<string, unknown>;
+          const msg: GuestMessage = {
+            id:             raw.id as string,
+            conversationId: (raw.conversation_id ?? raw.conversationId) as string,
+            senderType:     (raw.sender_type    ?? raw.senderType)     as GuestMessage["senderType"],
+            senderId:       (raw.sender_id      ?? raw.senderId)       as string | null,
+            senderName:     (raw.sender_name    ?? raw.senderName)     as string,
+            message:        raw.message as string,
+            isRead:         (raw.is_read        ?? raw.isRead)         as boolean,
+            createdAt:      (raw.created_at     ?? raw.createdAt)      as string,
+          };
           setMessages((prev) => {
             if (prev.find((m) => m.id === msg.id)) return prev;
             return [...prev, msg];
