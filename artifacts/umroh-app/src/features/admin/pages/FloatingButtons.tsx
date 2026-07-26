@@ -74,7 +74,7 @@ const AdminFloatingButtons = () => {
       if (data.id) {
         await apiFetch(`/api/admin/content/floating-buttons/${data.id}`, { method: "PATCH", body: JSON.stringify(payload) });
       } else {
-        await apiFetch("/api/admin/content/floating-buttons", { method: "POST", body: JSON.stringify({ ...payload, sort_order: buttons.length }) });
+        await apiFetch("/api/admin/content/floating-buttons", { method: "POST", body: JSON.stringify({ ...payload, sortOrder: buttons.length }) });
       }
     },
     onSuccess: () => {
@@ -100,7 +100,7 @@ const AdminFloatingButtons = () => {
 
   const toggleMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      await apiFetch(`/api/admin/content/floating-buttons/${id}`, { method: "PATCH", body: JSON.stringify({ is_active: isActive }) });
+      await apiFetch(`/api/admin/content/floating-buttons/${id}`, { method: "PATCH", body: JSON.stringify({ isActive }) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-floating-buttons"] });

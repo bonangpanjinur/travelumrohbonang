@@ -18,3 +18,4 @@
 - [FASE 2 backend API](fase2-backend-api.md) — POST/PATCH departures now handle hotelMakkahId, hotelMadinahId, extraHotels; GET admin/packages/:id includes hotel/airline/extra_hotels per departure; new GET+PUT departures/:id/extra-hotels endpoints; PackageDepartureSchema extended.
 - [Imported workspace dependency bootstrap](imported-workspace-dependency-bootstrap.md) — install the existing pnpm lockfile before diagnosing workflow failures in imported monorepos.
 - [Public package brochure](public-package-brochure.md) — brochure downloads are public and use the package hero image plus a QR link back to its detail page.
+- [CMS Drizzle payload casing](cms-drizzle-payload-casing.md) — generic admin CMS mutations must send Drizzle's camelCase schema keys, not SQL snake_case names.
