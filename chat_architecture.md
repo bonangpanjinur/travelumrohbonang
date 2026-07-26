@@ -481,22 +481,23 @@ export const chatAuth = async (req, res, next) => {
 
 ---
 
-### Sprint 3 — Upgrade AdminFloatingChat (FAB Admin)
-**Estimasi: 1–2 hari**
+### Sprint 3 — Upgrade AdminFloatingChat (FAB Admin) ✅ SELESAI
+**Selesai: 26 Juli 2026**
 
 **Goal:** FAB chat di pojok kanan bawah admin diupgrade — pakai data dari sistem `conversations` baru (bukan `bookingId` lama), real-time badge.
 
 **Perubahan di `AdminFloatingChat.tsx`:**
-- [ ] Ganti fetch `GET /api/admin/chats` → `GET /api/admin/conversations`
-- [ ] Ganti `ConversationList` agar tampilkan nama user/tamu (bukan bookingCode)
-- [ ] Ganti `MiniChatBox` agar fetch dari `GET /api/admin/conversations/:id/messages`
-- [ ] Kirim pesan via `POST /api/admin/conversations/:id/messages`
-- [ ] Ganti polling 20s → Supabase realtime subscription untuk badge unread
-- [ ] Tampilkan label tipe: "(Tamu)", "(Member)", "(Booking)"
+- [x] Ganti fetch `GET /api/admin/chats` → `GET /api/admin/conversations`
+- [x] Ganti `ConversationList` agar tampilkan nama user/tamu (bukan bookingCode)
+- [x] Ganti `MiniChatBox` agar fetch dari `GET /api/admin/conversations/:id/messages`
+- [x] Kirim pesan via `POST /api/admin/conversations/:id/messages`
+- [x] Ganti polling 20s → Supabase realtime subscription untuk badge unread
+- [x] Tampilkan label tipe: "(Tamu)", "(Member)", "(Booking)"
 
 **Done criteria:**
-- FAB admin menampilkan percakapan tamu dan member, bukan hanya booking
-- Badge unread update real-time tanpa polling
+- ✅ FAB admin menampilkan percakapan tamu dan member, bukan hanya booking
+- ✅ Badge unread update real-time tanpa polling
+- ✅ TypeScript typecheck bersih
 
 ---
 

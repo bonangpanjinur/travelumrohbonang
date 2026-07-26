@@ -1,90 +1,130 @@
 /**
- * AdminFloatingChat
+ * AdminFloatingChat — Sprint 3 upgrade (chat_architecture.md §6)
  *
  * Rendered via ReactDOM.createPortal → document.body so it is never clipped
  * by stacking contexts, overflow:hidden, or CSS transforms in the admin tree.
  *
- * Shows a chat-bubble FAB at bottom-right on every admin page.
- * Badge = conversations that arrived since the panel was last opened.
- * Click to open a slide-up panel with conversation list + inline reply.
+ * Changes vs Sprint 1 version:
+ *  - Fetch conversations from GET /api/admin/conversations (not /api/admin/chats)
+ *  - ConversationList shows name + type label, not booking code
+ *  - MiniChatBox uses GET/POST /api/admin/conversations/:id/messages
+ *  - Polling 20 s removed → Supabase realtime for unread badge + new messages
+ *  - Type labels: "(Tamu)", "(Member)", "(Booking)"
  */
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { supabase } from "@/shared/integrations/supabase/client";
 import { apiFetch } from "@/shared/lib/apiClient";
-import { MessageCircle, X, Send, Loader2, ChevronLeft, RefreshCw } from "lucide-react";
+import {
+  MessageCircle,
+  X,
+  Send,
+  Loader2,
+  ChevronLeft,
+  RefreshCw,
+} from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { format } from "date-fns";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { toast } from "sonner";
+import type { AdminConversation, ConvMessage } from "../hooks/useAdminInbox";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-interface Conversation {
-  bookingId: string;
-  bookingCode: string;
-  message: string;
-  createdAt: string;
+function getDisplayName(conv: AdminConversation): string {
+  if (conv.type === "guest") return conv.guest_name ?? "Tamu";
+  if (conv.type === "member") return conv.member_name ?? "Jemaah";
+  return `Booking #${conv.booking_id?.slice(0, 8) ?? ""}`;
 }
 
-interface ChatMessage {
-  id: string;
-  booking_id: string;
-  sender_role: "admin" | "buyer";
-  message: string;
-  createdAt: string;
+function getTypeLabel(type: AdminConversation["type"]): string {
+  if (type === "guest") return "Tamu";
+  if (type === "member") return "Member";
+  return "Booking";
 }
 
-// ─── Mini ChatBox ─────────────────────────────────────────────────────────────
+function getTypeBadgeCls(type: AdminConversation["type"]): string {
+  if (type === "guest") return "bg-orange-100 text-orange-700";
+  if (type === "member") return "bg-blue-100 text-blue-700";
+  return "bg-purple-100 text-purple-700";
+}
 
-function MiniChatBox({ bookingId }: { bookingId: string }) {
+// ─── MiniChatBox ─────────────────────────────────────────────────────────────
+
+function MiniChatBox({ conv }: { conv: AdminConversation }) {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ConvMessage[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const endRef = useRef<HTMLDivElement>(null);
+  const mountId = useMemo(
+    () => `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    [],
+  );
 
   const load = useCallback(async () => {
     try {
-      const { data } = await apiFetch<{ data: ChatMessage[] }>(
-        `/api/cms/chat-messages?booking_id=${bookingId}`
+      const { data } = await apiFetch<{ data: ConvMessage[] }>(
+        `/api/admin/conversations/${conv.id}/messages`,
       );
-      setMessages(data || []);
+      setMessages(data ?? []);
     } catch {
       /* silent */
     } finally {
       setLoading(false);
     }
-  }, [bookingId]);
+  }, [conv.id]);
 
+  // Initial load + mark as read
   useEffect(() => {
     setLoading(true);
     load();
-    const t = setInterval(load, 15_000);
-    return () => clearInterval(t);
-  }, [load]);
+    apiFetch(`/api/admin/conversations/${conv.id}/read`, {
+      method: "PATCH",
+    }).catch(() => {});
+  }, [conv.id, load]);
 
+  // Realtime subscription — new messages in this conversation
+  useEffect(() => {
+    const channel = supabase
+      .channel(`fab-conv-${conv.id}-${mountId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "conversation_messages",
+          filter: `conversation_id=eq.${conv.id}`,
+        },
+        (payload) => {
+          const msg = payload.new as ConvMessage;
+          setMessages((prev) => {
+            if (prev.find((m) => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [conv.id, mountId]);
+
+  // Scroll to bottom on new messages
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages.length]);
 
   const send = async () => {
-    if (!text.trim() || !user) return;
+    if (!text.trim() || !user || sending) return;
     setSending(true);
     try {
-      await apiFetch("/api/admin/chats", {
+      await apiFetch(`/api/admin/conversations/${conv.id}/messages`, {
         method: "POST",
-        body: JSON.stringify({
-          bookingId,
-          senderId: user.id,
-          senderRole: "admin",
-          message: text.trim(),
-        }),
+        body: JSON.stringify({ message: text.trim() }),
       });
       setText("");
-      await load();
     } catch {
       toast.error("Gagal mengirim pesan");
     } finally {
@@ -100,21 +140,33 @@ function MiniChatBox({ bookingId }: { bookingId: string }) {
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
         ) : messages.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground py-8">Belum ada pesan.</p>
+          <p className="text-center text-sm text-muted-foreground py-8">
+            Belum ada pesan.
+          </p>
         ) : (
           messages.map((m) => {
-            const mine = m.sender_role === "admin";
+            const mine = m.senderType === "admin";
             return (
-              <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+              <div
+                key={m.id}
+                className={`flex ${mine ? "justify-end" : "justify-start"}`}
+              >
                 <div
                   className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${
-                    mine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                    mine
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-foreground"
                   }`}
                 >
                   <div className="text-[10px] opacity-60 mb-0.5">
-                    {mine ? "Admin" : "Jamaah"} · {format(new Date(m.createdAt), "HH:mm")}
+                    {m.senderName} ·{" "}
+                    {m.createdAt
+                      ? format(new Date(m.createdAt), "HH:mm")
+                      : ""}
                   </div>
-                  <div className="whitespace-pre-wrap break-words">{m.message}</div>
+                  <div className="whitespace-pre-wrap break-words">
+                    {m.message}
+                  </div>
                 </div>
               </div>
             );
@@ -123,23 +175,42 @@ function MiniChatBox({ bookingId }: { bookingId: string }) {
         <div ref={endRef} />
       </div>
       <div className="border-t border-border p-2 flex gap-2 bg-background">
-        <Input
-          placeholder="Balas pesan..."
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-          disabled={sending}
-          className="text-sm"
-        />
-        <Button onClick={send} disabled={sending || !text.trim()} size="icon" className="shrink-0">
-          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        </Button>
+        {conv.status === "closed" ? (
+          <p className="text-xs text-muted-foreground text-center w-full py-1">
+            Percakapan ditutup
+          </p>
+        ) : (
+          <>
+            <Input
+              placeholder="Balas pesan..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) =>
+                e.key === "Enter" && !e.shiftKey && send()
+              }
+              disabled={sending}
+              className="text-sm"
+            />
+            <Button
+              onClick={send}
+              disabled={sending || !text.trim()}
+              size="icon"
+              className="shrink-0"
+            >
+              {sending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── Conversation list ────────────────────────────────────────────────────────
+// ─── ConversationList ─────────────────────────────────────────────────────────
 
 function ConversationList({
   conversations,
@@ -147,27 +218,41 @@ function ConversationList({
   onSelect,
   onRefresh,
 }: {
-  conversations: Conversation[];
+  conversations: AdminConversation[];
   loading: boolean;
-  onSelect: (c: Conversation) => void;
+  onSelect: (c: AdminConversation) => void;
   onRefresh: () => void;
 }) {
   const [search, setSearch] = useState("");
-  const filtered = conversations.filter(
-    (c) => !search || c.bookingCode?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = conversations.filter((c) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      getDisplayName(c).toLowerCase().includes(q) ||
+      (c.guest_phone ?? "").toLowerCase().includes(q) ||
+      (c.last_message_preview ?? "").toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="flex flex-col h-full">
       <div className="p-2 border-b border-border flex gap-1">
         <Input
-          placeholder="Cari kode booking..."
+          placeholder="Cari nama, HP, pesan..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="text-xs h-8"
         />
-        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onRefresh}>
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          onClick={onRefresh}
+          title="Refresh"
+        >
+          <RefreshCw
+            className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`}
+          />
         </Button>
       </div>
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -176,23 +261,54 @@ function ConversationList({
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
         ) : filtered.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground py-8">Belum ada percakapan</p>
+          <p className="text-center text-sm text-muted-foreground py-8">
+            Belum ada percakapan
+          </p>
         ) : (
-          filtered.map((c) => (
-            <button
-              key={c.bookingId}
-              onClick={() => onSelect(c)}
-              className="w-full text-left p-2.5 rounded-lg border border-border hover:bg-muted/60 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-semibold">{c.bookingCode}</span>
-                <span className="text-[10px] text-muted-foreground">
-                  {format(new Date(c.createdAt), "dd MMM HH:mm")}
-                </span>
-              </div>
-              <div className="text-xs text-muted-foreground truncate mt-0.5">{c.message}</div>
-            </button>
-          ))
+          filtered.map((c) => {
+            const name = getDisplayName(c);
+            const hasUnread = (c.unread_admin ?? 0) > 0;
+            return (
+              <button
+                key={c.id}
+                onClick={() => onSelect(c)}
+                className="w-full text-left p-2.5 rounded-lg border border-border hover:bg-muted/60 transition-colors"
+              >
+                <div className="flex items-center justify-between gap-1 mb-0.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {hasUnread && (
+                      <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                    )}
+                    <span className="font-medium text-xs truncate">
+                      {name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <span
+                      className={`text-[10px] px-1 py-0.5 rounded font-medium ${getTypeBadgeCls(c.type)}`}
+                    >
+                      {getTypeLabel(c.type)}
+                    </span>
+                    {hasUnread && (
+                      <span className="bg-red-500 text-white text-[10px] rounded-full px-1 min-w-[16px] text-center">
+                        {c.unread_admin}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {c.guest_phone && (
+                  <div className="text-[10px] text-muted-foreground mb-0.5">
+                    {c.guest_phone}
+                  </div>
+                )}
+                {c.last_message_preview && (
+                  <div className="text-xs text-muted-foreground truncate">
+                    {c.last_message_preview}
+                  </div>
+                )}
+              </button>
+            );
+          })
         )}
       </div>
     </div>
@@ -201,35 +317,31 @@ function ConversationList({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-const POLL_INTERVAL = 20_000;
-
 const AdminFloatingChat = () => {
   const [open, setOpen] = useState(false);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<AdminConversation[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<Conversation | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const seenIds = useRef<Set<string>>(new Set());
+  const [selected, setSelected] = useState<AdminConversation | null>(null);
+  const [totalUnread, setTotalUnread] = useState(0);
 
+  const mountId = useMemo(
+    () => `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    [],
+  );
+
+  // ── Fetch conversation list ────────────────────────────────────────────────
   const loadConversations = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const { data } = await apiFetch<{ data: any[] }>("/api/admin/chats");
-      const deduped = new Map<string, any>();
-      (data || []).forEach((m: any) => {
-        if (!deduped.has(m.bookingId)) deduped.set(m.bookingId, m);
-      });
-      const list: Conversation[] = Array.from(deduped.values()).map((m) => ({
-        bookingId: m.bookingId,
-        bookingCode: m.bookingCode,
-        message: m.message,
-        createdAt: m.createdAt,
-      }));
+      const result = await apiFetch<{
+        data: AdminConversation[];
+        total: number;
+      }>("/api/admin/conversations?status=open&limit=50");
+      const list = result.data ?? [];
       setConversations(list);
-      const newIds = list.filter((c) => !seenIds.current.has(c.bookingId));
-      setUnreadCount(newIds.length);
+      setTotalUnread(list.reduce((n, c) => n + (c.unread_admin ?? 0), 0));
     } catch {
-      /* silent — button still renders */
+      /* silent — FAB still renders */
     } finally {
       setLoading(false);
     }
@@ -237,33 +349,87 @@ const AdminFloatingChat = () => {
 
   useEffect(() => {
     loadConversations();
-    const t = setInterval(() => loadConversations(true), POLL_INTERVAL);
-    return () => clearInterval(t);
   }, [loadConversations]);
 
+  // ── Realtime: new/updated conversations → update badge & list ────────────
   useEffect(() => {
-    if (open) {
-      seenIds.current = new Set(conversations.map((c) => c.bookingId));
-      setUnreadCount(0);
-    }
-  }, [open, conversations]);
+    const channel = supabase
+      .channel(`fab-inbox-${mountId}`)
+      // New conversation created
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "conversations" },
+        (payload) => {
+          const conv = payload.new as AdminConversation;
+          setConversations((prev) => {
+            if (prev.find((c) => c.id === conv.id)) return prev;
+            return [conv, ...prev];
+          });
+          setTotalUnread((n) => n + (conv.unread_admin ?? 0));
+        },
+      )
+      // Conversation updated (unread_admin, last_message_preview, status…)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "conversations" },
+        (payload) => {
+          const updated = payload.new as AdminConversation;
+          setConversations((prev) => {
+            const next = prev.map((c) =>
+              c.id === updated.id ? { ...c, ...updated } : c,
+            );
+            setTotalUnread(
+              next.reduce((n, c) => n + (c.unread_admin ?? 0), 0),
+            );
+            return next;
+          });
+          // Keep selected in sync
+          setSelected((sel) =>
+            sel?.id === updated.id ? { ...sel, ...updated } : sel,
+          );
+        },
+      )
+      .subscribe();
 
-  // ── Render via portal so it escapes any CSS stacking context in the tree ──
+    return () => { supabase.removeChannel(channel); };
+  }, [mountId]);
+
+  // Reset unread when panel is opened
+  useEffect(() => {
+    if (open) setTotalUnread(0);
+  }, [open]);
+
+  const handleSelect = (conv: AdminConversation) => {
+    setSelected(conv);
+    // Optimistically clear this conversation's unread from the badge
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === conv.id ? { ...c, unread_admin: 0 } : c,
+      ),
+    );
+    setTotalUnread((n) => Math.max(0, n - (conv.unread_admin ?? 0)));
+  };
+
+  // ── Portal render ─────────────────────────────────────────────────────────
   return createPortal(
     <>
       {/* ── FAB trigger ─────────────────────────────────────────────────── */}
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label={open ? "Tutup chat" : "Chat Jamaah"}
+        aria-label={open ? "Tutup chat" : "Chat Inbox"}
         style={{ zIndex: 9999 }}
         className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-2xl flex items-center justify-center hover:opacity-90 active:scale-95 transition-all"
       >
-        {open ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
+        {open ? (
+          <X className="w-6 h-6" />
+        ) : (
+          <MessageCircle className="w-6 h-6" />
+        )}
 
         {/* unread badge */}
-        {unreadCount > 0 && !open && (
+        {totalUnread > 0 && !open && (
           <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow pointer-events-none">
-            {unreadCount > 9 ? "9+" : unreadCount}
+            {totalUnread > 9 ? "9+" : totalUnread}
           </span>
         )}
       </button>
@@ -286,16 +452,25 @@ const AdminFloatingChat = () => {
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold truncate">Booking {selected.bookingCode}</div>
-                  <div className="text-[10px] opacity-70">Chat dengan jamaah</div>
+                  <div className="text-sm font-semibold truncate">
+                    {getDisplayName(selected)}
+                  </div>
+                  <div className="text-[10px] opacity-70">
+                    ({getTypeLabel(selected.type)})
+                    {selected.guest_phone
+                      ? ` · ${selected.guest_phone}`
+                      : ""}
+                  </div>
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-2">
                 <MessageCircle className="w-4 h-4 shrink-0" />
-                <span className="text-sm font-semibold">Chat Jamaah</span>
+                <span className="text-sm font-semibold">Chat Inbox</span>
                 {conversations.length > 0 && (
-                  <span className="text-[10px] opacity-70">({conversations.length})</span>
+                  <span className="text-[10px] opacity-70">
+                    ({conversations.length})
+                  </span>
                 )}
               </div>
             )}
@@ -311,12 +486,12 @@ const AdminFloatingChat = () => {
           {/* body */}
           <div className="flex-1 min-h-0">
             {selected ? (
-              <MiniChatBox bookingId={selected.bookingId} />
+              <MiniChatBox conv={selected} />
             ) : (
               <ConversationList
                 conversations={conversations}
                 loading={loading}
-                onSelect={setSelected}
+                onSelect={handleSelect}
                 onRefresh={() => loadConversations()}
               />
             )}
@@ -324,7 +499,7 @@ const AdminFloatingChat = () => {
         </div>
       )}
     </>,
-    document.body
+    document.body,
   );
 };
 
