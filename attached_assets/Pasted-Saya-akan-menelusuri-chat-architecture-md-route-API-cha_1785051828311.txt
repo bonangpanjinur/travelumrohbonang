@@ -1,0 +1,33 @@
+Saya akan menelusuri chat_architecture.md, route/API chat, komponen panel admin, serta konfigurasi workflow untuk melihat apakah fiturnya sudah lengkap atau baru berupa rancangan. Saya belum akan mengubah kode sampai alur yang kurang dan titik aktivasi adminnya jelas.
+
+
+5 actions
+Strukturnya menunjukkan modul chat memang sudah ada di database, backend, dan frontend, tetapi ada indikasi celah integrasi di panel admin serta workflow yang sedang gagal. Saya akan membaca dokumen arsitektur dan jalur kode utama sekarang, lalu memperbaiki bagian yang benar-benar kurang dan menguji cara mengaktifkannya.
+
+
+8 actions
+Dari pemeriksaan awal, fitur ini bukan sekadar belum diaktifkan: sebagian besar fondasinya sudah ada, tetapi ada dua jalur admin yang berjalan bersamaan. Saya sedang memeriksa routing, hook inbox, widget publik, dan error workflow agar perbaikannya tidak hanya menampilkan menu, tetapi benar-benar bisa dipakai dari sisi admin, jemaah, dan tamu.
+
+
+10 actions
+Saya menemukan masalah pertama yang pasti: kedua workflow gagal hanya karena dependensi monorepo belum terpasang (vite dan esbuild tidak ditemukan), bukan karena kode chat. Selain itu saya akan memeriksa mount route dan menu admin—termasuk bug casing/role—sebelum memperbaiki dan menjalankan ulang aplikasi.
+
+
+9 actions
+Saya sudah menemukan satu kekurangan utama: widget tamu hanya dipasang di tiga template tenant, bukan di layout publik utama, jadi calon jemaah di halaman utama/paket tidak melihat tombol chat sama sekali. Saya juga akan cek menu admin dan kontrol feature flag agar kita bisa menambahkan akses yang jelas tanpa mengganggu jalur lama.
+
+
+9 actions
+Saya akan memperbaiki tiga hal yang paling berdampak: memasang widget chat tamu pada layout publik utama, memastikan menu /admin/chat tidak tersaring oleh rute lama /admin/chats, dan membuat status Live Chat jelas di Manajemen Fitur. Setelah itu saya pasang dependensi dari lockfile, restart kedua workflow, lalu cek build/typecheck dan preview.
+
+
+11 actions
+Saya menemukan dua perbaikan kode yang jelas sebelum instalasi: Live Chat hanya mengawal URL lama /admin/chats, sedangkan menu memakai /admin/chat; dan widget tamu belum dipasang global pada halaman publik utama. Saya akan memperbaiki keduanya, lalu memastikan jalur role admin di backend tidak salah menganggap admin sebagai jemaah.
+
+
+10 actions
+Perubahan inti sudah saya terapkan. Sekarang saya pasang dependensi sesuai pnpm-lock.yaml, lalu saya rapikan satu celah backend: middleware chat membaca role dari profiles, padahal role sebenarnya ada di user_roles, sehingga admin yang memakai endpoint chat publik bisa salah dikenali sebagai member.
+
+
+2 actions
+Instalasi lewat helper paket gagal karena mencoba menambahkan pnpm sebagai dependency root, bukan memasang dependency proyek. Saya lanjutkan dengan bootstrap lockfile yang benar (pnpm install --frozen-lockfile), sambil memperbaiki mapping payload realtime snake_case→camelCase yang saat ini membuat pesan baru bisa muncul kosong atau badge tidak bertambah.
