@@ -35,8 +35,8 @@ interface FloatingButton {
   label: string;
   url: string;
   icon: string;
-  is_active: boolean;
-  sort_order: number;
+  isActive: boolean;
+  sortOrder: number;
 }
 
 // ── Lookup tables ─────────────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ const ContactButtons = ({
     staleTime: 5 * 60 * 1000,
   });
 
-  const buttons = rawButtons.filter((b) => b.is_active);
+  const buttons = rawButtons.filter((b) => b.isActive);
   if (buttons.length === 0) return null;
 
   /* ── Single button — pill with pulsing ring ──────────────────────────── */

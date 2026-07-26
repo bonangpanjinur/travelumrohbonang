@@ -10,8 +10,8 @@ interface FloatingButton {
   label: string;
   url: string;
   icon: string;
-  is_active: boolean;
-  sort_order: number;
+  isActive: boolean;
+  sortOrder: number;
 }
 
 interface Props {
@@ -53,7 +53,7 @@ const FloatingButtons = ({ fallbackWhatsapp }: Props = {}) => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const buttons = rawButtons.filter((b) => b.is_active);
+  const buttons = rawButtons.filter((b) => b.isActive);
 
   // Fall back to tenant's WhatsApp number when no CMS buttons are configured
   const effectiveButtons: FloatingButton[] =
@@ -67,8 +67,8 @@ const FloatingButtons = ({ fallbackWhatsapp }: Props = {}) => {
             label: "Chat WhatsApp",
             url: `https://wa.me/${fallbackWhatsapp.replace(/\D/g, "")}`,
             icon: "MessageCircle",
-            is_active: true,
-            sort_order: 0,
+            isActive: true,
+            sortOrder: 0,
           },
         ]
       : [];
