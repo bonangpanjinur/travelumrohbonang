@@ -86,3 +86,4 @@ This regenerates `lib/api-client-react/src/generated/` and `lib/api-zod/src/gene
 
 - Keep the existing monorepo structure — do not restructure or migrate the stack.
 - `SUPABASE_DATABASE_URL` is the Drizzle connection string on Replit dev (avoids collision with Replit's own `DATABASE_URL`).
+- **All SQL files (migrations, seeds, patches) must go to `supabase/migrations/`** — never to `lib/db/migrations/` or anywhere else. Use the timestamp naming convention: `YYYYMMDDNNNNNN_description.sql` (e.g. `20260727000001_add_budgets_table.sql`). Increment the 6-digit sequence within the same day to preserve order.
