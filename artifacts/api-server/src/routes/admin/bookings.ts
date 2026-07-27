@@ -466,12 +466,8 @@ router.post("/", async (req, res) => {
       res.status(400).json({ error: "Keberangkatan tidak sesuai dengan paket yang dipilih" });
       return;
     }
-    if (depRow.status && depRow.status !== "active") {
-      res.status(400).json({ error: "Keberangkatan tidak aktif atau sudah ditutup" });
-      return;
-    }
-    // NOTE: Admin/super admin may book past departures (e.g. for record-keeping or late registrations)
-    // Past-date check intentionally skipped for admin routes.
+    // NOTE: Admin/super admin may book past or full departures (record-keeping, late registrations).
+    // Status check and past-date check intentionally skipped for admin routes.
 
     // P0: Lookup price from DB — do not trust totalPrice from frontend
     let calculatedPrice = 0;
@@ -563,20 +559,26 @@ router.post("/", async (req, res) => {
         });
       }
 
-      // P0: Atomic quota decrement — prevents overselling under concurrent requests
+      // P0: Sync remaining_quota from real booking count, then decrement.
+      // Admin routes skip quota gate — stored column can be stale; use COUNT for accuracy.
       const quotaResult = await tx.execute(sql`
         UPDATE package_departures
         SET
-          remaining_quota = remaining_quota - 1,
-          status = CASE WHEN remaining_quota - 1 <= 0 THEN 'penuh' ELSE status END
-        WHERE id = ${departureId} AND remaining_quota >= 1
+          remaining_quota = GREATEST(0,
+            quota - (SELECT COUNT(*) FROM bookings WHERE departure_id = package_departures.id AND status != 'cancelled') - 1
+          ),
+          status = CASE
+            WHEN quota - (SELECT COUNT(*) FROM bookings WHERE departure_id = package_departures.id AND status != 'cancelled') - 1 <= 0
+            THEN 'penuh' ELSE 'active'
+          END
+        WHERE id = ${departureId}
         RETURNING id
       `);
       const quotaRows = (quotaResult as any).rows ?? quotaResult;
       if (!Array.isArray(quotaRows) || quotaRows.length === 0) {
         throw Object.assign(
-          new Error("Kuota keberangkatan penuh, tidak dapat membuat booking baru"),
-          { code: "CAPACITY_FULL" },
+          new Error("Keberangkatan tidak ditemukan saat update kuota"),
+          { code: "DEPARTURE_NOT_FOUND" },
         );
       }
 
@@ -670,12 +672,8 @@ router.post("/group", async (req, res) => {
       res.status(400).json({ error: "Keberangkatan tidak sesuai dengan paket yang dipilih" });
       return;
     }
-    if (dep.status && dep.status !== "active") {
-      res.status(400).json({ error: "Keberangkatan tidak aktif atau sudah ditutup" });
-      return;
-    }
-    // NOTE: Admin/super admin may book past departures (e.g. for record-keeping or late registrations)
-    // Past-date check intentionally skipped for admin routes.
+    // NOTE: Admin/super admin may book past or full departures (record-keeping, late registrations).
+    // Status check and past-date check intentionally skipped for admin routes.
 
     // P0: Lookup all departure prices from DB — do not trust roomPrice from frontend
     const depPricesRows = await db
@@ -781,20 +779,26 @@ router.post("/group", async (req, res) => {
         });
       }
 
-      // P0: Atomic quota decrement — prevents overselling under concurrent booking requests
+      // P0: Sync remaining_quota from real booking count, then decrement.
+      // Admin routes skip quota gate — stored column can be stale; use COUNT for accuracy.
       const groupQuotaResult = await tx.execute(sql`
         UPDATE package_departures
         SET
-          remaining_quota = remaining_quota - ${jamaah.length},
-          status = CASE WHEN remaining_quota - ${jamaah.length} <= 0 THEN 'penuh' ELSE status END
-        WHERE id = ${departureId} AND remaining_quota >= ${jamaah.length}
+          remaining_quota = GREATEST(0,
+            quota - (SELECT COUNT(*) FROM bookings WHERE departure_id = package_departures.id AND status != 'cancelled') - ${jamaah.length}
+          ),
+          status = CASE
+            WHEN quota - (SELECT COUNT(*) FROM bookings WHERE departure_id = package_departures.id AND status != 'cancelled') - ${jamaah.length} <= 0
+            THEN 'penuh' ELSE 'active'
+          END
+        WHERE id = ${departureId}
         RETURNING id
       `);
       const groupQuotaRows = (groupQuotaResult as any).rows ?? groupQuotaResult;
       if (!Array.isArray(groupQuotaRows) || groupQuotaRows.length === 0) {
         throw Object.assign(
-          new Error(`Kuota tidak mencukupi. Dibutuhkan ${jamaah.length} kursi tetapi kuota sudah habis.`),
-          { code: "CAPACITY_FULL" },
+          new Error(`Keberangkatan tidak ditemukan saat update kuota`),
+          { code: "DEPARTURE_NOT_FOUND" },
         );
       }
 
@@ -877,10 +881,12 @@ router.patch(
 
         // Restore quota when booking transitions to cancelled (use paxCount for group bookings)
         if (newStatus === "cancelled" && current.status !== "cancelled" && current.departureId) {
-          const seats = current.paxCount ?? 1;
+          // Restore quota and reset status from 'penuh' → 'active' if seats open up again
           await tx.execute(sql`
             UPDATE package_departures
-            SET remaining_quota = remaining_quota + ${seats}
+            SET
+              remaining_quota = remaining_quota + ${current.paxCount ?? 1},
+              status = CASE WHEN status = 'penuh' AND remaining_quota + ${current.paxCount ?? 1} > 0 THEN 'active' ELSE status END
             WHERE id = ${current.departureId}
           `);
         }
@@ -981,8 +987,13 @@ router.patch("/bulk-status", async (req, res) => {
         });
         if (newStatus === "cancelled" && row.departureId) {
           const seats = paxMap.get(row.id) ?? 1;
+          // Restore quota and reset status from 'penuh' → 'active' if seats open up again
           await tx.execute(sql`
-            UPDATE package_departures SET remaining_quota = remaining_quota + ${seats} WHERE id = ${row.departureId}
+            UPDATE package_departures
+            SET
+              remaining_quota = remaining_quota + ${seats},
+              status = CASE WHEN status = 'penuh' AND remaining_quota + ${seats} > 0 THEN 'active' ELSE status END
+            WHERE id = ${row.departureId}
           `);
         }
       }
