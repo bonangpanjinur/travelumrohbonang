@@ -78,6 +78,9 @@ type Finding = {
   issue: string;
   severity: "error" | "warning" | "info";
   created_at: string;
+  actionPath?: string;
+  actionLabel?: string;
+  recommendation?: string;
 };
 
 async function runAudit(): Promise<Finding[]> {
@@ -93,31 +96,94 @@ async function runAudit(): Promise<Finding[]> {
   for (const p of pkgRows) {
     const path = `/paket/${p.slug}`;
     if (!p.title || p.title.trim().length === 0) {
-      findings.push({ id: crypto.randomUUID(), path, issue: "Judul paket kosong", severity: "error", created_at: now });
+      findings.push({
+        id: crypto.randomUUID(),
+        path,
+        issue: "Judul paket kosong",
+        severity: "error",
+        created_at: now,
+        actionPath: `/admin/packages?edit=${encodeURIComponent(p.slug)}`,
+        actionLabel: "Perbaiki di Paket",
+        recommendation: "Isi judul paket yang jelas dan relevan, idealnya maksimal 60 karakter.",
+      });
     } else if (p.title.length > 60) {
-      findings.push({ id: crypto.randomUUID(), path, issue: `Judul terlalu panjang (${p.title.length} karakter, maks 60)`, severity: "warning", created_at: now });
+      findings.push({
+        id: crypto.randomUUID(),
+        path,
+        issue: `Judul terlalu panjang (${p.title.length} karakter, maks 60)`,
+        severity: "warning",
+        created_at: now,
+        actionPath: `/admin/packages?edit=${encodeURIComponent(p.slug)}`,
+        actionLabel: "Perbaiki di Paket",
+        recommendation: "Ringkas judul menjadi maksimal 60 karakter agar tidak terpotong di hasil pencarian.",
+      });
     }
     if (!p.description || p.description.trim().length === 0) {
-      findings.push({ id: crypto.randomUUID(), path, issue: "Deskripsi paket kosong (meta description)", severity: "error", created_at: now });
+      findings.push({
+        id: crypto.randomUUID(),
+        path,
+        issue: "Deskripsi paket kosong (meta description)",
+        severity: "error",
+        created_at: now,
+        actionPath: `/admin/packages?edit=${encodeURIComponent(p.slug)}`,
+        actionLabel: "Perbaiki di Paket",
+        recommendation: "Isi deskripsi unik sekitar 50–160 karakter yang menjelaskan tujuan, durasi, atau keunggulan paket.",
+      });
     } else if (p.description.length > 160) {
-      findings.push({ id: crypto.randomUUID(), path, issue: `Deskripsi terlalu panjang (${p.description.length} karakter, maks 160)`, severity: "warning", created_at: now });
+      findings.push({
+        id: crypto.randomUUID(),
+        path,
+        issue: `Deskripsi terlalu panjang (${p.description.length} karakter, maks 160)`,
+        severity: "warning",
+        created_at: now,
+        actionPath: `/admin/packages?edit=${encodeURIComponent(p.slug)}`,
+        actionLabel: "Perbaiki di Paket",
+        recommendation: "Ringkas deskripsi menjadi maksimal 160 karakter; target yang baik adalah 50–160 karakter.",
+      });
     }
   }
 
   for (const b of blogRows) {
     const path = `/blog/${b.slug}`;
     if (!b.title || b.title.trim().length === 0) {
-      findings.push({ id: crypto.randomUUID(), path, issue: "Judul artikel kosong", severity: "error", created_at: now });
+      findings.push({
+        id: crypto.randomUUID(),
+        path,
+        issue: "Judul artikel kosong",
+        severity: "error",
+        created_at: now,
+        actionPath: "/admin/blog",
+        actionLabel: "Perbaiki di Blog",
+        recommendation: "Buka editor artikel dan isi judul yang jelas.",
+      });
     }
     if ((!b.seoDescription || b.seoDescription.trim().length === 0) && (!b.excerpt || b.excerpt.trim().length === 0)) {
-      findings.push({ id: crypto.randomUUID(), path, issue: "Meta description & excerpt kosong", severity: "warning", created_at: now });
+      findings.push({
+        id: crypto.randomUUID(),
+        path,
+        issue: "Meta description & excerpt kosong",
+        severity: "warning",
+        created_at: now,
+        actionPath: "/admin/blog",
+        actionLabel: "Perbaiki di Blog",
+        recommendation: "Isi SEO description sekitar 50–160 karakter. Excerpt dapat menjadi cadangan jika SEO description kosong.",
+      });
     }
   }
 
   for (const pg of pageRows) {
     const path = `/${pg.slug}`;
     if (!pg.seoDescription || pg.seoDescription.trim().length === 0) {
-      findings.push({ id: crypto.randomUUID(), path, issue: "Meta description halaman kosong", severity: "warning", created_at: now });
+      findings.push({
+        id: crypto.randomUUID(),
+        path,
+        issue: "Meta description halaman kosong",
+        severity: "warning",
+        created_at: now,
+        actionPath: "/admin/pages",
+        actionLabel: "Perbaiki di Halaman",
+        recommendation: "Buka pengaturan halaman dan isi meta description sekitar 50–160 karakter.",
+      });
     }
   }
 

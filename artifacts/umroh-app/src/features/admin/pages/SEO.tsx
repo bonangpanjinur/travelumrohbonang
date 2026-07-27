@@ -59,7 +59,16 @@ const AdminSEO = () => {
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [auditRunning, setAuditRunning] = useState(false);
-  const [auditFindings, setAuditFindings] = useState<Array<{ id: string; path: string; issue: string; severity: string; created_at: string }>>([]);
+  const [auditFindings, setAuditFindings] = useState<Array<{
+    id: string;
+    path: string;
+    issue: string;
+    severity: string;
+    created_at: string;
+    actionPath?: string;
+    actionLabel?: string;
+    recommendation?: string;
+  }>>([]);
 
   const loadAudit = async () => {
     try {
@@ -414,6 +423,9 @@ const AdminSEO = () => {
               </Button>
             </CardHeader>
             <CardContent>
+              <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+                Gunakan tombol <strong>Perbaiki</strong> pada setiap temuan. Untuk meta description, gunakan teks unik yang menjelaskan halaman dengan panjang ideal sekitar 50–160 karakter.
+              </div>
               {auditFindings.length === 0 ? (
                 <p className="text-muted-foreground text-sm">
                   Belum ada hasil audit. Klik "Jalankan Audit" untuk memindai paket, blog, dan halaman.
@@ -426,6 +438,7 @@ const AdminSEO = () => {
                         <TableHead>Severity</TableHead>
                         <TableHead>Path</TableHead>
                         <TableHead>Issue</TableHead>
+                        <TableHead className="text-right">Tindakan</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -445,7 +458,22 @@ const AdminSEO = () => {
                             </Badge>
                           </TableCell>
                           <TableCell className="font-mono text-xs">{f.path}</TableCell>
-                          <TableCell>{f.issue}</TableCell>
+                          <TableCell>
+                            <div className="font-medium">{f.issue}</div>
+                            {f.recommendation && (
+                              <p className="mt-1 max-w-xl text-xs text-muted-foreground">{f.recommendation}</p>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {f.actionPath && (
+                              <Button asChild size="sm" variant="outline">
+                                <a href={f.actionPath}>
+                                  {f.actionLabel || "Perbaiki"}
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                </a>
+                              </Button>
+                            )}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

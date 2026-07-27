@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
@@ -12,7 +12,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { useToast } from "@/shared/hooks/use-toast";
 import { Plus, Pencil, Trash2, Eye, ChevronDown, ChevronUp, Search, Download, ExternalLink, Copy, Package, CheckCircle2, XCircle, Calendar, Images } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import PackageCommissions from "@/features/admin/components/PackageCommissions";
 import PackageGalleryPanel from "@/features/admin/components/PackageGalleryPanel";
 import { Dialog as GalleryDialog, DialogContent as GalleryDialogContent, DialogHeader as GalleryDialogHeader, DialogTitle as GalleryDialogTitle } from "@/shared/components/ui/dialog";
@@ -78,6 +78,9 @@ const mapPackageFromApi = (p: any): Package => ({
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const AdminPackages = () => {
+  const [searchParams] = useSearchParams();
+  const auditEditSlug = searchParams.get("edit");
+  const handledAuditEdit = useRef<string | null>(null);
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -217,6 +220,29 @@ const AdminPackages = () => {
     markClean();
     setIsOpen(true);
   };
+
+  useEffect(() => {
+    if (!auditEditSlug || !packages.length || handledAuditEdit.current === auditEditSlug) return;
+    const packageToEdit = packages.find((pkg) => pkg.slug === auditEditSlug);
+    if (!packageToEdit) return;
+
+    handledAuditEdit.current = auditEditSlug;
+    setEditing(packageToEdit);
+    setForm({
+      title: packageToEdit.title,
+      slug: packageToEdit.slug,
+      description: packageToEdit.description || "",
+      package_type: packageToEdit.package_type || "",
+      duration_days: packageToEdit.duration_days,
+      minimum_dp: packageToEdit.minimum_dp || 0,
+      dp_deadline_days: packageToEdit.dp_deadline_days || 30,
+      full_deadline_days: packageToEdit.full_deadline_days || 7,
+      category_id: packageToEdit.category_id || "",
+      image_url: packageToEdit.image_url || "",
+    });
+    markClean();
+    setIsOpen(true);
+  }, [auditEditSlug, packages, markClean]);
 
   const executeDelete = async (id: string) => {
     try {
