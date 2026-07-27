@@ -466,10 +466,29 @@ const AdminPilgrims = () => {
     }
 
     // CSV: parse client-side with PapaParse
+    // Also normalises manifest-format headers (FULL NAME, DATE OF BIRTH, etc.)
+    // so users can upload either the CSV template or the manifest-format file.
+    const MANIFEST_ALIAS: Record<string, string> = {
+      "full_name":    "nama",
+      "full name":    "nama",
+      "sex":          "jenis_kelamin",
+      "date_of_birth":"tanggal_lahir",
+      "tgl_lahir":    "tanggal_lahir",
+      "birth_date":   "tanggal_lahir",
+      "passpor":      "no_paspor",
+      "passport":     "no_paspor",
+      "no_passport":  "no_paspor",
+      "expired_date": "masa_berlaku_paspor",
+      "exp_date":     "masa_berlaku_paspor",
+      "expire_date":  "masa_berlaku_paspor",
+    };
     Papa.parse<CsvRow>(file, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: (h) => h.trim().toLowerCase().replace(/\s+/g, "_"),
+      transformHeader: (h) => {
+        const normalised = h.trim().toLowerCase().replace(/\s+/g, "_");
+        return MANIFEST_ALIAS[normalised] ?? normalised;
+      },
       complete: (result) => {
         const rows = result.data as CsvRow[];
         const errs: string[] = [];
@@ -771,8 +790,8 @@ const AdminPilgrims = () => {
                 </div>
               )}
 
-              {/* Errors */}
-              {importErrors.length > 0 && (
+              {/* Errors — only show for CSV path; Excel errors come from the server */}
+              {!importIsExcel && importErrors.length > 0 && (
                 <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
                   <div className="flex items-center gap-2 text-destructive font-medium text-sm">
                     <AlertCircle className="w-4 h-4" /> {importErrors.length} error ditemukan
