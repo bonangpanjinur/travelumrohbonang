@@ -15,6 +15,8 @@ import {
   inArray,
 } from "@workspace/db";
 import { requireSuperAdmin } from "../../middlewares/requireAdmin";
+import multer from "multer";
+import * as XLSX from "xlsx";
 
 const router = Router();
 
@@ -136,6 +138,226 @@ router.patch("/:id", async (req: any, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to update pilgrim" });
+  }
+});
+
+// ── Excel helpers ─────────────────────────────────────────────────────────────
+const excelUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+/** Convert Excel serial date number → ISO "YYYY-MM-DD" string, or pass through ISO strings */
+function excelDateToISO(val: any): string | null {
+  if (!val && val !== 0) return null;
+  if (typeof val === "string") {
+    // Already ISO or localized string
+    if (/^\d{4}-\d{2}-\d{2}/.test(val)) return val.slice(0, 10);
+    return null;
+  }
+  const n = Number(val);
+  if (isNaN(n) || n < 1) return null;
+  // Excel date serial: days since 1899-12-30 (accounts for 1900 leap-year bug)
+  const date = new Date(Math.round((n - 25569) * 86400 * 1000));
+  return date.toISOString().split("T")[0];
+}
+
+function mapGender(val: any): string | null {
+  const s = String(val || "").toUpperCase().trim();
+  if (s === "M" || s === "MALE" || s === "L" || s === "LAKI-LAKI" || s === "LAKI") return "male";
+  if (s === "F" || s === "FEMALE" || s === "P" || s === "PEREMPUAN") return "female";
+  return null;
+}
+
+const MANIFEST_HEADERS = ["NO","FULL NAME","SEX","BIRTH PLACE","DATE OF BIRTH","AGE","PASSPOR","ISSUED DATE","EXPIRED DATE","ISSUE OFFICE","RELATIONSHIP","TYPE ROOM","KETERANGAN"];
+
+/** Build blank manifest worksheet (for template download) */
+function buildManifestSheet(rows: any[][], title = "MANIFEST JAMAAH UMRAH, VINS TOUR TRAVEL"): XLSX.WorkSheet {
+  const wsData: any[][] = [
+    ["", "", title, "", "", "", "", "", "", "", "", "", ""],
+    Array(13).fill(""),
+    ["", "", "", "GROUP", rows.length, "", "", "", "", "", "", "", ""],
+    ["", "", "", "TANGGAL", new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }), "", "", "", "", "", "", "", ""],
+    ["", "", "", "PROGRAM", "UMROH", "", "", "", "", "", "", "", ""],
+    Array(13).fill(""),
+    MANIFEST_HEADERS,
+    ...rows,
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws["!cols"] = [4,30,5,15,15,5,13,15,15,15,15,12,25].map(wch => ({ wch }));
+  // Bold header row (index 6)
+  return ws;
+}
+
+// ── GET /template-excel — download blank manifest Excel template ──────────────
+router.get("/template-excel", (_req, res) => {
+  try {
+    const exampleRow = ["1","NAMA LENGKAP JEMAAH","M","JAKARTA","1980-05-15","44","A1234567","2019-01-01","2029-01-01","JAKARTA","SINGLE","QUAD","KETERANGAN"];
+    const ws = buildManifestSheet([exampleRow], "MANIFEST JAMAAH UMRAH, VINS TOUR TRAVEL");
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "MANIFEST");
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", 'attachment; filename="template-import-jemaah.xlsx"');
+    res.send(buf);
+  } catch (err: any) {
+    res.status(500).json({ error: "Gagal buat template", detail: err.message });
+  }
+});
+
+// ── POST /import-excel — upload .xls/.xlsx file, parse, bulk insert ───────────
+router.post("/import-excel", excelUpload.single("file"), async (req: any, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "File wajib diupload" });
+
+    const wb = XLSX.read(req.file.buffer, { type: "buffer", cellDates: false });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const allRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+
+    // Find header row: look for a row where index 0 = "NO" or index 1 contains "FULL NAME" / "NAMA"
+    let headerRowIdx = -1;
+    for (let i = 0; i < Math.min(20, allRows.length); i++) {
+      const r = allRows[i];
+      const c0 = String(r[0] || "").toUpperCase().trim();
+      const c1 = String(r[1] || "").toUpperCase().trim();
+      if (c0 === "NO" && (c1.includes("FULL NAME") || c1.includes("NAMA"))) {
+        headerRowIdx = i;
+        break;
+      }
+    }
+
+    let headers: string[];
+    let dataRows: any[][];
+    if (headerRowIdx >= 0) {
+      headers = allRows[headerRowIdx].map((h: any) => String(h).toUpperCase().trim());
+      dataRows = allRows.slice(headerRowIdx + 1);
+    } else {
+      // fallback: treat first row as header
+      headers = allRows[0].map((h: any) => String(h).toUpperCase().trim());
+      dataRows = allRows.slice(1);
+    }
+
+    const ci = (names: string[]) => names.reduce((found, n) => found >= 0 ? found : headers.findIndex(h => h.includes(n)), -1);
+    const iName      = ci(["FULL NAME","NAMA"]);
+    const iSex       = ci(["SEX","JENIS"]);
+    const iBirthDate = ci(["DATE OF BIRTH","TANGGAL LAHIR","TGL LAHIR"]);
+    const iBirthPl   = ci(["BIRTH PLACE","TEMPAT LAHIR"]);
+    const iPassport  = ci(["PASSPOR","PASSPORT","NO_PASPOR","PASPOR"]);
+    const iIssued    = ci(["ISSUED DATE","TGL TERBIT"]);
+    const iExpiry    = ci(["EXPIRED DATE","MASA BERLAKU","EXP"]);
+    const iOffice    = ci(["ISSUE OFFICE","KANTOR"]);
+    const iRel       = ci(["RELATIONSHIP","HUB"]);
+    const iRoom      = ci(["TYPE ROOM","ROOM","TIPE"]);
+    const iNotes     = ci(["KETERANGAN","NOTES","CATATAN"]);
+
+    const inserts: (typeof bookingPilgrims.$inferInsert)[] = [];
+
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
+      if (!row || row.every((c: any) => !c)) continue;
+
+      const name = iName >= 0 ? String(row[iName] || "").trim() : "";
+      if (!name) continue;
+
+      // Compose notes from birth place + relationship + keterangan fields
+      const parts: string[] = [];
+      if (iBirthPl >= 0 && row[iBirthPl]) parts.push(`Tempat Lahir: ${String(row[iBirthPl]).trim()}`);
+      if (iOffice  >= 0 && row[iOffice])  parts.push(`Kantor Paspor: ${String(row[iOffice]).trim()}`);
+      if (iRel     >= 0 && row[iRel])     parts.push(`Hub: ${String(row[iRel]).trim()}`);
+      if (iNotes   >= 0 && row[iNotes])   parts.push(String(row[iNotes]).trim());
+
+      inserts.push({
+        id: crypto.randomUUID(),
+        name,
+        gender:         iSex     >= 0 ? mapGender(row[iSex]) : null,
+        birthDate:      iBirthDate >= 0 ? excelDateToISO(row[iBirthDate]) : null,
+        passportNumber: iPassport  >= 0 ? String(row[iPassport] || "").trim() || null : null,
+        passportExpiry: iExpiry    >= 0 ? excelDateToISO(row[iExpiry]) : null,
+        roomType:       iRoom      >= 0 ? String(row[iRoom] || "").trim() || null : null,
+        notes:          parts.length > 0 ? parts.join(" | ") : null,
+        createdAt: new Date(),
+      } as typeof bookingPilgrims.$inferInsert);
+    }
+
+    if (inserts.length === 0) {
+      return res.status(422).json({ error: "Tidak ada data jemaah valid ditemukan dalam file" });
+    }
+    if (inserts.length > 500) {
+      return res.status(400).json({ error: "Maksimal 500 jemaah per import" });
+    }
+
+    const inserted = await db.insert(bookingPilgrims).values(inserts).returning();
+    res.status(201).json({ inserted: inserted.length, pilgrims: inserted });
+  } catch (err: any) {
+    console.error("[pilgrims] POST /import-excel", err.message);
+    res.status(500).json({ error: "Gagal import Excel", detail: err.message });
+  }
+});
+
+// ── GET /export-excel — download manifest Excel (filtered by search/bookingId) ─
+router.get("/export-excel", async (req: any, res) => {
+  try {
+    const { search, bookingId } = req.query as Record<string, string>;
+
+    let query = db
+      .select({
+        name:           bookingPilgrims.name,
+        gender:         bookingPilgrims.gender,
+        birthDate:      bookingPilgrims.birthDate,
+        passportNumber: bookingPilgrims.passportNumber,
+        passportExpiry: bookingPilgrims.passportExpiry,
+        roomType:       bookingPilgrims.roomType,
+        notes:          bookingPilgrims.notes,
+        bookingCode:    bookings.bookingCode,
+        packageTitle:   packages.title,
+        departureDate:  packageDepartures.departureDate,
+      })
+      .from(bookingPilgrims)
+      .leftJoin(bookings, eq(bookingPilgrims.bookingId, bookings.id))
+      .leftJoin(packages, eq(bookings.packageId, packages.id))
+      .leftJoin(packageDepartures, eq(bookings.departureId, packageDepartures.id));
+
+    if (bookingId) {
+      query = query.where(eq(bookingPilgrims.bookingId, bookingId)) as any;
+    } else if (search) {
+      const s = `%${search}%`;
+      query = query.where(
+        or(ilike(bookingPilgrims.name, s), ilike(bookingPilgrims.passportNumber, s), ilike(bookingPilgrims.nik, s))
+      ) as any;
+    }
+
+    const data = await (query as any).orderBy(desc(bookingPilgrims.createdAt));
+
+    const rows = (data as any[]).map((p: any, i: number) => {
+      const bDate  = p.birthDate  ? new Date(p.birthDate)  : null;
+      const expDate = p.passportExpiry ? new Date(p.passportExpiry) : null;
+      const age = bDate ? Math.floor((Date.now() - bDate.getTime()) / (365.25 * 24 * 3600 * 1000)) : "";
+      return [
+        i + 1,
+        p.name,
+        p.gender === "male" ? "M" : p.gender === "female" ? "F" : "",
+        "",   // birthPlace – not stored
+        bDate  ? bDate.toLocaleDateString("id-ID")  : "",
+        age,
+        p.passportNumber || "",
+        "",   // issuedDate – not stored
+        expDate ? expDate.toLocaleDateString("id-ID") : "",
+        "",   // issueOffice – not stored
+        "",   // relationship – not stored
+        p.roomType || "",
+        p.notes || "",
+      ];
+    });
+
+    const ws = buildManifestSheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "MANIFEST");
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    const dateTag = new Date().toISOString().split("T")[0];
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="manifest-jemaah-${dateTag}.xlsx"`);
+    res.send(buf);
+  } catch (err: any) {
+    console.error("[pilgrims] GET /export-excel", err.message);
+    res.status(500).json({ error: "Gagal export Excel", detail: err.message });
   }
 });
 

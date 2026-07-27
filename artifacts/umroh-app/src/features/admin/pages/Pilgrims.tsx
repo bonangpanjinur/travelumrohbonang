@@ -9,34 +9,30 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { useToast } from "@/shared/hooks/use-toast";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download, Plus, Pencil, Loader2, Upload, AlertCircle, CheckCircle2, FileText, Trash2, ExternalLink, Package, CheckSquare2 } from "lucide-react";
-import { exportToCsv } from "@/shared/lib/exportCsv";
 import { Badge } from "@/shared/components/ui/badge";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import AdminPagination from "@/features/admin/components/AdminPagination";
 import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
 import { apiFetch } from "@/shared/lib/apiClient";
+import { supabaseAuth } from "@/shared/integrations/supabase/auth-client";
 
-// ── CSV Import helpers ────────────────────────────────────────────────────────
+// ── Download helper (blob endpoints) ─────────────────────────────────────────
 
-const CSV_TEMPLATE_HEADERS = [
-  "nama", "nik", "jenis_kelamin", "tanggal_lahir",
-  "telepon", "email", "no_paspor", "masa_berlaku_paspor",
-];
-
-const CSV_TEMPLATE_EXAMPLE = [
-  "Siti Rahayu", "3201234567890001", "female", "1980-05-15",
-  "08123456789", "siti@email.com", "A1234567", "2029-12-31",
-];
-
-function downloadCsvTemplate() {
-  const rows = [CSV_TEMPLATE_HEADERS, CSV_TEMPLATE_EXAMPLE];
-  const csv = rows.map((r) => r.join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+async function downloadApiBlob(path: string, filename: string) {
+  const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+  const headers: Record<string, string> = {};
+  try {
+    const { data: { session } } = await supabaseAuth.auth.getSession();
+    if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+  } catch {}
+  const res = await fetch(`${API_BASE}${path}`, { credentials: "include", headers });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "template-import-jemaah.csv";
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -171,12 +167,14 @@ const AdminPilgrims = () => {
   const [equipmentData, setEquipmentData] = useState<any[]>([]);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
 
-  // CSV Import dialog
+  // Import dialog (CSV or Excel)
   const [importOpen, setImportOpen] = useState(false);
   const [importRows, setImportRows] = useState<CsvRow[]>([]);
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
   const [importDone, setImportDone] = useState<number | null>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importIsExcel, setImportIsExcel] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Booking options for dropdown (search-as-you-type — BUG-10)
@@ -449,14 +447,25 @@ const AdminPilgrims = () => {
   const field = (key: keyof FormState, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
-  // ── CSV Import handlers ───────────────────────────────────────────────────
+  // ── Import handlers (CSV + Excel) ────────────────────────────────────────
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setImportErrors([]);
     setImportDone(null);
+    setImportRows([]);
+    setImportFile(file);
 
+    const isExcel = /\.(xls|xlsx)$/i.test(file.name);
+    setImportIsExcel(isExcel);
+
+    if (isExcel) {
+      // Excel parsing happens server-side; just mark file as ready
+      return;
+    }
+
+    // CSV: parse client-side with PapaParse
     Papa.parse<CsvRow>(file, {
       header: true,
       skipEmptyLines: true,
@@ -475,16 +484,28 @@ const AdminPilgrims = () => {
   };
 
   const handleImportSubmit = async () => {
-    if (importErrors.length > 0 || importRows.length === 0) return;
     setImporting(true);
     try {
-      const payload = importRows.map(mapCsvRowToPayload);
-      const result = await apiFetch<{ inserted: number }>("/api/admin/pilgrims/bulk", {
-        method: "POST",
-        body: JSON.stringify({ pilgrims: payload }),
-      });
-      setImportDone(result.inserted);
-      toast({ title: `Berhasil import ${result.inserted} jemaah` });
+      if (importIsExcel && importFile) {
+        // Upload raw Excel file to dedicated endpoint
+        const fd = new FormData();
+        fd.append("file", importFile);
+        const result = await apiFetch<{ inserted: number }>("/api/admin/pilgrims/import-excel", {
+          method: "POST",
+          body: fd,
+        });
+        setImportDone(result.inserted);
+        toast({ title: `Berhasil import ${result.inserted} jemaah dari Excel` });
+      } else {
+        if (importErrors.length > 0 || importRows.length === 0) return;
+        const payload = importRows.map(mapCsvRowToPayload);
+        const result = await apiFetch<{ inserted: number }>("/api/admin/pilgrims/bulk", {
+          method: "POST",
+          body: JSON.stringify({ pilgrims: payload }),
+        });
+        setImportDone(result.inserted);
+        toast({ title: `Berhasil import ${result.inserted} jemaah` });
+      }
       fetchPilgrims();
     } catch (err: any) {
       toast({ title: "Import gagal", description: err.message, variant: "destructive" });
@@ -497,7 +518,22 @@ const AdminPilgrims = () => {
     setImportRows([]);
     setImportErrors([]);
     setImportDone(null);
+    setImportFile(null);
+    setImportIsExcel(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const [exporting, setExporting] = useState(false);
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      const dateTag = new Date().toISOString().split("T")[0];
+      await downloadApiBlob("/api/admin/pilgrims/export-excel", `manifest-jemaah-${dateTag}.xlsx`);
+    } catch (err: any) {
+      toast({ title: "Export gagal", description: err.message, variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -527,18 +563,11 @@ const AdminPilgrims = () => {
             <Plus className="w-4 h-4 mr-2" /> Tambah Jemaah
           </Button>
           <Button variant="outline" onClick={() => { resetImport(); setImportOpen(true); }}>
-            <Upload className="w-4 h-4 mr-2" /> Import CSV
+            <Upload className="w-4 h-4 mr-2" /> Import Excel
           </Button>
-          <Button variant="outline" onClick={() => {
-            const headers = ["Nama", "Gender", "NIK", "No. Paspor", "Telepon", "Email", "Kode Booking", "Paket"];
-            const rows = filteredPilgrims.map(p => [
-              p.name, p.gender === "male" ? "L" : p.gender === "female" ? "P" : "-",
-              p.nik || "-", p.passportNumber || "-", p.phone || "-", p.email || "-",
-              p.booking?.bookingCode || "-", p.booking?.packageTitle || "-"
-            ]);
-            exportToCsv("jemaah", headers, rows);
-          }}>
-            <Download className="w-4 h-4 mr-2" /> Export CSV
+          <Button variant="outline" onClick={handleExportExcel} disabled={exporting}>
+            {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            Export Excel
           </Button>
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -680,11 +709,11 @@ const AdminPilgrims = () => {
         </>
       )}
 
-      {/* ── CSV Import Dialog ── */}
+      {/* ── Import Dialog (Excel / CSV) ── */}
       <Dialog open={importOpen} onOpenChange={(o) => { setImportOpen(o); if (!o) resetImport(); }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Import Jemaah via CSV</DialogTitle>
+            <DialogTitle>Import Data Jemaah</DialogTitle>
           </DialogHeader>
 
           {importDone !== null ? (
@@ -697,29 +726,50 @@ const AdminPilgrims = () => {
             <div className="space-y-5 py-2">
               {/* Instructions */}
               <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-2">
-                <p className="font-medium">Petunjuk import:</p>
-                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                  <li>Download template CSV di bawah ini</li>
-                  <li>Isi data jemaah (kolom <code className="text-xs bg-muted px-1 rounded">nama</code> wajib diisi)</li>
-                  <li>Upload file CSV yang sudah diisi</li>
-                  <li>Periksa preview, lalu klik "Import"</li>
-                </ol>
-                <Button variant="outline" size="sm" onClick={downloadCsvTemplate} className="mt-2">
-                  <Download className="w-3.5 h-3.5 mr-1.5" /> Download Template CSV
+                <p className="font-medium">Format yang didukung:</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li>
+                    <strong>Excel (.xls / .xlsx)</strong> — format manifest seperti yang Anda gunakan
+                    <span className="block pl-4 text-xs">Kolom: NO, FULL NAME, SEX, BIRTH PLACE, DATE OF BIRTH, PASSPOR, EXPIRED DATE, TYPE ROOM, KETERANGAN</span>
+                  </li>
+                  <li>
+                    <strong>CSV</strong> — kolom: <code className="text-xs bg-muted px-1 rounded">nama</code>, <code className="text-xs bg-muted px-1 rounded">jenis_kelamin</code>, <code className="text-xs bg-muted px-1 rounded">tanggal_lahir</code>, <code className="text-xs bg-muted px-1 rounded">no_paspor</code>, dll.
+                  </li>
+                </ul>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => downloadApiBlob("/api/admin/pilgrims/template-excel", "template-import-jemaah.xlsx").catch(() =>
+                    toast({ title: "Gagal download template", variant: "destructive" })
+                  )}
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" /> Download Template Excel
                 </Button>
               </div>
 
               {/* File Upload */}
               <div>
-                <Label>Upload File CSV</Label>
+                <Label>Upload File</Label>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,text/csv"
+                  accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   className="mt-1 block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border file:border-border file:text-sm file:font-medium file:bg-background file:cursor-pointer hover:file:bg-muted cursor-pointer"
                   onChange={handleFileChange}
                 />
               </div>
+
+              {/* Excel ready state */}
+              {importIsExcel && importFile && importErrors.length === 0 && (
+                <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800">
+                  <CheckCircle2 className="w-5 h-5 text-blue-500 shrink-0" />
+                  <div>
+                    <p className="font-medium">{importFile.name}</p>
+                    <p className="text-xs text-blue-600 mt-0.5">File Excel siap diimport. Data akan diproses oleh server.</p>
+                  </div>
+                </div>
+              )}
 
               {/* Errors */}
               {importErrors.length > 0 && (
@@ -734,8 +784,8 @@ const AdminPilgrims = () => {
                 </div>
               )}
 
-              {/* Preview */}
-              {importRows.length > 0 && importErrors.length === 0 && (
+              {/* CSV Preview */}
+              {!importIsExcel && importRows.length > 0 && importErrors.length === 0 && (
                 <div>
                   <p className="text-sm font-medium mb-2">
                     Preview ({importRows.length} baris)
@@ -773,10 +823,16 @@ const AdminPilgrims = () => {
                 <Button variant="outline" onClick={() => setImportOpen(false)} disabled={importing}>Batal</Button>
                 <Button
                   onClick={handleImportSubmit}
-                  disabled={importing || importRows.length === 0 || importErrors.length > 0}
+                  disabled={
+                    importing ||
+                    (!importIsExcel && (importRows.length === 0 || importErrors.length > 0)) ||
+                    (importIsExcel && !importFile)
+                  }
                 >
                   {importing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Import {importRows.length > 0 ? `${importRows.length} Jemaah` : ""}
+                  {importIsExcel
+                    ? "Import dari Excel"
+                    : importRows.length > 0 ? `Import ${importRows.length} Jemaah` : "Import"}
                 </Button>
               </div>
             </div>
