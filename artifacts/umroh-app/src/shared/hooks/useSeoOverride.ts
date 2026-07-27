@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 
 export interface SeoOverride {
+  path: string;
   title?: string | null;
   description?: string | null;
-  og_image?: string | null;
-  canonical_override?: string | null;
+  ogImage?: string | null;
+  canonicalOverride?: string | null;
   noindex?: boolean | null;
   keywords?: string | null;
 }
@@ -16,12 +17,14 @@ export const useSeoOverride = (path: string) => {
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data } = await supabase
-        .from("seo_overrides")
-        .select("title,description,og_image,canonical_override,noindex,keywords")
-        .eq("path", path)
-        .maybeSingle();
-      if (active) setOverride((data as SeoOverride) ?? null);
+      try {
+        const result = await apiFetch<{ data: SeoOverride[] }>("/api/cms/seo-overrides");
+        const data = result?.data?.find((item) => item.path === path) ?? null;
+        if (active) setOverride(data);
+      } catch (error) {
+        console.error("Error fetching SEO override:", error);
+        if (active) setOverride(null);
+      }
     })();
     return () => {
       active = false;

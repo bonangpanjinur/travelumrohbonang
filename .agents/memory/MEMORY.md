@@ -19,3 +19,4 @@
 - [Imported workspace dependency bootstrap](imported-workspace-dependency-bootstrap.md) — install the existing pnpm lockfile before diagnosing workflow failures in imported monorepos.
 - [Public package brochure](public-package-brochure.md) — brochure downloads are public and use the package hero image plus a QR link back to its detail page.
 - [CMS Drizzle payload casing](cms-drizzle-payload-casing.md) — generic admin CMS mutations must send Drizzle's camelCase schema keys, not SQL snake_case names.
+- [CMS metadata database source](cms-metadata-db-source.md) — title, favicon, and SEO tags must share the server CMS settings endpoint as their database source.

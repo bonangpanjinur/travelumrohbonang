@@ -26,8 +26,8 @@ interface SeoOverride {
   path: string;
   title: string | null;
   description: string | null;
-  og_image: string | null;
-  canonical_override: string | null;
+  ogImage: string | null;
+  canonicalOverride: string | null;
   noindex: boolean;
   keywords: string | null;
 }
@@ -149,8 +149,8 @@ const AdminSEO = () => {
       path: editing.path.trim(),
       title: editing.title?.trim() || null,
       description: editing.description?.trim() || null,
-      og_image: editing.og_image?.trim() || null,
-      canonical_override: editing.canonical_override?.trim() || null,
+      ogImage: editing.ogImage?.trim() || null,
+      canonicalOverride: editing.canonicalOverride?.trim() || null,
       noindex: editing.noindex,
       keywords: editing.keywords?.trim() || null,
     };
@@ -192,8 +192,8 @@ const AdminSEO = () => {
       path: "/",
       title: "",
       description: "",
-      og_image: "",
-      canonical_override: "",
+       ogImage: "",
+       canonicalOverride: "",
       noindex: false,
       keywords: "",
     });
@@ -542,15 +542,15 @@ const AdminSEO = () => {
                 <div>
                   <Label>OG Image URL</Label>
                   <Input
-                    value={editing.og_image ?? ""}
-                    onChange={(e) => setEditing({ ...editing, og_image: e.target.value })}
+                    value={editing.ogImage ?? ""}
+                    onChange={(e) => setEditing({ ...editing, ogImage: e.target.value })}
                   />
                 </div>
                 <div>
                   <Label>Canonical Override</Label>
                   <Input
-                    value={editing.canonical_override ?? ""}
-                    onChange={(e) => setEditing({ ...editing, canonical_override: e.target.value })}
+                    value={editing.canonicalOverride ?? ""}
+                    onChange={(e) => setEditing({ ...editing, canonicalOverride: e.target.value })}
                   />
                 </div>
               </div>

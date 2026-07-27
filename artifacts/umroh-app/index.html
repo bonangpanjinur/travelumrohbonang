@@ -3,62 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Runtime title, favicon, and SEO metadata are loaded from site_settings. -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <title>Memuat situs</title>
+    <script>
+      (async () => {
+        try {
+          const response = await fetch("/api/cms/site-settings", {
+            headers: { Accept: "application/json" },
+          });
+          if (!response.ok) return;
 
-    <title>Vins Tour Travel - Perjalanan Terbaik Menuju Baitullah</title>
-    <meta name="description" content="Paket umroh terbaik dengan pelayanan premium, hotel bintang 5, dan bimbingan ustadz berpengalaman." />
-    <meta name="author" content="Vins Tour Travel" />
-    <meta name="keywords" content="Umroh, Paket Umroh, Travel umroh, umroh 2024, umroh murah" />
+          const payload = await response.json();
+          const settings = Array.isArray(payload?.data) ? payload.data : [];
+          const getValue = (key) => {
+            const setting = settings.find((item) => item?.key === key);
+            return setting?.value && typeof setting.value === "object" ? setting.value : {};
+          };
+          const branding = getValue("branding");
+          const seo = getValue("seo");
+          const companyName = typeof branding.company_name === "string" ? branding.company_name : "";
+          const tagline = typeof branding.tagline === "string" ? branding.tagline : "";
+          const configuredTitle =
+            typeof seo.site_title === "string" && seo.site_title.trim()
+              ? seo.site_title.trim()
+              : [companyName, tagline].filter(Boolean).join(" - ");
 
-    <link rel="preconnect" href="https://reuwfhuaabdhxjkomred.supabase.co" crossorigin />
-    <link rel="dns-prefetch" href="https://reuwfhuaabdhxjkomred.supabase.co" />
+          if (configuredTitle) document.title = configuredTitle;
 
-    <!-- Open Graph (fallback untuk crawler yang tidak eksekusi JS) -->
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Vins Tour Travel" />
-    <meta property="og:locale" content="id_ID" />
-    <meta property="og:title" content="Vins Tour Travel - Perjalanan Terbaik Menuju Baitullah" />
-    <meta property="og:description" content="Paket umroh terbaik dengan pelayanan premium, hotel bintang 5, dan bimbingan ustadz berpengalaman." />
-    <!-- og:url is emitted per-route by SEO component to follow tenant domain -->
-    <meta property="og:image" content="/opengraph.jpg" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Vins Tour Travel - Perjalanan Terbaik Menuju Baitullah" />
-    <meta name="twitter:description" content="Paket umroh terbaik dengan pelayanan premium, hotel bintang 5, dan bimbingan ustadz berpengalaman." />
-    <meta name="twitter:image" content="/opengraph.jpg" />
-
-    <!-- hreflang alternates are emitted per-route by SEO component to follow tenant domain -->
-
-
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "TravelAgency",
-        "name": "Vins Tour Travel",
-        "url": "/",
-        "description": "Paket umroh terbaik dengan pelayanan premium, hotel bintang 5, dan bimbingan ustadz berpengalaman.",
-        "areaServed": "ID",
-        "priceRange": "$$",
-        "address": { "@type": "PostalAddress", "addressCountry": "ID" },
-        "contactPoint": {
-          "@type": "ContactPoint",
-          "contactType": "customer service",
-          "availableLanguage": ["Indonesian", "English"]
+          if (typeof branding.favicon_url === "string" && branding.favicon_url.trim()) {
+            document.querySelectorAll("link[rel*='icon']").forEach((link) => link.remove());
+            const favicon = document.createElement("link");
+            favicon.rel = "icon";
+            favicon.href = branding.favicon_url.trim();
+            document.head.appendChild(favicon);
+          }
+        } catch {
+          // React SEO applies the same database settings after the app mounts.
         }
-      }
-    </script>
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "Vins Tour Travel",
-        "url": "/",
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": "/paket?q={search_term_string}",
-          "query-input": "required name=search_term_string"
-        }
-      }
+      })();
     </script>
   </head>
 

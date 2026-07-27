@@ -44,8 +44,6 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       <SEO
-        title="Perjalanan Umroh Terbaik"
-        description="Wujudkan ibadah umroh impian Anda dengan pelayanan terbaik, bimbingan ustadz berpengalaman, dan hotel bintang 5 dekat Masjidil Haram."
         jsonLd={faqJsonLd}
       />
       <LocalBusinessJsonLd />
