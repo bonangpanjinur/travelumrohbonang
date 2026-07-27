@@ -116,6 +116,28 @@ const AdminBookings = () => {
     }
   };
 
+  const [bulkDeletePending, setBulkDeletePending] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const res = await apiFetch<{ deleted: number }>("/api/admin/bookings/bulk", {
+        method: "DELETE",
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      toast({ title: `${res.deleted} booking berhasil dihapus` });
+      setSelectedIds([]);
+      setBulkDeletePending(false);
+      fetchBookings(0);
+    } catch (err: any) {
+      toast({ title: "Gagal hapus booking", description: err.message, variant: "destructive" });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const handleBulkStatus = async (status: "confirmed" | "cancelled") => {
     if (selectedIds.length === 0) return;
     setBulkPendingAction(null);
@@ -473,6 +495,15 @@ const AdminBookings = () => {
               <Download className="w-3.5 h-3.5" />
               Export Dipilih
             </button>
+            {isSuperAdmin && (
+              <button
+                onClick={() => setBulkDeletePending(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-rose-700 text-white hover:bg-rose-800 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Hapus Semua
+              </button>
+            )}
             <button
               onClick={() => setSelectedIds([])}
               className="px-3 py-1.5 text-xs font-medium rounded border hover:bg-muted transition-colors"
@@ -668,6 +699,32 @@ const AdminBookings = () => {
             </Button>
             <Button variant="destructive" onClick={handleDeleteBooking} disabled={isDeleting}>
               {isDeleting ? "Menghapus…" : "Ya, Hapus Permanen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk Delete Confirmation Dialog (super admin only) ─────────────── */}
+      <Dialog open={bulkDeletePending} onOpenChange={(o) => { if (!o && !isBulkDeleting) setBulkDeletePending(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              Hapus {selectedIds.length} Booking?
+            </DialogTitle>
+            <DialogDescription>
+              Seluruh data terkait (jamaah, pembayaran, dokumen) akan ikut terhapus secara permanen. Tindakan ini <strong>tidak dapat diurungkan</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 px-3 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-800 font-medium">
+            {selectedIds.length} booking akan dihapus sekaligus
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeletePending(false)} disabled={isBulkDeleting}>
+              Batal
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={isBulkDeleting}>
+              {isBulkDeleting ? "Menghapus…" : `Ya, Hapus ${selectedIds.length} Booking`}
             </Button>
           </DialogFooter>
         </DialogContent>

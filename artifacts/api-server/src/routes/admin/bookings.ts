@@ -1806,6 +1806,45 @@ router.get("/:id/passport-recommendation", async (req, res) => {
 });
 
 // ── DELETE /:id — hapus booking permanen (super admin only) ──────────────────
+router.delete("/bulk", requireSuperAdmin, async (req, res) => {
+  try {
+    const { ids } = req.body as { ids?: string[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json({ error: "ids diperlukan (array)" });
+      return;
+    }
+
+    // Restore quota for each booking yang punya departure
+    const toDelete = await db
+      .select({ id: bookings.id, departureId: bookings.departureId })
+      .from(bookings)
+      .where(inArray(bookings.id, ids));
+
+    const departureGroups = new Map<string, number>();
+    for (const b of toDelete) {
+      if (b.departureId) {
+        departureGroups.set(b.departureId, (departureGroups.get(b.departureId) ?? 0) + 1);
+      }
+    }
+
+    await db.transaction(async (tx) => {
+      // Restore remaining_quota per departure
+      for (const [depId, count] of departureGroups.entries()) {
+        await tx
+          .update(packageDepartures)
+          .set({ remainingQuota: sql`${packageDepartures.remainingQuota} + ${count}` })
+          .where(eq(packageDepartures.id, depId));
+      }
+      // Hapus semua booking sekaligus (cascade via DB constraints)
+      await tx.delete(bookings).where(inArray(bookings.id, ids));
+    });
+
+    res.json({ success: true, deleted: toDelete.length });
+  } catch (e) {
+    sendAdminError(res, "DELETE /api/admin/bookings/bulk", e);
+  }
+});
+
 router.delete("/:id", requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
