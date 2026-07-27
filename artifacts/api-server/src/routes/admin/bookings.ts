@@ -470,14 +470,8 @@ router.post("/", async (req, res) => {
       res.status(400).json({ error: "Keberangkatan tidak aktif atau sudah ditutup" });
       return;
     }
-    if (depRow.departureDate) {
-      const todayCheck = new Date();
-      todayCheck.setHours(0, 0, 0, 0);
-      if (new Date(depRow.departureDate) < todayCheck) {
-        res.status(400).json({ error: "Tidak dapat membuat booking untuk keberangkatan yang tanggalnya sudah lewat" });
-        return;
-      }
-    }
+    // NOTE: Admin/super admin may book past departures (e.g. for record-keeping or late registrations)
+    // Past-date check intentionally skipped for admin routes.
 
     // P0: Lookup price from DB — do not trust totalPrice from frontend
     let calculatedPrice = 0;
@@ -680,14 +674,8 @@ router.post("/group", async (req, res) => {
       res.status(400).json({ error: "Keberangkatan tidak aktif atau sudah ditutup" });
       return;
     }
-    if (dep.departureDate) {
-      const todayGroup = new Date();
-      todayGroup.setHours(0, 0, 0, 0);
-      if (new Date(dep.departureDate) < todayGroup) {
-        res.status(400).json({ error: "Tidak dapat membuat booking untuk keberangkatan yang tanggalnya sudah lewat" });
-        return;
-      }
-    }
+    // NOTE: Admin/super admin may book past departures (e.g. for record-keeping or late registrations)
+    // Past-date check intentionally skipped for admin routes.
 
     // P0: Lookup all departure prices from DB — do not trust roomPrice from frontend
     const depPricesRows = await db
