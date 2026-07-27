@@ -1,10 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
+import { useAuth } from "@/shared/hooks/useAuth";
 import BookingTable, { type Booking } from "@/features/admin/components/BookingTable";
 import BookingFilters from "@/features/admin/components/BookingFilters";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
-import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw, CheckSquare2, Filter, ArrowRightLeft, AlertTriangle } from "lucide-react";
+import { Search, Download, Plus, FileSpreadsheet, X, AlertCircle, RefreshCw, CheckSquare2, Filter, ArrowRightLeft, AlertTriangle, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +34,11 @@ const PAGE_SIZE = 20;
 
 const AdminBookings = () => {
   const { toast } = useToast();
+  const { role } = useAuth();
+  const isSuperAdmin = role === "super_admin";
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; code: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
@@ -95,6 +100,21 @@ const AdminBookings = () => {
     const hasPaid = selected.some((b) => b.paymentStatus === "paid");
     return { selected, totalJamaah, pkgNames, depDates, hasPaid };
   }, [selectedIds, bookings]);
+
+  const handleDeleteBooking = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await apiFetch(`/api/admin/bookings/${deleteTarget.id}`, { method: "DELETE" });
+      toast({ title: `Booking ${deleteTarget.code} berhasil dihapus` });
+      setDeleteTarget(null);
+      fetchBookings(page);
+    } catch (err: any) {
+      toast({ title: "Gagal menghapus booking", description: err.message, variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleBulkStatus = async (status: "confirmed" | "cancelled") => {
     if (selectedIds.length === 0) return;
@@ -499,6 +519,7 @@ const AdminBookings = () => {
             onRefresh={fetchBookings}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
+            onDelete={isSuperAdmin ? (id, code) => setDeleteTarget({ id, code }) : undefined}
           />
 
           {totalPages > 1 && (
@@ -619,6 +640,34 @@ const AdminBookings = () => {
               className={bulkPendingAction === "confirmed" ? "bg-green-600 hover:bg-green-700 text-white" : ""}
             >
               {bulkPendingAction === "confirmed" ? "Ya, Konfirmasi" : "Ya, Batalkan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Confirmation Dialog (super admin only) ────────────────── */}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o && !isDeleting) setDeleteTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              Hapus Booking
+            </DialogTitle>
+            <DialogDescription>
+              Tindakan ini akan menghapus booking secara permanen beserta seluruh data terkait (jamaah, pembayaran, dokumen). Tidak dapat diurungkan.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteTarget && (
+            <div className="py-2 px-3 bg-muted rounded-lg text-sm font-mono font-semibold">
+              {deleteTarget.code}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
+              Batal
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteBooking} disabled={isDeleting}>
+              {isDeleting ? "Menghapus…" : "Ya, Hapus Permanen"}
             </Button>
           </DialogFooter>
         </DialogContent>

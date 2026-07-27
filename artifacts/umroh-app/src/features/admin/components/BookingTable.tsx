@@ -2,7 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Checkbox } from "@/shared/components/ui/checkbox";
-import { Users, Phone, UsersRound, MessageCircle, ArrowRight } from "lucide-react";
+import { Users, Phone, UsersRound, MessageCircle, ArrowRight, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import BookingStatusBadge from "./BookingStatusBadge";
@@ -43,6 +43,7 @@ interface BookingTableProps {
   onRefresh?: () => void;
   selectedIds?: string[];
   onSelectionChange?: (ids: string[]) => void;
+  onDelete?: (id: string, code: string) => void;
 }
 
 // Role badge styling
@@ -58,6 +59,7 @@ const BookingTable = ({
   onRefresh,
   selectedIds = [],
   onSelectionChange,
+  onDelete,
 }: BookingTableProps) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -126,6 +128,15 @@ const BookingTable = ({
                   <Button variant="default" size="sm" className="flex-1 gap-1" onClick={() => goToDetail(b.id, b.bookingCode)}>
                     Detail <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
+                  {onDelete && (
+                    <Button
+                      variant="destructive" size="sm"
+                      onClick={(e) => { e.stopPropagation(); onDelete(b.id, b.bookingCode); }}
+                      title="Hapus booking"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                 </div>
               </MobileCard>
             );
@@ -305,6 +316,17 @@ const BookingTable = ({
                         >
                           Detail <ArrowRight className="w-3 h-3" />
                         </Button>
+                        {onDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            title="Hapus booking"
+                            onClick={(e) => { e.stopPropagation(); onDelete(b.id, b.bookingCode); }}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
