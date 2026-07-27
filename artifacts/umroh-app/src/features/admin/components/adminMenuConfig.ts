@@ -126,8 +126,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Itinerary Perjalanan", labelKey: "menu.itineraries", href: "/admin/itineraries", icon: MapPin, roles: ALL_STAFF },
       // ── 2. Booking & Jemaah ───────────────────────────────────────────────────
       { label: "Booking", labelKey: "menu.bookings", href: "/admin/bookings", icon: Ticket, roles: OPERATIONAL, featureId: "bookings" },
-      { label: "Jemaah per Booking", labelKey: "menu.pilgrims", href: "/admin/pilgrims", icon: Users, roles: ALL_STAFF, featureId: "jamaah" },
-      { label: "Data Induk Jemaah", labelKey: "menu.pilgrims_db", href: "/admin/pilgrims-db", icon: Database, roles: ALL_STAFF, featureId: "jamaah" },
+      { label: "Data Jemaah", labelKey: "menu.pilgrims", href: "/admin/pilgrims", icon: Users, roles: ALL_STAFF, featureId: "jamaah" },
       // ── 3. Dokumen & Visa ─────────────────────────────────────────────────────
       { label: "Dokumen Jemaah", labelKey: "menu.pilgrim_documents", href: "/admin/documents", icon: FileCheck, roles: OPERATIONAL, featureId: "documents" },
       { label: "Tracking Visa", labelKey: "menu.visa_tracking", href: "/admin/visa-tracking", icon: IdCard, roles: OPERATIONAL },

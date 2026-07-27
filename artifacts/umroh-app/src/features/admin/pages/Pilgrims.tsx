@@ -5,9 +5,10 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/shared/components/ui/dialog";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download, Plus, Pencil, Loader2, Upload, AlertCircle, CheckCircle2, FileText, Trash2, ExternalLink, Package } from "lucide-react";
+import { useAuth } from "@/shared/hooks/useAuth";
+import { Search, Eye, Users, Calendar, Phone, Mail, CreditCard, Download, Plus, Pencil, Loader2, Upload, AlertCircle, CheckCircle2, FileText, Trash2, ExternalLink, Package, CheckSquare2 } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import { Badge } from "@/shared/components/ui/badge";
 import { format } from "date-fns";
@@ -114,6 +115,44 @@ const AdminPilgrims = () => {
   const [selectedPilgrim, setSelectedPilgrim] = useState<Pilgrim | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const { toast } = useToast();
+  const { role } = useAuth();
+  const isSuperAdmin = role === "super_admin";
+
+  // ── Bulk selection & delete ───────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeletePending, setBulkDeletePending] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const res = await apiFetch<{ deleted: number }>("/api/admin/pilgrims/bulk", {
+        method: "DELETE",
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      toast({ title: `${res.deleted} jemaah berhasil dihapus` });
+      setSelectedIds([]);
+      setBulkDeletePending(false);
+      fetchPilgrims();
+    } catch (err: any) {
+      toast({ title: "Gagal hapus jemaah", description: err.message, variant: "destructive" });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === paginatedItems.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(paginatedItems.map((p) => p.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  };
 
   // Form dialog
   const [formOpen, setFormOpen] = useState(false);
@@ -469,6 +508,21 @@ const AdminPilgrims = () => {
           <p className="text-muted-foreground">Total {filteredPilgrims.length} jemaah ditemukan</p>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
+          {isSuperAdmin && selectedIds.length > 0 && (
+            <Button
+              variant="destructive"
+              onClick={() => setBulkDeletePending(true)}
+              className="bg-rose-700 hover:bg-rose-800"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Hapus {selectedIds.length} Jemaah
+            </Button>
+          )}
+          {selectedIds.length > 0 && (
+            <Button variant="outline" onClick={() => setSelectedIds([])}>
+              Batal Pilih
+            </Button>
+          )}
           <Button onClick={openAdd}>
             <Plus className="w-4 h-4 mr-2" /> Tambah Jemaah
           </Button>
@@ -521,6 +575,17 @@ const AdminPilgrims = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {isSuperAdmin && (
+                      <TableHead className="w-10">
+                        <input
+                          type="checkbox"
+                          checked={paginatedItems.length > 0 && selectedIds.length === paginatedItems.length}
+                          onChange={toggleSelectAll}
+                          className="w-4 h-4 cursor-pointer accent-primary"
+                          title="Pilih semua"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Nama Jemaah</TableHead>
                     <TableHead>NIK / Paspor</TableHead>
                     <TableHead>Kontak</TableHead>
@@ -532,7 +597,17 @@ const AdminPilgrims = () => {
                 </TableHeader>
                 <TableBody>
                   {paginatedItems.map((pilgrim) => (
-                    <TableRow key={pilgrim.id}>
+                    <TableRow key={pilgrim.id} className={selectedIds.includes(pilgrim.id) ? "bg-primary/5" : ""}>
+                      {isSuperAdmin && (
+                        <TableCell className="w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(pilgrim.id)}
+                            onChange={() => toggleSelect(pilgrim.id)}
+                            className="w-4 h-4 cursor-pointer accent-primary"
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div>
                           <p className="font-semibold">{pilgrim.name}</p>
@@ -1113,6 +1188,30 @@ const AdminPilgrims = () => {
               <p className="text-xs text-muted-foreground pt-1">Format: JPG, PNG, PDF. Maksimal 15MB.</p>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Konfirmasi Hapus Massal Jemaah ── */}
+      <Dialog open={bulkDeletePending} onOpenChange={(o) => { if (!o && !isBulkDeleting) setBulkDeletePending(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" /> Hapus {selectedIds.length} Jemaah?
+            </DialogTitle>
+            <DialogDescription>
+              Tindakan ini akan menghapus <strong>{selectedIds.length} jemaah</strong> secara permanen dan tidak dapat dibatalkan.
+              Data dokumen terkait juga akan ikut terhapus.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkDeletePending(false)} disabled={isBulkDeleting}>
+              Batal
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={isBulkDeleting}>
+              {isBulkDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Ya, Hapus Semua
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

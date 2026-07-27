@@ -14,6 +14,7 @@ import {
   desc,
   inArray,
 } from "@workspace/db";
+import { requireSuperAdmin } from "../../middlewares/requireAdmin";
 
 const router = Router();
 
@@ -315,6 +316,24 @@ router.get("/check-ins", async (req: any, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch check-ins" });
+  }
+});
+
+// ── DELETE /bulk — hapus banyak jemaah sekaligus (super admin only) ──────────
+router.delete("/bulk", requireSuperAdmin, async (req: any, res) => {
+  try {
+    const { ids } = req.body as { ids?: string[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "ids harus array non-kosong" });
+    }
+    const deleted = await db
+      .delete(bookingPilgrims)
+      .where(inArray(bookingPilgrims.id, ids))
+      .returning({ id: bookingPilgrims.id });
+    res.json({ deleted: deleted.length });
+  } catch (error) {
+    console.error("[DELETE /admin/pilgrims/bulk]", error);
+    res.status(500).json({ error: "Gagal menghapus jemaah" });
   }
 });
 
