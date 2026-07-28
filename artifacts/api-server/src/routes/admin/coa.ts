@@ -207,18 +207,33 @@ router.get("/ledger", async (req, res) => {
     if (from) conditions.push(gte(financialTransactions.transactionDate, new Date(from)));
     if (to) conditions.push(lte(financialTransactions.transactionDate, new Date(to)));
 
+    // Fetch the account to determine normal_balance direction
+    const [account] = await db
+      .select({ normalBalance: chartOfAccounts.normalBalance })
+      .from(chartOfAccounts)
+      .where(eq(chartOfAccounts.id, accountId))
+      .limit(1);
+
+    const normalBalance = account?.normalBalance ?? "debit";
+
     const rows = await db
       .select()
       .from(financialTransactions)
       .where(and(...conditions))
       .orderBy(asc(financialTransactions.transactionDate));
 
-    // Compute running balance
+    // Compute running balance respecting the account's normal balance direction.
+    // For debit-normal accounts (asset, expense):   debit increases, credit decreases.
+    // For credit-normal accounts (liability, equity, revenue): credit increases, debit decreases.
     let runningBalance = 0;
     const withBalance = rows.map((r) => {
       const amt = parseFloat(String(r.amount));
       const isDebit = r.entryType === "debit";
-      runningBalance += isDebit ? amt : -amt;
+      if (normalBalance === "debit") {
+        runningBalance += isDebit ? amt : -amt;
+      } else {
+        runningBalance += isDebit ? -amt : amt;
+      }
       return { ...r, runningBalance };
     });
 

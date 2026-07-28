@@ -309,7 +309,15 @@ router.post("/piutang/remind", async (req: Request, res: Response) => {
       return;
     }
 
-    // Ambil data semua booking sekaligus
+    // Validate booking IDs — only allow UUID format to prevent injection
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validIds = bookingIds.filter(id => uuidRe.test(id));
+    if (validIds.length === 0) {
+      res.status(400).json({ error: "Tidak ada booking ID yang valid" });
+      return;
+    }
+
+    // Ambil data semua booking sekaligus — gunakan ANY($1::text[]) agar parameterized
     const rows = await db.execute(sql`
       SELECT
         b.id,
@@ -330,7 +338,7 @@ router.post("/piutang/remind", async (req: Request, res: Response) => {
       LEFT JOIN package_departures dep ON dep.id = b.departure_id
       LEFT JOIN packages            pkg ON pkg.id = b.package_id
       LEFT JOIN profiles            prof ON prof.id = b.user_id
-      WHERE b.id = ANY(${sql.raw(`ARRAY[${bookingIds.map(id => `'${id.replace(/'/g, "''")}'`).join(",")}]::text[]`)})
+      WHERE b.id = ANY(${validIds}::text[])
         AND b.status NOT IN ('cancelled', 'draft')
         AND b.total_price - COALESCE(paid.total_paid, 0) > 0
     `);
@@ -682,12 +690,12 @@ router.get("/reports/income-statement", async (req: Request, res: Response) => {
   try {
     const { from, to } = req.query as { from?: string; to?: string };
 
-    const conditions: string[] = [];
-    if (from) conditions.push(`ft.transaction_date >= '${from}'::timestamptz`);
-    if (to)   conditions.push(`ft.transaction_date <= '${to}'::timestamptz`);
-    const whereClause = conditions.length > 0 ? `AND ${conditions.join(" AND ")}` : "";
+    // Validate date format to prevent injection (YYYY-MM-DD)
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    if (from && !dateRe.test(from)) return res.status(400).json({ error: "Invalid from date" });
+    if (to && !dateRe.test(to))     return res.status(400).json({ error: "Invalid to date" });
 
-    const rows = await db.execute(sql.raw(`
+    const rows = await db.execute(sql`
       SELECT
         ft.type,
         ft.category,
@@ -696,10 +704,12 @@ router.get("/reports/income-statement", async (req: Request, res: Response) => {
         SUM(ft.amount::numeric)         AS total
       FROM financial_transactions ft
       LEFT JOIN chart_of_accounts coa ON coa.id = ft.account_id
-      WHERE ft.type IN ('income', 'expense') ${whereClause}
+      WHERE ft.type IN ('income', 'expense')
+        ${from ? sql`AND ft.transaction_date >= ${new Date(from)}` : sql``}
+        ${to   ? sql`AND ft.transaction_date <= ${new Date(to)}`   : sql``}
       GROUP BY ft.type, ft.category, coa.name, coa.code
       ORDER BY ft.type, SUM(ft.amount::numeric) DESC
-    `));
+    `);
 
     const getRows = (r: any) => (r as any).rows ?? r;
     const data = getRows(rows);
@@ -737,23 +747,28 @@ router.get("/reports/income-statement", async (req: Request, res: Response) => {
 router.get("/reports/balance-sheet", async (req: Request, res: Response) => {
   try {
     const { date } = req.query as { date?: string };
-    const dateFilter = date ? `AND ft.transaction_date <= '${date}'::timestamptz` : "";
 
-    const rows = await db.execute(sql.raw(`
+    // Validate date format
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    if (date && !dateRe.test(date)) return res.status(400).json({ error: "Invalid date" });
+
+    const rows = await db.execute(sql`
       SELECT
         coa.type,
         coa.category,
         coa.code,
         coa.name,
         coa.normal_balance,
-        COALESCE(SUM(CASE WHEN ft.entry_type = 'debit' THEN ft.amount::numeric ELSE 0 END), 0) AS total_debit,
+        COALESCE(SUM(CASE WHEN ft.entry_type = 'debit'  THEN ft.amount::numeric ELSE 0 END), 0) AS total_debit,
         COALESCE(SUM(CASE WHEN ft.entry_type = 'credit' THEN ft.amount::numeric ELSE 0 END), 0) AS total_credit
       FROM chart_of_accounts coa
-      LEFT JOIN financial_transactions ft ON ft.account_id = coa.id ${dateFilter}
+      LEFT JOIN financial_transactions ft
+        ON ft.account_id = coa.id
+        ${date ? sql`AND ft.transaction_date <= ${new Date(date)}` : sql``}
       WHERE coa.is_active = true AND coa.type IN ('asset', 'liability', 'equity')
       GROUP BY coa.id, coa.type, coa.category, coa.code, coa.name, coa.normal_balance
       ORDER BY coa.code
-    `));
+    `);
 
     const getRows = (r: any) => (r as any).rows ?? r;
     const data = getRows(rows);
@@ -796,32 +811,35 @@ router.get("/reports/cash-flow", async (req: Request, res: Response) => {
   try {
     const { from, to } = req.query as { from?: string; to?: string };
 
-    const conditions: string[] = [];
-    if (from) conditions.push(`bp.paid_at >= '${from}'::timestamptz`);
-    if (to)   conditions.push(`bp.paid_at <= '${to}'::timestamptz`);
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    // Validate date format
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    if (from && !dateRe.test(from)) return res.status(400).json({ error: "Invalid from date" });
+    if (to && !dateRe.test(to))     return res.status(400).json({ error: "Invalid to date" });
 
     // Operating: actual cash received from bookings
     const [inflows, outflows] = await Promise.all([
-      db.execute(sql.raw(`
+      db.execute(sql`
         SELECT
           DATE_TRUNC('month', bp.paid_at) AS month,
           SUM(bp.amount) AS total
         FROM booking_payments bp
-        ${whereClause}
+        WHERE TRUE
+          ${from ? sql`AND bp.paid_at >= ${new Date(from)}` : sql``}
+          ${to   ? sql`AND bp.paid_at <= ${new Date(to)}`   : sql``}
         GROUP BY month
         ORDER BY month
-      `)),
-      db.execute(sql.raw(`
+      `),
+      db.execute(sql`
         SELECT
           DATE_TRUNC('month', ft.transaction_date) AS month,
           SUM(ft.amount::numeric) AS total
         FROM financial_transactions ft
-        WHERE ft.type = 'expense' ${conditions.length > 0 ? "AND ft.transaction_date >= '" + from + "'::timestamptz" : ""}
-          ${to ? "AND ft.transaction_date <= '" + to + "'::timestamptz" : ""}
+        WHERE ft.type = 'expense'
+          ${from ? sql`AND ft.transaction_date >= ${new Date(from)}` : sql``}
+          ${to   ? sql`AND ft.transaction_date <= ${new Date(to)}`   : sql``}
         GROUP BY month
         ORDER BY month
-      `)),
+      `),
     ]);
 
     const getRows = (r: any) => (r as any).rows ?? r;
