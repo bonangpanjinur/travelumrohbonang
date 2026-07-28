@@ -7,7 +7,7 @@ import { sendAdminError } from "../../lib/adminApiError";
 import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../../lib/supabaseEnv";
 import { shouldUseSupabaseHttp } from "../../lib/dbFlags";
 
-const ADMIN_ROLES = new Set(["super_admin", "admin", "branch_manager", "finance", "staff", "agent"]);
+const ADMIN_ROLES = new Set(["super_admin", "owner", "admin", "branch_manager", "finance", "staff", "agent"]);
 
 const router = Router();
 
@@ -86,7 +86,7 @@ router.get("/my", async (req, res) => {
  */
 router.get("/", async (req, res) => {
   const role = req.user?.role as string | undefined;
-  if (role !== "super_admin" && role !== "admin") {
+  if (role !== "super_admin" && role !== "owner" && role !== "admin") {
     res.status(403).json({ error: "Admin access required" });
     return;
   }
@@ -122,8 +122,9 @@ router.get("/", async (req, res) => {
  * Body: { permissions: Array<{ role, menuKey, enabled }> }
  */
 router.put("/", async (req, res) => {
-  if (req.user?.role !== "super_admin") {
-    res.status(403).json({ error: "Super admin access required" });
+  const callerRole = req.user?.role as string | undefined;
+  if (callerRole !== "super_admin" && callerRole !== "owner") {
+    res.status(403).json({ error: "Super admin or owner access required" });
     return;
   }
 
@@ -221,8 +222,9 @@ router.put("/", async (req, res) => {
  * Only super_admin.
  */
 router.delete("/reset", async (req, res) => {
-  if (req.user?.role !== "super_admin") {
-    res.status(403).json({ error: "Super admin access required" });
+  const callerRole = req.user?.role as string | undefined;
+  if (callerRole !== "super_admin" && callerRole !== "owner") {
+    res.status(403).json({ error: "Super admin or owner access required" });
     return;
   }
   if (USE_SUPABASE_HTTP) {

@@ -41,6 +41,13 @@ export function isLocalOnlyDbHost(url: string): boolean {
  *      where "helium" is reachable internally).
  */
 export function shouldUseSupabaseHttp(): boolean {
+  // On Vercel serverless, `connectionTimeoutMillis` in pg.Pool only covers
+  // pool-slot acquisition, NOT the underlying TCP/SSL handshake. When the
+  // Supabase host is unreachable or misconfigured the OS-level TCP connect
+  // hangs until the Vercel 30-second function limit is hit, returning a 504.
+  // Forcing Supabase HTTP avoids the pool entirely on Vercel.
+  if (process.env.VERCEL === "1") return true;
+
   const effectiveUrl =
     process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || "";
 
