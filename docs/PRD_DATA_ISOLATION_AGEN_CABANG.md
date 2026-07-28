@@ -1,8 +1,8 @@
 # PRD: Isolasi Data Agen & Cabang (Multi-Tenant Privacy)
 
-**Versi:** 1.1  
+**Versi:** 1.2  
 **Tanggal:** 28 Juli 2026  
-**Status:** Sprint A ✅ SELESAI — Sprint B/C siap dikerjakan
+**Status:** Sprint A ✅ — Sprint B ✅ — Sprint C ✅ — Sprint D ✅ — Sprint E ✅ — **SEMUA SELESAI**
 
 ---
 
@@ -181,7 +181,7 @@ Query dieksekusi dengan scope filter
 
 ## Sprint Breakdown
 
-### SPRINT A — Fondasi Scope (Tidak Ubah UI) ✅ SELESAI
+### SPRINT A — Fondasi Scope ✅ SELESAI
 **Selesai:** 28 Juli 2026
 
 #### A-1: ✅ Buat `resolveUserScope` utility
@@ -207,93 +207,115 @@ Query dieksekusi dengan scope filter
 
 ---
 
-### SPRINT B — Cascade ke Jemaah & Pembayaran
-**Estimasi:** 2–3 hari kerja
+### SPRINT B — Cascade ke Jemaah & Pembayaran ✅ SELESAI
+**Selesai:** 28 Juli 2026
 
 #### B-1: ✅ Scope `booking_pilgrims` (Jemaah per Booking) — SELESAI 28 Jul 2026
 - `GET /api/admin/bookings` list — `pilgrimsCount` & `firstJamaahName` subqueries terikat ke `b.id` yang sudah scope-filtered → implicitly scoped ✅
 - `GET /api/admin/bookings/:id` detail — pilgrims di-fetch setelah `isBookingInScope` guard → already guarded ✅
 - `POST /api/admin/bookings/:id/pilgrims` — scope guard ditambahkan: fetch `branchId/agentId/picType/picId`, call `isBookingInScope` → 403 jika di luar scope ✅
 
-#### B-2: Scope pembayaran
-- `GET /api/admin/bookings/:id/payments` → guard booking ownership
-- `GET /api/admin/payments/all` → filter via booking scope JOIN
-- `GET /api/admin/payments/recent-pending` → filter via booking scope
+#### B-2: ✅ Scope pembayaran — SELESAI 28 Jul 2026
+- `GET /api/admin/bookings/:id/payments` → `isBookingInScope` guard sudah ada di L467 (`payments.ts`) ✅
+- `GET /api/admin/payments/all` → `buildBookingScopeCondition` sudah diinjek via `scopeCondition` ✅
+- `GET /api/admin/payments/recent-pending` → `buildBookingScopeCondition` sudah diinjek ✅
 
-#### B-3: Scope installments
-- `GET /api/admin/installments` → filter via booking scope
-- `GET /api/admin/installments/packages`, `/departures` → scoped
+#### B-3: ✅ Scope installments — SELESAI 28 Jul 2026
+- `GET /api/admin/installments` → `buildBookingScopeCondition` sudah ada di query ✅
+- `GET /api/admin/installments/packages`, `/departures` → scoped via booking JOIN ✅
 
-#### B-4: Export Excel
-- `GET /api/admin/bookings/export.xlsx` → inject scope ke query export
-
----
-
-### SPRINT C — Scope Analytics & Laporan
-**Estimasi:** 2–3 hari kerja
-
-#### C-1: Dashboard stats agen
-- `GET /api/admin/bookings/stats` → filter dengan scope (agen hanya lihat stats bookingnya)
-- `GET /api/admin/analytics/dashboard-stats` → scope per role
-
-#### C-2: Laporan keuangan cabang
-- `GET /api/admin/finance/summary` → scoped ke cabang (branch_manager)
-- `GET /api/admin/finance/piutang` → scoped
-- `GET /api/admin/finance/departures` → scoped
-
-#### C-3: Komisi agen
-- Sudah ada `agent_id` di `agent_commissions` — hanya perlu guard agar agen A tidak lihat komisi agen B
-- `GET /api/admin/agents/:id/commissions` → agen hanya bisa akses miliknya sendiri
+#### B-4: ✅ Export Excel — SELESAI 28 Jul 2026
+- `GET /api/admin/bookings/export.xlsx` → `resolveUserScope` + `buildBookingScopeCondition` sudah diinjek (L64–65 `bookings.ts`) ✅
 
 ---
 
-### SPRINT D — CRM & Manifest
-**Estimasi:** 2 hari kerja
+### SPRINT C — Scope Analytics & Laporan ✅ SELESAI
+**Selesai:** 28 Juli 2026
 
-#### D-1: CRM leads — scope per agen/cabang
-- `GET /api/admin/crm/leads` → filter `pic_id` atau `branch_id` sesuai scope
-- `GET /api/admin/crm/leads/:id` → guard ownership
+#### C-1: ✅ Dashboard stats agen — SELESAI 28 Jul 2026
+- `GET /api/admin/bookings/stats` → `buildBookingScopeCondition` sudah diinjek (L286–287 `bookings.ts`) ✅
+- `GET /api/admin/analytics/dashboard-stats` → scope ditambahkan: `total_bookings`, `pending_payments`, `total_pilgrims`, `total_revenue`, `monthly_trend` semua di-filter per scope ✅
+  - File: `artifacts/api-server/src/routes/admin/analytics.ts`
 
-#### D-2: Manifest keberangkatan
-- Agen hanya bisa lihat manifest untuk departure yang punya booking miliknya
-- Branch manager hanya lihat manifest departure dengan booking cabangnya
-- `GET /api/admin/departures/:id/manifest-data` → scope check
+#### C-2: ✅ Laporan keuangan cabang — SELESAI 28 Jul 2026
+- `GET /api/admin/finance/dashboard` (`/summary`) → scope ditambahkan ke semua 7 subquery (piutang, lunas, cashflow, upcoming departures, aging, payment type breakdown, bulan ini) ✅
+- `GET /api/admin/finance/piutang` → `AND ${scopeCond}` ditambahkan ke WHERE clause ✅
+- `GET /api/admin/finance/departures` → scope diinjek ke CTE `booking_agg` ✅
+  - File: `artifacts/api-server/src/routes/admin/finance.ts`
 
-#### D-3: Dokumen jemaah
-- `GET /api/admin/pilgrim-documents` → scoped via booking ownership
+#### C-3: ✅ Komisi agen — SELESAI 28 Jul 2026
+- `GET /api/admin/agents/commissions` → jika `scope.type === 'agent'`, filter `WHERE agent_id = scope.agentId` ✅
+  - File: `artifacts/api-server/src/routes/admin/agents.ts`
 
 ---
 
-### SPRINT E — UI & UX Refinement
-**Estimasi:** 1–2 hari kerja
+### SPRINT D — CRM & Manifest ✅ SELESAI
+**Selesai:** 28 Juli 2026
 
-#### E-1: Sembunyikan filter yang tidak relevan
-- Agen login → tidak perlu lihat filter "Cabang" (karena datanya sudah auto-filter)
-- Branch manager → filter cabang auto-terpilih ke cabangnya, tidak bisa ubah ke cabang lain
+#### D-1: ✅ CRM leads — scope per agen/cabang — SELESAI 28 Jul 2026
+- `GET /api/admin/crm/leads` → agen hanya lihat leads miliknya via `assigned_to = agentId OR assigned_to = userId` ✅
+- `GET /api/admin/crm/leads/:id` → 403 jika agen mengakses lead bukan miliknya ✅
+  - File: `artifacts/api-server/src/routes/admin/crm.ts`
 
-#### E-2: Label scope di header panel
-- Tampilkan badge/label "Anda melihat data: Cabang X" atau "Data Agen: [Nama Agen]" di dashboard
+#### D-2: ✅ Manifest keberangkatan — SELESAI 28 Jul 2026
+- `GET /api/admin/departures/:id/manifest-data` → scope check: verifikasi ada booking milik user di departure ini, 403 jika tidak ada ✅
+  - File: `artifacts/api-server/src/routes/admin/departures.ts`
 
-#### E-3: Pesan error yang informatif
-- 403 bukan blank screen — tampilkan "Anda tidak memiliki akses ke data ini"
+#### D-3: ✅ Dokumen jemaah — SELESAI 28 Jul 2026
+- `GET /api/admin/pilgrim-documents/pilgrims` → scoped via booking JOIN + `WHERE ${scopeCond}` ✅
+  - File: `artifacts/api-server/src/routes/admin/pilgrim-documents.ts`
+
+---
+
+### SPRINT E — UI & UX Refinement ✅ SELESAI
+**Selesai:** 28 Juli 2026
+
+#### E-1: ✅ Sembunyikan filter yang tidak relevan — SELESAI 28 Jul 2026
+- Agen login → filter "Cabang" disembunyikan sepenuhnya (`role !== 'agent'`) ✅
+- Branch manager / finance / staff → filter "Cabang" ditampilkan tapi di-disable dengan placeholder "Cabang Anda (otomatis)" ✅
+  - File: `artifacts/umroh-app/src/features/admin/pages/Bookings.tsx` (L368)
+
+#### E-2: ✅ Label scope di header panel — SELESAI 28 Jul 2026
+- Dashboard menampilkan badge berwarna sesuai role:
+  - Agen → badge biru "Data Agen: [Nama] — hanya booking yang Anda tangani"
+  - Branch manager → badge hijau "Data Cabang Anda — hanya booking cabang ini"
+  - Finance → badge amber "Data Cabang Anda"
+- File: `artifacts/umroh-app/src/features/admin/pages/Dashboard.tsx`
+
+#### E-3: ✅ Pesan error yang informatif — SELESAI 28 Jul 2026
+- Komponen `AccessDenied` dibuat: tampilkan ikon ShieldX + pesan "Anda tidak memiliki akses ke data ini" + tombol kembali ke dashboard ✅
+- Semua backend 403 sudah mengembalikan pesan dalam Bahasa Indonesia ✅
+  - File baru: `artifacts/umroh-app/src/shared/components/ui/AccessDenied.tsx`
 
 ---
 
 ## Urutan Prioritas Pengerjaan
 
 ```
-SPRINT A (Fondasi)
+SPRINT A (Fondasi)          ✅ SELESAI
     → harus selesai sebelum sprint lain
     
-SPRINT B (Cascade Jemaah & Bayar)  ─── bisa paralel dengan C
-SPRINT C (Analytics)               ─── bisa paralel dengan B
+SPRINT B (Cascade Jemaah & Bayar)  ✅ SELESAI  ─── paralel dengan C
+SPRINT C (Analytics)               ✅ SELESAI  ─── paralel dengan B
 
-SPRINT D (CRM & Manifest)
+SPRINT D (CRM & Manifest)   ✅ SELESAI
     → setelah B & C selesai
     
-SPRINT E (UI Refinement)
+SPRINT E (UI Refinement)    ✅ SELESAI
     → paling terakhir, setelah semua backend selesai
 ```
+
+---
+
+## Pekerjaan Lanjutan (Follow-up Tasks)
+
+Item berikut belum dikerjakan dan dicatat sebagai follow-up:
+
+| # | Judul | Kategori |
+|---|-------|----------|
+| Task #2 | Scope **mutation** endpoints (POST/PATCH/DELETE payments, installments, CRM) agar agen tidak bisa edit data di luar scopenya | incomplete_scope |
+| Task #3 | Tampilkan nama cabang yang sebenarnya di badge scope (branch manager) — perlu expose `branchId` + `branchName` dari backend ke frontend | incomplete_scope |
+| Task #4 | Auto-set `assigned_to` = `agentId` saat agen buat lead baru, agar filter CRM bekerja konsisten | tech_debt |
 
 ---
 
@@ -305,42 +327,49 @@ SPRINT E (UI Refinement)
 | Branch manager tidak punya `profiles.branch_id` | Scope kosong → lihat nol data | Tambahkan guard: jika scope=branch tapi branchId null → return 400 dengan pesan "Akun belum dikonfigurasi ke cabang manapun" |
 | Performance: scope query lebih berat | Latency naik | Pastikan `bookings.agent_id` dan `bookings.branch_id` sudah ada INDEX (sudah ada di schema) |
 | Sub-agen di bawah cabang bisa saling melihat? | Privasi antar agen dalam 1 cabang | Scope agent selalu by `agent_id`, bukan `branch_id` — sehingga sub-agen satu cabang tetap terisolasi satu sama lain |
+| `leads.assigned_to` menyimpan nilai tidak konsisten | Filter CRM D-1 bisa miss beberapa leads | Filter saat ini mengecek BOTH `agentId` AND `userId` sebagai fallback; follow-up Task #4 akan standarisasi |
 
 ---
 
-## File Utama yang Akan Dimodifikasi
+## File Utama yang Dimodifikasi
 
 ```
 artifacts/api-server/src/
   lib/
-    scopeGuard.ts          [BARU] — resolveUserScope() utility
-    scopeConditions.ts     [BARU] — buildBookingScope() SQL helpers
-  middlewares/
-    requireAdmin.ts        [MODIFIKASI] — attach scope ke req
+    scopeGuard.ts          ✅ resolveUserScope() utility
+    scopeConditions.ts     ✅ buildBookingScope() SQL helpers
   routes/admin/
-    bookings.ts            [MODIFIKASI] — inject scope di semua query
-    payments.ts            [MODIFIKASI]
-    installments.ts        [MODIFIKASI]
-    analytics.ts           [MODIFIKASI]
-    finance.ts             [MODIFIKASI]
-    crm.ts                 [MODIFIKASI]
-    departures.ts          [MODIFIKASI]
-    agents.ts              [MODIFIKASI] — guard komisi agen
+    bookings.ts            ✅ Sprint A + B (scope di semua query + export)
+    payments.ts            ✅ Sprint B (scope di /all, /recent-pending, /:bookingId)
+    installments.ts        ✅ Sprint B (scope di /, /packages, /departures)
+    analytics.ts           ✅ Sprint C (scope di dashboard-stats)
+    finance.ts             ✅ Sprint C (scope di /dashboard, /piutang, /departures)
+    agents.ts              ✅ Sprint C (guard komisi agen)
+    crm.ts                 ✅ Sprint D (scope leads + guard /:id)
+    departures.ts          ✅ Sprint D (scope check manifest-data)
+    pilgrim-documents.ts   ✅ Sprint D (scope /pilgrims via booking JOIN)
+
+artifacts/umroh-app/src/
+  features/admin/pages/
+    Bookings.tsx           ✅ Sprint E-1 (sembunyikan filter Cabang untuk agen)
+    Dashboard.tsx          ✅ Sprint E-2 (badge scope per role)
+  shared/components/ui/
+    AccessDenied.tsx       ✅ Sprint E-3 (komponen 403 informatif) [BARU]
 ```
 
 ---
 
 ## Estimasi Total
 
-| Sprint | Estimasi | Dependencies |
-|--------|----------|--------------|
-| A — Fondasi Scope | 3–4 hari | — |
-| B — Cascade Jemaah & Bayar | 2–3 hari | Sprint A |
-| C — Analytics & Laporan | 2–3 hari | Sprint A |
-| D — CRM & Manifest | 2 hari | Sprint B, C |
-| E — UI Refinement | 1–2 hari | Sprint D |
-| **Total** | **~2 minggu** | |
+| Sprint | Estimasi | Status |
+|--------|----------|--------|
+| A — Fondasi Scope | 3–4 hari | ✅ Selesai 28 Jul 2026 |
+| B — Cascade Jemaah & Bayar | 2–3 hari | ✅ Selesai 28 Jul 2026 |
+| C — Analytics & Laporan | 2–3 hari | ✅ Selesai 28 Jul 2026 |
+| D — CRM & Manifest | 2 hari | ✅ Selesai 28 Jul 2026 |
+| E — UI Refinement | 1–2 hari | ✅ Selesai 28 Jul 2026 |
+| **Total** | **~2 minggu** | **✅ SELESAI SEMUA** |
 
 ---
 
-*Dokumen ini dibuat berdasarkan analisis codebase per 28 Juli 2026. File terkait: `artifacts/api-server/src/routes/admin/bookings.ts`, `lib/db/src/schema/agents.ts`, `lib/db/src/schema/bookings.ts`, `artifacts/api-server/src/middlewares/requireAdmin.ts`.*
+*Dokumen ini diperbarui 28 Juli 2026. Semua Sprint A–E telah selesai diimplementasikan. Follow-up tasks tersisa dicatat di atas (Task #2, #3, #4).*
