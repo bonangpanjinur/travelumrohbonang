@@ -62,6 +62,13 @@ const AdminRoomAssignment = () => {
     staleTime: 30_000,
   });
 
+  // Reset edits whenever the user switches to a different departure,
+  // so stale localRooms from departure A cannot be saved to departure B.
+  useEffect(() => {
+    setLocalRooms({});
+    setDirty(false);
+  }, [selectedDeparture]);
+
   // Sync local room state whenever server data changes,
   // but skip sync if the user has unsaved edits (avoids race-condition overwrite)
   useEffect(() => {
