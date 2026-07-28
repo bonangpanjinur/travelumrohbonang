@@ -219,7 +219,7 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
 
   useEffect(() => {
     if (!packageId) { setDepartures([]); setDepartureId(""); return; }
-    apiFetch<{ data: any[] }>(`/api/admin/packages/${packageId}/departures?status=active&minQuota=1`)
+    apiFetch<{ data: any[] }>(`/api/admin/packages/${packageId}/departures?minQuota=1`)
       .then(({ data }) => setDepartures(data || []))
       .catch(() => setDepartures([]));
   }, [packageId]);
