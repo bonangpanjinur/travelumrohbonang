@@ -29,7 +29,8 @@ interface PiutangItem {
   payStatus: "belum_bayar" | "baru_dp" | "sebagian" | "hampir_lunas";
   agingBucket: "overdue" | "kritis" | "mendesak" | "perhatian" | "normal";
   daysToDepart: number | null;
-  customerName: string;
+  firstJamaahName: string | null;
+  pemesanName: string | null;
   customerPhone: string | null;
   customerEmail: string | null;
   packageId: string;
@@ -70,11 +71,12 @@ const AGING = {
 
 // ── Export CSV ────────────────────────────────────────────────────────────────
 const exportCSV = (items: PiutangItem[]) => {
-  const header = ["No","Kode Booking","Nama","HP","Email","Paket","Tgl Berangkat","Total","Sudah Bayar","Sisa","Status Bayar","Aging"];
+  const header = ["No","Kode Booking","Jemaah","Pemesan","HP","Email","Paket","Tgl Berangkat","Total","Sudah Bayar","Sisa","Status Bayar","Aging"];
   const rows = items.map((item, i) => [
     i + 1,
     item.bookingCode,
-    item.customerName,
+    item.firstJamaahName ?? item.pemesanName ?? "-",
+    item.pemesanName ?? "-",
     item.customerPhone ?? "",
     item.customerEmail ?? "",
     item.packageTitle,
@@ -129,7 +131,8 @@ const Piutang = () => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
-      item.customerName.toLowerCase().includes(q) ||
+      (item.firstJamaahName ?? "").toLowerCase().includes(q) ||
+      (item.pemesanName     ?? "").toLowerCase().includes(q) ||
       item.bookingCode.toLowerCase().includes(q) ||
       item.packageTitle.toLowerCase().includes(q) ||
       (item.customerPhone ?? "").includes(q)
@@ -165,7 +168,7 @@ const Piutang = () => {
         method: "POST",
         body: JSON.stringify({ bookingIds: [item.id] }),
       });
-      toast.success(`Reminder dikirim ke ${item.customerName}`);
+      toast.success(`Reminder dikirim ke ${item.firstJamaahName ?? item.pemesanName ?? item.bookingCode}`);
     } catch {
       toast.error("Gagal mengirim reminder");
     } finally {
@@ -314,7 +317,10 @@ const Piutang = () => {
                           />
                         </TableCell>
                         <TableCell>
-                          <div className="font-semibold text-sm">{item.customerName}</div>
+                          <div className="font-semibold text-sm">{item.firstJamaahName ?? item.pemesanName ?? "-"}</div>
+                          {item.pemesanName && item.pemesanName !== item.firstJamaahName && (
+                            <div className="text-xs text-muted-foreground">Pemesan: {item.pemesanName}</div>
+                          )}
                           <div className="text-xs text-muted-foreground font-mono">{item.bookingCode}</div>
                         </TableCell>
                         <TableCell>

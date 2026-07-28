@@ -197,9 +197,10 @@ router.get("/piutang", async (req: Request, res: Response) => {
         b.created_at,
         b.package_id,
         b.departure_id,
-        p.name        AS customer_name,
-        p.phone       AS customer_phone,
-        p.email       AS customer_email,
+        (SELECT bp.name FROM booking_pilgrims bp WHERE bp.booking_id = b.id ORDER BY bp.created_at LIMIT 1) AS first_jamaah_name,
+        COALESCE(b.pemesan_name, b.pic_name, p.name) AS pemesan_name,
+        COALESCE(b.pemesan_phone, b.pic_phone, p.phone) AS customer_phone,
+        COALESCE(b.pemesan_email, p.email)              AS customer_email,
         pkg.title     AS package_title,
         dep.departure_date,
         COALESCE(paid.total_paid, 0)                          AS total_paid,
@@ -209,7 +210,7 @@ router.get("/piutang", async (req: Request, res: Response) => {
           ELSE EXTRACT(DAY FROM (dep.departure_date::timestamp - NOW()))::int
         END AS days_to_departure
       FROM bookings b
-      LEFT JOIN profiles            p   ON p.id   = b.user_id
+      LEFT JOIN profiles            p   ON p.id::text = b.user_id
       LEFT JOIN packages            pkg ON pkg.id = b.package_id
       LEFT JOIN package_departures  dep ON dep.id = b.departure_id
       LEFT JOIN (
@@ -247,23 +248,24 @@ router.get("/piutang", async (req: Request, res: Response) => {
       else                        agingBucket = "normal";
 
       return {
-        id:            r.id,
-        bookingCode:   r.booking_code,
+        id:             r.id,
+        bookingCode:    r.booking_code,
         totalPrice,
         totalPaid,
         outstanding,
-        status:        r.status,
+        status:         r.status,
         payStatus,
         agingBucket,
-        daysToDepart:  days,
-        customerName:  r.customer_name  ?? "-",
-        customerPhone: r.customer_phone ?? null,
-        customerEmail: r.customer_email ?? null,
-        packageId:     r.package_id,
-        packageTitle:  r.package_title  ?? "-",
-        departureId:   r.departure_id,
-        departureDate: r.departure_date,
-        createdAt:     r.created_at,
+        daysToDepart:   days,
+        firstJamaahName: r.first_jamaah_name ?? null,
+        pemesanName:    r.pemesan_name    ?? null,
+        customerPhone:  r.customer_phone  ?? null,
+        customerEmail:  r.customer_email  ?? null,
+        packageId:      r.package_id,
+        packageTitle:   r.package_title   ?? "-",
+        departureId:    r.departure_id,
+        departureDate:  r.departure_date,
+        createdAt:      r.created_at,
       };
     });
 
