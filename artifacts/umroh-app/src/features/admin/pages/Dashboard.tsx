@@ -3,8 +3,10 @@ import {
   Users, ShoppingBag, CreditCard, TrendingUp, CalendarCheck,
   UserPlus, Building2, UserCheck, Download, Target, ShieldCheck,
   RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, ArrowUpRight,
+  ExternalLink,
 } from "lucide-react";
 import { useEffect, useState, useCallback, useRef } from "react";
+import { Link } from "wouter";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { format, formatDistanceToNow } from "date-fns";
@@ -100,15 +102,19 @@ interface KpiCardProps {
 }
 
 const KpiCard = ({ title, value, icon: Icon, iconBg, loading, alert, isCurrency, sub, href }: KpiCardProps) => {
-  const content = (
+  const card = (
     <Card className={cn(
-      "relative overflow-hidden transition-all hover:shadow-md",
+      "relative overflow-hidden transition-all",
+      href ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:translate-y-0" : "",
       alert ? "ring-2 ring-red-400 ring-offset-1" : "",
     )}>
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</p>
+            <div className="flex items-center gap-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</p>
+              {href && !loading && <ExternalLink className="w-3 h-3 text-muted-foreground/50" />}
+            </div>
             {loading ? (
               <div className="mt-2 h-7 w-24 bg-muted animate-pulse rounded-md" />
             ) : (
@@ -131,8 +137,8 @@ const KpiCard = ({ title, value, icon: Icon, iconBg, loading, alert, isCurrency,
     </Card>
   );
 
-  if (href) return <a href={href} className="block">{content}</a>;
-  return content;
+  if (href) return <Link href={href} className="block">{card}</Link>;
+  return card;
 };
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -354,86 +360,92 @@ const AdminDashboard = () => {
 
       {/* ── Financial highlight row ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="sm:col-span-1 bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 shadow-lg">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold text-emerald-100 uppercase tracking-wide">Total Pendapatan</p>
-              <Wallet className="w-5 h-5 text-emerald-200" />
-            </div>
-            {loading ? (
-              <div className="h-8 w-32 bg-emerald-400/50 animate-pulse rounded-md" />
-            ) : (
-              <p className="text-2xl font-bold">{formatRp(stats.totalRevenue)}</p>
-            )}
-            <p className="text-xs text-emerald-100 mt-1.5">dari semua pembayaran terverifikasi</p>
-          </CardContent>
-        </Card>
-
-        <Card className={cn(
-          "sm:col-span-1 border-0 shadow-lg",
-          stats.totalOutstanding > 0
-            ? "bg-gradient-to-br from-orange-500 to-red-500 text-white"
-            : "bg-gradient-to-br from-slate-100 to-slate-200",
-        )}>
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className={cn("text-xs font-semibold uppercase tracking-wide",
-                stats.totalOutstanding > 0 ? "text-orange-100" : "text-muted-foreground"
-              )}>
-                Total Piutang Aktif
-              </p>
-              <AlertCircle className={cn("w-5 h-5",
-                stats.totalOutstanding > 0 ? "text-orange-200" : "text-muted-foreground"
-              )} />
-            </div>
-            {loading ? (
-              <div className="h-8 w-32 bg-white/20 animate-pulse rounded-md" />
-            ) : (
-              <p className={cn("text-2xl font-bold",
-                stats.totalOutstanding > 0 ? "text-white" : "text-muted-foreground"
-              )}>
-                {stats.totalOutstanding > 0 ? formatRp(stats.totalOutstanding) : "Rp 0"}
-              </p>
-            )}
-            {!loading && (
-              <p className={cn("text-xs mt-1.5",
-                stats.totalOutstanding > 0 ? "text-orange-100" : "text-muted-foreground"
-              )}>
-                {stats.pendingPayments > 0
-                  ? <><a href="/admin/keuangan/piutang" className="underline underline-offset-2">{stats.pendingPayments} booking</a> belum lunas</>
-                  : "Semua booking sudah lunas 🎉"}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="sm:col-span-1 border shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tingkat Pelunasan</p>
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-            </div>
-            {loading ? (
-              <div className="h-8 w-20 bg-muted animate-pulse rounded-md" />
-            ) : (
-              <p className="text-3xl font-bold">{collectionRate}%</p>
-            )}
-            <div className="mt-3">
-              <div className="w-full bg-muted rounded-full h-1.5">
-                <div
-                  className={cn("h-1.5 rounded-full transition-all duration-500",
-                    collectionRate >= 80 ? "bg-emerald-500" :
-                    collectionRate >= 50 ? "bg-amber-500" : "bg-red-500"
-                  )}
-                  style={{ width: `${collectionRate}%` }}
-                />
+        <Link href="/admin/finance-dashboard" className="sm:col-span-1 block group">
+          <Card className="h-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 shadow-lg cursor-pointer group-hover:shadow-xl group-hover:-translate-y-0.5 transition-all">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-emerald-100 uppercase tracking-wide">Total Pendapatan</p>
+                <Wallet className="w-5 h-5 text-emerald-200" />
               </div>
-              <p className="text-xs text-muted-foreground mt-1.5">
-                {paidCount} dari {stats.totalBookings} booking lunas
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+              {loading ? (
+                <div className="h-8 w-32 bg-emerald-400/50 animate-pulse rounded-md" />
+              ) : (
+                <p className="text-2xl font-bold">{formatRp(stats.totalRevenue)}</p>
+              )}
+              <p className="text-xs text-emerald-100 mt-1.5">dari semua pembayaran terverifikasi →</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/admin/piutang" className="sm:col-span-1 block group">
+          <Card className={cn(
+            "h-full border-0 shadow-lg cursor-pointer group-hover:shadow-xl group-hover:-translate-y-0.5 transition-all",
+            stats.totalOutstanding > 0
+              ? "bg-gradient-to-br from-orange-500 to-red-500 text-white"
+              : "bg-gradient-to-br from-slate-100 to-slate-200",
+          )}>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <p className={cn("text-xs font-semibold uppercase tracking-wide",
+                  stats.totalOutstanding > 0 ? "text-orange-100" : "text-muted-foreground"
+                )}>
+                  Total Piutang Aktif
+                </p>
+                <AlertCircle className={cn("w-5 h-5",
+                  stats.totalOutstanding > 0 ? "text-orange-200" : "text-muted-foreground"
+                )} />
+              </div>
+              {loading ? (
+                <div className="h-8 w-32 bg-white/20 animate-pulse rounded-md" />
+              ) : (
+                <p className={cn("text-2xl font-bold",
+                  stats.totalOutstanding > 0 ? "text-white" : "text-muted-foreground"
+                )}>
+                  {stats.totalOutstanding > 0 ? formatRp(stats.totalOutstanding) : "Rp 0"}
+                </p>
+              )}
+              {!loading && (
+                <p className={cn("text-xs mt-1.5",
+                  stats.totalOutstanding > 0 ? "text-orange-100" : "text-muted-foreground"
+                )}>
+                  {stats.pendingPayments > 0
+                    ? `${stats.pendingPayments} booking belum lunas →`
+                    : "Semua booking sudah lunas 🎉"}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/admin/payments" className="sm:col-span-1 block group">
+          <Card className="h-full border shadow-sm cursor-pointer group-hover:shadow-md group-hover:-translate-y-0.5 transition-all">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tingkat Pelunasan</p>
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              </div>
+              {loading ? (
+                <div className="h-8 w-20 bg-muted animate-pulse rounded-md" />
+              ) : (
+                <p className="text-3xl font-bold">{collectionRate}%</p>
+              )}
+              <div className="mt-3">
+                <div className="w-full bg-muted rounded-full h-1.5">
+                  <div
+                    className={cn("h-1.5 rounded-full transition-all duration-500",
+                      collectionRate >= 80 ? "bg-emerald-500" :
+                      collectionRate >= 50 ? "bg-amber-500" : "bg-red-500"
+                    )}
+                    style={{ width: `${collectionRate}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  {paidCount} dari {stats.totalBookings} booking lunas →
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* ── Operational KPIs ── */}
@@ -445,6 +457,7 @@ const AdminDashboard = () => {
           iconBg="bg-blue-500"
           loading={loading}
           sub={`periode ${PERIODS.find(p => p.value === period)?.label}`}
+          href="/admin/bookings"
         />
         <KpiCard
           title="Belum Lunas"
@@ -454,7 +467,7 @@ const AdminDashboard = () => {
           loading={loading}
           alert={stats.pendingPayments > 0}
           sub={stats.pendingPayments > 0 ? "perlu tindakan" : "semua sudah bayar"}
-          href={stats.pendingPayments > 0 ? "/admin/keuangan/piutang" : undefined}
+          href="/admin/piutang"
         />
         <KpiCard
           title="Total Jamaah"
@@ -462,6 +475,7 @@ const AdminDashboard = () => {
           icon={UserCheck}
           iconBg="bg-teal-500"
           loading={loading}
+          href="/admin/pilgrims"
         />
         <KpiCard
           title="Paket Aktif"
@@ -469,6 +483,7 @@ const AdminDashboard = () => {
           icon={CalendarCheck}
           iconBg="bg-green-500"
           loading={loading}
+          href="/admin/packages"
         />
         <KpiCard
           title="Total Agen"
@@ -476,6 +491,7 @@ const AdminDashboard = () => {
           icon={Users}
           iconBg="bg-purple-500"
           loading={loading}
+          href="/admin/agents"
         />
         <KpiCard
           title="Cabang"
@@ -483,6 +499,7 @@ const AdminDashboard = () => {
           icon={Building2}
           iconBg="bg-indigo-500"
           loading={loading}
+          href="/admin/branches"
         />
         <KpiCard
           title="Muthawif"
@@ -490,37 +507,43 @@ const AdminDashboard = () => {
           icon={UserPlus}
           iconBg="bg-pink-500"
           loading={loading}
+          href="/admin/muthawifs"
         />
-        {/* Placeholder slot — shows period revenue */}
-        <Card className="relative overflow-hidden border shadow-sm hover:shadow-md transition-all">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Revenue {PERIODS.find(p => p.value === period)?.label}
-                </p>
-                {loading || periodLoading ? (
-                  <div className="mt-2 h-7 w-24 bg-muted animate-pulse rounded-md" />
-                ) : (
-                  <p className="mt-1.5 text-xl font-bold leading-none">
-                    {periodRevenue !== null ? formatRp(periodRevenue) : "—"}
-                  </p>
-                )}
-                {!loading && !periodLoading && periodRevenue !== null && periodStats?.kpis?.prevRevenue > 0 && (
-                  <p className={cn("text-xs mt-1.5 flex items-center gap-0.5",
-                    periodRevenue >= periodStats.kpis.prevRevenue ? "text-emerald-600" : "text-red-500"
-                  )}>
-                    <ArrowUpRight className={cn("w-3 h-3", periodRevenue < periodStats.kpis.prevRevenue && "rotate-180")} />
-                    vs periode sebelumnya
-                  </p>
-                )}
+        {/* Revenue per periode — links to Analytics */}
+        <Link href="/admin/analytics" className="block">
+          <Card className="relative overflow-hidden border shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Revenue {PERIODS.find(p => p.value === period)?.label}
+                    </p>
+                    <ExternalLink className="w-3 h-3 text-muted-foreground/50" />
+                  </div>
+                  {loading || periodLoading ? (
+                    <div className="mt-2 h-7 w-24 bg-muted animate-pulse rounded-md" />
+                  ) : (
+                    <p className="mt-1.5 text-xl font-bold leading-none">
+                      {periodRevenue !== null ? formatRp(periodRevenue) : "—"}
+                    </p>
+                  )}
+                  {!loading && !periodLoading && periodRevenue !== null && periodStats?.kpis?.prevRevenue > 0 && (
+                    <p className={cn("text-xs mt-1.5 flex items-center gap-0.5",
+                      periodRevenue >= periodStats.kpis.prevRevenue ? "text-emerald-600" : "text-red-500"
+                    )}>
+                      <ArrowUpRight className={cn("w-3 h-3", periodRevenue < periodStats.kpis.prevRevenue && "rotate-180")} />
+                      vs periode sebelumnya
+                    </p>
+                  )}
+                </div>
+                <div className="rounded-xl p-2.5 bg-cyan-500 text-white shadow shrink-0">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
               </div>
-              <div className="rounded-xl p-2.5 bg-cyan-500 text-white shadow shrink-0">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* ── Target vs Aktual ── */}
