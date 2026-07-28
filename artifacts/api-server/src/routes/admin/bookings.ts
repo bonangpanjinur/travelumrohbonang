@@ -208,7 +208,7 @@ router.get("/", async (req, res) => {
             CASE b.pic_type
               WHEN 'agen'     THEN (SELECT a.name  FROM agents   a  WHERE a.id  = b.pic_id LIMIT 1)
               WHEN 'cabang'   THEN (SELECT br2.name FROM branches br2 WHERE br2.id = b.pic_id LIMIT 1)
-              WHEN 'karyawan' THEN (SELECT p2.name FROM profiles p2 WHERE p2.id  = b.pic_id LIMIT 1)
+              WHEN 'karyawan' THEN (SELECT p2.name FROM profiles p2 WHERE p2.id::text = b.pic_id LIMIT 1)
               ELSE NULL
             END
           )                     AS "picName",
