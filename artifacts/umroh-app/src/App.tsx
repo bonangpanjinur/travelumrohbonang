@@ -91,7 +91,6 @@ import AdminContracts from "./features/admin/pages/AdminContracts";
 import AdminAuditLogs from "./features/admin/pages/AuditLogs";
 import AdminSystemHealth from "./features/admin/pages/SystemHealth";
 import AdminSlugRedirects from "./features/admin/pages/SlugRedirects";
-import AdminRoleManagement from "./features/admin/pages/RoleManagement";
 import AdminChats from "./features/admin/pages/Chats";
 import ChatInbox from "./features/admin/pages/ChatInbox";
 import ChatPage from "./features/user/pages/ChatPage";
@@ -279,7 +278,7 @@ const AppContent = () => {
           <Route path="contracts" element={<AdminContracts />} />
           <Route path="audit-logs" element={<AdminAuditLogs />} />
           <Route path="system-health" element={<AdminSystemHealth />} />
-          <Route path="role-management" element={<AdminRoleManagement />} />
+          <Route path="role-management" element={<Navigate to="/admin/settings" replace />} />
           <Route path="chats" element={<Navigate to="/admin/chat" replace />} />
           <Route path="chat" element={<ChatInbox />} />
           <Route path="leaderboard" element={<AdminLeaderboard />} />

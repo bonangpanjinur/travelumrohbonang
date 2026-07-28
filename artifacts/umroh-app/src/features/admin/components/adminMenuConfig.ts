@@ -254,7 +254,6 @@ export const menuGroups: MenuGroup[] = [
       { label: "Live REST Diagnostics", labelKey: "menu.rest_diag", href: "/admin/rest-diag", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
       { label: "Slug Redirects (SEO)", labelKey: "menu.slug_redirects", href: "/admin/slug-redirects", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
       { label: "Pengaturan SEO", labelKey: "menu.seo_settings", href: "/admin/seo", icon: Search, roles: SUPER_ADMIN_ADMIN },
-      { label: "Manajemen Role", labelKey: "menu.role_management", href: "/admin/role-management", icon: ShieldCheck, roles: SUPER_ONLY },
       { label: "Izin Menu per Role", labelKey: "menu.menu_permissions", href: "/admin/menu-permissions", icon: Layers, roles: OPERATIONAL },
       { label: "Manajemen Fitur", labelKey: "menu.feature_management", href: "/admin/feature-management", icon: ToggleRight, roles: SUPER_ONLY },
       { label: "Mata Uang", labelKey: "menu.currencies", href: "/admin/currencies", icon: Coins, roles: SUPER_ADMIN_ADMIN },
