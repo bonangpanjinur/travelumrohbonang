@@ -1096,14 +1096,29 @@ router.post("/:id/pilgrims", async (req, res) => {
       return;
     }
 
-    // Verify booking exists
+    // Verify booking exists + fetch scope fields
     const [booking] = await db
-      .select({ id: bookings.id, departureId: bookings.departureId, paxCount: bookings.paxCount })
+      .select({
+        id: bookings.id,
+        departureId: bookings.departureId,
+        paxCount: bookings.paxCount,
+        branchId: bookings.branchId,
+        agentId: bookings.agentId,
+        picType: bookings.picType,
+        picId: bookings.picId,
+      })
       .from(bookings)
       .where(eq(bookings.id, id))
       .limit(1);
     if (!booking) {
       res.status(404).json({ error: "Booking tidak ditemukan" });
+      return;
+    }
+
+    // B-1: Guard — only allow adding pilgrim to a booking within scope
+    const scope = await resolveUserScope(req);
+    if (!isBookingInScope(booking, scope)) {
+      res.status(403).json({ error: scopeDeniedMessage(scope) });
       return;
     }
 

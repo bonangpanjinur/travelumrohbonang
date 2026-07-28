@@ -210,9 +210,10 @@ Query dieksekusi dengan scope filter
 ### SPRINT B — Cascade ke Jemaah & Pembayaran
 **Estimasi:** 2–3 hari kerja
 
-#### B-1: Scope `booking_pilgrims` (Jemaah per Booking)
-- `GET /api/admin/bookings` (pilgrims sub-route) → filter via booking scope
-- `GET /api/admin/bookings/:id/pilgrims` → guard via booking ownership
+#### B-1: ✅ Scope `booking_pilgrims` (Jemaah per Booking) — SELESAI 28 Jul 2026
+- `GET /api/admin/bookings` list — `pilgrimsCount` & `firstJamaahName` subqueries terikat ke `b.id` yang sudah scope-filtered → implicitly scoped ✅
+- `GET /api/admin/bookings/:id` detail — pilgrims di-fetch setelah `isBookingInScope` guard → already guarded ✅
+- `POST /api/admin/bookings/:id/pilgrims` — scope guard ditambahkan: fetch `branchId/agentId/picType/picId`, call `isBookingInScope` → 403 jika di luar scope ✅
 
 #### B-2: Scope pembayaran
 - `GET /api/admin/bookings/:id/payments` → guard booking ownership
