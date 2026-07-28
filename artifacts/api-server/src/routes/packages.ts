@@ -15,13 +15,43 @@ import {
   profiles,
   itineraries,
   itineraryDays,
+  bookings,
   eq,
   and,
+  ne,
   asc,
   desc,
   sql,
   inArray,
 } from "@workspace/db";
+
+/**
+ * Fetch real-time filled counts from non-cancelled bookings for a list of departure IDs.
+ * Returns a Map<departureId, filledCount>.
+ * Use this instead of the stored remainingQuota column which can become stale.
+ */
+async function getRealRemainingMap(
+  depIds: string[],
+  quotaByDep: Map<string, number>,
+): Promise<Map<string, number>> {
+  if (!depIds.length) return new Map();
+  const counts = await db
+    .select({
+      departureId: bookings.departureId,
+      filled: sql<number>`COALESCE(SUM(${bookings.paxCount}), 0)::int`,
+    })
+    .from(bookings)
+    .where(and(inArray(bookings.departureId, depIds), ne(bookings.status, "cancelled")))
+    .groupBy(bookings.departureId);
+  const filledMap = new Map(counts.map((r) => [r.departureId!, Number(r.filled)]));
+  const result = new Map<string, number>();
+  for (const id of depIds) {
+    const quota = quotaByDep.get(id) ?? 0;
+    const filled = filledMap.get(id) ?? 0;
+    result.set(id, Math.max(0, quota - filled));
+  }
+  return result;
+}
 import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SERVER_KEY } from "../lib/supabaseEnv";
 import { shouldUseSupabaseHttp } from "../lib/dbFlags";
 
@@ -149,7 +179,23 @@ router.get("/", async (req: Request, res: Response) => {
         rows = await supabaseGet(`packages?${filters.join("&")}`);
       }
 
-      const data = rows.map(mapPkgRow);
+      // Post-process: recalculate remaining_quota from real bookings (Supabase REST column is stale).
+      const mappedRows = rows.map(mapPkgRow);
+      const allDepIds = mappedRows.flatMap((p: any) => (p.departures ?? []).map((d: any) => d.id));
+      const allQuotaMap = new Map<string, number>();
+      for (const p of mappedRows) {
+        for (const d of (p.departures ?? [])) {
+          allQuotaMap.set(d.id, d.quota ?? 0);
+        }
+      }
+      const realMap = await getRealRemainingMap(allDepIds, allQuotaMap);
+      const data = mappedRows.map((p: any) => ({
+        ...p,
+        departures: (p.departures ?? []).map((d: any) => ({
+          ...d,
+          remaining_quota: realMap.has(d.id) ? realMap.get(d.id) : d.remaining_quota,
+        })),
+      }));
       res.json({ data, total: data.length });
       return;
     }
@@ -182,6 +228,10 @@ router.get("/", async (req: Request, res: Response) => {
       ? await db.select().from(departurePrices)
       : [];
 
+    // Real-time quota recalculation for all departures.
+    const quotaByDep = new Map(allDeps.map((d) => [d.id, d.quota ?? 0]));
+    const realRemainingMap = await getRealRemainingMap(depIds, quotaByDep);
+
     const pricesByDep = allPrices.reduce<Record<string, typeof allPrices>>((acc, p) => {
       if (!p.departureId) return acc;
       if (!acc[p.departureId]) acc[p.departureId] = [];
@@ -211,7 +261,7 @@ router.get("/", async (req: Request, res: Response) => {
           id: d.id,
           departure_date: d.departureDate,
           return_date: d.returnDate,
-          remaining_quota: d.remainingQuota,
+          remaining_quota: realRemainingMap.get(d.id) ?? Math.max(0, (d.quota ?? 0)),
           quota: d.quota,
           status: d.status,
           hotel_makkah_id: d.hotelMakkahId ?? null,
@@ -454,12 +504,16 @@ router.get("/jadwal", async (req, res) => {
       }
     }
 
+    // Real-time quota recalculation — stale DB column is unreliable.
+    const quotaByDep = new Map(rows.map((r) => [r.id, r.quota ?? 0]));
+    const realRemainingMap = await getRealRemainingMap(depIds, quotaByDep);
+
     const data = rows.map((r) => ({
       id: r.id,
       departureDate: r.departureDate,
       returnDate: r.returnDate,
       quota: r.quota,
-      remainingQuota: r.remainingQuota,
+      remainingQuota: realRemainingMap.get(r.id) ?? Math.max(0, (r.quota ?? 0) - 0),
       status: r.status,
       package: {
         id: r.packageId,
@@ -498,7 +552,16 @@ router.get("/:slug", async (req: Request, res: Response) => {
         res.status(404).json({ error: "Package not found" });
         return;
       }
-      res.json(mapPkgRow(row));
+      // Post-process: recalculate remaining_quota from real bookings.
+      const mapped = mapPkgRow(row);
+      const slugDepIds = (mapped.departures ?? []).map((d: any) => d.id);
+      const slugQuotaMap = new Map<string, number>((mapped.departures ?? []).map((d: any) => [d.id, d.quota ?? 0]));
+      const slugRealMap = await getRealRemainingMap(slugDepIds, slugQuotaMap);
+      mapped.departures = (mapped.departures ?? []).map((d: any) => ({
+        ...d,
+        remaining_quota: slugRealMap.has(d.id) ? slugRealMap.get(d.id) : d.remaining_quota,
+      }));
+      res.json(mapped);
       return;
     }
 
@@ -519,16 +582,19 @@ router.get("/:slug", async (req: Request, res: Response) => {
       pkg.categoryId ? db.select().from(packageCategories).where(eq(packageCategories.id, pkg.categoryId)).limit(1) : Promise.resolve([]),
     ]);
 
-    // Fetch per-departure data: prices, hotels, extra hotels
-    const [allPrices, allHotels, allAirlines, allExtraHotels] = await Promise.all([
+    // Fetch per-departure data: prices, hotels, extra hotels + real-time quota
+    const slugDepIds = deps.map((d) => d.id);
+    const slugQuotaMap = new Map(deps.map((d) => [d.id, d.quota ?? 0]));
+    const [allPrices, allHotels, allAirlines, allExtraHotels, slugRealMap] = await Promise.all([
       deps.length
-        ? db.select().from(departurePrices).where(inArray(departurePrices.departureId, deps.map((d) => d.id)))
+        ? db.select().from(departurePrices).where(inArray(departurePrices.departureId, slugDepIds))
         : Promise.resolve([]),
       db.select().from(hotels),
       db.select().from(airlines),
       deps.length
-        ? db.select().from(departureHotels).where(inArray(departureHotels.departureId, deps.map((d) => d.id))).orderBy(asc(departureHotels.sortOrder))
+        ? db.select().from(departureHotels).where(inArray(departureHotels.departureId, slugDepIds)).orderBy(asc(departureHotels.sortOrder))
         : Promise.resolve([]),
+      getRealRemainingMap(slugDepIds, slugQuotaMap),
     ]);
 
     const hotelMap = Object.fromEntries(allHotels.map((h) => [h.id, h]));
@@ -560,7 +626,7 @@ router.get("/:slug", async (req: Request, res: Response) => {
         departure_date: dep.departureDate,
         return_date: dep.returnDate,
         quota: dep.quota,
-        remaining_quota: dep.remainingQuota,
+        remaining_quota: slugRealMap.get(dep.id) ?? Math.max(0, dep.quota ?? 0),
         status: dep.status,
         muthawif_id: dep.muthawifId,
         hotel_makkah_id: dep.hotelMakkahId ?? null,
