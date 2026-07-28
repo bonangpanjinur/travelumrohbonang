@@ -30,7 +30,12 @@ interface Package { id: string; title: string }
 interface Muthawif { id: string; name: string }
 interface Airline { id: string; name: string; code: string | null }
 interface Airport { id: string; name: string; code: string | null; city: string | null }
-interface HotelOption { id: string; name: string; city: string | null }
+interface HotelOption { id: string; name: string; city: string | null; stars: number | null }
+
+function HotelStars({ stars }: { stars: number | null }) {
+  if (!stars) return null;
+  return <span className="text-yellow-500 text-xs ml-1">{"★".repeat(stars)}</span>;
+}
 interface DeparturePrice { id: string; roomType: string; price: number }
 interface ExtraHotel {
   id?: string;
@@ -230,9 +235,10 @@ const AdminDepartures = () => {
       setAirlines(airlinesRes.data || []);
       setAirports(airportsRes.data || []);
       setHotels((hotelsRes.data || []).map((h: any) => ({
-        id: h.id ?? h.id,
+        id: h.id,
         name: h.name,
         city: h.city ?? null,
+        stars: h.stars ?? null,
       })));
     } catch (err: any) {
       toast({ title: "Gagal memuat data keberangkatan", description: err?.message ?? "Periksa koneksi atau coba lagi.", variant: "destructive" });
@@ -551,7 +557,9 @@ const AdminDepartures = () => {
                           <SelectContent>
                             <SelectItem value="__none__">— Tidak Ada —</SelectItem>
                             {makkahHotels.map(h => (
-                              <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
+                              <SelectItem key={h.id} value={h.id}>
+                                <span className="flex items-center gap-1">{h.name}<HotelStars stars={h.stars} /></span>
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -563,7 +571,9 @@ const AdminDepartures = () => {
                           <SelectContent>
                             <SelectItem value="__none__">— Tidak Ada —</SelectItem>
                             {madinahHotels.map(h => (
-                              <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
+                              <SelectItem key={h.id} value={h.id}>
+                                <span className="flex items-center gap-1">{h.name}<HotelStars stars={h.stars} /></span>
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
