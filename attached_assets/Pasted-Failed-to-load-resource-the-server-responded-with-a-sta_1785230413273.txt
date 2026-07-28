@@ -1,0 +1,80 @@
+Failed to load resource: the server responded with a status of 401 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/conversations?status=open&limit=50:1  Failed to load resource: the server responded with a status of 500 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+yakjpqqobknrmhfmybhe.supabase.co/rest/v1/:1  Failed to load resource: the server responded with a status of 401 ()
+/api/admin/bookings/stats:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?status=all&paymentStatus=all&search=&branchId=__all__&packageId=__all__&limit=20&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+index-Tzf3RLgZ.js:441 Error: Failed query: 
+        SELECT
+          b.id,
+          b.booking_code        AS "bookingCode",
+          b.user_id             AS "userId",
+          b.package_id          AS "packageId",
+          b.departure_id        AS "departureId",
+          b.branch_id           AS "branchId",
+          b.status,
+          b.total_price         AS "totalPrice",
+          b.currency,
+          b.payment_scheme      AS "paymentScheme",
+          b.notes,
+          b.created_at          AS "createdAt",
+          b.pic_type            AS "picType",
+          b.pic_id              AS "picId",
+          COALESCE(b.is_group_booking, false) AS "isGroupBooking",
+          b.group_name          AS "groupName",
+          COALESCE(b.pic_name,
+            CASE b.pic_type
+              WHEN 'agen'     THEN (SELECT a.name  FROM agents   a  WHERE a.id  = b.pic_id LIMIT 1)
+              WHEN 'cabang'   THEN (SELECT br2.name FROM branches br2 WHERE br2.id = b.pic_id LIMIT 1)
+              WHEN 'karyawan' THEN (SELECT p2.name FROM profiles p2 WHERE p2.id  = b.pic_id LIMIT 1)
+              ELSE NULL
+            END
+          )                     AS "picName",
+          b.pic_phone           AS "picPhone",
+          b.pic_email           AS "picEmail",
+          COALESCE(b.pemesan_name, b.pic_name, prof.name) AS "pemesanName",
+          COALESCE(b.pemesan_phone, b.pic_phone, prof.phone) AS "pemesanPhone",
+          b.pemesan_email       AS "pemesanEmail",
+          pkg.title             AS "packageTitle",
+          pkg.slug              AS "packageSlug",
+          dep.departure_date    AS "departureDate",
+          prof.name             AS "userName",
+          prof.email            AS "userEmail",
+          br.name               AS "branchName",
+          (SELECT COUNT(*)::int FROM booking_pilgrims bp WHERE bp.booking_id = b.id) AS "pilgrimsCount",
+          (SELECT bp.name FROM booking_pilgrims bp WHERE bp.booking_id = b.id ORDER BY bp.created_at LIMIT 1) AS "firstJamaahName",
+          (SELECT CASE
+            WHEN b.total_price > 0 AND COALESCE(SUM(pt.amount), 0) >= b.total_price THEN 'paid'
+            WHEN COALESCE(SUM(pt.amount), 0) > 0 THEN 'partial'
+            ELSE 'unpaid' END
+           FROM booking_payments pt WHERE pt.booking_id = b.id AND pt.is_voided = false
+          ) AS "paymentStatus"
+        FROM bookings b
+        LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
+        LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
+        LEFT JOIN profiles           prof ON prof.id = b.user_id
+        LEFT JOIN branches           br   ON br.id   = b.branch_id
+        
+        ORDER BY b.created_at DESC
+        LIMIT $1
+        OFFSET $2
+      
+params: 20,0 — Error tidak terklasifikasi. Lihat 'detail' + Vercel function log. Buka /api/health/detail untuk cek env & konektivitas.
+    at be (index-Tzf3RLgZ.js:39:76127)
+    at async at (index-Tzf3RLgZ.js:441:139251)
+at @ index-Tzf3RLgZ.js:441
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?limit=20:1  Failed to load resource: the server responded with a status of 500 ()
+/api/admin/bookings?status=all&paymentStatus=all&search=&branchId=__all__&packageId=__all__&limit=20&offset=0:1  Failed to load resource: the server responded with a status of 500 ()
+index-Tzf3RLgZ.js:441 Error: Failed query: 
+        SELECT
+          b.id,
+          b.booking_code        AS...
