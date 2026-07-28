@@ -210,7 +210,7 @@ router.get("/piutang", async (req: Request, res: Response) => {
           ELSE EXTRACT(DAY FROM (dep.departure_date::timestamp - NOW()))::int
         END AS days_to_departure
       FROM bookings b
-      LEFT JOIN profiles            p   ON p.id::text = b.user_id
+      LEFT JOIN profiles            p   ON p.id = b.user_id::uuid
       LEFT JOIN packages            pkg ON pkg.id = b.package_id
       LEFT JOIN package_departures  dep ON dep.id = b.departure_id
       LEFT JOIN (

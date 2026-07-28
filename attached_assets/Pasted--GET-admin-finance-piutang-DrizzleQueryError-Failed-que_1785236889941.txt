@@ -1,0 +1,102 @@
+[GET /admin/finance/piutang] _DrizzleQueryError: Failed query: 
+      SELECT
+        b.id,
+        b.booking_code,
+        b.total_price,
+        b.status,
+        b.created_at,
+        b.package_id,
+        b.departure_id,
+        (SELECT bp.name FROM booking_pilgrims bp WHERE bp.booking_id = b.id ORDER BY bp.created_at LIMIT 1) AS first_jamaah_name,
+        COALESCE(b.pemesan_name, b.pic_name, p.name) AS pemesan_name,
+        COALESCE(b.pemesan_phone, b.pic_phone, p.phone) AS customer_phone,
+        COALESCE(b.pemesan_email, p.email)              AS customer_email,
+        pkg.title     AS package_title,
+        dep.departure_date,
+        COALESCE(paid.total_paid, 0)                          AS total_paid,
+        b.total_price - COALESCE(paid.total_paid, 0)          AS outstanding,
+        CASE
+          WHEN dep.departure_date IS NULL THEN NULL
+          ELSE EXTRACT(DAY FROM (dep.departure_date::timestamp - NOW()))::int
+        END AS days_to_departure
+      FROM bookings b
+      LEFT JOIN profiles            p   ON p.id::text = b.user_id
+      LEFT JOIN packages            pkg ON pkg.id = b.package_id
+      LEFT JOIN package_departures  dep ON dep.id = b.departure_id
+      LEFT JOIN (
+        SELECT booking_id, SUM(amount) AS total_paid
+        FROM booking_payments WHERE is_voided = false
+        GROUP BY booking_id
+      ) paid ON paid.booking_id = b.id
+      WHERE b.status NOT IN ('cancelled', 'draft')
+        AND COALESCE(paid.total_paid, 0) < b.total_price
+        
+        
+      ORDER BY dep.departure_date::timestamp ASC NULLS LAST, b.created_at DESC
+    
+params: 
+    at NodePgPreparedQuery.queryWithCache (file:///var/task/artifacts/api-server/dist/vercel.mjs:41867:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async file:///var/task/artifacts/api-server/dist/vercel.mjs:441004:18 {
+  query: '\n' +
+    '      SELECT\n' +
+    '        b.id,\n' +
+    '        b.booking_code,\n' +
+    '        b.total_price,\n' +
+    '        b.status,\n' +
+    '        b.created_at,\n' +
+    '        b.package_id,\n' +
+    '        b.departure_id,\n' +
+    '        (SELECT bp.name FROM booking_pilgrims bp WHERE bp.booking_id = b.id ORDER BY bp.created_at LIMIT 1) AS first_jamaah_name,\n' +
+    '        COALESCE(b.pemesan_name, b.pic_name, p.name) AS pemesan_name,\n' +
+    '        COALESCE(b.pemesan_phone, b.pic_phone, p.phone) AS customer_phone,\n' +
+    '        COALESCE(b.pemesan_email, p.email)              AS customer_email,\n' +
+    '        pkg.title     AS package_title,\n' +
+    '        dep.departure_date,\n' +
+    '        COALESCE(paid.total_paid, 0)                          AS total_paid,\n' +
+    '        b.total_price - COALESCE(paid.total_paid, 0)          AS outstanding,\n' +
+    '        CASE\n' +
+    '          WHEN dep.departure_date IS NULL THEN NULL\n' +
+    '          ELSE EXTRACT(DAY FROM (dep.departure_date::timestamp - NOW()))::int\n' +
+    '        END AS days_to_departure\n' +
+    '      FROM bookings b\n' +
+    '      LEFT JOIN profiles            p   ON p.id::text = b.user_id\n' +
+    '      LEFT JOIN packages            pkg ON pkg.id = b.package_id\n' +
+    '      LEFT JOIN package_departures  dep ON dep.id = b.departure_id\n' +
+    '      LEFT JOIN (\n' +
+    '        SELECT booking_id, SUM(amount) AS total_paid\n' +
+    '        FROM booking_payments WHERE is_voided = false\n' +
+    '        GROUP BY booking_id\n' +
+    '      ) paid ON paid.booking_id = b.id\n' +
+    "      WHERE b.status NOT IN ('cancelled', 'draft')\n" +
+    '        AND COALESCE(paid.total_paid, 0) < b.total_price\n' +
+    '        \n' +
+    '        \n' +
+    '      ORDER BY dep.departure_date::timestamp ASC NULLS LAST, b.created_at DESC\n' +
+    '    ',
+  params: [],
+  cause: error: operator does not exist: text = uuid
+      at file:///var/task/artifacts/api-server/dist/vercel.mjs:33091:15
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///var/task/artifacts/api-server/dist/vercel.mjs:42150:24
+      at async NodePgPreparedQuery.queryWithCache (file:///var/task/artifacts/api-server/dist/vercel.mjs:41865:20)
+      at async file:///var/task/artifacts/api-server/dist/vercel.mjs:441004:18 {
+    length: 197,
+    severity: 'ERROR',
+    code: '42883',
+    detail: undefined,
+    hint: 'No operator matches the given name and argument types. You might need to add explicit type casts.',
+    position: '987',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_oper.c',
+    line: '635',
+    routine: 'op_error'
+  }
+}
