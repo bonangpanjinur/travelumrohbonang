@@ -219,7 +219,7 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
 
   useEffect(() => {
     if (!packageId) { setDepartures([]); setDepartureId(""); return; }
-    apiFetch<{ data: any[] }>(`/api/admin/packages/${packageId}/departures?minQuota=1`)
+    apiFetch<{ data: any[] }>(`/api/admin/packages/${packageId}/departures`)
       .then(({ data }) => setDepartures(data || []))
       .catch(() => setDepartures([]));
   }, [packageId]);
@@ -414,44 +414,57 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {departures.map((dep) => (
-                      <button
-                        key={dep.id}
-                        type="button"
-                        onClick={() => setDepartureId(dep.id)}
-                        className={`w-full text-left p-3 rounded-lg border transition-all ${
-                          departureId === dep.id
-                            ? "border-primary bg-primary/5 ring-1 ring-primary"
-                            : "border-border hover:border-primary/50 hover:bg-muted/50"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-muted-foreground" />
-                            <span className="font-medium text-sm">
-                              {safeFormatDate(dep.departureDate, "d MMMM yyyy", { locale: localeId, fallback: "Tanggal tidak tersedia" })}
-                              {dep.returnDate && ` — ${safeFormatDate(dep.returnDate, "d MMMM yyyy", { locale: localeId, fallback: "Tanggal tidak tersedia" })}`}
-                            </span>
+                    {departures.map((dep) => {
+                      const isFull = dep.remainingQuota <= 0;
+                      const isSelected = departureId === dep.id;
+                      return (
+                        <button
+                          key={dep.id}
+                          type="button"
+                          onClick={() => !isFull && setDepartureId(dep.id)}
+                          disabled={isFull}
+                          className={`w-full text-left p-3 rounded-lg border transition-all ${
+                            isFull
+                              ? "border-border bg-muted/40 opacity-60 cursor-not-allowed"
+                              : isSelected
+                              ? "border-primary bg-primary/5 ring-1 ring-primary"
+                              : "border-border hover:border-primary/50 hover:bg-muted/50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Calendar className={`w-4 h-4 ${isFull ? "text-muted-foreground/50" : "text-muted-foreground"}`} />
+                              <span className={`font-medium text-sm ${isFull ? "text-muted-foreground" : ""}`}>
+                                {safeFormatDate(dep.departureDate, "d MMMM yyyy", { locale: localeId, fallback: "Tanggal tidak tersedia" })}
+                                {dep.returnDate && ` — ${safeFormatDate(dep.returnDate, "d MMMM yyyy", { locale: localeId, fallback: "Tanggal tidak tersedia" })}`}
+                              </span>
+                            </div>
+                            {isFull ? (
+                              <Badge variant="destructive" className="text-xs">
+                                Penuh ({dep.quota}/{dep.quota})
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant={dep.remainingQuota <= 5 ? "destructive" : "secondary"}
+                                className="text-xs"
+                              >
+                                Sisa {dep.remainingQuota}/{dep.quota} kursi
+                              </Badge>
+                            )}
                           </div>
-                          <Badge
-                            variant={dep.remainingQuota <= 5 ? "destructive" : "secondary"}
-                            className="text-xs"
-                          >
-                            Sisa {dep.remainingQuota}/{dep.quota} kursi
-                          </Badge>
-                        </div>
-                        <div className="mt-1.5 flex flex-wrap gap-2 pl-6">
-                          {dep.prices.filter((p) => p.price > 0).map((p) => (
-                            <span key={p.roomType} className="text-xs text-muted-foreground">
-                              {ROOM_LABELS[p.roomType] ?? p.roomType}: Rp {p.price.toLocaleString("id-ID")}
-                            </span>
-                          ))}
-                          {dep.prices.every((p) => p.price <= 0) && (
-                            <span className="text-xs text-amber-600 italic">Harga belum diatur</span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                          <div className="mt-1.5 flex flex-wrap gap-2 pl-6">
+                            {dep.prices.filter((p) => p.price > 0).map((p) => (
+                              <span key={p.roomType} className={`text-xs ${isFull ? "text-muted-foreground/50" : "text-muted-foreground"}`}>
+                                {ROOM_LABELS[p.roomType] ?? p.roomType}: Rp {p.price.toLocaleString("id-ID")}
+                              </span>
+                            ))}
+                            {dep.prices.every((p) => p.price <= 0) && (
+                              <span className="text-xs text-amber-600 italic">Harga belum diatur</span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
