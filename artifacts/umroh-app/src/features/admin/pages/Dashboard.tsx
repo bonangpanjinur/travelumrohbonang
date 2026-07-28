@@ -44,6 +44,7 @@ interface DashboardStats {
   totalBranches: number;
   totalMuthawifs: number;
   totalRevenue: number;
+  totalOutstanding: number;
   monthlyTrend: MonthlyTrend[];
 }
 
@@ -77,6 +78,7 @@ const AdminDashboard = () => {
     totalBranches: 0,
     totalMuthawifs: 0,
     totalRevenue: 0,
+    totalOutstanding: 0,
   });
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([]);
   const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrend[]>([]);
@@ -296,7 +298,7 @@ const AdminDashboard = () => {
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Total Booking" value={stats.totalBookings} icon={ShoppingBag} color="bg-blue-500" loading={loading} />
-        <StatCard title="Menunggu Pembayaran" value={stats.pendingPayments} icon={CreditCard} color="bg-orange-500" alert={stats.pendingPayments > 0} loading={loading} />
+        <StatCard title="Belum Lunas" value={stats.pendingPayments} icon={CreditCard} color="bg-orange-500" alert={stats.pendingPayments > 0} loading={loading} />
         <StatCard title="Total Agen" value={stats.totalAgents} icon={Users} color="bg-purple-500" loading={loading} />
         <StatCard title="Paket Aktif" value={stats.activePackages} icon={CalendarCheck} color="bg-green-500" loading={loading} />
       </div>
@@ -314,6 +316,26 @@ const AdminDashboard = () => {
           isCurrency
         />
       </div>
+
+      {/* Piutang highlight — only show when there is outstanding debt */}
+      {!loading && stats.totalOutstanding > 0 && (
+        <div className="rounded-lg border border-orange-200 bg-orange-50 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <CreditCard className="w-5 h-5 text-orange-500 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-orange-800">
+                Total Piutang Aktif: <span className="text-orange-600">Rp {stats.totalOutstanding.toLocaleString("id-ID")}</span>
+              </p>
+              <p className="text-xs text-orange-600 mt-0.5">
+                {stats.pendingPayments} booking masih memiliki sisa tagihan yang belum dibayar
+              </p>
+            </div>
+          </div>
+          <a href="/admin/keuangan/piutang" className="text-xs font-medium text-orange-700 hover:underline shrink-0">
+            Lihat Detail Piutang →
+          </a>
+        </div>
+      )}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">

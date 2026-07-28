@@ -268,19 +268,50 @@ router.get("/dashboard-stats", async (req, res) => {
     const [countsRow, revenueRow, trendRows] = await Promise.all([
       db.execute(sql`
         select
-          (select count(*)::int from bookings b where ${scopeCond})                                           as total_bookings,
-          (select count(*)::int from bookings b where b.status IN ('pending', 'waiting_payment') and ${scopeCond}) as pending_payments,
-          (select count(*)::int from agents where is_active = true)                                           as total_agents,
-          (select count(*)::int from packages where is_active = true)                                         as active_packages,
-          (select count(*)::int from booking_pilgrims bp join bookings b on b.id = bp.booking_id where ${scopeCond}) as total_pilgrims,
-          (select count(*)::int from branches where is_active = true)                                         as total_branches,
-          (select count(*)::int from muthawifs)                                                               as total_muthawifs
+          (select count(*)::int from bookings b where ${scopeCond})
+            as total_bookings,
+          -- Booking yang masih punya sisa tagihan (total_price > yang sudah dibayar)
+          (select count(*)::int
+           from bookings b
+           where b.status NOT IN ('cancelled', 'draft')
+             and ${scopeCond}
+             and b.total_price > coalesce(
+               (select sum(bp.amount) from booking_payments bp
+                where bp.booking_id = b.id and bp.is_voided = false), 0
+             )
+          ) as pending_payments,
+          (select count(*)::int from agents where is_active = true)
+            as total_agents,
+          (select count(*)::int from packages where is_active = true)
+            as active_packages,
+          (select count(*)::int from booking_pilgrims bp join bookings b on b.id = bp.booking_id where ${scopeCond})
+            as total_pilgrims,
+          (select count(*)::int from branches where is_active = true)
+            as total_branches,
+          (select count(*)::int from muthawifs)
+            as total_muthawifs,
+          -- Total piutang: sisa tagihan yang belum terbayar di semua booking aktif
+          (select coalesce(sum(
+               b.total_price - coalesce(
+                 (select sum(bp.amount) from booking_payments bp
+                  where bp.booking_id = b.id and bp.is_voided = false), 0
+               )
+             ), 0)::bigint
+           from bookings b
+           where b.status NOT IN ('cancelled', 'draft')
+             and ${scopeCond}
+             and b.total_price > coalesce(
+               (select sum(bp.amount) from booking_payments bp
+                where bp.booking_id = b.id and bp.is_voided = false), 0
+             )
+          ) as total_outstanding
       `),
+      // Revenue = semua booking_payments yang tidak di-void (ledger utama)
       db.execute(sql`
-        select coalesce(sum(pay.amount), 0)::bigint as total_revenue
-        from payments pay
-        join bookings b on b.id = pay.booking_id
-        where pay.status = 'verified' and ${scopeCond}
+        select coalesce(sum(bp.amount), 0)::bigint as total_revenue
+        from booking_payments bp
+        join bookings b on b.id = bp.booking_id
+        where bp.is_voided = false and ${scopeCond}
       `),
       db.execute(sql`
         select
@@ -313,6 +344,7 @@ router.get("/dashboard-stats", async (req, res) => {
       totalBranches: Number(c.total_branches ?? 0),
       totalMuthawifs: Number(c.total_muthawifs ?? 0),
       totalRevenue: Number(r.total_revenue ?? 0),
+      totalOutstanding: Number(c.total_outstanding ?? 0),
       monthlyTrend: (trendRows.rows as { month: string; count: number }[]).map((row) => ({
         month: row.month,
         count: Number(row.count ?? 0),
