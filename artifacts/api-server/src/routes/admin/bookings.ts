@@ -37,6 +37,8 @@ import { validate } from "../../middlewares/validate";
 import { sendAdminError } from "../../lib/adminApiError";
 import { awardLoyaltyPointsForBooking } from "../../lib/loyalty";
 import { requireSuperAdmin, requireStaff } from "../../middlewares/requireAdmin";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import { buildBookingScopeCondition, isBookingInScope, scopeDeniedMessage } from "../../lib/scopeConditions";
 
 const router = Router();
 
@@ -59,10 +61,11 @@ router.get("/export.xlsx", async (req, res) => {
   try {
     const { status, search, branchId, packageId: exportPackageId, startDate, endDate } = req.query;
 
-    const conditions: ReturnType<typeof sql>[] = [];
+    const scope = await resolveUserScope(req);
+    const conditions: ReturnType<typeof sql>[] = [buildBookingScopeCondition(scope)];
     if (status && typeof status === "string" && status !== "all") conditions.push(sql`b.status = ${status}`);
     if (search && typeof search === "string") conditions.push(sql`b.booking_code ILIKE ${"%" + search + "%"}`);
-    if (branchId && typeof branchId === "string" && branchId !== "__all__") {
+    if (scope.type === "global" && branchId && typeof branchId === "string" && branchId !== "__all__") {
       if (branchId === "__none__") conditions.push(sql`b.branch_id IS NULL`);
       else conditions.push(sql`b.branch_id = ${branchId}`);
     }
@@ -72,7 +75,7 @@ router.get("/export.xlsx", async (req, res) => {
     if (startDate && typeof startDate === "string") conditions.push(sql`dep.departure_date >= ${startDate}`);
     if (endDate && typeof endDate === "string") conditions.push(sql`dep.departure_date <= ${endDate}`);
 
-    const whereClause = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
+    const whereClause = sql`WHERE ${sql.join(conditions, sql` AND `)}`;
 
     const dataResult = await db.execute(sql`
       SELECT
@@ -120,8 +123,12 @@ router.get("/", async (req, res) => {
   try {
     const { status, paymentStatus, userId, search, branchId, packageId, departureId: departureIdFilter, limit, offset, startDate, endDate } = req.query;
 
+    // ── Data isolation: resolve scope for this user ──────────────────────────
+    const scope = await resolveUserScope(req);
+    const scopeCondition = buildBookingScopeCondition(scope);
+
     // Build WHERE conditions with Drizzle sql template (parameterised, injection-safe)
-    const conditions: ReturnType<typeof sql>[] = [];
+    const conditions: ReturnType<typeof sql>[] = [scopeCondition];
 
     if (status && typeof status === "string" && status !== "all") {
       conditions.push(sql`b.status = ${status}`);
@@ -151,7 +158,9 @@ router.get("/", async (req, res) => {
         OR b.group_name ILIKE ${term}
       )`);
     }
-    if (branchId && typeof branchId === "string") {
+    // branchId filter from client is only honoured for global-scope users.
+    // Branch-scoped and agent-scoped users are already restricted by scopeCondition above.
+    if (scope.type === "global" && branchId && typeof branchId === "string") {
       if (branchId === "__none__") {
         conditions.push(sql`b.branch_id IS NULL`);
       } else if (branchId !== "__all__") {
@@ -171,9 +180,7 @@ router.get("/", async (req, res) => {
       conditions.push(sql`dep.departure_date <= ${endDate}`);
     }
 
-    const whereClause = conditions.length > 0
-      ? sql`WHERE ${sql.join(conditions, sql` AND `)}`
-      : sql``;
+    const whereClause = sql`WHERE ${sql.join(conditions, sql` AND `)}`;
 
     // Raw SQL — avoids referencing columns that may not yet exist in the DB
     // (e.g. is_group_booking / group_name added by a later migration).
@@ -276,6 +283,8 @@ router.get("/recent", async (req, res) => {
  */
 router.get("/stats", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    const scopeCond = buildBookingScopeCondition(scope);
     const result = await db.execute(sql`
       SELECT
         COUNT(*)::int
@@ -303,6 +312,7 @@ router.get("/stats", async (req, res) => {
             ))
           AS departing_soon
       FROM bookings b
+      WHERE ${scopeCond}
     `);
     const row = (result.rows?.[0] ?? {}) as Record<string, unknown>;
     res.json({
@@ -359,6 +369,13 @@ router.get("/:id", async (req, res) => {
 
     if (!booking) {
       res.status(404).json({ error: "Booking not found" });
+      return;
+    }
+
+    // ── Data isolation: verify this booking is within the user's scope ───────
+    const scope = await resolveUserScope(req);
+    if (!isBookingInScope({ branchId: booking.branchId, agentId: (booking as any).agentId ?? null, picType: booking.picType, picId: booking.picId }, scope)) {
+      res.status(403).json({ error: scopeDeniedMessage(scope) });
       return;
     }
 
