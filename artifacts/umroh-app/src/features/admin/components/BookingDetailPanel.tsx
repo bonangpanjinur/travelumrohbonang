@@ -220,6 +220,11 @@ const BookingDetailPanel = ({
   const [uploadingProof, setUploadingProof] = useState(false);
   const proofInputRef = useRef<HTMLInputElement>(null);
 
+  // Edit payment
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [editPaymentForm, setEditPaymentForm] = useState<NewPaymentForm>(emptyNewPayment());
+  const [savingEditPayment, setSavingEditPayment] = useState(false);
+
   // BKG-F03: Notes
   const [notes, setNotes] = useState<string>("");
   const [editingNotes, setEditingNotes] = useState(false);
@@ -542,6 +547,46 @@ const BookingDetailPanel = ({
       toast.error("Gagal menyimpan catatan");
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  // ── Edit pembayaran ───────────────────────────────────────────────────────
+  const openEditPayment = (p: { id: string; type: string; amount: number; paidAt: string | null; method: string | null; notes: string | null }) => {
+    setEditingPaymentId(p.id);
+    setEditPaymentForm({
+      type: p.type,
+      amount: String(p.amount),
+      paidAt: p.paidAt ? p.paidAt.split("T")[0] : new Date().toISOString().split("T")[0],
+      method: p.method ?? "",
+      notes: p.notes ?? "",
+      proofUrl: undefined,
+    });
+  };
+
+  const handleSaveEditPayment = async () => {
+    if (!editingPaymentId) return;
+    const amount = parseInt(editPaymentForm.amount.replace(/\D/g, ""));
+    if (!amount || amount <= 0) { toast.error("Jumlah pembayaran wajib diisi"); return; }
+    setSavingEditPayment(true);
+    try {
+      await apiFetch(`/api/admin/bookings/${bookingId}/payments/${editingPaymentId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          type:            editPaymentForm.type,
+          amount,
+          paidAt:          editPaymentForm.paidAt,
+          method:          editPaymentForm.method  || undefined,
+          notes:           editPaymentForm.notes   || undefined,
+        }),
+      });
+      toast.success("Pembayaran berhasil diubah");
+      setEditingPaymentId(null);
+      fetchDetails();
+      onBookingChange?.();
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal mengubah pembayaran");
+    } finally {
+      setSavingEditPayment(false);
     }
   };
 
@@ -1335,37 +1380,118 @@ const BookingDetailPanel = ({
               {paymentSummary.payments
                 .filter((p) => !p.isVoided)
                 .map((p) => (
-                  <div key={p.id} className="flex items-start justify-between py-2 text-sm group">
-                    <div className="space-y-0.5 flex-1 min-w-0">
-                      <span className="font-medium">
-                        {PAYMENT_TYPE_LABELS[p.type] ?? p.type}
-                      </span>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {p.method && <span>{p.method}</span>}
-                        {p.referenceNumber && <span>#{p.referenceNumber}</span>}
-                        {p.notes && <span className="italic">{p.notes}</span>}
+                  <div key={p.id} className="py-2 text-sm">
+                    {editingPaymentId === p.id ? (
+                      /* ── Inline edit form ── */
+                      <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-background">
+                        <p className="text-xs font-semibold text-primary">Edit Pembayaran</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs">Jenis</Label>
+                            <Select value={editPaymentForm.type} onValueChange={(v) => setEditPaymentForm((f) => ({ ...f, type: v }))}>
+                              <SelectTrigger className="h-7 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(PAYMENT_TYPE_LABELS).map(([v, l]) => (
+                                  <SelectItem key={v} value={v}>{l}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Jumlah (Rp) *</Label>
+                            <Input
+                              value={editPaymentForm.amount}
+                              onChange={(e) => setEditPaymentForm((f) => ({ ...f, amount: e.target.value }))}
+                              placeholder="0"
+                              className="h-7 text-xs mt-0.5"
+                              type="number"
+                              min="0"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Tanggal Bayar *</Label>
+                            <Input
+                              value={editPaymentForm.paidAt}
+                              onChange={(e) => setEditPaymentForm((f) => ({ ...f, paidAt: e.target.value }))}
+                              className="h-7 text-xs mt-0.5"
+                              type="date"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Metode</Label>
+                            <Input
+                              value={editPaymentForm.method}
+                              onChange={(e) => setEditPaymentForm((f) => ({ ...f, method: e.target.value }))}
+                              placeholder="Transfer, Tunai…"
+                              className="h-7 text-xs mt-0.5"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Catatan</Label>
+                          <Input
+                            value={editPaymentForm.notes}
+                            onChange={(e) => setEditPaymentForm((f) => ({ ...f, notes: e.target.value }))}
+                            placeholder="Opsional"
+                            className="h-7 text-xs mt-0.5"
+                          />
+                        </div>
+                        <div className="flex gap-1.5 justify-end pt-1">
+                          <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
+                            onClick={() => setEditingPaymentId(null)} disabled={savingEditPayment}>
+                            <X className="w-3 h-3" /> Batal
+                          </Button>
+                          <Button size="sm" className="h-7 text-xs gap-1 gradient-gold text-primary"
+                            onClick={handleSaveEditPayment} disabled={savingEditPayment}>
+                            {savingEditPayment ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                            Simpan
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-right shrink-0 ml-4 flex items-center gap-2">
-                      <div>
-                        <p className="font-semibold tabular-nums">Rp {p.amount.toLocaleString("id-ID")}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {p.paidAt && !isNaN(new Date(p.paidAt).getTime())
-                            ? new Date(p.paidAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
-                            : "—"}
-                        </p>
+                    ) : (
+                      /* ── Baris normal ── */
+                      <div className="flex items-start justify-between group">
+                        <div className="space-y-0.5 flex-1 min-w-0">
+                          <span className="font-medium">
+                            {PAYMENT_TYPE_LABELS[p.type] ?? p.type}
+                          </span>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {p.method && <span>{p.method}</span>}
+                            {p.referenceNumber && <span>#{p.referenceNumber}</span>}
+                            {p.notes && <span className="italic">{p.notes}</span>}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0 ml-4 flex items-center gap-2">
+                          <div>
+                            <p className="font-semibold tabular-nums">Rp {p.amount.toLocaleString("id-ID")}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {p.paidAt && !isNaN(new Date(p.paidAt).getTime())
+                                ? new Date(p.paidAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                                : "—"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => openEditPayment(p)}
+                              className="text-muted-foreground hover:text-primary shrink-0"
+                              title="Edit pembayaran ini"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleVoidPayment(p.id, p.amount)}
+                              disabled={voidingPaymentId === p.id}
+                              className="text-muted-foreground hover:text-destructive shrink-0"
+                              title="Void / batalkan pembayaran ini"
+                            >
+                              {voidingPaymentId === p.id
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <Ban className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => handleVoidPayment(p.id, p.amount)}
-                        disabled={voidingPaymentId === p.id}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
-                        title="Void / batalkan pembayaran ini"
-                      >
-                        {voidingPaymentId === p.id
-                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          : <Ban className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
+                    )}
                   </div>
                 ))}
             </div>
