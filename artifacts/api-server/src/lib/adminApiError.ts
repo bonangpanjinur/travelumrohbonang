@@ -32,7 +32,13 @@ const DB_UNREACHABLE_CODES = new Set([
 /** Klasifikasi error jadi (machineCode, httpStatus, hint). */
 function classify(err: any): { error: string; status: number; hint: string } {
   const code = err?.code ?? err?.cause?.code ?? null;
+  // DrizzleQueryError stores the SQL in err.message ("Failed query: ...") and
+  // the actual Postgres error in err.cause.message. We must check both so that
+  // text patterns like "column does not exist" are still caught when the pg
+  // error code isn't surfaced directly on the top-level error object.
   const msg = String(err?.message ?? "").toLowerCase();
+  const causeMsg = String(err?.cause?.message ?? "").toLowerCase();
+  const fullMsg = msg + " " + causeMsg;
 
   if (code && DB_UNREACHABLE_CODES.has(String(code))) {
     return {
@@ -44,7 +50,7 @@ function classify(err: any): { error: string; status: number; hint: string } {
     };
   }
 
-  if (msg.includes("password authentication failed") || msg.includes("role \"") && msg.includes("does not exist")) {
+  if (fullMsg.includes("password authentication failed") || fullMsg.includes("role \"") && fullMsg.includes("does not exist")) {
     return {
       error: "db_auth_failed",
       status: 503,
@@ -52,7 +58,7 @@ function classify(err: any): { error: string; status: number; hint: string } {
     };
   }
 
-  if (code === "42P01" || (msg.includes("relation") && msg.includes("does not exist"))) {
+  if (code === "42P01" || (fullMsg.includes("relation") && fullMsg.includes("does not exist"))) {
     return {
       error: "table_missing",
       status: 503,
@@ -62,7 +68,7 @@ function classify(err: any): { error: string; status: number; hint: string } {
     };
   }
 
-  if (code === "42703" || (msg.includes("column") && msg.includes("does not exist"))) {
+  if (code === "42703" || (fullMsg.includes("column") && fullMsg.includes("does not exist"))) {
     return {
       error: "column_missing",
       status: 503,
@@ -72,7 +78,7 @@ function classify(err: any): { error: string; status: number; hint: string } {
     };
   }
 
-  if (code === "PGRST301" || msg.includes("jwt") || msg.includes("unauthorized")) {
+  if (code === "PGRST301" || fullMsg.includes("jwt") || fullMsg.includes("unauthorized")) {
     return {
       error: "supabase_unauthorized",
       status: 401,
