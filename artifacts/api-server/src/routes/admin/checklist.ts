@@ -10,7 +10,7 @@
 
 import { Router } from "express";
 import {
-  db, departureChecklists, packageDepartures,
+  db, departureChecklists, packageDepartures, profiles,
   eq, and, asc, sql,
 } from "@workspace/db";
 import { sendAdminError } from "../../lib/adminApiError";
@@ -51,8 +51,20 @@ router.get("/", async (req, res) => {
     }
 
     const rows = await db
-      .select()
+      .select({
+        id:          departureChecklists.id,
+        departureId: departureChecklists.departureId,
+        hMinus:      departureChecklists.hMinus,
+        category:    departureChecklists.category,
+        item:        departureChecklists.item,
+        isDone:      departureChecklists.isDone,
+        doneBy:      departureChecklists.doneBy,
+        doneByName:  profiles.name,
+        doneAt:      departureChecklists.doneAt,
+        notes:       departureChecklists.notes,
+      })
       .from(departureChecklists)
+      .leftJoin(profiles, eq(profiles.id, departureChecklists.doneBy))
       .where(eq(departureChecklists.departureId, departureId))
       .orderBy(asc(departureChecklists.hMinus), asc(departureChecklists.category));
 

@@ -20,7 +20,7 @@ import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 interface ChecklistItem {
   id: string; departureId: string; hMinus: number;
   category: string | null; item: string; isDone: boolean;
-  doneBy: string | null; doneAt: string | null; notes: string | null;
+  doneBy: string | null; doneByName: string | null; doneAt: string | null; notes: string | null;
 }
 
 interface ChecklistResult {
@@ -208,8 +208,13 @@ export default function DepartureChecklist() {
                               </span>
                             )}
                             {item.isDone && item.doneAt && (
-                              <span className="text-xs text-muted-foreground">
-                                Selesai: {new Date(item.doneAt).toLocaleDateString("id-ID")}
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                ✓{item.doneByName ? ` ${item.doneByName}` : ""}
+                                {" · "}
+                                {new Date(item.doneAt).toLocaleString("id-ID", {
+                                  day: "2-digit", month: "short", year: "numeric",
+                                  hour: "2-digit", minute: "2-digit",
+                                })}
                               </span>
                             )}
                           </div>
