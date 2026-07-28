@@ -91,7 +91,12 @@ router.get("/", requireAuth, async (req, res) => {
       data: rows.rows,
       total: Number((countResult.rows[0] as any)?.total ?? 0),
     });
-  } catch (err) {
+  } catch (err: any) {
+    // If the conversations table hasn't been created yet, return empty list
+    // rather than crashing the dashboard with a 500.
+    if (err?.message?.includes("does not exist") || err?.code === "42P01") {
+      return res.json({ data: [], total: 0 });
+    }
     console.error("[admin/conversations GET]", err);
     return res.status(500).json({ error: "Gagal memuat daftar percakapan" });
   }

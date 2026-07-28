@@ -91,28 +91,32 @@ const AdminDashboard = () => {
   const [targetDialog, setTargetDialog] = useState(false);
   const [targetForm, setTargetForm] = useState<Targets>(targets);
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const [statsResult, recentResult] = await Promise.all([
-          apiFetch<DashboardStats>("/api/admin/analytics/dashboard-stats").catch(() => null),
-          apiFetch<{ data: RecentBooking[] }>("/api/admin/bookings?limit=5").catch(() => ({ data: [] as RecentBooking[] })),
-        ]);
-        if (statsResult) {
-          const { monthlyTrend: trend, ...counts } = statsResult;
-          setStats(counts);
-          setMonthlyTrend(trend ?? []);
-        }
-        setRecentBookings(recentResult.data || []);
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-        toast.error("Gagal memuat statistik dashboard");
-      } finally {
-        setLoading(false);
+  const fetchAll = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true);
+    try {
+      const [statsResult, recentResult] = await Promise.all([
+        apiFetch<DashboardStats>("/api/admin/analytics/dashboard-stats").catch(() => null),
+        apiFetch<{ data: RecentBooking[] }>("/api/admin/bookings?limit=5").catch(() => ({ data: [] as RecentBooking[] })),
+      ]);
+      if (statsResult) {
+        const { monthlyTrend: trend, ...counts } = statsResult;
+        setStats(counts);
+        setMonthlyTrend(trend ?? []);
       }
-    };
-    fetchAll();
+      setRecentBookings(recentResult.data || []);
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchAll(true);
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => fetchAll(false), 30_000);
+    return () => clearInterval(interval);
+  }, [fetchAll]);
 
   const fetchPeriodStats = useCallback(async (p: Period) => {
     setPeriodLoading(true);

@@ -269,7 +269,7 @@ router.get("/dashboard-stats", async (req, res) => {
       db.execute(sql`
         select
           (select count(*)::int from bookings b where ${scopeCond})                                           as total_bookings,
-          (select count(*)::int from bookings b where b.status = 'waiting_payment' and ${scopeCond})          as pending_payments,
+          (select count(*)::int from bookings b where b.status IN ('pending', 'waiting_payment') and ${scopeCond}) as pending_payments,
           (select count(*)::int from agents where is_active = true)                                           as total_agents,
           (select count(*)::int from packages where is_active = true)                                         as active_packages,
           (select count(*)::int from booking_pilgrims bp join bookings b on b.id = bp.booking_id where ${scopeCond}) as total_pilgrims,
@@ -277,9 +277,10 @@ router.get("/dashboard-stats", async (req, res) => {
           (select count(*)::int from muthawifs)                                                               as total_muthawifs
       `),
       db.execute(sql`
-        select coalesce(sum(b.total_price), 0)::bigint as total_revenue
-        from bookings b
-        where b.status = 'paid' and ${scopeCond}
+        select coalesce(sum(pay.amount), 0)::bigint as total_revenue
+        from payments pay
+        join bookings b on b.id = pay.booking_id
+        where pay.status = 'verified' and ${scopeCond}
       `),
       db.execute(sql`
         select
