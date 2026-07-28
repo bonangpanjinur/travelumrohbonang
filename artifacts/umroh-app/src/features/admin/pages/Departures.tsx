@@ -256,8 +256,14 @@ const AdminDepartures = () => {
   };
 
   // ── Extra hotel helpers ───────────────────────────────────────────────────
-  const makkahHotels = hotels.filter(h => h.city === "Makkah");
-  const madinahHotels = hotels.filter(h => h.city === "Madinah");
+  const makkahHotels = hotels.filter(h => {
+    const c = (h.city ?? "").toLowerCase();
+    return c === "makkah" || c === "mekkah" || c === "mekah";
+  });
+  const madinahHotels = hotels.filter(h => {
+    const c = (h.city ?? "").toLowerCase();
+    return c === "madinah" || c === "medina" || c === "madinoh";
+  });
 
   const addExtraHotel = () => {
     setExtraHotels([...extraHotels, { hotel_id: "", label: "", sort_order: extraHotels.length }]);
