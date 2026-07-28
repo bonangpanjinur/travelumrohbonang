@@ -1259,11 +1259,15 @@ router.get("/:id/invoice-data", async (req, res) => {
   try {
     const { id } = req.params;
 
+    // A-4: Resolve scope early — needed for both local-DB and Supabase-fallback paths
+    const scope = await resolveUserScope(req);
+
     const [bookingResult, pilgrimsResult, roomsResult, paymentsResult, brandingResult, seqResult] =
       await Promise.all([
         db.execute(sql`
           SELECT
-            b.booking_code, b.total_price, b.status, b.created_at,
+            b.id, b.booking_code, b.total_price, b.status, b.created_at,
+            b.branch_id, b.agent_id, b.pic_type, b.pic_id,
             pkg.title      AS package_title,
             dep.departure_date,
             COALESCE(b.pemesan_name, prof.name) AS customer_name,
@@ -1306,6 +1310,17 @@ router.get("/:id/invoice-data", async (req, res) => {
     const bRows = (bookingResult as any).rows ?? bookingResult;
     let booking = bRows[0];
 
+    // A-4: Guard — scope check on local DB booking
+    if (booking && !isBookingInScope({
+      branchId: booking.branch_id,
+      agentId:  booking.agent_id,
+      picType:  booking.pic_type,
+      picId:    booking.pic_id,
+    }, scope)) {
+      res.status(403).json({ error: scopeDeniedMessage(scope) });
+      return;
+    }
+
     // Fallback: jika booking tidak ada di local DB, coba Supabase
     if (!booking) {
       const userToken = (req.headers.authorization || "").replace("Bearer ", "");
@@ -1316,6 +1331,16 @@ router.get("/:id/invoice-data", async (req, res) => {
       }
       if (!sbBooking) {
         res.status(404).json({ error: "Booking not found" });
+        return;
+      }
+      // A-4: Guard — scope check on Supabase-fallback booking
+      if (!isBookingInScope({
+        branchId: sbBooking.branch_id ?? null,
+        agentId:  sbBooking.agent_id  ?? null,
+        picType:  sbBooking.pic_type  ?? null,
+        picId:    sbBooking.pic_id    ?? null,
+      }, scope)) {
+        res.status(403).json({ error: scopeDeniedMessage(scope) });
         return;
       }
       // Use the real UUID from sbBooking for related-data lookups
@@ -1421,10 +1446,14 @@ router.get("/:id/passport-recommendation-data", async (req, res) => {
   try {
     const id = req.params.id as string;
 
+    // A-4: Resolve scope early — checked on both local-DB and Supabase-fallback paths
+    const scope = await resolveUserScope(req);
+
     const [bookingRows, brandingResult] = await Promise.all([
       db.execute(sql`
         SELECT
           b.id, b.booking_code,
+          b.branch_id, b.agent_id, b.pic_type, b.pic_id,
           pkg.title   AS package_title,
           dep.departure_date
         FROM bookings b
@@ -1444,6 +1473,17 @@ router.get("/:id/passport-recommendation-data", async (req, res) => {
     const localBooking = bRows[0];
     const brandRows = (brandingResult as any).rows ?? brandingResult;
     const branding: any = brandRows[0]?.value ?? {};
+
+    // A-4: Guard — scope check on local DB booking
+    if (localBooking && !isBookingInScope({
+      branchId: localBooking.branch_id,
+      agentId:  localBooking.agent_id,
+      picType:  localBooking.pic_type,
+      picId:    localBooking.pic_id,
+    }, scope)) {
+      res.status(403).json({ error: scopeDeniedMessage(scope) });
+      return;
+    }
 
     let bookingId: string;
     let bookingCode: string;
@@ -1478,6 +1518,16 @@ router.get("/:id/passport-recommendation-data", async (req, res) => {
       if (!sbBooking) sbBooking = await sbGetBookingByCode(id.toUpperCase(), userToken);
       if (!sbBooking) {
         res.status(404).json({ error: "Booking not found" });
+        return;
+      }
+      // A-4: Guard — scope check on Supabase-fallback booking
+      if (!isBookingInScope({
+        branchId: sbBooking.branch_id ?? null,
+        agentId:  sbBooking.agent_id  ?? null,
+        picType:  sbBooking.pic_type  ?? null,
+        picId:    sbBooking.pic_id    ?? null,
+      }, scope)) {
+        res.status(403).json({ error: scopeDeniedMessage(scope) });
         return;
       }
       const [sbPkg, sbDep, sbPilgrimsRaw] = await Promise.all([
