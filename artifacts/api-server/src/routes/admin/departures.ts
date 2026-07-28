@@ -61,11 +61,12 @@ router.get("/", async (req, res) => {
       .leftJoin(packages, eq(packageDepartures.packageId, packages.id));
 
     // Optional filters: status and minQuota (used by booking dialog)
+    // NOTE: minQuota is intentionally NOT applied as a SQL WHERE clause because the stored
+    // remainingQuota column can be stale. It is applied AFTER real-time recalculation below.
     const { status: statusFilter, minQuota } = req.query as Record<string, string | undefined>;
     const conditions: ReturnType<typeof eq>[] = [];
     if (packageId) conditions.push(eq(packageDepartures.packageId, packageId));
     if (statusFilter) conditions.push(eq(packageDepartures.status, statusFilter as any));
-    if (minQuota) conditions.push(gte(packageDepartures.remainingQuota, Number(minQuota)));
 
     const data = conditions.length
       ? await baseQuery.where(and(...conditions)).orderBy(packageDepartures.departureDate)
@@ -178,7 +179,13 @@ router.get("/", async (req, res) => {
       };
     });
 
-    res.json({ data: departuresWithPrices, total: departuresWithPrices.length });
+    // Apply minQuota filter AFTER real-time recalculation so stale DB column values don't
+    // incorrectly hide departures that still have available seats.
+    const filtered = minQuota
+      ? departuresWithPrices.filter((d) => d.remainingQuota >= Number(minQuota))
+      : departuresWithPrices;
+
+    res.json({ data: filtered, total: filtered.length });
   } catch (err) {
     sendAdminError(res, "GET /api/admin/departures", err);
   }
