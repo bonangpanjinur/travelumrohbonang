@@ -73,14 +73,14 @@ router.get("/", async (req, res) => {
 
     const departureIds = data.map((dep: any) => dep.id);
 
-    // Hitung booking aktif (non-cancelled) per keberangkatan secara real-time
-    // agar remaining_quota tidak bergantung pada kolom stored yang bisa tidak sinkron.
+    // Hitung jemaah aktif (non-cancelled) per keberangkatan secara real-time.
+    // Gunakan SUM(pax_count) bukan COUNT(id) — satu booking bisa berisi banyak jemaah.
     const filledCountMap = new Map<string, number>();
     if (departureIds.length) {
       const counts = await db
         .select({
           departureId: bookings.departureId,
-          filled: count(bookings.id),
+          filled: sql<number>`COALESCE(SUM(${bookings.paxCount}), 0)::int`,
         })
         .from(bookings)
         .where(
@@ -915,8 +915,9 @@ router.post("/:id/sync-quota", async (req, res) => {
 
     if (!dep) return res.status(404).json({ error: "Departure not found" });
 
+    // Hitung dari SUM(pax_count) — satu booking bisa berisi banyak jemaah
     const [{ filled }] = await db
-      .select({ filled: count(bookings.id) })
+      .select({ filled: sql<number>`COALESCE(SUM(${bookings.paxCount}), 0)::int` })
       .from(bookings)
       .where(and(
         eq(bookings.departureId, departureId),

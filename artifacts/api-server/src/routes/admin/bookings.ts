@@ -779,16 +779,16 @@ router.post("/group", async (req, res) => {
         });
       }
 
-      // P0: Sync remaining_quota from real booking count, then decrement.
-      // Admin routes skip quota gate — stored column can be stale; use COUNT for accuracy.
+      // P0: Sync remaining_quota dari total jemaah (pax_count), bukan jumlah booking.
+      // Satu booking grup bisa berisi banyak jemaah — harus pakai SUM(pax_count).
       const groupQuotaResult = await tx.execute(sql`
         UPDATE package_departures
         SET
           remaining_quota = GREATEST(0,
-            quota - (SELECT COUNT(*) FROM bookings WHERE departure_id = package_departures.id AND status != 'cancelled') - ${jamaah.length}
+            quota - COALESCE((SELECT SUM(pax_count) FROM bookings WHERE departure_id = package_departures.id AND status != 'cancelled'), 0) - ${jamaah.length}
           ),
           status = CASE
-            WHEN quota - (SELECT COUNT(*) FROM bookings WHERE departure_id = package_departures.id AND status != 'cancelled') - ${jamaah.length} <= 0
+            WHEN quota - COALESCE((SELECT SUM(pax_count) FROM bookings WHERE departure_id = package_departures.id AND status != 'cancelled'), 0) - ${jamaah.length} <= 0
             THEN 'penuh' ELSE 'active'
           END
         WHERE id = ${departureId}
