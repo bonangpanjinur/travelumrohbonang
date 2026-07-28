@@ -99,9 +99,11 @@ export const defaultBranding: BrandingSettings = {
 };
 
 // Role constants for reuse
-const ALL_STAFF = ["super_admin", "admin", "branch_manager", "staff"];
-const SUPER_ADMIN_ADMIN = ["super_admin", "admin"];
-const SUPER_ONLY = ["super_admin"];
+// owner sits one level below super_admin — gets everything admin gets, plus
+// most super_admin-only items, EXCEPT Manajemen Fitur and Integrasi & API Keys.
+const ALL_STAFF = ["super_admin", "owner", "admin", "branch_manager", "staff"];
+const SUPER_ADMIN_ADMIN = ["super_admin", "owner", "admin"];
+const SUPER_ONLY = ["super_admin"]; // feature-management + integrations — owner excluded
 const OPERATIONAL = ["super_admin", "admin", "branch_manager", "staff", "agent"];
 const FINANCE = ["super_admin", "admin", "branch_manager", "finance"];
 // Finance role gets dashboard + notifications + payment verification

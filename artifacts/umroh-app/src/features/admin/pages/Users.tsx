@@ -265,6 +265,7 @@ const AdminUsers = () => {
                               <SelectItem value="finance">Finance</SelectItem>
                               <SelectItem value="branch_manager">Branch Manager</SelectItem>
                               <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="owner">Owner</SelectItem>
                               <SelectItem value="super_admin">Super Admin</SelectItem>
                             </SelectContent>
                           </Select>

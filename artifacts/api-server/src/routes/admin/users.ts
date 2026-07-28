@@ -50,6 +50,26 @@ router.patch("/:id", validate(AdminUpdateUserRequest), async (req, res) => {
   try {
     const id = req.params.id as string;
     const updates = req.body as AdminUpdateUserInput;
+    const requesterRole = (req.user as any)?.role as string;
+
+    // Owner cannot touch super_admin accounts or promote anyone to super_admin/owner.
+    if (requesterRole === "owner") {
+      // Fetch the target user's current role
+      const [target] = await db.select().from(profiles).where(eq(profiles.id, id)).limit(1);
+      if (target?.role === "super_admin") {
+        res.status(403).json({ error: "Owner cannot modify a super admin account" });
+        return;
+      }
+      if (target?.role === "owner" && target.id !== (req.user as any)?.id) {
+        res.status(403).json({ error: "Owner cannot modify another owner account" });
+        return;
+      }
+      // Prevent promoting to super_admin or owner
+      if (updates.role === "super_admin" || updates.role === "owner") {
+        res.status(403).json({ error: "Owner cannot assign the super_admin or owner role" });
+        return;
+      }
+    }
 
     const [updated] = await db
       .update(profiles)

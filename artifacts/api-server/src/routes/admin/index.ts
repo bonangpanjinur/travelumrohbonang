@@ -78,7 +78,7 @@ router.use("/agents", requireAdmin, adminAgentsRouter);
 router.use("/integrations", requireSuperAdmin, adminIntegrationsRouter);
 // GET readable by all admin roles; PUT/DELETE restricted to super_admin inside the router
 router.use("/menu-permissions", requireOperational, adminMenuPermissionsRouter);
-router.use("/feature-flags", requireAdmin, adminFeatureFlagsRouter);
+router.use("/feature-flags", requireSuperAdmin, adminFeatureFlagsRouter);
 router.use("/analytics", requireFinance, adminAnalyticsRouter);
 router.use("/reports", requireFinance, adminReportsRouter);
 router.use("/accounting", requireFinance, adminAccountingRouter);

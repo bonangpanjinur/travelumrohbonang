@@ -2,6 +2,7 @@ import { type RequestHandler } from "express";
 // P3-9: Role sets are now defined once in roleConstants.ts and imported here.
 import {
   FULL_ADMIN_ROLES,
+  OWNER_ROLES,
   STAFF_ROLES,
   OPERATIONAL_ROLES,
   FINANCE_ROLES,
@@ -93,7 +94,30 @@ export const requireFinance: RequestHandler = (req, res, next) => {
   next();
 };
 
-/** Super admin gate: super_admin only. Use on role management and integrations. */
+/**
+ * Owner gate: super_admin + owner.
+ * Use on privileged routes that owner can access but plain admin cannot
+ * (e.g. user deletion, promote-to-admin). Does NOT cover feature-flags
+ * or integrations — those remain requireSuperAdmin.
+ */
+export const requireOwner: RequestHandler = (req, res, next) => {
+  if (isDev) console.log(`[requireOwner] checking — role=${(req.user as any)?.role ?? "(unauthenticated)"} path=${req.path}`);
+
+  if (!req.isAuthenticated()) {
+    if (isDev) console.log("[requireOwner] DENIED — not authenticated");
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  if (!OWNER_ROLES.has(req.user.role as string)) {
+    if (isDev) console.log(`[requireOwner] DENIED — role=${(req.user as any).role} not in OWNER_ROLES`);
+    res.status(403).json({ error: "Owner or super admin access required" });
+    return;
+  }
+  if (isDev) console.log(`[requireOwner] granted — role=${(req.user as any).role}`);
+  next();
+};
+
+/** Super admin gate: super_admin only. Use on feature-flags and integrations. */
 export const requireSuperAdmin: RequestHandler = (req, res, next) => {
   if (isDev) console.log(`[requireSuperAdmin] checking — role=${(req.user as any)?.role ?? "(unauthenticated)"} path=${req.path}`);
 

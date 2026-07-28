@@ -21,6 +21,7 @@ import { cn } from "@/shared/lib/utils";
 
 const ADMIN_ROLES = [
   { value: "super_admin",    label: "Super Admin",    icon: Crown,       color: "text-amber-600",  badge: "bg-amber-100 text-amber-800 border-amber-300" },
+  { value: "owner",          label: "Owner",          icon: Crown,       color: "text-rose-600",   badge: "bg-rose-100 text-rose-800 border-rose-300" },
   { value: "admin",          label: "Admin",          icon: ShieldCheck, color: "text-blue-600",   badge: "bg-blue-100 text-blue-800 border-blue-300" },
   { value: "branch_manager", label: "Branch Manager", icon: Building2,   color: "text-purple-600", badge: "bg-purple-100 text-purple-800 border-purple-300" },
   { value: "finance",        label: "Finance",        icon: Briefcase,   color: "text-teal-600",   badge: "bg-teal-100 text-teal-800 border-teal-300" },

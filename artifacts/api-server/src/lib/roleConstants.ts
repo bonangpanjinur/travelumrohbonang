@@ -9,6 +9,7 @@
 /** All valid roles ordered from most to least privileged. */
 export const ROLE_HIERARCHY = [
   "super_admin",
+  "owner",
   "admin",
   "branch_manager",
   "finance",
@@ -28,23 +29,32 @@ export type AppRole = (typeof ROLE_HIERARCHY)[number];
  */
 export const ROLE_RANK: Record<string, number> = {
   super_admin: 0,
-  admin: 1,
-  branch_manager: 2,
-  finance: 3,
-  staff: 4,
-  agent: 5,
-  buyer: 6,
-  user: 7,
+  owner: 1,
+  admin: 2,
+  branch_manager: 3,
+  finance: 4,
+  staff: 5,
+  agent: 6,
+  buyer: 7,
+  user: 8,
 };
 
 // ── Role Sets (imported by requireAdmin.ts) ───────────────────────────────────
 
-/** Full admin: super_admin + admin only. Default admin router gate. */
-export const FULL_ADMIN_ROLES = new Set(["super_admin", "admin"]);
+/** Full admin: super_admin + owner + admin. Default admin router gate. */
+export const FULL_ADMIN_ROLES = new Set(["super_admin", "owner", "admin"]);
 
-/** Staff: super_admin, admin, branch_manager, staff. */
+/**
+ * Owner-and-above: super_admin + owner.
+ * Use on routes that owner can access but admin cannot
+ * (most privileged operations except feature-flags and integrations).
+ */
+export const OWNER_ROLES = new Set(["super_admin", "owner"]);
+
+/** Staff: super_admin, owner, admin, branch_manager, staff. */
 export const STAFF_ROLES = new Set([
   "super_admin",
+  "owner",
   "admin",
   "branch_manager",
   "staff",
@@ -53,6 +63,7 @@ export const STAFF_ROLES = new Set([
 /** Operational: staff + agent + finance. Use on booking/package read routes. */
 export const OPERATIONAL_ROLES = new Set([
   "super_admin",
+  "owner",
   "admin",
   "branch_manager",
   "finance",
@@ -60,9 +71,10 @@ export const OPERATIONAL_ROLES = new Set([
   "agent",
 ]);
 
-/** Finance: super_admin, admin, branch_manager, finance. */
+/** Finance: super_admin, owner, admin, branch_manager, finance. */
 export const FINANCE_ROLES = new Set([
   "super_admin",
+  "owner",
   "admin",
   "branch_manager",
   "finance",
