@@ -6,7 +6,7 @@ import {
   ExternalLink, AlertTriangle, Flame, Siren, Info, ChevronDown, ChevronUp, X,
 } from "lucide-react";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Link } from "wouter";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { format, formatDistanceToNow } from "date-fns";
@@ -178,7 +178,7 @@ const KpiCard = ({ title, value, icon: Icon, iconBg, loading, alert, alertLevel 
     </Card>
   );
 
-  if (href) return <Link href={href} className="block">{card}</Link>;
+  if (href) return <Link to={href} className="block">{card}</Link>;
   return card;
 };
 
@@ -413,7 +413,7 @@ const AdminDashboard = () => {
           <div className="bg-red-500 rounded-lg p-2 shrink-0">
             <Siren className="w-5 h-5 animate-pulse" />
           </div>
-          <Link href="/admin/piutang" className="flex-1 min-w-0 cursor-pointer">
+          <Link to="/admin/piutang" className="flex-1 min-w-0 cursor-pointer">
             <p className="font-bold text-sm">
               ⚠️ Peringatan Piutang Mendesak — {urgentCount} booking butuh tindakan segera
             </p>
@@ -425,7 +425,7 @@ const AdminDashboard = () => {
           </Link>
           <div className="hidden sm:flex items-center gap-3 shrink-0">
             {overdueAging && overdueAging.count > 0 && (
-              <Link href="/admin/piutang?bucket=overdue">
+              <Link to="/admin/piutang?bucket=overdue">
                 <div className="text-center bg-red-700/60 hover:bg-red-700/80 rounded-lg px-3 py-1.5 transition-colors cursor-pointer">
                   <p className="text-lg font-bold leading-none">{overdueAging.count}</p>
                   <p className="text-[10px] text-red-200 mt-0.5">Lewat Jatuh Tempo</p>
@@ -433,7 +433,7 @@ const AdminDashboard = () => {
               </Link>
             )}
             {kritisAging && kritisAging.count > 0 && (
-              <Link href="/admin/piutang?bucket=kritis">
+              <Link to="/admin/piutang?bucket=kritis">
                 <div className="text-center bg-red-700/60 hover:bg-red-700/80 rounded-lg px-3 py-1.5 transition-colors cursor-pointer">
                   <p className="text-lg font-bold leading-none">{kritisAging.count}</p>
                   <p className="text-[10px] text-red-200 mt-0.5">≤14 Hari Kritis</p>
@@ -455,7 +455,7 @@ const AdminDashboard = () => {
       {!loading && hasDebt && !isUrgent && !warningDismissed && (
         <div className="relative flex items-center gap-3 p-3.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl">
           <AlertCircle className="w-5 h-5 shrink-0" />
-          <Link href="/admin/piutang" className="flex-1 min-w-0 cursor-pointer hover:underline">
+          <Link to="/admin/piutang" className="flex-1 min-w-0 cursor-pointer hover:underline">
             <p className="text-sm font-semibold">
               {stats.pendingPayments} booking belum lunas — total piutang {formatRp(stats.totalOutstanding)}
             </p>
@@ -473,7 +473,7 @@ const AdminDashboard = () => {
 
       {/* ── Financial highlight row ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Link href="/admin/finance-dashboard" className="sm:col-span-1 block group">
+        <Link to="/admin/finance-dashboard" className="sm:col-span-1 block group">
           <Card className="h-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 shadow-lg cursor-pointer group-hover:shadow-xl group-hover:-translate-y-0.5 transition-all">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
@@ -491,7 +491,7 @@ const AdminDashboard = () => {
         </Link>
 
         {/* Total Piutang — RED gradient */}
-        <Link href="/admin/piutang" className="sm:col-span-1 block group">
+        <Link to="/admin/piutang" className="sm:col-span-1 block group">
           <Card className={cn(
             "h-full border-0 shadow-lg cursor-pointer group-hover:shadow-xl group-hover:-translate-y-0.5 transition-all",
             hasDebt
@@ -547,7 +547,7 @@ const AdminDashboard = () => {
           </Card>
         </Link>
 
-        <Link href="/admin/payments" className="sm:col-span-1 block group">
+        <Link to="/admin/payments" className="sm:col-span-1 block group">
           <Card className="h-full border shadow-sm cursor-pointer group-hover:shadow-md group-hover:-translate-y-0.5 transition-all">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
@@ -645,7 +645,7 @@ const AdminDashboard = () => {
             <CardContent className="px-5 pb-4 pt-0">
               <div className="flex items-center justify-between mb-3">
                 <div className="h-px flex-1 bg-border" />
-                <Link href="/admin/piutang" className="ml-3 shrink-0">
+                <Link to="/admin/piutang" className="ml-3 shrink-0">
                   <Button variant="outline" size="sm" className="text-xs h-7 border-red-200 text-red-600 hover:bg-red-50">
                     Lihat Semua <ExternalLink className="w-3 h-3 ml-1" />
                   </Button>
@@ -659,7 +659,7 @@ const AdminDashboard = () => {
                   const cfg = AGING_CONFIG[bucket];
                   const Icon = cfg.icon;
                   return (
-                    <Link key={bucket} href={`/admin/piutang?bucket=${bucket}`} className="block">
+                    <Link key={bucket} to={`/admin/piutang?bucket=${bucket}`} className="block">
                       <div className={cn(
                         "rounded-xl p-3 border cursor-pointer hover:shadow-sm transition-all",
                         cfg.bg, cfg.border
@@ -790,7 +790,7 @@ const AdminDashboard = () => {
           href="/admin/muthawifs"
         />
         {/* Revenue per periode */}
-        <Link href="/admin/analytics" className="block">
+        <Link to="/admin/analytics" className="block">
           <Card className="relative overflow-hidden border shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all">
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-3">
@@ -960,7 +960,7 @@ const AdminDashboard = () => {
                 {recentBookings.map((b) => {
                   const s = STATUS_MAP[b.status] ?? { label: b.status, className: "bg-muted text-muted-foreground border-muted" };
                   return (
-                    <Link key={b.id} href={`/admin/bookings`} className="block">
+                    <Link key={b.id} to="/admin/bookings" className="block">
                       <div className="flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-muted/40 transition-colors cursor-pointer">
                         <div className="bg-primary/10 p-1.5 rounded-full shrink-0">
                           <ShoppingBag className="h-3.5 w-3.5 text-primary" />
@@ -981,7 +981,7 @@ const AdminDashboard = () => {
                   );
                 })}
                 <div className="pt-2">
-                  <Link href="/admin/bookings">
+                  <Link to="/admin/bookings">
                     <Button variant="outline" size="sm" className="w-full text-xs">
                       Lihat Semua Booking <ExternalLink className="w-3 h-3 ml-1.5" />
                     </Button>

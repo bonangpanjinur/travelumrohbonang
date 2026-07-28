@@ -1,6 +1,6 @@
 import { ShieldX } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 
 interface AccessDeniedProps {
   /** Pesan kustom — defaultnya "Anda tidak memiliki akses ke data ini." */
@@ -14,7 +14,7 @@ interface AccessDeniedProps {
  * — menggantikan halaman kosong / blank screen.
  */
 export function AccessDenied({ message, showBack = true }: AccessDeniedProps) {
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4 text-center px-4">
@@ -28,7 +28,7 @@ export function AccessDenied({ message, showBack = true }: AccessDeniedProps) {
         </p>
       </div>
       {showBack && (
-        <Button variant="outline" size="sm" onClick={() => setLocation("/admin")}>
+        <Button variant="outline" size="sm" onClick={() => navigate("/admin")}>
           Kembali ke Dashboard
         </Button>
       )}
