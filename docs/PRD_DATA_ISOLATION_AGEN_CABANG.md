@@ -1,8 +1,8 @@
 # PRD: Isolasi Data Agen & Cabang (Multi-Tenant Privacy)
 
-**Versi:** 1.0  
+**Versi:** 1.1  
 **Tanggal:** 28 Juli 2026  
-**Status:** Draft — Siap Dikerjakan
+**Status:** Sprint A ✅ SELESAI — Sprint B/C siap dikerjakan
 
 ---
 
@@ -181,30 +181,29 @@ Query dieksekusi dengan scope filter
 
 ## Sprint Breakdown
 
-### SPRINT A — Fondasi Scope (Tidak Ubah UI)
-**Estimasi:** 3–4 hari kerja
+### SPRINT A — Fondasi Scope (Tidak Ubah UI) ✅ SELESAI
+**Selesai:** 28 Juli 2026
 
-#### A-1: Buat `resolveUserScope` utility
-- File baru: `artifacts/api-server/src/lib/scopeGuard.ts`
-- Fungsi `resolveUserScope(req)` → lookup ke `agents` table (jika role=agent) atau `profiles` table (jika role=branch_manager/staff/finance)
-- Cache ringan per-request di `req.scope` via middleware
-- Unit testable
+#### A-1: ✅ Buat `resolveUserScope` utility
+- `artifacts/api-server/src/lib/scopeGuard.ts` — sudah ada dan berfungsi
+- Cache per-request via `req.resolvedScope`
+- Mendukung role: `global` (super_admin/owner/admin), `branch` (branch_manager/staff/finance), `agent`
 
-#### A-2: Buat `buildBookingScope(scope)` SQL helper
-- File baru: `artifacts/api-server/src/lib/scopeConditions.ts`
-- Fungsi yang menghasilkan `sql` fragment untuk di-inject ke WHERE clause booking query
-- Untuk `agent`: `(b.agent_id = $agentId OR (b.pic_type = 'agen' AND b.pic_id = $agentId))`
-- Untuk `branch`: `b.branch_id = $branchId`
-- Untuk `global`: `sql\`1=1\`` (no filter)
+#### A-2: ✅ Buat `buildBookingScope(scope)` SQL helper
+- `artifacts/api-server/src/lib/scopeConditions.ts` — sudah ada
+- `buildBookingScopeCondition()` — menghasilkan SQL fragment WHERE
+- `isBookingInScope()` — post-fetch ownership check
+- `scopeDeniedMessage()` — pesan 403 yang informatif per role
 
-#### A-3: Pasang scope di `GET /api/admin/bookings`
-- Inject `buildBookingScope` ke query utama dan count query
-- Test: agen A tidak bisa lihat booking agen B
+#### A-3: ✅ Pasang scope di `GET /api/admin/bookings`
+- List query + count query → scope diinjek
+- `GET /stats` → scope diinjek
+- `GET /export.xlsx` → scope diinjek
 
-#### A-4: Guard `GET /api/admin/bookings/:id` (detail)
-- Setelah fetch, cek apakah booking masuk dalam scope user
-- Jika tidak → `403 Forbidden` dengan pesan jelas
-- Berlaku juga untuk: `GET /:id/invoice-data`, `GET /:id/passport-recommendation-data`
+#### A-4: ✅ Guard `GET /api/admin/bookings/:id` dan sub-routes
+- `GET /:id` → 403 jika di luar scope
+- `GET /:id/invoice-data` → 403 jika di luar scope (local DB + Supabase fallback)
+- `GET /:id/passport-recommendation-data` → 403 jika di luar scope (local DB + Supabase fallback)
 
 ---
 
