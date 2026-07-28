@@ -12,8 +12,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/shared/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Backpack, PackageCheck, PackageMinus, RotateCcw } from "lucide-react";
+
+interface PendingStatusChange { id: string; status: string; label: string; }
 
 interface Equipment { id: string; name: string; category: string | null; totalStock: number; }
 interface Assignment { id: string; equipmentId: string; status: string; quantity: number; equipmentName: string; equipmentCategory: string | null; distributedAt: string | null; returnedAt: string | null; }
@@ -41,6 +48,7 @@ export default function EquipmentDistribution() {
   const [bulkDialog, setBulkDialog] = useState(false);
   const [selectedPilgrimIds, setSelectedPilgrimIds] = useState<Set<string>>(new Set());
   const [bulkEquipmentId, setBulkEquipmentId] = useState("");
+  const [pendingStatusChange, setPendingStatusChange] = useState<PendingStatusChange | null>(null);
 
   const { data: departures = [] } = useQuery<Departure[]>({
     queryKey: ["departures-list"],
@@ -215,15 +223,15 @@ export default function EquipmentDistribution() {
                                     <span className={`text-xs px-1.5 py-0.5 rounded ${cfg.color}`}>{cfg.label}</span>
                                     {a.status === "pending" && (
                                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-green-600 hover:text-green-700"
-                                        title="Mark Distributed"
-                                        onClick={() => updateStatusMutation.mutate({ id: a.id, status: "distributed" })}>
+                                        title="Tandai Terdistribusi"
+                                        onClick={() => setPendingStatusChange({ id: a.id, status: "distributed", label: `Tandai "${a.equipmentName}" sebagai terdistribusi untuk ${p.name}?` })}>
                                         <PackageCheck className="h-3 w-3" />
                                       </Button>
                                     )}
                                     {a.status === "distributed" && (
                                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-gray-600"
-                                        title="Mark Returned"
-                                        onClick={() => updateStatusMutation.mutate({ id: a.id, status: "returned" })}>
+                                        title="Tandai Dikembalikan"
+                                        onClick={() => setPendingStatusChange({ id: a.id, status: "returned", label: `Tandai "${a.equipmentName}" sebagai dikembalikan dari ${p.name}?` })}>
                                         <RotateCcw className="h-3 w-3" />
                                       </Button>
                                     )}
@@ -242,6 +250,29 @@ export default function EquipmentDistribution() {
           </Card>
         </>
       )}
+
+      {/* Status Change Confirmation */}
+      <AlertDialog open={!!pendingStatusChange} onOpenChange={(open) => { if (!open) setPendingStatusChange(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Perubahan Status</AlertDialogTitle>
+            <AlertDialogDescription>{pendingStatusChange?.label}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingStatusChange) {
+                  updateStatusMutation.mutate({ id: pendingStatusChange.id, status: pendingStatusChange.status });
+                  setPendingStatusChange(null);
+                }
+              }}
+            >
+              Ya, Konfirmasi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Bulk Assign Dialog */}
       <Dialog open={bulkDialog} onOpenChange={setBulkDialog}>

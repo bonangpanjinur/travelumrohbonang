@@ -7,11 +7,12 @@ import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Input } from "@/shared/components/ui/input";
-import { Printer, Users, Plane, Calendar, Download, Search, UsersRound, FileText, History, ChevronDown, ChevronUp, Plus, Minus } from "lucide-react";
+import { Printer, Users, Plane, Calendar, Download, Search, UsersRound, FileText, History, ChevronDown, ChevronUp, Plus, Minus, Loader2 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
 import { exportToCsv } from "@/shared/lib/exportCsv";
+import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -106,6 +107,7 @@ const AdminManifest = () => {
   const [page, setPage] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
   const [expandedSnapshotId, setExpandedSnapshotId] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   // Debounce search — tunggu 400ms setelah user berhenti mengetik
   useEffect(() => {
@@ -185,6 +187,31 @@ const AdminManifest = () => {
 
   const handlePrint = () => window.print();
 
+  const handleDownloadPdf = async () => {
+    if (!selectedDep || pdfLoading) return;
+    setPdfLoading(true);
+    try {
+      const res = await fetch(`/api/admin/departures/${selectedDep}/manifest.pdf`, { credentials: "include" });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `manifest-${selectedDep}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      toast.error(`Gagal mengunduh PDF: ${err.message ?? "Coba lagi"}`);
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   const handleExportCsv = () => {
     const headers = [
       "No", "Booking", "Nama Pemesan", "Nama", "Gender", "Tgl Lahir", "Kewarganegaraan",
@@ -231,9 +258,13 @@ const AdminManifest = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.open(`/api/admin/departures/${selectedDep}/manifest.pdf`, "_blank")}
+              disabled={pdfLoading}
+              onClick={handleDownloadPdf}
             >
-              <FileText className="h-4 w-4 mr-2" /> Download PDF
+              {pdfLoading
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Membuat PDF...</>
+                : <><FileText className="h-4 w-4 mr-2" /> Download PDF</>
+              }
             </Button>
             <Button size="sm" onClick={handlePrint} className="gradient-gold text-primary">
               <Printer className="h-4 w-4 mr-2" /> Cetak Manifest
