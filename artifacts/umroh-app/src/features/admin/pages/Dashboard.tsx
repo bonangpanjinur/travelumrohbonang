@@ -1,9 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import {
   Users, ShoppingBag, CreditCard, TrendingUp, CalendarCheck,
-  UserPlus, Building2, UserCheck, Download, Target, Pencil,
+  UserPlus, Building2, UserCheck, Download, Target, Pencil, ShieldCheck,
 } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
+import { useAuth } from "@/shared/hooks/useAuth";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -66,6 +67,7 @@ const PERIODS: { value: Period; label: string }[] = [
 ];
 
 const AdminDashboard = () => {
+  const { role, user } = useAuth();
   const [stats, setStats] = useState<Omit<DashboardStats, "monthlyTrend">>({
     totalBookings: 0,
     totalAgents: 0,
@@ -180,6 +182,25 @@ const AdminDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard Overview</h1>
           <p className="text-muted-foreground mt-1">Ringkasan aktivitas travel Umrah Anda.</p>
+          {/* E-2: Scope badge */}
+          {role === "agent" && (
+            <span className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Data Agen: {user?.firstName ?? "Anda"} — hanya booking yang Anda tangani
+            </span>
+          )}
+          {role === "branch_manager" && (
+            <span className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Data Cabang Anda — hanya booking cabang ini
+            </span>
+          )}
+          {role === "finance" && (
+            <span className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Data Cabang Anda
+            </span>
+          )}
         </div>
         <div className="flex gap-2 flex-wrap">
           {/* Period selector */}

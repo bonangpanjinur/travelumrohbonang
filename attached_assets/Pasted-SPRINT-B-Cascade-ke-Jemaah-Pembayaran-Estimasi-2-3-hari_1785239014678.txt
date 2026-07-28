@@ -1,0 +1,51 @@
+SPRINT B — Cascade ke Jemaah & Pembayaran
+Estimasi: 2–3 hari kerja
+
+B-1: ✅ Scope booking_pilgrims (Jemaah per Booking) — SELESAI 28 Jul 2026
+GET /api/admin/bookings list — pilgrimsCount & firstJamaahName subqueries terikat ke b.id yang sudah scope-filtered → implicitly scoped ✅
+GET /api/admin/bookings/:id detail — pilgrims di-fetch setelah isBookingInScope guard → already guarded ✅
+POST /api/admin/bookings/:id/pilgrims — scope guard ditambahkan: fetch branchId/agentId/picType/picId, call isBookingInScope → 403 jika di luar scope ✅
+B-2: Scope pembayaran
+GET /api/admin/bookings/:id/payments → guard booking ownership
+GET /api/admin/payments/all → filter via booking scope JOIN
+GET /api/admin/payments/recent-pending → filter via booking scope
+B-3: Scope installments
+GET /api/admin/installments → filter via booking scope
+GET /api/admin/installments/packages, /departures → scoped
+B-4: Export Excel
+GET /api/admin/bookings/export.xlsx → inject scope ke query export
+SPRINT C — Scope Analytics & Laporan
+Estimasi: 2–3 hari kerja
+
+C-1: Dashboard stats agen
+GET /api/admin/bookings/stats → filter dengan scope (agen hanya lihat stats bookingnya)
+GET /api/admin/analytics/dashboard-stats → scope per role
+C-2: Laporan keuangan cabang
+GET /api/admin/finance/summary → scoped ke cabang (branch_manager)
+GET /api/admin/finance/piutang → scoped
+GET /api/admin/finance/departures → scoped
+C-3: Komisi agen
+Sudah ada agent_id di agent_commissions — hanya perlu guard agar agen A tidak lihat komisi agen B
+GET /api/admin/agents/:id/commissions → agen hanya bisa akses miliknya sendiri
+SPRINT D — CRM & Manifest
+Estimasi: 2 hari kerja
+
+D-1: CRM leads — scope per agen/cabang
+GET /api/admin/crm/leads → filter pic_id atau branch_id sesuai scope
+GET /api/admin/crm/leads/:id → guard ownership
+D-2: Manifest keberangkatan
+Agen hanya bisa lihat manifest untuk departure yang punya booking miliknya
+Branch manager hanya lihat manifest departure dengan booking cabangnya
+GET /api/admin/departures/:id/manifest-data → scope check
+D-3: Dokumen jemaah
+GET /api/admin/pilgrim-documents → scoped via booking ownership
+SPRINT E — UI & UX Refinement
+Estimasi: 1–2 hari kerja
+
+E-1: Sembunyikan filter yang tidak relevan
+Agen login → tidak perlu lihat filter "Cabang" (karena datanya sudah auto-filter)
+Branch manager → filter cabang auto-terpilih ke cabangnya, tidak bisa ubah ke cabang lain
+E-2: Label scope di header panel
+Tampilkan badge/label "Anda melihat data: Cabang X" atau "Data Agen: [Nama Agen]" di dashboard
+E-3: Pesan error yang informatif
+403 bukan blank screen — tampilkan "Anda tidak memiliki akses ke data ini"

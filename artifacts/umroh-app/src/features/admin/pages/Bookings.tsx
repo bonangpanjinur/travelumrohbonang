@@ -365,12 +365,21 @@ const AdminBookings = () => {
       {/* ── Filter Lanjutan (collapsible) ──────────────────────────────────── */}
       {showFilters && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-muted/40 border border-border rounded-lg">
-          {/* Cabang */}
+          {/* Cabang — disembunyikan untuk agen (server sudah otomatis scope) */}
+          {role !== "agent" && (
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Cabang</label>
-            <Select value={branchFilter} onValueChange={setBranchFilter}>
+            <Select
+              value={branchFilter}
+              onValueChange={setBranchFilter}
+              disabled={role === "branch_manager" || role === "finance" || role === "staff"}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Semua Cabang" />
+                <SelectValue placeholder={
+                  role === "branch_manager" || role === "finance" || role === "staff"
+                    ? "Cabang Anda (otomatis)"
+                    : "Semua Cabang"
+                } />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">Semua Cabang</SelectItem>
@@ -381,6 +390,7 @@ const AdminBookings = () => {
               </SelectContent>
             </Select>
           </div>
+          )}
 
           {/* Paket */}
           <div className="space-y-1">

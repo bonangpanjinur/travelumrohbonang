@@ -1,9 +1,10 @@
 import { Router } from "express";
 import {
   db, leads, leadFollowUps, leadInteractions, bookingPilgrims,
-  eq, desc, asc, and, lte, gte, sql, inArray,
+  eq, desc, asc, and, lte, gte, sql, inArray, or,
 } from "@workspace/db";
 import { isTableMissing } from "../../lib/adminApiError";
+import { resolveUserScope } from "../../lib/scopeGuard";
 
 const warnMissing = (route: string) =>
   console.warn(`[crm] table missing on ${route} — returning empty data`);
@@ -142,9 +143,20 @@ router.get("/repeat-customers", async (_req, res) => {
 router.get("/leads", async (req, res) => {
   try {
     const { status, tag, search } = req.query as Record<string, string>;
+    const scope = await resolveUserScope(req);
+
     let query = db.select().from(leads).$dynamic();
 
     const conditions = [];
+
+    // D-1: scope — agen hanya lihat leads miliknya (berdasarkan assignedTo)
+    if (scope.type === "agent" && scope.agentId) {
+      const userId = (req as any).user?.id ?? null;
+      const scopeConditions = [eq(leads.assignedTo, scope.agentId)];
+      if (userId) scopeConditions.push(eq(leads.assignedTo, userId));
+      conditions.push(or(...scopeConditions));
+    }
+
     if (status) conditions.push(eq(leads.status, status));
     if (search) {
       conditions.push(
@@ -171,6 +183,17 @@ router.get("/leads/:id", async (req, res) => {
   try {
     const [lead] = await db.select().from(leads).where(eq(leads.id, req.params.id));
     if (!lead) return res.status(404).json({ error: "Lead tidak ditemukan" });
+
+    // D-1: guard ownership untuk agen
+    const scope = await resolveUserScope(req);
+    if (scope.type === "agent" && scope.agentId) {
+      const userId = (req as any).user?.id ?? null;
+      const isOwned = lead.assignedTo === scope.agentId || lead.assignedTo === userId;
+      if (!isOwned) {
+        return res.status(403).json({ error: "Anda tidak memiliki akses ke lead ini." });
+      }
+    }
+
     res.json(lead);
   } catch (err) {
     res.status(500).json({ error: "Gagal mengambil lead" });

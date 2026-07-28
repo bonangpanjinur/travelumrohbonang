@@ -4,7 +4,9 @@
  * tanpa batasan kepemilikan (admin bypass).
  */
 import { Router } from "express";
-import { db, pilgrimDocuments, documentTypes, bookingPilgrims, bookings, packages, eq, and, inArray, asc } from "@workspace/db";
+import { db, pilgrimDocuments, documentTypes, bookingPilgrims, bookings, packages, eq, and, inArray, asc, sql } from "@workspace/db";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import { buildBookingScopeCondition } from "../../lib/scopeConditions";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
@@ -72,30 +74,44 @@ router.get("/pilgrims", async (req: any, res) => {
   try {
     const { search } = req.query as Record<string, string | undefined>;
 
-    // Join booking_pilgrims → bookings → packages
-    const pilgrimRows = await db
-      .select({
-        id: bookingPilgrims.id,
-        name: bookingPilgrims.name,
-        passport_number: bookingPilgrims.passportNumber,
-        passport_expiry: bookingPilgrims.passportExpiry,
-        booking_id: bookingPilgrims.bookingId,
-        booking_code: bookings.bookingCode,
-        package_title: packages.title,
-      })
-      .from(bookingPilgrims)
-      .leftJoin(bookings, eq(bookingPilgrims.bookingId, bookings.id))
-      .leftJoin(packages, eq(bookings.packageId, packages.id))
-      .orderBy(bookingPilgrims.createdAt);
+    // D-3: scope — filter jemaah berdasarkan booking yang diizinkan
+    const scope = await resolveUserScope(req);
+    const scopeCond = buildBookingScopeCondition(scope);
+
+    // Join booking_pilgrims → bookings → packages dengan scope filter
+    const pilgrimRows = await db.execute(sql`
+      SELECT
+        bp.id,
+        bp.name,
+        bp.passport_number,
+        bp.passport_expiry,
+        bp.booking_id,
+        b.booking_code,
+        pkg.title AS package_title
+      FROM booking_pilgrims bp
+      LEFT JOIN bookings b ON b.id = bp.booking_id
+      LEFT JOIN packages pkg ON pkg.id = b.package_id
+      WHERE ${scopeCond}
+      ORDER BY bp.created_at
+    `);
+    const rawRows = ((pilgrimRows as any).rows ?? pilgrimRows) as Array<{
+      id: string;
+      name: string | null;
+      passport_number: string | null;
+      passport_expiry: string | null;
+      booking_id: string | null;
+      booking_code: string | null;
+      package_title: string | null;
+    }>;
 
     // Apply search filter
     const filtered = search
-      ? pilgrimRows.filter(
+      ? rawRows.filter(
           (p) =>
             p.name?.toLowerCase().includes(search.toLowerCase()) ||
             p.passport_number?.toLowerCase().includes(search.toLowerCase()),
         )
-      : pilgrimRows;
+      : rawRows;
 
     const pilgrimIds = filtered.map((p) => p.id);
 

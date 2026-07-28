@@ -5,6 +5,8 @@
  */
 import { Router, Request, Response } from "express";
 import { db, sql } from "@workspace/db";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import { buildBookingScopeCondition } from "../../lib/scopeConditions";
 
 const router = Router();
 
@@ -16,6 +18,10 @@ function sendError(res: Response, label: string, err: unknown) {
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 router.get("/dashboard", async (req: Request, res: Response) => {
   try {
+    // C-2: scope ke cabang/agen
+    const scope = await resolveUserScope(req);
+    const scopeCond = buildBookingScopeCondition(scope);
+
     const [
       monthIncomeResult,
       totalPiutangResult,
@@ -25,13 +31,15 @@ router.get("/dashboard", async (req: Request, res: Response) => {
       agingResult,
       paymentTypeBreakdownResult,
     ] = await Promise.all([
-      // Total pemasukan bulan ini
+      // Total pemasukan bulan ini (scoped via booking join)
       db.execute(sql`
-        SELECT COALESCE(SUM(amount), 0) AS month_income
-        FROM booking_payments
-        WHERE is_voided = false
-          AND EXTRACT(MONTH FROM paid_at) = EXTRACT(MONTH FROM NOW())
-          AND EXTRACT(YEAR  FROM paid_at) = EXTRACT(YEAR  FROM NOW())
+        SELECT COALESCE(SUM(bp.amount), 0) AS month_income
+        FROM booking_payments bp
+        JOIN bookings b ON b.id = bp.booking_id
+        WHERE bp.is_voided = false
+          AND EXTRACT(MONTH FROM bp.paid_at) = EXTRACT(MONTH FROM NOW())
+          AND EXTRACT(YEAR  FROM bp.paid_at) = EXTRACT(YEAR  FROM NOW())
+          AND ${scopeCond}
       `),
 
       // Total piutang aktif (belum lunas)
@@ -46,6 +54,7 @@ router.get("/dashboard", async (req: Request, res: Response) => {
         ) paid ON paid.booking_id = b.id
         WHERE b.status NOT IN ('cancelled', 'draft')
           AND COALESCE(paid.total_paid, 0) < b.total_price
+          AND ${scopeCond}
       `),
 
       // Booking sudah lunas (paid/confirmed/completed)
@@ -59,24 +68,27 @@ router.get("/dashboard", async (req: Request, res: Response) => {
         ) paid ON paid.booking_id = b.id
         WHERE b.status NOT IN ('cancelled', 'draft')
           AND COALESCE(paid.total_paid, 0) >= b.total_price
+          AND ${scopeCond}
       `),
 
-      // Arus kas bulanan — 12 bulan terakhir
+      // Arus kas bulanan — 12 bulan terakhir (scoped via booking join)
       db.execute(sql`
         SELECT
-          TO_CHAR(DATE_TRUNC('month', paid_at), 'YYYY-MM') AS month,
-          SUM(CASE WHEN type IN ('dp','down_payment') THEN amount ELSE 0 END) AS dp,
-          SUM(CASE WHEN type = 'installment'          THEN amount ELSE 0 END) AS cicilan,
-          SUM(CASE WHEN type IN ('full','balance','pelunasan') THEN amount ELSE 0 END) AS pelunasan,
-          SUM(amount) AS total
-        FROM booking_payments
-        WHERE is_voided = false
-          AND paid_at >= NOW() - INTERVAL '12 months'
-        GROUP BY DATE_TRUNC('month', paid_at)
-        ORDER BY DATE_TRUNC('month', paid_at) ASC
+          TO_CHAR(DATE_TRUNC('month', bp.paid_at), 'YYYY-MM') AS month,
+          SUM(CASE WHEN bp.type IN ('dp','down_payment') THEN bp.amount ELSE 0 END) AS dp,
+          SUM(CASE WHEN bp.type = 'installment'          THEN bp.amount ELSE 0 END) AS cicilan,
+          SUM(CASE WHEN bp.type IN ('full','balance','pelunasan') THEN bp.amount ELSE 0 END) AS pelunasan,
+          SUM(bp.amount) AS total
+        FROM booking_payments bp
+        JOIN bookings b ON b.id = bp.booking_id
+        WHERE bp.is_voided = false
+          AND bp.paid_at >= NOW() - INTERVAL '12 months'
+          AND ${scopeCond}
+        GROUP BY DATE_TRUNC('month', bp.paid_at)
+        ORDER BY DATE_TRUNC('month', bp.paid_at) ASC
       `),
 
-      // Keberangkatan mendatang 90 hari — financial summary
+      // Keberangkatan mendatang 90 hari — financial summary (scoped)
       db.execute(sql`
         SELECT
           dep.id,
@@ -96,11 +108,12 @@ router.get("/dashboard", async (req: Request, res: Response) => {
           GROUP BY booking_id
         ) paid ON paid.booking_id = b.id
         WHERE dep.departure_date::timestamp BETWEEN NOW() AND NOW() + INTERVAL '90 days'
+          AND ${scopeCond}
         GROUP BY dep.id, dep.departure_date, pkg.title
         ORDER BY dep.departure_date::timestamp ASC
       `),
 
-      // Aging buckets — berapa booking per bucket hari-ke-keberangkatan
+      // Aging buckets — berapa booking per bucket hari-ke-keberangkatan (scoped)
       db.execute(sql`
         SELECT
           CASE
@@ -121,17 +134,20 @@ router.get("/dashboard", async (req: Request, res: Response) => {
         ) paid ON paid.booking_id = b.id
         WHERE b.status NOT IN ('cancelled', 'draft')
           AND COALESCE(paid.total_paid, 0) < b.total_price
+          AND ${scopeCond}
         GROUP BY bucket
       `),
 
-      // Breakdown tipe pembayaran bulan ini
+      // Breakdown tipe pembayaran bulan ini (scoped via booking join)
       db.execute(sql`
-        SELECT type, SUM(amount) AS total
-        FROM booking_payments
-        WHERE is_voided = false
-          AND EXTRACT(MONTH FROM paid_at) = EXTRACT(MONTH FROM NOW())
-          AND EXTRACT(YEAR  FROM paid_at) = EXTRACT(YEAR  FROM NOW())
-        GROUP BY type
+        SELECT bp.type, SUM(bp.amount) AS total
+        FROM booking_payments bp
+        JOIN bookings b ON b.id = bp.booking_id
+        WHERE bp.is_voided = false
+          AND EXTRACT(MONTH FROM bp.paid_at) = EXTRACT(MONTH FROM NOW())
+          AND EXTRACT(YEAR  FROM bp.paid_at) = EXTRACT(YEAR  FROM NOW())
+          AND ${scopeCond}
+        GROUP BY bp.type
       `),
     ]);
 
@@ -188,6 +204,10 @@ router.get("/piutang", async (req: Request, res: Response) => {
   try {
     const { package_id, departure_id, bucket, status: statusFilter } = req.query as Record<string, string>;
 
+    // C-2: scope ke cabang/agen
+    const scope = await resolveUserScope(req);
+    const scopeCond = buildBookingScopeCondition(scope);
+
     const rows = await db.execute(sql`
       SELECT
         b.id,
@@ -220,6 +240,7 @@ router.get("/piutang", async (req: Request, res: Response) => {
       ) paid ON paid.booking_id = b.id
       WHERE b.status NOT IN ('cancelled', 'draft')
         AND COALESCE(paid.total_paid, 0) < b.total_price
+        AND ${scopeCond}
         ${package_id   ? sql`AND b.package_id   = ${package_id}`   : sql``}
         ${departure_id ? sql`AND b.departure_id = ${departure_id}` : sql``}
       ORDER BY dep.departure_date::timestamp ASC NULLS LAST, b.created_at DESC
@@ -417,6 +438,10 @@ router.post("/piutang/remind", async (req: Request, res: Response) => {
 // GET /api/admin/finance/departures
 router.get("/departures", async (req: Request, res: Response) => {
   try {
+    // C-2: scope ke cabang/agen
+    const scope = await resolveUserScope(req);
+    const scopeCond = buildBookingScopeCondition(scope);
+
     const rows = await db.execute(sql`
       WITH
       -- 1. Aggregate payments per booking
@@ -426,7 +451,7 @@ router.get("/departures", async (req: Request, res: Response) => {
         WHERE is_voided = false
         GROUP BY booking_id
       ),
-      -- 2. Aggregate booking revenue + seat counts per departure
+      -- 2. Aggregate booking revenue + seat counts per departure (scoped)
       booking_agg AS (
         SELECT
           b.departure_id,
@@ -437,6 +462,7 @@ router.get("/departures", async (req: Request, res: Response) => {
         FROM bookings b
         LEFT JOIN paid_agg pa ON pa.booking_id = b.id
         WHERE b.status NOT IN ('cancelled','draft')
+          AND ${scopeCond}
         GROUP BY b.departure_id
       ),
       -- 3. Compute HPP per departure using pre-aggregated seat count (no nested aggregates)

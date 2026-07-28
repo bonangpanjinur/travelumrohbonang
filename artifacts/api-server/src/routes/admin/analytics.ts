@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { db, sql } from "@workspace/db";
 import { sendAdminError } from "../../lib/adminApiError";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import { buildBookingScopeCondition } from "../../lib/scopeConditions";
 
 const router = Router();
 
@@ -260,36 +262,40 @@ router.get("/agent-stats", async (req, res) => {
  */
 router.get("/dashboard-stats", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    const scopeCond = buildBookingScopeCondition(scope);
+
     const [countsRow, revenueRow, trendRows] = await Promise.all([
       db.execute(sql`
         select
-          (select count(*)::int from bookings)                                           as total_bookings,
-          (select count(*)::int from bookings where status = 'waiting_payment')          as pending_payments,
-          (select count(*)::int from agents where is_active = true)                      as total_agents,
-          (select count(*)::int from packages where is_active = true)                    as active_packages,
-          (select count(*)::int from booking_pilgrims)                                   as total_pilgrims,
-          (select count(*)::int from branches where is_active = true)                    as total_branches,
-          (select count(*)::int from muthawifs)                                          as total_muthawifs
+          (select count(*)::int from bookings b where ${scopeCond})                                           as total_bookings,
+          (select count(*)::int from bookings b where b.status = 'waiting_payment' and ${scopeCond})          as pending_payments,
+          (select count(*)::int from agents where is_active = true)                                           as total_agents,
+          (select count(*)::int from packages where is_active = true)                                         as active_packages,
+          (select count(*)::int from booking_pilgrims bp join bookings b on b.id = bp.booking_id where ${scopeCond}) as total_pilgrims,
+          (select count(*)::int from branches where is_active = true)                                         as total_branches,
+          (select count(*)::int from muthawifs)                                                               as total_muthawifs
       `),
       db.execute(sql`
-        select coalesce(sum(total_price), 0)::bigint as total_revenue
-        from bookings
-        where status = 'paid'
+        select coalesce(sum(b.total_price), 0)::bigint as total_revenue
+        from bookings b
+        where b.status = 'paid' and ${scopeCond}
       `),
       db.execute(sql`
         select
           to_char(d.month, 'Mon YY') as month,
-          coalesce(b.cnt, 0)::int    as count
+          coalesce(bk.cnt, 0)::int    as count
         from generate_series(
           date_trunc('month', now()) - interval '5 months',
           date_trunc('month', now()),
           interval '1 month'
         ) as d(month)
         left join (
-          select date_trunc('month', created_at) as m, count(*) as cnt
-          from bookings
+          select date_trunc('month', b.created_at) as m, count(*) as cnt
+          from bookings b
+          where ${scopeCond}
           group by 1
-        ) b on b.m = d.month
+        ) bk on bk.m = d.month
         order by d.month
       `),
     ]);

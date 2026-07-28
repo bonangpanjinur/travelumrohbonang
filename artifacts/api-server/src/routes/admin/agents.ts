@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { db, agents, agentCommissions, agentWithdrawals, affiliateClicks, userRoles, eq, desc } from "@workspace/db";
+import { db, agents, agentCommissions, agentWithdrawals, affiliateClicks, userRoles, eq, desc, and } from "@workspace/db";
 import { requireSuperAdmin } from "../../middlewares/requireAdmin";
 import { journalCommissionWithdrawal } from "../../lib/autoJournal";
+import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
 
@@ -54,7 +55,12 @@ router.delete("/:id", async (req, res) => {
 // Commissions
 router.get("/commissions", async (req, res) => {
   try {
-    const data = await db.select().from(agentCommissions).orderBy(desc(agentCommissions.createdAt));
+    const scope = await resolveUserScope(req);
+    // Agen hanya boleh melihat komisi miliknya sendiri
+    const query = scope.type === "agent" && scope.agentId
+      ? db.select().from(agentCommissions).where(eq(agentCommissions.agentId, scope.agentId)).orderBy(desc(agentCommissions.createdAt))
+      : db.select().from(agentCommissions).orderBy(desc(agentCommissions.createdAt));
+    const data = await query;
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch commissions" });

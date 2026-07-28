@@ -28,6 +28,8 @@ import {
 } from "@workspace/db";
 import { generateManifestPdf } from "../../lib/pdf/manifest";
 import { sendAdminError } from "../../lib/adminApiError";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import { buildBookingScopeCondition } from "../../lib/scopeConditions";
 
 // mergeParams: true so req.params.packageId from parent router is accessible here
 const router = Router({ mergeParams: true });
@@ -204,6 +206,22 @@ router.get("/:id/manifest-data", async (req, res) => {
     const limit = Math.min(Number(limitParam) || 50, 200);
     const offset = Number(offsetParam) || 0;
     const searchTerm = search?.trim() || "";
+
+    // D-2: scope check — verifikasi akses ke keberangkatan ini
+    const scope = await resolveUserScope(req);
+    if (scope.type !== "global") {
+      const scopeCond = buildBookingScopeCondition(scope);
+      const accessCheck = await db.execute(sql`
+        SELECT 1 FROM bookings b
+        WHERE b.departure_id = ${departureId}
+          AND ${scopeCond}
+        LIMIT 1
+      `);
+      const rows = (accessCheck as any).rows ?? accessCheck;
+      if (rows.length === 0) {
+        return res.status(403).json({ error: "Anda tidak memiliki akses ke manifest keberangkatan ini." });
+      }
+    }
 
     const [departure] = await db
       .select({
