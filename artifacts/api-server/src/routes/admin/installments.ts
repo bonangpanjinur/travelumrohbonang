@@ -14,13 +14,17 @@ import {
   bookingPayments,
   bookings,
   packages,
+  packageDepartures,
   profiles,
   eq,
   and,
+  sql,
   desc,
   asc,
 } from "@workspace/db";
 import { sendInstallmentReminders } from "../../lib/installmentReminderCron";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import { buildBookingScopeCondition } from "../../lib/scopeConditions";
 import {
   computePaymentStatus,
   syncBookingStatus,
@@ -30,10 +34,59 @@ import {
 
 const router = Router();
 
+// ── GET /packages — distinct packages with installments visible to this scope ─
+router.get("/packages", async (req, res) => {
+  try {
+    const scope = await resolveUserScope(req);
+    const scopeCondition = buildBookingScopeCondition(scope, "bookings");
+
+    const rows = await db
+      .selectDistinct({ id: packages.id, title: packages.title })
+      .from(installmentSchedules)
+      .leftJoin(bookings, eq(bookings.id, installmentSchedules.bookingId))
+      .leftJoin(packages, eq(packages.id, bookings.packageId))
+      .where(scopeCondition)
+      .orderBy(packages.title);
+
+    res.json(rows.filter((r) => r.id));
+  } catch (err) {
+    console.error("[admin/installments] packages:", err);
+    res.status(500).json({ error: "Failed to fetch packages" });
+  }
+});
+
+// ── GET /departures — distinct departures with installments visible to scope ──
+router.get("/departures", async (req, res) => {
+  try {
+    const scope = await resolveUserScope(req);
+    const scopeCondition = buildBookingScopeCondition(scope, "bookings");
+
+    const rows = await db
+      .selectDistinct({
+        id: packageDepartures.id,
+        departureDate: packageDepartures.departureDate,
+        packageTitle: packages.title,
+      })
+      .from(installmentSchedules)
+      .leftJoin(bookings, eq(bookings.id, installmentSchedules.bookingId))
+      .leftJoin(packageDepartures, eq(packageDepartures.id, bookings.departureId))
+      .leftJoin(packages, eq(packages.id, bookings.packageId))
+      .where(scopeCondition)
+      .orderBy(packageDepartures.departureDate);
+
+    res.json(rows.filter((r) => r.id));
+  } catch (err) {
+    console.error("[admin/installments] departures:", err);
+    res.status(500).json({ error: "Failed to fetch departures" });
+  }
+});
+
 // ── GET /overdue — must be before /:id to avoid route shadowing ───────────────
 router.get("/overdue", async (req, res) => {
   try {
     const now = new Date();
+    const scope = await resolveUserScope(req);
+    const scopeCondition = buildBookingScopeCondition(scope, "bookings");
 
     const rows = await db
       .select({
@@ -54,7 +107,7 @@ router.get("/overdue", async (req, res) => {
       .leftJoin(bookings, eq(bookings.id, installmentSchedules.bookingId))
       .leftJoin(packages, eq(packages.id, bookings.packageId))
       .leftJoin(profiles, eq(profiles.id, bookings.userId))
-      .where(eq(installmentSchedules.status, "pending"))
+      .where(and(eq(installmentSchedules.status, "pending"), scopeCondition))
       .orderBy(asc(installmentSchedules.dueDate));
 
     // Filter past due in JS (avoids raw sql)
@@ -200,8 +253,11 @@ router.get("/", async (req, res) => {
       bookingId?: string;
     };
 
+    const scope = await resolveUserScope(req);
+    const scopeCondition = buildBookingScopeCondition(scope, "bookings");
+
     const isOverdueFilter = status === "overdue";
-    const conditions: Parameters<typeof and>[0][] = [];
+    const conditions: Parameters<typeof and>[0][] = [scopeCondition];
     // "overdue" is not a real DB status; query pending rows and post-filter by date.
     if (isOverdueFilter) {
       conditions.push(eq(installmentSchedules.status, "pending"));

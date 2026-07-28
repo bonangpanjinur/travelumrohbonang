@@ -14,6 +14,12 @@ import {
   desc,
 } from "@workspace/db";
 import { sbGetBooking, sbGetPayments } from "../../lib/supabaseFallback";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import {
+  buildBookingScopeCondition,
+  isBookingInScope,
+  scopeDeniedMessage,
+} from "../../lib/scopeConditions";
 import {
   AdminRecordPaymentRequest,
   AdminUpdatePaymentRequest,
@@ -89,6 +95,9 @@ router.get("/proof-files/:filename", (req: any, res) => {
 
 router.get("/all", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    const scopeCondition = buildBookingScopeCondition(scope, "bookings");
+
     const data = await db
       .select({
         id: payments.id,
@@ -111,6 +120,7 @@ router.get("/all", async (req, res) => {
       .from(payments)
       .leftJoin(bookings, eq(payments.bookingId, bookings.id))
       .leftJoin(profiles, eq(profiles.id, bookings.userId))
+      .where(scopeCondition)
       .orderBy(desc(payments.createdAt));
     res.json(data);
   } catch (e) {
@@ -121,6 +131,9 @@ router.get("/all", async (req, res) => {
 
 router.get("/recent-pending", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    const scopeCondition = buildBookingScopeCondition(scope, "bookings");
+
     const data = await db
       .select({
         id: payments.id,
@@ -131,7 +144,7 @@ router.get("/recent-pending", async (req, res) => {
       })
       .from(payments)
       .leftJoin(bookings, eq(payments.bookingId, bookings.id))
-      .where(eq(payments.status, "pending"))
+      .where(and(eq(payments.status, "pending"), scopeCondition))
       .orderBy(desc(payments.createdAt))
       .limit(20);
     res.json(data);
@@ -395,9 +408,16 @@ router.patch("/reject/:id", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
+    const scope = await resolveUserScope(req);
 
     const [booking] = await db
-      .select({ id: bookings.id })
+      .select({
+        id: bookings.id,
+        branchId: bookings.branchId,
+        agentId: bookings.agentId,
+        picType: bookings.picType,
+        picId: bookings.picId,
+      })
       .from(bookings)
       .where(eq(bookings.id, bookingId))
       .limit(1);
@@ -441,6 +461,11 @@ router.get("/", async (req, res) => {
       }
       res.status(404).json({ error: "Booking not found" });
       return;
+    }
+
+    // ── Scope guard: deny access to bookings outside this user's scope ────────
+    if (!isBookingInScope(booking, scope)) {
+      return res.status(403).json({ error: scopeDeniedMessage(scope) });
     }
 
     const paymentRows = await db
