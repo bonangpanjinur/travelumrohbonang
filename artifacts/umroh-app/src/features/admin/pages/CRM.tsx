@@ -183,7 +183,10 @@ const AdminCRM = () => {
 
   const { data: packages = [] } = useQuery<any[]>({
     queryKey: ["packages_for_crm"],
-    queryFn: () => apiFetch<any[]>("/api/packages?active=true"),
+    queryFn: async () => {
+      const res = await apiFetch<{ data: any[]; total: number } | any[]>("/api/packages?active=true");
+      return Array.isArray(res) ? res : (res as any).data ?? [];
+    },
   });
 
   const { data: interactions = [], isLoading: interactionsLoading } = useQuery<any[]>({
