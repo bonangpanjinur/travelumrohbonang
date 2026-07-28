@@ -103,7 +103,9 @@ const ALL_STAFF = ["super_admin", "admin", "branch_manager", "staff"];
 const SUPER_ADMIN_ADMIN = ["super_admin", "admin"];
 const SUPER_ONLY = ["super_admin"];
 const OPERATIONAL = ["super_admin", "admin", "branch_manager", "staff", "agent"];
-const FINANCE = ["super_admin", "admin", "branch_manager"];
+const FINANCE = ["super_admin", "admin", "branch_manager", "finance"];
+// Finance role gets dashboard + notifications + payment verification
+const FINANCE_OPERATIONAL = [...OPERATIONAL, "finance"];
 
 export const menuGroups: MenuGroup[] = [
   {
@@ -111,8 +113,8 @@ export const menuGroups: MenuGroup[] = [
     labelKey: "menu.group.main",
     icon: LayoutDashboard,
     items: [
-      { label: "Dashboard", labelKey: "menu.dashboard", href: "/admin", icon: LayoutDashboard, roles: OPERATIONAL },
-      { label: "Notifikasi", labelKey: "menu.notifications", href: "/admin/notifications", icon: BellRing, roles: OPERATIONAL },
+      { label: "Dashboard", labelKey: "menu.dashboard", href: "/admin", icon: LayoutDashboard, roles: FINANCE_OPERATIONAL },
+      { label: "Notifikasi", labelKey: "menu.notifications", href: "/admin/notifications", icon: BellRing, roles: FINANCE_OPERATIONAL },
     ],
   },
   {
@@ -154,7 +156,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Dashboard Keuangan",       labelKey: "menu.finance_dashboard",   href: "/admin/finance-dashboard",  icon: LayoutDashboard, roles: FINANCE, featureId: "reports" },
       { label: "Keuangan Keberangkatan",   labelKey: "menu.departure_finance",   href: "/admin/departure-finance",  icon: BarChart3, roles: FINANCE, featureId: "reports" },
       // ── Penerimaan ─────────────────────────────────────────────────────────
-      { label: "Pembayaran Jemaah",        labelKey: "menu.payments",             href: "/admin/payments",           icon: CreditCard, roles: OPERATIONAL, featureId: "payments" },
+      { label: "Pembayaran Jemaah",        labelKey: "menu.payments",             href: "/admin/payments",           icon: CreditCard, roles: FINANCE_OPERATIONAL, featureId: "payments" },
       { label: "Cicilan",                  labelKey: "menu.installments",         href: "/admin/installments",       icon: Receipt, roles: FINANCE, featureId: "installments" },
       { label: "Tabungan Umroh",           labelKey: "menu.savings",              href: "/admin/savings",            icon: PiggyBank, roles: FINANCE },
       // ── Piutang ────────────────────────────────────────────────────────────
@@ -254,7 +256,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Live REST Diagnostics", labelKey: "menu.rest_diag", href: "/admin/rest-diag", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
       { label: "Slug Redirects (SEO)", labelKey: "menu.slug_redirects", href: "/admin/slug-redirects", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
       { label: "Pengaturan SEO", labelKey: "menu.seo_settings", href: "/admin/seo", icon: Search, roles: SUPER_ADMIN_ADMIN },
-      { label: "Izin Menu per Role", labelKey: "menu.menu_permissions", href: "/admin/menu-permissions", icon: Layers, roles: OPERATIONAL },
+      { label: "Izin Menu per Role", labelKey: "menu.menu_permissions", href: "/admin/menu-permissions", icon: Layers, roles: FINANCE_OPERATIONAL },
       { label: "Manajemen Fitur", labelKey: "menu.feature_management", href: "/admin/feature-management", icon: ToggleRight, roles: SUPER_ONLY },
       { label: "Mata Uang", labelKey: "menu.currencies", href: "/admin/currencies", icon: Coins, roles: SUPER_ADMIN_ADMIN },
       { label: "Integrasi & API Keys", labelKey: "menu.integrations", href: "/admin/integrations", icon: KeyRound, roles: SUPER_ONLY },

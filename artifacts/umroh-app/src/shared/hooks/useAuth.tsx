@@ -12,6 +12,7 @@ export type AppRole =
   | "super_admin"
   | "admin"
   | "branch_manager"
+  | "finance"
   | "staff"
   | "agent"
   | "buyer"
@@ -40,7 +41,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const VALID_ROLES = new Set<AppRole>([
-  "super_admin", "admin", "branch_manager", "staff", "agent", "buyer", "user",
+  "super_admin", "admin", "branch_manager", "finance", "staff", "agent", "buyer", "user",
 ]);
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string ?? "";

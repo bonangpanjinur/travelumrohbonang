@@ -11,6 +11,7 @@ export const ROLE_HIERARCHY = [
   "super_admin",
   "admin",
   "branch_manager",
+  "finance",
   "staff",
   "agent",
   "buyer",
@@ -29,10 +30,11 @@ export const ROLE_RANK: Record<string, number> = {
   super_admin: 0,
   admin: 1,
   branch_manager: 2,
-  staff: 3,
-  agent: 4,
-  buyer: 5,
-  user: 6,
+  finance: 3,
+  staff: 4,
+  agent: 5,
+  buyer: 6,
+  user: 7,
 };
 
 // ── Role Sets (imported by requireAdmin.ts) ───────────────────────────────────
@@ -48,18 +50,20 @@ export const STAFF_ROLES = new Set([
   "staff",
 ]);
 
-/** Operational: staff + agent. Use on booking/package read routes. */
+/** Operational: staff + agent + finance. Use on booking/package read routes. */
 export const OPERATIONAL_ROLES = new Set([
   "super_admin",
   "admin",
   "branch_manager",
+  "finance",
   "staff",
   "agent",
 ]);
 
-/** Finance: super_admin, admin, branch_manager. */
+/** Finance: super_admin, admin, branch_manager, finance. */
 export const FINANCE_ROLES = new Set([
   "super_admin",
   "admin",
   "branch_manager",
+  "finance",
 ]);

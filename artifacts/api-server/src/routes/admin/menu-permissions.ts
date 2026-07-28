@@ -7,7 +7,7 @@ import { sendAdminError } from "../../lib/adminApiError";
 import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../../lib/supabaseEnv";
 import { shouldUseSupabaseHttp } from "../../lib/dbFlags";
 
-const ADMIN_ROLES = new Set(["super_admin", "admin", "branch_manager", "staff", "agent"]);
+const ADMIN_ROLES = new Set(["super_admin", "admin", "branch_manager", "finance", "staff", "agent"]);
 
 const router = Router();
 
