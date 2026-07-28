@@ -3,7 +3,7 @@ import {
   Users, ShoppingBag, CreditCard, TrendingUp, CalendarCheck,
   UserPlus, Building2, UserCheck, Download, Target, ShieldCheck,
   RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, ArrowUpRight,
-  ExternalLink, AlertTriangle, Flame, Siren, Info,
+  ExternalLink, AlertTriangle, Flame, Siren, Info, ChevronDown, ChevronUp, X,
 } from "lucide-react";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "wouter";
@@ -204,8 +204,10 @@ const AdminDashboard = () => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") || DEFAULT_TARGETS; }
     catch { return DEFAULT_TARGETS; }
   });
-  const [targetDialog, setTargetDialog] = useState(false);
-  const [targetForm, setTargetForm]     = useState<Targets>(targets);
+  const [targetDialog, setTargetDialog]       = useState(false);
+  const [targetForm, setTargetForm]           = useState<Targets>(targets);
+  const [agingExpanded, setAgingExpanded]     = useState(true);
+  const [warningDismissed, setWarningDismissed] = useState(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [, forceRender] = useState(0);
 
@@ -406,55 +408,67 @@ const AdminDashboard = () => {
       </div>
 
       {/* ── DEBT WARNING BANNER ── */}
-      {!loading && isUrgent && (
-        <Link href="/admin/piutang" className="block">
-          <div className="flex items-center gap-3 p-4 bg-red-600 text-white rounded-xl shadow-lg cursor-pointer hover:bg-red-700 transition-colors">
-            <div className="bg-red-500 rounded-lg p-2 shrink-0">
-              <Siren className="w-5 h-5 animate-pulse" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm">
-                ⚠️ Peringatan Piutang Mendesak — {urgentCount} booking butuh tindakan segera
-              </p>
-              <p className="text-red-100 text-xs mt-0.5">
-                Total tagihan belum dibayar yang kritis/sudah lewat jatuh tempo:{" "}
-                <span className="font-bold text-white">{formatRp(urgentAmount)}</span>
-                {" "}· Klik untuk lihat detail
-              </p>
-            </div>
-            <div className="hidden sm:flex items-center gap-3 shrink-0">
-              {overdueAging && overdueAging.count > 0 && (
-                <div className="text-center bg-red-700/60 rounded-lg px-3 py-1.5">
+      {!loading && isUrgent && !warningDismissed && (
+        <div className="relative flex items-center gap-3 p-4 bg-red-600 text-white rounded-xl shadow-lg">
+          <div className="bg-red-500 rounded-lg p-2 shrink-0">
+            <Siren className="w-5 h-5 animate-pulse" />
+          </div>
+          <Link href="/admin/piutang" className="flex-1 min-w-0 cursor-pointer">
+            <p className="font-bold text-sm">
+              ⚠️ Peringatan Piutang Mendesak — {urgentCount} booking butuh tindakan segera
+            </p>
+            <p className="text-red-100 text-xs mt-0.5">
+              Total tagihan kritis/lewat jatuh tempo:{" "}
+              <span className="font-bold text-white">{formatRp(urgentAmount)}</span>
+              {" "}· Klik untuk lihat detail
+            </p>
+          </Link>
+          <div className="hidden sm:flex items-center gap-3 shrink-0">
+            {overdueAging && overdueAging.count > 0 && (
+              <Link href="/admin/piutang?bucket=overdue">
+                <div className="text-center bg-red-700/60 hover:bg-red-700/80 rounded-lg px-3 py-1.5 transition-colors cursor-pointer">
                   <p className="text-lg font-bold leading-none">{overdueAging.count}</p>
                   <p className="text-[10px] text-red-200 mt-0.5">Lewat Jatuh Tempo</p>
                 </div>
-              )}
-              {kritisAging && kritisAging.count > 0 && (
-                <div className="text-center bg-red-700/60 rounded-lg px-3 py-1.5">
+              </Link>
+            )}
+            {kritisAging && kritisAging.count > 0 && (
+              <Link href="/admin/piutang?bucket=kritis">
+                <div className="text-center bg-red-700/60 hover:bg-red-700/80 rounded-lg px-3 py-1.5 transition-colors cursor-pointer">
                   <p className="text-lg font-bold leading-none">{kritisAging.count}</p>
                   <p className="text-[10px] text-red-200 mt-0.5">≤14 Hari Kritis</p>
                 </div>
-              )}
-            </div>
-            <ArrowUpRight className="w-5 h-5 text-red-200 shrink-0" />
+              </Link>
+            )}
           </div>
-        </Link>
+          <button
+            onClick={() => setWarningDismissed(true)}
+            title="Tutup peringatan"
+            className="shrink-0 p-1.5 rounded-lg bg-red-500/50 hover:bg-red-500/80 transition-colors ml-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       )}
 
       {/* Soft warning when there's debt but not urgent */}
-      {!loading && hasDebt && !isUrgent && (
-        <Link href="/admin/piutang" className="block">
-          <div className="flex items-center gap-3 p-3.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl cursor-pointer hover:bg-red-100 transition-colors">
-            <AlertCircle className="w-5 h-5 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold">
-                {stats.pendingPayments} booking belum lunas — total piutang {formatRp(stats.totalOutstanding)}
-              </p>
-              <p className="text-xs text-red-500 mt-0.5">Klik untuk melihat daftar piutang lengkap →</p>
-            </div>
-            <ArrowUpRight className="w-4 h-4 shrink-0 text-red-400" />
-          </div>
-        </Link>
+      {!loading && hasDebt && !isUrgent && !warningDismissed && (
+        <div className="relative flex items-center gap-3 p-3.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <Link href="/admin/piutang" className="flex-1 min-w-0 cursor-pointer hover:underline">
+            <p className="text-sm font-semibold">
+              {stats.pendingPayments} booking belum lunas — total piutang {formatRp(stats.totalOutstanding)}
+            </p>
+            <p className="text-xs text-red-500 mt-0.5">Klik untuk melihat daftar piutang lengkap →</p>
+          </Link>
+          <button
+            onClick={() => setWarningDismissed(true)}
+            title="Tutup peringatan"
+            className="shrink-0 p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+          >
+            <X className="w-4 h-4 text-red-400" />
+          </button>
+        </div>
       )}
 
       {/* ── Financial highlight row ── */}
@@ -568,97 +582,148 @@ const AdminDashboard = () => {
         </Link>
       </div>
 
-      {/* ── Aging Piutang breakdown ── */}
+      {/* ── Aging Piutang breakdown (collapsible) ── */}
       {!loading && hasDebt && aging.length > 0 && (
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2 pt-4 px-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-red-500" />
-                  Analisa Piutang Belum Lunas
-                </CardTitle>
-                <CardDescription className="text-xs mt-0.5">Pengelompokan tagihan berdasarkan urgensi waktu keberangkatan</CardDescription>
-              </div>
-              <Link href="/admin/piutang">
-                <Button variant="outline" size="sm" className="text-xs h-7 border-red-200 text-red-600 hover:bg-red-50">
-                  Lihat Semua <ExternalLink className="w-3 h-3 ml-1" />
-                </Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent className="px-5 pb-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {(["overdue", "kritis", "mendesak", "perhatian"] as const).map(bucket => {
-                const a = getAging(bucket);
-                if (!a || a.count === 0) return null;
-                const cfg = AGING_CONFIG[bucket];
-                const Icon = cfg.icon;
-                return (
-                  <Link key={bucket} href={`/admin/piutang?bucket=${bucket}`} className="block">
-                    <div className={cn(
-                      "rounded-xl p-3 border cursor-pointer hover:shadow-sm transition-all",
-                      cfg.bg, cfg.border
-                    )}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={cn("text-[10px] font-bold uppercase tracking-wide", cfg.text)}>
-                          {cfg.shortLabel}
-                        </span>
-                        <span className={cn("text-[9px] text-white font-medium px-1.5 py-0.5 rounded-full", cfg.badgeBg)}>
-                          {cfg.label}
-                        </span>
-                      </div>
-                      <div className="flex items-end justify-between gap-1">
-                        <div>
-                          <p className={cn("text-2xl font-bold leading-none", cfg.text)}>{a.count}</p>
-                          <p className={cn("text-[10px] mt-0.5", cfg.text, "opacity-75")}>booking</p>
-                        </div>
-                        <Icon className={cn("w-5 h-5 opacity-60", cfg.text)} />
-                      </div>
-                      <p className={cn("text-[11px] font-semibold mt-2", cfg.text)}>
-                        {formatRp(a.outstanding)}
-                      </p>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-
-            {/* Upcoming departures with debt */}
-            {financeDash && financeDash.upcomingDepartures.length > 0 && (
-              <div className="mt-4">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                  Keberangkatan Mendatang dengan Piutang
-                </p>
-                <div className="space-y-2">
-                  {financeDash.upcomingDepartures.slice(0, 4).map(dep => (
-                    <div key={dep.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                      <div className="shrink-0 text-center bg-background rounded-lg px-2 py-1 border min-w-[52px]">
-                        <p className="text-[10px] text-muted-foreground">{format(new Date(dep.departureDate), "MMM", { locale: localeId })}</p>
-                        <p className="text-sm font-bold leading-none">{format(new Date(dep.departureDate), "dd")}</p>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate">{dep.packageTitle}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="flex-1 bg-muted rounded-full h-1.5 max-w-[80px]">
-                            <div
-                              className={cn("h-1.5 rounded-full", dep.pctCollected >= 80 ? "bg-emerald-500" : dep.pctCollected >= 50 ? "bg-amber-500" : "bg-red-500")}
-                              style={{ width: `${dep.pctCollected}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] text-muted-foreground">{dep.pctCollected}% lunas</span>
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-xs font-bold text-red-600">{formatRp(dep.outstanding)}</p>
-                        <p className="text-[10px] text-muted-foreground">{dep.belumLunasCount} blm lunas</p>
-                      </div>
-                    </div>
-                  ))}
+        <Card className="border-l-4 border-l-red-500 overflow-hidden">
+          {/* Header — always visible, click to toggle */}
+          <button
+            onClick={() => setAgingExpanded(v => !v)}
+            className="w-full text-left"
+            aria-expanded={agingExpanded}
+          >
+            <div className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/30 transition-colors">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-none">Analisa Piutang Belum Lunas</p>
+                  {!agingExpanded && (
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      {aging.filter(a => a.count > 0).map(a => {
+                        const cfg = AGING_CONFIG[a.bucket];
+                        return cfg ? `${a.count} ${cfg.shortLabel}` : null;
+                      }).filter(Boolean).join(" · ")}
+                      {" — "}{formatRp(stats.totalOutstanding)} total
+                    </p>
+                  )}
+                  {agingExpanded && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Pengelompokan tagihan berdasarkan urgensi waktu keberangkatan
+                    </p>
+                  )}
                 </div>
               </div>
-            )}
-          </CardContent>
+              <div className="flex items-center gap-2 shrink-0 ml-3">
+                {!agingExpanded && (
+                  <div className="hidden sm:flex gap-1.5">
+                    {(["overdue", "kritis", "mendesak"] as const).map(bucket => {
+                      const a = getAging(bucket);
+                      if (!a || a.count === 0) return null;
+                      const cfg = AGING_CONFIG[bucket];
+                      return (
+                        <span key={bucket} className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border", cfg.bg, cfg.text, cfg.border)}>
+                          {a.count} {cfg.shortLabel}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className={cn(
+                  "p-1 rounded-md transition-colors",
+                  agingExpanded ? "bg-red-50 text-red-500" : "bg-muted/50 text-muted-foreground"
+                )}>
+                  {agingExpanded
+                    ? <ChevronUp className="w-4 h-4" />
+                    : <ChevronDown className="w-4 h-4" />
+                  }
+                </div>
+              </div>
+            </div>
+          </button>
+
+          {/* Collapsible body */}
+          {agingExpanded && (
+            <CardContent className="px-5 pb-4 pt-0">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-px flex-1 bg-border" />
+                <Link href="/admin/piutang" className="ml-3 shrink-0">
+                  <Button variant="outline" size="sm" className="text-xs h-7 border-red-200 text-red-600 hover:bg-red-50">
+                    Lihat Semua <ExternalLink className="w-3 h-3 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {(["overdue", "kritis", "mendesak", "perhatian"] as const).map(bucket => {
+                  const a = getAging(bucket);
+                  if (!a || a.count === 0) return null;
+                  const cfg = AGING_CONFIG[bucket];
+                  const Icon = cfg.icon;
+                  return (
+                    <Link key={bucket} href={`/admin/piutang?bucket=${bucket}`} className="block">
+                      <div className={cn(
+                        "rounded-xl p-3 border cursor-pointer hover:shadow-sm transition-all",
+                        cfg.bg, cfg.border
+                      )}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={cn("text-[10px] font-bold uppercase tracking-wide", cfg.text)}>
+                            {cfg.shortLabel}
+                          </span>
+                          <span className={cn("text-[9px] text-white font-medium px-1.5 py-0.5 rounded-full", cfg.badgeBg)}>
+                            {cfg.label}
+                          </span>
+                        </div>
+                        <div className="flex items-end justify-between gap-1">
+                          <div>
+                            <p className={cn("text-2xl font-bold leading-none", cfg.text)}>{a.count}</p>
+                            <p className={cn("text-[10px] mt-0.5 opacity-75", cfg.text)}>booking</p>
+                          </div>
+                          <Icon className={cn("w-5 h-5 opacity-60", cfg.text)} />
+                        </div>
+                        <p className={cn("text-[11px] font-semibold mt-2", cfg.text)}>
+                          {formatRp(a.outstanding)}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {/* Upcoming departures with debt */}
+              {financeDash && financeDash.upcomingDepartures.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    Keberangkatan Mendatang dengan Piutang
+                  </p>
+                  <div className="space-y-2">
+                    {financeDash.upcomingDepartures.slice(0, 4).map(dep => (
+                      <div key={dep.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                        <div className="shrink-0 text-center bg-background rounded-lg px-2 py-1 border min-w-[52px]">
+                          <p className="text-[10px] text-muted-foreground">{format(new Date(dep.departureDate), "MMM", { locale: localeId })}</p>
+                          <p className="text-sm font-bold leading-none">{format(new Date(dep.departureDate), "dd")}</p>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{dep.packageTitle}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex-1 bg-muted rounded-full h-1.5 max-w-[80px]">
+                              <div
+                                className={cn("h-1.5 rounded-full", dep.pctCollected >= 80 ? "bg-emerald-500" : dep.pctCollected >= 50 ? "bg-amber-500" : "bg-red-500")}
+                                style={{ width: `${dep.pctCollected}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-muted-foreground">{dep.pctCollected}% lunas</span>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-xs font-bold text-red-600">{formatRp(dep.outstanding)}</p>
+                          <p className="text-[10px] text-muted-foreground">{dep.belumLunasCount} blm lunas</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          )}
         </Card>
       )}
 
