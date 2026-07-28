@@ -166,7 +166,7 @@ const BookingTable = ({
                 )}
                 <TableHead>Kode</TableHead>
                 <TableHead>Jemaah</TableHead>
-                <TableHead>Diinput Oleh</TableHead>
+                <TableHead>PIC</TableHead>
                 <TableHead>Paket</TableHead>
                 <TableHead>Keberangkatan</TableHead>
                 <TableHead>Total</TableHead>

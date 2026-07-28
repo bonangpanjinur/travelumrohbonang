@@ -2,6 +2,8 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { supabaseAuth } from "@/shared/integrations/supabase/auth-client";
+import { useAuth } from "@/shared/hooks/useAuth";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import BookingDetailPanel from "@/features/admin/components/BookingDetailPanel";
 import BookingStatusBadge from "@/features/admin/components/BookingStatusBadge";
 import ChangeRoomModal from "@/features/admin/components/ChangeRoomModal";
@@ -26,6 +28,7 @@ import {
   Bed, Calendar, FileDown, ExternalLink, Loader2,
   Package, CreditCard, Banknote, AlertCircle, RefreshCw,
   User, Phone, Building2, UserCheck, AlertTriangle, ClipboardCheck,
+  UserCog, Pencil,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -96,6 +99,7 @@ const formatDate = (d: string | null | undefined) => {
 const BookingDetailPage = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
+  const { role } = useAuth();
 
   const [booking, setBooking] = useState<BookingHeader | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,6 +118,69 @@ const BookingDetailPage = () => {
     checkJamaah: boolean;
     checkRoom: boolean;
   }>({ open: false, action: null, checkJamaah: false, checkRoom: false });
+
+  // PIC change dialog
+  const [showChangePic, setShowChangePic] = useState(false);
+  const [picDraft, setPicDraft] = useState<{ picType: string; picId: string }>({ picType: "pusat", picId: "" });
+  const [picOptions, setPicOptions] = useState<{ id: string; name: string }[]>([]);
+  const [loadingPicOptions, setLoadingPicOptions] = useState(false);
+  const [savingPic, setSavingPic] = useState(false);
+
+  const canEditPic = role === "super_admin" || role === "owner" || role === "admin" || role === "staff";
+
+  const openChangePicDialog = () => {
+    setPicDraft({
+      picType: booking?.picType || "pusat",
+      picId: booking?.picId || "",
+    });
+    setPicOptions([]);
+    setShowChangePic(true);
+    if (booking?.picType && booking.picType !== "pusat") {
+      loadPicOptions(booking.picType);
+    }
+  };
+
+  const loadPicOptions = async (type: string) => {
+    if (type === "pusat") { setPicOptions([]); return; }
+    setLoadingPicOptions(true);
+    try {
+      const data = await apiFetch<{ agents: { id: string; name: string }[]; branches: { id: string; name: string }[] }>(
+        "/api/admin/bookings/pic-options"
+      );
+      if (type === "agen") {
+        setPicOptions(data.agents || []);
+      } else if (type === "cabang") {
+        setPicOptions(data.branches || []);
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal memuat opsi PIC");
+      setPicOptions([]);
+    } finally {
+      setLoadingPicOptions(false);
+    }
+  };
+
+  const handleSavePic = async () => {
+    if (!booking) return;
+    setSavingPic(true);
+    try {
+      const isPusat = !picDraft.picType || picDraft.picType === "pusat";
+      await apiFetch(`/api/admin/bookings/${booking.id}/pic`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          picType: isPusat ? null : picDraft.picType,
+          picId: isPusat ? null : picDraft.picId || null,
+        }),
+      });
+      toast.success("PIC berhasil diubah");
+      setShowChangePic(false);
+      fetchBooking();
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal mengubah PIC");
+    } finally {
+      setSavingPic(false);
+    }
+  };
 
   const fetchBooking = async () => {
     if (!bookingId) return;
@@ -453,15 +520,24 @@ const BookingDetailPage = () => {
             <UserCheck className="w-4 h-4 text-muted-foreground" /> Penginput &amp; Cabang
           </h3>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-3 text-sm">
-            {/* Diinput oleh */}
+            {/* PIC */}
             <div>
-              <p className="text-xs text-muted-foreground font-medium mb-0.5">Diinput Oleh</p>
+              <p className="text-xs text-muted-foreground font-medium mb-0.5">PIC</p>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium">{booking.picName || (isPusat ? "Kantor Pusat" : "-")}</span>
                 {booking.picType && (
                   <span className={`text-xs px-1.5 py-0.5 rounded border font-semibold ${picTypeBadgeColor[booking.picType] ?? picTypeBadgeColor.pusat}`}>
                     {picTypeLabel[booking.picType] ?? booking.picType}
                   </span>
+                )}
+                {canEditPic && (
+                  <button
+                    onClick={openChangePicDialog}
+                    className="ml-1 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    title="Ubah PIC"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
               {booking.user?.email && (
@@ -531,6 +607,79 @@ const BookingDetailPage = () => {
         onOpenChange={setShowChangeDeparture}
         onSuccess={fetchBooking}
       />
+
+      {/* ── Dialog Ubah PIC ─────────────────────────────────────────────── */}
+      <Dialog open={showChangePic} onOpenChange={(o) => { if (!o) setShowChangePic(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCog className="w-5 h-5 text-primary" /> Ubah PIC Booking
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-1">
+            {/* Tipe PIC */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Tipe PIC</label>
+              <Select
+                value={picDraft.picType}
+                onValueChange={(val) => {
+                  setPicDraft({ picType: val, picId: "" });
+                  loadPicOptions(val);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih tipe PIC" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pusat">Kantor Pusat</SelectItem>
+                  <SelectItem value="agen">Agen</SelectItem>
+                  <SelectItem value="cabang">Cabang</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Pilih entitas (agen / cabang) */}
+            {picDraft.picType !== "pusat" && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">
+                  {picDraft.picType === "agen" ? "Pilih Agen" : "Pilih Cabang"}
+                </label>
+                <Select
+                  value={picDraft.picId}
+                  onValueChange={(val) => setPicDraft((d) => ({ ...d, picId: val }))}
+                  disabled={loadingPicOptions}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingPicOptions ? "Memuat…" : "Pilih…"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {picOptions.map((opt) => (
+                      <SelectItem key={opt.id} value={opt.id}>{opt.name}</SelectItem>
+                    ))}
+                    {picOptions.length === 0 && !loadingPicOptions && (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">Tidak ada data</div>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowChangePic(false)} disabled={savingPic}>
+              Batal
+            </Button>
+            <Button
+              onClick={handleSavePic}
+              disabled={savingPic || (picDraft.picType !== "pusat" && !picDraft.picId)}
+            >
+              {savingPic ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : null}
+              Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── P2-2: Readiness check sebelum "Tandai Selesai" ──────────────── */}
       <Dialog

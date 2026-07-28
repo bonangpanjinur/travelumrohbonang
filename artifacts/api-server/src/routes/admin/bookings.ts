@@ -36,9 +36,24 @@ import {
 import { validate } from "../../middlewares/validate";
 import { sendAdminError } from "../../lib/adminApiError";
 import { awardLoyaltyPointsForBooking } from "../../lib/loyalty";
-import { requireSuperAdmin } from "../../middlewares/requireAdmin";
+import { requireSuperAdmin, requireStaff } from "../../middlewares/requireAdmin";
 
 const router = Router();
+
+// ── PIC options — agents + branches list for the "Ubah PIC" dialog ──────────
+// Gated by requireStaff so super_admin/owner/admin/branch_manager/staff can use it.
+router.get("/pic-options", requireStaff, async (req, res) => {
+  try {
+    const [agentRows, branchRows] = await Promise.all([
+      db.select({ id: agents.id, name: agents.name }).from(agents).orderBy(agents.name),
+      db.select({ id: branches.id, name: branches.name }).from(branches).orderBy(branches.name),
+    ]);
+    res.json({ agents: agentRows, branches: branchRows });
+  } catch (e) {
+    console.error("[GET /api/admin/bookings/pic-options]", e);
+    res.status(500).json({ error: "Gagal memuat opsi PIC" });
+  }
+});
 
 router.get("/export.xlsx", async (req, res) => {
   try {
@@ -182,7 +197,14 @@ router.get("/", async (req, res) => {
           b.pic_id              AS "picId",
           COALESCE(b.is_group_booking, false) AS "isGroupBooking",
           b.group_name          AS "groupName",
-          b.pic_name            AS "picName",
+          COALESCE(b.pic_name,
+            CASE b.pic_type
+              WHEN 'agen'     THEN (SELECT a.name  FROM agents   a  WHERE a.id  = b.pic_id LIMIT 1)
+              WHEN 'cabang'   THEN (SELECT br2.name FROM branches br2 WHERE br2.id = b.pic_id LIMIT 1)
+              WHEN 'karyawan' THEN (SELECT p2.name FROM profiles p2 WHERE p2.id  = b.pic_id LIMIT 1)
+              ELSE NULL
+            END
+          )                     AS "picName",
           b.pic_phone           AS "picPhone",
           b.pic_email           AS "picEmail",
           COALESCE(b.pemesan_name, b.pic_name, prof.name) AS "pemesanName",
@@ -1118,6 +1140,69 @@ router.post("/:id/pilgrims", async (req, res) => {
   } catch (e) {
     console.error("[POST /api/admin/bookings/:id/pilgrims]", e);
     res.status(500).json({ error: "Gagal menambahkan jamaah" });
+  }
+});
+
+// ── Ubah PIC booking ────────────────────────────────────────────────────────
+// Allowed roles: super_admin, owner, admin, branch_manager, staff (requireStaff)
+const VALID_PIC_TYPES = new Set(["pusat", "agen", "cabang", "karyawan"]);
+
+router.patch("/:id/pic", requireStaff, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { picType, picId } = req.body as { picType?: string | null; picId?: string | null };
+
+    // Validate picType
+    const resolvedType = picType || "pusat";
+    if (!VALID_PIC_TYPES.has(resolvedType)) {
+      res.status(400).json({ error: `picType diterima: ${[...VALID_PIC_TYPES].join(", ")}` });
+      return;
+    }
+
+    // picId required when not pusat
+    if (resolvedType !== "pusat" && !picId) {
+      res.status(400).json({ error: "picId wajib diisi jika picType bukan pusat" });
+      return;
+    }
+
+    // Check booking exists
+    const [existing] = await db.select({ id: bookings.id }).from(bookings).where(eq(bookings.id, id)).limit(1);
+    if (!existing) {
+      res.status(404).json({ error: "Booking tidak ditemukan" });
+      return;
+    }
+
+    // Resolve picName from the correct entity table
+    let picName: string | null = null;
+    if (picId && resolvedType !== "pusat") {
+      if (resolvedType === "agen") {
+        const [row] = await db.select({ name: agents.name }).from(agents).where(eq(agents.id, picId)).limit(1);
+        if (!row) { res.status(404).json({ error: "Agen tidak ditemukan" }); return; }
+        picName = row.name;
+      } else if (resolvedType === "cabang") {
+        const [row] = await db.select({ name: branches.name }).from(branches).where(eq(branches.id, picId)).limit(1);
+        if (!row) { res.status(404).json({ error: "Cabang tidak ditemukan" }); return; }
+        picName = row.name;
+      } else if (resolvedType === "karyawan") {
+        const [row] = await db.select({ name: profiles.name }).from(profiles).where(eq(profiles.id, picId)).limit(1);
+        if (!row) { res.status(404).json({ error: "Karyawan tidak ditemukan" }); return; }
+        picName = row.name;
+      }
+    }
+
+    await db
+      .update(bookings)
+      .set({
+        picType: resolvedType === "pusat" ? null : resolvedType,
+        picId: resolvedType === "pusat" ? null : (picId ?? null),
+        picName: picName,
+      })
+      .where(eq(bookings.id, id));
+
+    res.status(204).end();
+  } catch (e) {
+    console.error("[PATCH /api/admin/bookings/:id/pic]", e);
+    res.status(500).json({ error: "Failed to update PIC" });
   }
 });
 
