@@ -3,7 +3,7 @@ import {
   Users, ShoppingBag, CreditCard, TrendingUp, CalendarCheck,
   UserPlus, Building2, UserCheck, Download, Target, ShieldCheck,
   RefreshCw, AlertCircle, CheckCircle2, Clock, Wallet, ArrowUpRight,
-  ExternalLink,
+  ExternalLink, AlertTriangle, Flame, Siren, Info,
 } from "lucide-react";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "wouter";
@@ -52,6 +52,33 @@ interface DashboardStats {
   monthlyTrend: MonthlyTrend[];
 }
 
+interface AgingBucket {
+  bucket: "overdue" | "kritis" | "mendesak" | "perhatian" | "normal";
+  count: number;
+  outstanding: number;
+}
+
+interface FinanceDashboard {
+  summary: {
+    monthIncome: number;
+    totalPiutang: number;
+    piutangCount: number;
+    lunasCount: number;
+  };
+  aging: AgingBucket[];
+  upcomingDepartures: {
+    id: string;
+    departureDate: string;
+    packageTitle: string;
+    bookingCount: number;
+    targetRevenue: number;
+    collected: number;
+    outstanding: number;
+    belumLunasCount: number;
+    pctCollected: number;
+  }[];
+}
+
 type Period = "7days" | "30days" | "3months" | "6months" | "1year";
 
 interface Targets {
@@ -76,9 +103,17 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
   paid:            { label: "Lunas",    className: "bg-emerald-100 text-emerald-700 border-emerald-200" },
   confirmed:       { label: "Konfirmasi", className: "bg-blue-100 text-blue-700 border-blue-200" },
   waiting_payment: { label: "Menunggu", className: "bg-amber-100 text-amber-700 border-amber-200" },
-  pending:         { label: "Pending",  className: "bg-orange-100 text-orange-700 border-orange-200" },
+  pending:         { label: "Pending",  className: "bg-amber-100 text-amber-700 border-amber-200" },
   cancelled:       { label: "Batal",    className: "bg-red-100 text-red-700 border-red-200" },
   draft:           { label: "Draft",    className: "bg-gray-100 text-gray-500 border-gray-200" },
+};
+
+const AGING_CONFIG: Record<string, { label: string; shortLabel: string; icon: React.ElementType; bg: string; text: string; border: string; badgeBg: string }> = {
+  overdue:   { label: "Sudah Lewat", shortLabel: "Lewat",    icon: Siren,         bg: "bg-red-50 dark:bg-red-950/30",     text: "text-red-700",    border: "border-red-200",    badgeBg: "bg-red-600" },
+  kritis:    { label: "≤ 14 Hari",   shortLabel: "Kritis",   icon: Flame,         bg: "bg-rose-50 dark:bg-rose-950/30",   text: "text-rose-700",   border: "border-rose-200",   badgeBg: "bg-rose-600" },
+  mendesak:  { label: "≤ 30 Hari",   shortLabel: "Mendesak", icon: AlertTriangle, bg: "bg-orange-50 dark:bg-orange-950/30", text: "text-orange-700", border: "border-orange-200", badgeBg: "bg-orange-500" },
+  perhatian: { label: "≤ 60 Hari",   shortLabel: "Perhatian",icon: AlertCircle,   bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700",  border: "border-amber-200",  badgeBg: "bg-amber-500" },
+  normal:    { label: "> 60 Hari",   shortLabel: "Normal",   icon: Info,          bg: "bg-slate-50 dark:bg-slate-900/30", text: "text-slate-600",  border: "border-slate-200",  badgeBg: "bg-slate-500" },
 };
 
 function formatRp(n: number) {
@@ -96,17 +131,21 @@ interface KpiCardProps {
   iconBg: string;
   loading?: boolean;
   alert?: boolean;
+  alertLevel?: "warning" | "danger";
   isCurrency?: boolean;
   sub?: string;
   href?: string;
 }
 
-const KpiCard = ({ title, value, icon: Icon, iconBg, loading, alert, isCurrency, sub, href }: KpiCardProps) => {
+const KpiCard = ({ title, value, icon: Icon, iconBg, loading, alert, alertLevel = "danger", isCurrency, sub, href }: KpiCardProps) => {
+  const ringColor = alertLevel === "danger" ? "ring-red-500 ring-offset-1" : "ring-amber-400 ring-offset-1";
+  const barColor  = alertLevel === "danger" ? "bg-red-500" : "bg-amber-400";
+
   const card = (
     <Card className={cn(
       "relative overflow-hidden transition-all",
       href ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:translate-y-0" : "",
-      alert ? "ring-2 ring-red-400 ring-offset-1" : "",
+      alert ? `ring-2 ${ringColor}` : "",
     )}>
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
@@ -118,12 +157,14 @@ const KpiCard = ({ title, value, icon: Icon, iconBg, loading, alert, isCurrency,
             {loading ? (
               <div className="mt-2 h-7 w-24 bg-muted animate-pulse rounded-md" />
             ) : (
-              <p className={cn("mt-1.5 font-bold leading-none", isCurrency ? "text-xl" : "text-3xl")}>
+              <p className={cn("mt-1.5 font-bold leading-none", isCurrency ? "text-xl" : "text-3xl",
+                alert && alertLevel === "danger" ? "text-red-600 dark:text-red-400" : ""
+              )}>
                 {isCurrency ? formatRp(Number(value)) : value}
               </p>
             )}
             {sub && !loading && (
-              <p className="mt-1.5 text-xs text-muted-foreground">{sub}</p>
+              <p className={cn("mt-1.5 text-xs", alert ? "text-red-500 font-medium" : "text-muted-foreground")}>{sub}</p>
             )}
           </div>
           <div className={cn("rounded-xl p-2.5 text-white shadow shrink-0", iconBg)}>
@@ -131,7 +172,7 @@ const KpiCard = ({ title, value, icon: Icon, iconBg, loading, alert, isCurrency,
           </div>
         </div>
         {alert && !loading && (
-          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-400" />
+          <div className={cn("absolute bottom-0 left-0 right-0 h-1", barColor)} />
         )}
       </CardContent>
     </Card>
@@ -152,11 +193,12 @@ const AdminDashboard = () => {
   });
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([]);
   const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrend[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [refreshing, setRefreshing]   = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [period, setPeriod]           = useState<Period>("6months");
-  const [periodStats, setPeriodStats] = useState<any>(null);
+  const [financeDash, setFinanceDash]     = useState<FinanceDashboard | null>(null);
+  const [loading, setLoading]             = useState(true);
+  const [refreshing, setRefreshing]       = useState(false);
+  const [lastUpdated, setLastUpdated]     = useState<Date | null>(null);
+  const [period, setPeriod]               = useState<Period>("6months");
+  const [periodStats, setPeriodStats]     = useState<any>(null);
   const [periodLoading, setPeriodLoading] = useState(false);
   const [targets, setTargets] = useState<Targets>(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") || DEFAULT_TARGETS; }
@@ -165,9 +207,9 @@ const AdminDashboard = () => {
   const [targetDialog, setTargetDialog] = useState(false);
   const [targetForm, setTargetForm]     = useState<Targets>(targets);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [, forceRender] = useState(0); // re-render for live clock
+  const [, forceRender] = useState(0);
 
-  // Live clock — ticks every second
+  // Live clock
   useEffect(() => {
     const t = setInterval(() => forceRender(n => n + 1), 1000);
     return () => clearInterval(t);
@@ -176,9 +218,10 @@ const AdminDashboard = () => {
   const fetchAll = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
     try {
-      const [statsResult, recentResult] = await Promise.all([
+      const [statsResult, recentResult, financeResult] = await Promise.all([
         apiFetch<DashboardStats>("/api/admin/analytics/dashboard-stats").catch(() => null),
         apiFetch<{ data: RecentBooking[] }>("/api/admin/bookings?limit=5").catch(() => ({ data: [] as RecentBooking[] })),
+        apiFetch<FinanceDashboard>("/api/admin/finance/dashboard").catch(() => null),
       ]);
       if (statsResult) {
         const { monthlyTrend: trend, ...counts } = statsResult;
@@ -186,6 +229,7 @@ const AdminDashboard = () => {
         setMonthlyTrend(trend ?? []);
       }
       setRecentBookings(recentResult?.data || []);
+      if (financeResult) setFinanceDash(financeResult);
       setLastUpdated(new Date());
     } catch (err) {
       console.error("Dashboard fetch error:", err);
@@ -196,7 +240,6 @@ const AdminDashboard = () => {
     }
   }, []);
 
-  // Initial load + 30-second auto refresh
   useEffect(() => {
     fetchAll(false);
     tickRef.current = setInterval(() => fetchAll(false), AUTO_REFRESH_MS);
@@ -209,7 +252,7 @@ const AdminDashboard = () => {
       const data = await apiFetch<any>(`/api/admin/analytics/summary?period=${p}`);
       setPeriodStats(data);
     } catch {
-      // supplementary — silent fail
+      // silent
     } finally {
       setPeriodLoading(false);
     }
@@ -218,7 +261,6 @@ const AdminDashboard = () => {
   useEffect(() => { fetchPeriodStats(period); }, [period, fetchPeriodStats]);
 
   const handleManualRefresh = () => {
-    // Reset auto-refresh timer
     if (tickRef.current) clearInterval(tickRef.current);
     tickRef.current = setInterval(() => fetchAll(false), AUTO_REFRESH_MS);
     fetchAll(true);
@@ -270,10 +312,21 @@ const AdminDashboard = () => {
   const targetBookings   = targets.bookings ? Number(targets.bookings) : null;
   const targetRevenue    = targets.revenue  ? Number(targets.revenue)  : null;
 
-  // Payment collection rate
-  const paidCount    = stats.totalBookings - stats.pendingPayments;
+  const paidCount      = stats.totalBookings - stats.pendingPayments;
   const collectionRate = stats.totalBookings > 0
     ? Math.round((paidCount / stats.totalBookings) * 100) : 0;
+
+  // Aging helpers
+  const aging = financeDash?.aging ?? [];
+  const getAging = (bucket: string) => aging.find(a => a.bucket === bucket);
+  const overdueAging   = getAging("overdue");
+  const kritisAging    = getAging("kritis");
+  const mendesakAging  = getAging("mendesak");
+  const perhatianAging = getAging("perhatian");
+  const urgentCount    = (overdueAging?.count ?? 0) + (kritisAging?.count ?? 0);
+  const urgentAmount   = (overdueAging?.outstanding ?? 0) + (kritisAging?.outstanding ?? 0);
+  const hasDebt        = stats.totalOutstanding > 0;
+  const isUrgent       = urgentCount > 0;
 
   return (
     <div className="space-y-6">
@@ -283,7 +336,6 @@ const AdminDashboard = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard Overview</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Ringkasan aktivitas travel Umrah Anda.</p>
-          {/* Scope badge */}
           {role === "agent" && (
             <span className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium">
               <ShieldCheck className="w-3.5 h-3.5" />
@@ -292,20 +344,17 @@ const AdminDashboard = () => {
           )}
           {role === "branch_manager" && (
             <span className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Data Cabang Anda
+              <ShieldCheck className="w-3.5 h-3.5" /> Data Cabang Anda
             </span>
           )}
           {role === "finance" && (
             <span className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Data Cabang Anda
+              <ShieldCheck className="w-3.5 h-3.5" /> Data Cabang Anda
             </span>
           )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Period */}
           <div className="flex border rounded-lg overflow-hidden bg-muted/30">
             {PERIODS.map(p => (
               <button
@@ -330,7 +379,6 @@ const AdminDashboard = () => {
             <Download className="w-3.5 h-3.5 mr-1.5" /> Export
           </Button>
 
-          {/* Refresh + last updated */}
           <div className="flex items-center gap-2 text-xs text-muted-foreground border rounded-lg px-3 py-1.5 bg-muted/20">
             <button
               onClick={handleManualRefresh}
@@ -349,7 +397,6 @@ const AdminDashboard = () => {
                 <span>{new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
               )}
             </button>
-            {/* Live pulse indicator */}
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
@@ -357,6 +404,58 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* ── DEBT WARNING BANNER ── */}
+      {!loading && isUrgent && (
+        <Link href="/admin/piutang" className="block">
+          <div className="flex items-center gap-3 p-4 bg-red-600 text-white rounded-xl shadow-lg cursor-pointer hover:bg-red-700 transition-colors">
+            <div className="bg-red-500 rounded-lg p-2 shrink-0">
+              <Siren className="w-5 h-5 animate-pulse" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm">
+                ⚠️ Peringatan Piutang Mendesak — {urgentCount} booking butuh tindakan segera
+              </p>
+              <p className="text-red-100 text-xs mt-0.5">
+                Total tagihan belum dibayar yang kritis/sudah lewat jatuh tempo:{" "}
+                <span className="font-bold text-white">{formatRp(urgentAmount)}</span>
+                {" "}· Klik untuk lihat detail
+              </p>
+            </div>
+            <div className="hidden sm:flex items-center gap-3 shrink-0">
+              {overdueAging && overdueAging.count > 0 && (
+                <div className="text-center bg-red-700/60 rounded-lg px-3 py-1.5">
+                  <p className="text-lg font-bold leading-none">{overdueAging.count}</p>
+                  <p className="text-[10px] text-red-200 mt-0.5">Lewat Jatuh Tempo</p>
+                </div>
+              )}
+              {kritisAging && kritisAging.count > 0 && (
+                <div className="text-center bg-red-700/60 rounded-lg px-3 py-1.5">
+                  <p className="text-lg font-bold leading-none">{kritisAging.count}</p>
+                  <p className="text-[10px] text-red-200 mt-0.5">≤14 Hari Kritis</p>
+                </div>
+              )}
+            </div>
+            <ArrowUpRight className="w-5 h-5 text-red-200 shrink-0" />
+          </div>
+        </Link>
+      )}
+
+      {/* Soft warning when there's debt but not urgent */}
+      {!loading && hasDebt && !isUrgent && (
+        <Link href="/admin/piutang" className="block">
+          <div className="flex items-center gap-3 p-3.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-xl cursor-pointer hover:bg-red-100 transition-colors">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">
+                {stats.pendingPayments} booking belum lunas — total piutang {formatRp(stats.totalOutstanding)}
+              </p>
+              <p className="text-xs text-red-500 mt-0.5">Klik untuk melihat daftar piutang lengkap →</p>
+            </div>
+            <ArrowUpRight className="w-4 h-4 shrink-0 text-red-400" />
+          </div>
+        </Link>
+      )}
 
       {/* ── Financial highlight row ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -377,41 +476,58 @@ const AdminDashboard = () => {
           </Card>
         </Link>
 
+        {/* Total Piutang — RED gradient */}
         <Link href="/admin/piutang" className="sm:col-span-1 block group">
           <Card className={cn(
             "h-full border-0 shadow-lg cursor-pointer group-hover:shadow-xl group-hover:-translate-y-0.5 transition-all",
-            stats.totalOutstanding > 0
-              ? "bg-gradient-to-br from-orange-500 to-red-500 text-white"
+            hasDebt
+              ? "bg-gradient-to-br from-red-600 to-red-800 text-white"
               : "bg-gradient-to-br from-slate-100 to-slate-200",
           )}>
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
                 <p className={cn("text-xs font-semibold uppercase tracking-wide",
-                  stats.totalOutstanding > 0 ? "text-orange-100" : "text-muted-foreground"
+                  hasDebt ? "text-red-100" : "text-muted-foreground"
                 )}>
                   Total Piutang Aktif
                 </p>
-                <AlertCircle className={cn("w-5 h-5",
-                  stats.totalOutstanding > 0 ? "text-orange-200" : "text-muted-foreground"
-                )} />
+                <AlertCircle className={cn("w-5 h-5", hasDebt ? "text-red-200" : "text-muted-foreground")} />
               </div>
               {loading ? (
                 <div className="h-8 w-32 bg-white/20 animate-pulse rounded-md" />
               ) : (
-                <p className={cn("text-2xl font-bold",
-                  stats.totalOutstanding > 0 ? "text-white" : "text-muted-foreground"
-                )}>
-                  {stats.totalOutstanding > 0 ? formatRp(stats.totalOutstanding) : "Rp 0"}
+                <p className={cn("text-2xl font-bold", hasDebt ? "text-white" : "text-muted-foreground")}>
+                  {hasDebt ? formatRp(stats.totalOutstanding) : "Rp 0"}
                 </p>
               )}
               {!loading && (
-                <p className={cn("text-xs mt-1.5",
-                  stats.totalOutstanding > 0 ? "text-orange-100" : "text-muted-foreground"
-                )}>
-                  {stats.pendingPayments > 0
-                    ? `${stats.pendingPayments} booking belum lunas →`
-                    : "Semua booking sudah lunas 🎉"}
-                </p>
+                <>
+                  <p className={cn("text-xs mt-1.5", hasDebt ? "text-red-100" : "text-muted-foreground")}>
+                    {stats.pendingPayments > 0
+                      ? `${stats.pendingPayments} booking belum lunas →`
+                      : "Semua booking sudah lunas 🎉"}
+                  </p>
+                  {/* Aging mini pills */}
+                  {hasDebt && aging.length > 0 && (
+                    <div className="flex gap-1.5 mt-3 flex-wrap">
+                      {overdueAging && overdueAging.count > 0 && (
+                        <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full border border-white/30">
+                          🔴 {overdueAging.count} lewat
+                        </span>
+                      )}
+                      {kritisAging && kritisAging.count > 0 && (
+                        <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full border border-white/30">
+                          🔥 {kritisAging.count} kritis
+                        </span>
+                      )}
+                      {mendesakAging && mendesakAging.count > 0 && (
+                        <span className="text-[10px] bg-white/15 text-red-100 px-2 py-0.5 rounded-full border border-white/20">
+                          ⚠️ {mendesakAging.count} mendesak
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -427,7 +543,11 @@ const AdminDashboard = () => {
               {loading ? (
                 <div className="h-8 w-20 bg-muted animate-pulse rounded-md" />
               ) : (
-                <p className="text-3xl font-bold">{collectionRate}%</p>
+                <p className={cn("text-3xl font-bold",
+                  collectionRate >= 80 ? "text-emerald-600" : collectionRate >= 50 ? "text-amber-600" : "text-red-600"
+                )}>
+                  {collectionRate}%
+                </p>
               )}
               <div className="mt-3">
                 <div className="w-full bg-muted rounded-full h-1.5">
@@ -448,6 +568,100 @@ const AdminDashboard = () => {
         </Link>
       </div>
 
+      {/* ── Aging Piutang breakdown ── */}
+      {!loading && hasDebt && aging.length > 0 && (
+        <Card className="border-l-4 border-l-red-500">
+          <CardHeader className="pb-2 pt-4 px-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-500" />
+                  Analisa Piutang Belum Lunas
+                </CardTitle>
+                <CardDescription className="text-xs mt-0.5">Pengelompokan tagihan berdasarkan urgensi waktu keberangkatan</CardDescription>
+              </div>
+              <Link href="/admin/piutang">
+                <Button variant="outline" size="sm" className="text-xs h-7 border-red-200 text-red-600 hover:bg-red-50">
+                  Lihat Semua <ExternalLink className="w-3 h-3 ml-1" />
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="px-5 pb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {(["overdue", "kritis", "mendesak", "perhatian"] as const).map(bucket => {
+                const a = getAging(bucket);
+                if (!a || a.count === 0) return null;
+                const cfg = AGING_CONFIG[bucket];
+                const Icon = cfg.icon;
+                return (
+                  <Link key={bucket} href={`/admin/piutang?bucket=${bucket}`} className="block">
+                    <div className={cn(
+                      "rounded-xl p-3 border cursor-pointer hover:shadow-sm transition-all",
+                      cfg.bg, cfg.border
+                    )}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={cn("text-[10px] font-bold uppercase tracking-wide", cfg.text)}>
+                          {cfg.shortLabel}
+                        </span>
+                        <span className={cn("text-[9px] text-white font-medium px-1.5 py-0.5 rounded-full", cfg.badgeBg)}>
+                          {cfg.label}
+                        </span>
+                      </div>
+                      <div className="flex items-end justify-between gap-1">
+                        <div>
+                          <p className={cn("text-2xl font-bold leading-none", cfg.text)}>{a.count}</p>
+                          <p className={cn("text-[10px] mt-0.5", cfg.text, "opacity-75")}>booking</p>
+                        </div>
+                        <Icon className={cn("w-5 h-5 opacity-60", cfg.text)} />
+                      </div>
+                      <p className={cn("text-[11px] font-semibold mt-2", cfg.text)}>
+                        {formatRp(a.outstanding)}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Upcoming departures with debt */}
+            {financeDash && financeDash.upcomingDepartures.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  Keberangkatan Mendatang dengan Piutang
+                </p>
+                <div className="space-y-2">
+                  {financeDash.upcomingDepartures.slice(0, 4).map(dep => (
+                    <div key={dep.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="shrink-0 text-center bg-background rounded-lg px-2 py-1 border min-w-[52px]">
+                        <p className="text-[10px] text-muted-foreground">{format(new Date(dep.departureDate), "MMM", { locale: localeId })}</p>
+                        <p className="text-sm font-bold leading-none">{format(new Date(dep.departureDate), "dd")}</p>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{dep.packageTitle}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex-1 bg-muted rounded-full h-1.5 max-w-[80px]">
+                            <div
+                              className={cn("h-1.5 rounded-full", dep.pctCollected >= 80 ? "bg-emerald-500" : dep.pctCollected >= 50 ? "bg-amber-500" : "bg-red-500")}
+                              style={{ width: `${dep.pctCollected}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-muted-foreground">{dep.pctCollected}% lunas</span>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-xs font-bold text-red-600">{formatRp(dep.outstanding)}</p>
+                        <p className="text-[10px] text-muted-foreground">{dep.belumLunasCount} blm lunas</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* ── Operational KPIs ── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         <KpiCard
@@ -463,10 +677,11 @@ const AdminDashboard = () => {
           title="Belum Lunas"
           value={stats.pendingPayments}
           icon={CreditCard}
-          iconBg="bg-orange-500"
+          iconBg="bg-red-500"
           loading={loading}
           alert={stats.pendingPayments > 0}
-          sub={stats.pendingPayments > 0 ? "perlu tindakan" : "semua sudah bayar"}
+          alertLevel="danger"
+          sub={stats.pendingPayments > 0 ? `${formatRp(stats.totalOutstanding)} belum terbayar` : "semua sudah bayar ✓"}
           href="/admin/piutang"
         />
         <KpiCard
@@ -509,7 +724,7 @@ const AdminDashboard = () => {
           loading={loading}
           href="/admin/muthawifs"
         />
-        {/* Revenue per periode — links to Analytics */}
+        {/* Revenue per periode */}
         <Link href="/admin/analytics" className="block">
           <Card className="relative overflow-hidden border shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all">
             <CardContent className="p-5">
@@ -680,24 +895,33 @@ const AdminDashboard = () => {
                 {recentBookings.map((b) => {
                   const s = STATUS_MAP[b.status] ?? { label: b.status, className: "bg-muted text-muted-foreground border-muted" };
                   return (
-                    <div key={b.id} className="flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-muted/40 transition-colors">
-                      <div className="bg-primary/10 p-1.5 rounded-full shrink-0">
-                        <ShoppingBag className="h-3.5 w-3.5 text-primary" />
+                    <Link key={b.id} href={`/admin/bookings`} className="block">
+                      <div className="flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-muted/40 transition-colors cursor-pointer">
+                        <div className="bg-primary/10 p-1.5 rounded-full shrink-0">
+                          <ShoppingBag className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium leading-none truncate">{b.userName || "Tanpa Nama"}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{b.packageTitle || "—"} · {b.bookingCode}</p>
+                          <p className="text-[10px] text-muted-foreground/60 mt-0.5 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {format(new Date(b.createdAt), "d MMM yyyy, HH:mm", { locale: localeId })}
+                          </p>
+                        </div>
+                        <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full border shrink-0", s.className)}>
+                          {s.label}
+                        </span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium leading-none truncate">{b.userName || "Tanpa Nama"}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{b.packageTitle || "—"} · {b.bookingCode}</p>
-                        <p className="text-[10px] text-muted-foreground/60 mt-0.5 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {format(new Date(b.createdAt), "d MMM yyyy, HH:mm", { locale: localeId })}
-                        </p>
-                      </div>
-                      <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full border shrink-0", s.className)}>
-                        {s.label}
-                      </span>
-                    </div>
+                    </Link>
                   );
                 })}
+                <div className="pt-2">
+                  <Link href="/admin/bookings">
+                    <Button variant="outline" size="sm" className="w-full text-xs">
+                      Lihat Semua Booking <ExternalLink className="w-3 h-3 ml-1.5" />
+                    </Button>
+                  </Link>
+                </div>
               </div>
             )}
           </CardContent>
