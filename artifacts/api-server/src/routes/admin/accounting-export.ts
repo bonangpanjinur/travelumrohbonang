@@ -211,9 +211,7 @@ router.get("/espt-pph", async (req: Request, res: Response) => {
     if (from) conditions.push(sql`ft.transaction_date >= ${from}::timestamptz`);
     if (to)   conditions.push(sql`ft.transaction_date <= ${to}::timestamptz + INTERVAL '1 day'`);
 
-    const where = conditions.reduce((acc, cond, i) =>
-      i === 0 ? sql`WHERE ${cond}` : sql`${acc} AND ${cond}`
-    );
+    const where = sql` WHERE ${conditions.reduce((a, b) => sql`${a} AND ${b}`)}`;
 
     const result = await db.execute(sql`
       SELECT
@@ -309,8 +307,8 @@ router.get("/summary", async (req: Request, res: Response) => {
     if (from) conditions.push(sql`ft.transaction_date >= ${from}::timestamptz`);
     if (to)   conditions.push(sql`ft.transaction_date <= ${to}::timestamptz + INTERVAL '1 day'`);
 
-    const where = conditions.length
-      ? conditions.reduce((acc, cond, i) => i === 0 ? sql`WHERE ${cond}` : sql`${acc} AND ${cond}`)
+    const where = conditions.length > 0
+      ? sql` WHERE ${conditions.reduce((a, b) => sql`${a} AND ${b}`)}`
       : sql``;
 
     const result = await db.execute(sql`
