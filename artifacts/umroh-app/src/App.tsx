@@ -95,6 +95,9 @@ import AdminChats from "./features/admin/pages/Chats";
 import ChatInbox from "./features/admin/pages/ChatInbox";
 import ChatPage from "./features/user/pages/ChatPage";
 import AgentCommissions from "./features/agent/pages/AgentCommissions";
+import MuthawifDashboard from "./features/muthawif/pages/MuthawifDashboard";
+import MuthawifJamaahList from "./features/muthawif/pages/MuthawifJamaahList";
+import MuthawifLaporanHarian from "./features/muthawif/pages/MuthawifLaporanHarian";
 import RefundRequest from "./features/booking/pages/RefundRequest";
 import ETicket from "./features/booking/pages/ETicket";
 import AdminLeaderboard from "./features/admin/pages/Leaderboard";
@@ -205,6 +208,10 @@ const AppContent = () => {
         <Route path="/my-documents" element={<MyDocuments />} />
         <Route path="/agent-portal" element={<AgentPortal />} />
         <Route path="/agent-commissions" element={<AgentCommissions />} />
+        {/* Sprint 4A: Muthawif portal */}
+        <Route path="/muthawif" element={<MuthawifDashboard />} />
+        <Route path="/muthawif/jamaah" element={<MuthawifJamaahList />} />
+        <Route path="/muthawif/laporan-harian" element={<MuthawifLaporanHarian />} />
         <Route path="/refund-request" element={<RefundRequest />} />
         <Route path="/e-ticket/:bookingId" element={<ETicket />} />
         <Route path="/branch-dashboard" element={<BranchDashboard />} />

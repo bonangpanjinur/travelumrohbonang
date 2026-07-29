@@ -82,6 +82,21 @@ pnpm --filter @workspace/api-spec run codegen
 
 This regenerates `lib/api-client-react/src/generated/` and `lib/api-zod/src/generated/`.
 
+## Sprint progress
+
+| Sprint | Status | Scope |
+|--------|--------|-------|
+| Sprint 1–3 | ✅ Done | Admin portal, agent portal, finance, operations |
+| Sprint 4A | ✅ Done | Muthawif portal foundation — DB schema (`user_id` on `muthawifs`, `muthawif_daily_reports` table), Express API at `/api/muthawif/*`, frontend pages (`/muthawif`, `/muthawif/jamaah`, `/muthawif/laporan-harian`) |
+| Sprint 4B–4C | 🔴 Not started | Absensi sesi, penilaian jamaah, SOS, broadcast |
+
+### Muthawif portal (Sprint 4A)
+- **Backend**: `artifacts/api-server/src/routes/muthawif.ts` — 5 endpoints: profile, jamaah list, daily reports list/detail/create
+- **DB schema**: `lib/db/src/schema/muthawif.ts` — `muthawif_daily_reports` table; `user_id` column added to `muthawifs`
+- **Frontend**: `artifacts/umroh-app/src/features/muthawif/pages/` — MuthawifDashboard, MuthawifJamaahList, MuthawifLaporanHarian
+- **Routes**: `/muthawif`, `/muthawif/jamaah`, `/muthawif/laporan-harian` (all under AuthRoute)
+- **Linking muthawifs to accounts**: Admin must set `muthawifs.user_id` = the Supabase user UUID; no UI for this yet (Sprint 4B follow-up)
+
 ## User preferences
 
 - Keep the existing monorepo structure — do not restructure or migrate the stack.

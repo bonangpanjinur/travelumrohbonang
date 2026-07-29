@@ -50,12 +50,16 @@ export const airports = pgTable("airports", {
 
 export const muthawifs = pgTable("muthawifs", {
   id: text("id").primaryKey(),
+  // Sprint 4A: link muthawif record to a Supabase auth user — no local FK (mirrors agents.userId pattern)
+  userId: text("user_id"),
   name: text("name").notNull(),
   phone: text("phone"),
   photoUrl: text("photo_url"),
   // NOTE: 'bio' and 'is_active' do not exist in the actual DB — removed to prevent INSERT errors
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  index("idx_muthawifs_user_id").on(t.userId),
+]);
 
 export const branches = pgTable("branches", {
   id: text("id").primaryKey(),
