@@ -10,23 +10,116 @@
  * Jika sudah ada record dengan referenceNumber yang sama → skip (no-op).
  *
  * ─────────────────────────────────────────────────────────────────────
- * Peta Jurnal (disederhanakan, belum double-entry penuh — F-7 untuk CoA):
+ * Double-entry map (B1 fix):
  *
- * Event                   | Type    | Category
- * ─────────────────────── | ─────── | ────────────────────────
- * payment_verified        | income  | booking_payment
- * installment_paid        | income  | installment_payment
- * refund_approved         | expense | refund_approved
- * refund_processed        | refund  | refund_processed
- * commission_withdrawal   | expense | commission_withdrawal
- * savings_deposit         | income  | savings_deposit
- * savings_used            | expense | savings_used
+ * Event                   | DEBIT account   | CREDIT account
+ * ─────────────────────── | ─────────────── | ──────────────────────
+ * payment_verified        | 1-1101 (Kas)    | 4-1001 (Pendapatan Umroh)
+ * installment_paid        | 1-1101 (Kas)    | 4-1002 (Pendapatan DP/Cicilan)
+ * refund_approved         | 2-1101 (Hutang) | 2-1101 (Hutang Refund — liability)
+ * refund_processed        | 2-1101 (Hutang) | 1-1101 (Kas keluar)
+ * commission_withdrawal   | 5-2004 (Komisi) | 1-1101 (Kas keluar)
+ * savings_deposit         | 1-1101 (Kas)    | 2-1103 (Hutang Tabungan)
+ * savings_used            | 2-1103 (Hutang) | 4-1001 (Pendapatan Umroh)
  */
 
-import { db, financialTransactions, eq } from "@workspace/db";
+import { db, financialTransactions, chartOfAccounts, eq } from "@workspace/db";
 import { recordFinancialTransaction } from "./paymentSync";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── B2: CoA Lookup Cache ──────────────────────────────────────────────────────
+
+/** In-memory cache: CoA code → row id (populated lazily on first use) */
+const coaCache = new Map<string, string>();
+
+/**
+ * Look up a CoA account id by its code.
+ * Returns null if the account hasn't been seeded yet — callers fall back
+ * to inserting a journal entry with accountId=null (backward-compatible).
+ */
+async function getCoaId(code: string): Promise<string | null> {
+  const cached = coaCache.get(code);
+  if (cached) return cached;
+
+  try {
+    const [row] = await db
+      .select({ id: chartOfAccounts.id })
+      .from(chartOfAccounts)
+      .where(eq(chartOfAccounts.code, code))
+      .limit(1);
+
+    if (row?.id) {
+      coaCache.set(code, row.id);
+      return row.id;
+    }
+  } catch {
+    // CoA table may not be seeded yet — degrade gracefully
+  }
+  return null;
+}
+
+// ── B1: Double-Entry Helper ───────────────────────────────────────────────────
+
+/**
+ * Insert two financial_transactions rows for one economic event:
+ *   1. DEBIT  debitCode  (asset or expense account increases)
+ *   2. CREDIT creditCode (liability, equity, or revenue account increases)
+ *
+ * Each row shares the same referenceNumber but gets a unique id.
+ * If either CoA account hasn't been seeded, accountId is stored as null
+ * (backward-compatible with existing queries that don't filter by accountId).
+ */
+async function recordDoubleEntry(opts: {
+  bookingId?: string | null;
+  amount: number;
+  debitCode: string;   // e.g. '1-1101'
+  creditCode: string;  // e.g. '4-1001'
+  debitType: "income" | "expense" | "refund";
+  creditType: "income" | "expense" | "refund";
+  category: string;
+  description: string;
+  referenceNumber: string;
+  recordedBy?: string;
+}): Promise<void> {
+  const [debitAccountId, creditAccountId] = await Promise.all([
+    getCoaId(opts.debitCode),
+    getCoaId(opts.creditCode),
+  ]);
+
+  const now = new Date();
+
+  await db.insert(financialTransactions).values([
+    {
+      id: crypto.randomUUID(),
+      bookingId: opts.bookingId ?? null,
+      amount: String(opts.amount),
+      type: opts.debitType,
+      category: opts.category,
+      description: opts.description,
+      referenceNumber: opts.referenceNumber,
+      transactionDate: now,
+      recordedBy: opts.recordedBy ?? null,
+      accountId: debitAccountId,
+      entryType: "debit",
+      createdAt: now,
+    },
+    {
+      id: crypto.randomUUID(),
+      bookingId: opts.bookingId ?? null,
+      amount: String(opts.amount),
+      type: opts.creditType,
+      category: opts.category,
+      description: opts.description,
+      referenceNumber: opts.referenceNumber,
+      transactionDate: now,
+      recordedBy: opts.recordedBy ?? null,
+      accountId: creditAccountId,
+      entryType: "credit",
+      createdAt: now,
+    },
+  ]);
+}
+
+// ── Idempotency Guard ─────────────────────────────────────────────────────────
 
 /** Cek apakah jurnal dengan referenceNumber ini sudah ada (idempotency guard) */
 async function alreadyJournaled(ref: string): Promise<boolean> {
@@ -43,8 +136,8 @@ async function alreadyJournaled(ref: string): Promise<boolean> {
 /**
  * F-6.1 — Pembayaran manual diverifikasi admin.
  *
- * Debit : Kas / Bank
- * Kredit: Pendapatan Umroh (booking_payment)
+ * DEBIT : 1-1101 Kas (asset+)
+ * CREDIT: 4-1001 Pendapatan Paket Umroh (revenue+)
  *
  * Dipanggil dari: PATCH /admin/payments/verify/:id
  *                 POST  /admin/payments/bulk-verify
@@ -57,10 +150,14 @@ export async function journalPaymentVerified(opts: {
 }): Promise<void> {
   const ref = `auto:payment_verified:${opts.paymentId}`;
   if (await alreadyJournaled(ref)) return;
-  await recordFinancialTransaction({
+
+  await recordDoubleEntry({
     bookingId: opts.bookingId,
     amount: opts.amount,
-    type: "income",
+    debitCode: "1-1101",
+    creditCode: "4-1001",
+    debitType: "income",
+    creditType: "income",
     category: "booking_payment",
     description: `[Auto] Bukti bayar diverifikasi — payment #${opts.paymentId}`,
     referenceNumber: ref,
@@ -69,10 +166,10 @@ export async function journalPaymentVerified(opts: {
 }
 
 /**
- * F-6.2 — Cicilan (installment) dibayar, baik via gateway maupun manual.
+ * F-6.2 — Cicilan (installment) dibayar.
  *
- * Debit : Kas / Bank
- * Kredit: Pendapatan Umroh (installment_payment)
+ * DEBIT : 1-1101 Kas (asset+)
+ * CREDIT: 4-1002 Pendapatan DP / Cicilan (revenue+)
  *
  * Dipanggil dari: POST /admin/installments/:id (mark paid)
  *                 Webhook Midtrans/Xendit saat installment terbayar
@@ -86,10 +183,14 @@ export async function journalInstallmentPaid(opts: {
 }): Promise<void> {
   const ref = `auto:installment_paid:${opts.installmentId}`;
   if (await alreadyJournaled(ref)) return;
-  await recordFinancialTransaction({
+
+  await recordDoubleEntry({
     bookingId: opts.bookingId,
     amount: opts.amount,
-    type: "income",
+    debitCode: "1-1101",
+    creditCode: "4-1002",
+    debitType: "income",
+    creditType: "income",
     category: "installment_payment",
     description: `[Auto] Cicilan ke-${opts.installmentNumber} dibayar — installment #${opts.installmentId}`,
     referenceNumber: ref,
@@ -100,8 +201,11 @@ export async function journalInstallmentPaid(opts: {
 /**
  * F-6.3 — Refund disetujui admin (liability: uang harus dikembalikan).
  *
- * Debit : Beban Refund (refund_approved)
- * Kredit: Hutang Refund
+ * DEBIT : 2-1101 Hutang Usaha (liability — pengakuan kewajiban refund)
+ * CREDIT: 2-1101 Hutang Usaha (liability+) — kedua sisi di liability, net = 0
+ *
+ * Pendekatan sederhana: catat sebagai expense single-entry karena
+ * refund_approved belum mengeluarkan kas — kas keluar saat refund_processed.
  *
  * Dipanggil dari: PATCH /admin/refunds/:id  saat status → "approved"
  */
@@ -113,10 +217,17 @@ export async function journalRefundApproved(opts: {
 }): Promise<void> {
   const ref = `auto:refund_approved:${opts.refundId}`;
   if (await alreadyJournaled(ref)) return;
-  await recordFinancialTransaction({
+
+  // Refund approved = kewajiban diakui (DEBIT Beban Refund, CREDIT Hutang Refund)
+  // Gunakan 5-2001 (Biaya Operasional) sebagai proxy untuk Beban Refund karena
+  // tidak ada kode refund khusus di seed default.
+  await recordDoubleEntry({
     bookingId: opts.bookingId,
     amount: opts.amount,
-    type: "expense",
+    debitCode: "5-2001",   // Biaya Operasional (expense proxy untuk beban refund)
+    creditCode: "2-1101",  // Hutang Usaha (liability: wajib kembalikan kas)
+    debitType: "expense",
+    creditType: "expense",
     category: "refund_approved",
     description: `[Auto] Refund disetujui — refund #${opts.refundId}`,
     referenceNumber: ref,
@@ -127,8 +238,8 @@ export async function journalRefundApproved(opts: {
 /**
  * F-6.4 — Refund sudah dicairkan ke rekening jemaah (kas keluar).
  *
- * Debit : Hutang Refund
- * Kredit: Kas / Bank (refund_processed)
+ * DEBIT : 2-1101 Hutang Usaha (liability — hapus kewajiban)
+ * CREDIT: 1-1101 Kas (asset— kas keluar)
  *
  * Dipanggil dari: PATCH /admin/refunds/:id  saat status → "refunded"
  */
@@ -140,10 +251,14 @@ export async function journalRefundProcessed(opts: {
 }): Promise<void> {
   const ref = `auto:refund_processed:${opts.refundId}`;
   if (await alreadyJournaled(ref)) return;
-  await recordFinancialTransaction({
+
+  await recordDoubleEntry({
     bookingId: opts.bookingId,
     amount: opts.amount,
-    type: "refund",
+    debitCode: "2-1101",  // Hutang Usaha (hapus kewajiban, debit liability)
+    creditCode: "1-1101", // Kas (kas keluar, credit asset)
+    debitType: "refund",
+    creditType: "refund",
     category: "refund_processed",
     description: `[Auto] Refund dicairkan ke jemaah — refund #${opts.refundId}`,
     referenceNumber: ref,
@@ -154,12 +269,10 @@ export async function journalRefundProcessed(opts: {
 /**
  * F-6.5 — Withdrawal komisi agen diproses/dibayar (kas keluar).
  *
- * Debit : Hutang Komisi Agen
- * Kredit: Kas / Bank (commission_withdrawal)
+ * DEBIT : 5-2004 Komisi Agen & Referral (expense+)
+ * CREDIT: 1-1101 Kas (asset— kas keluar)
  *
  * Dipanggil dari: PATCH /admin/agents/withdrawals/:id  saat status → "paid"
- *
- * Catatan: withdrawal tidak terikat satu booking, bookingId = null.
  */
 export async function journalCommissionWithdrawal(opts: {
   agentId: string;
@@ -169,26 +282,50 @@ export async function journalCommissionWithdrawal(opts: {
 }): Promise<void> {
   const ref = `auto:commission_withdrawal:${opts.withdrawalId}`;
   if (await alreadyJournaled(ref)) return;
-  // Gunakan insert langsung karena bookingId bisa null
-  await db.insert(financialTransactions).values({
-    id: crypto.randomUUID(),
-    bookingId: null,
-    amount: String(opts.amount),
-    type: "expense",
-    category: "commission_withdrawal",
-    description: `[Auto] Komisi agen dicairkan — agent ${opts.agentId} withdrawal #${opts.withdrawalId}`,
-    referenceNumber: ref,
-    transactionDate: new Date(),
-    recordedBy: opts.adminId ?? null,
-    createdAt: new Date(),
-  });
+
+  const [debitAccountId, creditAccountId] = await Promise.all([
+    getCoaId("5-2004"),
+    getCoaId("1-1101"),
+  ]);
+
+  const now = new Date();
+  await db.insert(financialTransactions).values([
+    {
+      id: crypto.randomUUID(),
+      bookingId: null,
+      amount: String(opts.amount),
+      type: "expense",
+      category: "commission_withdrawal",
+      description: `[Auto] Komisi agen dicairkan — agent ${opts.agentId} withdrawal #${opts.withdrawalId}`,
+      referenceNumber: ref,
+      transactionDate: now,
+      recordedBy: opts.adminId ?? null,
+      accountId: debitAccountId,
+      entryType: "debit",
+      createdAt: now,
+    },
+    {
+      id: crypto.randomUUID(),
+      bookingId: null,
+      amount: String(opts.amount),
+      type: "expense",
+      category: "commission_withdrawal",
+      description: `[Auto] Komisi agen dicairkan — agent ${opts.agentId} withdrawal #${opts.withdrawalId}`,
+      referenceNumber: ref,
+      transactionDate: now,
+      recordedBy: opts.adminId ?? null,
+      accountId: creditAccountId,
+      entryType: "credit",
+      createdAt: now,
+    },
+  ]);
 }
 
 /**
  * F-6.6 — Setoran tabungan umroh diterima.
  *
- * Debit : Kas / Bank
- * Kredit: Hutang Tabungan Jemaah (savings_deposit)
+ * DEBIT : 1-1101 Kas (asset+)
+ * CREDIT: 2-1103 Tabungan Umroh Jemaah (liability+)
  *
  * Dipanggil dari: POST /savings/:id/deposit
  */
@@ -200,25 +337,50 @@ export async function journalSavingsDeposit(opts: {
 }): Promise<void> {
   const ref = `auto:savings_deposit:${opts.transactionId}`;
   if (await alreadyJournaled(ref)) return;
-  await db.insert(financialTransactions).values({
-    id: crypto.randomUUID(),
-    bookingId: null,
-    amount: String(opts.amount),
-    type: "income",
-    category: "savings_deposit",
-    description: `[Auto] Setoran tabungan umroh — user ${opts.userId} txn #${opts.transactionId}`,
-    referenceNumber: ref,
-    transactionDate: new Date(),
-    recordedBy: opts.adminId ?? null,
-    createdAt: new Date(),
-  });
+
+  const [debitAccountId, creditAccountId] = await Promise.all([
+    getCoaId("1-1101"),
+    getCoaId("2-1103"),
+  ]);
+
+  const now = new Date();
+  await db.insert(financialTransactions).values([
+    {
+      id: crypto.randomUUID(),
+      bookingId: null,
+      amount: String(opts.amount),
+      type: "income",
+      category: "savings_deposit",
+      description: `[Auto] Setoran tabungan umroh — user ${opts.userId} txn #${opts.transactionId}`,
+      referenceNumber: ref,
+      transactionDate: now,
+      recordedBy: opts.adminId ?? null,
+      accountId: debitAccountId,
+      entryType: "debit",
+      createdAt: now,
+    },
+    {
+      id: crypto.randomUUID(),
+      bookingId: null,
+      amount: String(opts.amount),
+      type: "income",
+      category: "savings_deposit",
+      description: `[Auto] Setoran tabungan umroh — user ${opts.userId} txn #${opts.transactionId}`,
+      referenceNumber: ref,
+      transactionDate: now,
+      recordedBy: opts.adminId ?? null,
+      accountId: creditAccountId,
+      entryType: "credit",
+      createdAt: now,
+    },
+  ]);
 }
 
 /**
  * F-6.7 — Tabungan umroh digunakan untuk booking.
  *
- * Debit : Hutang Tabungan Jemaah
- * Kredit: Pendapatan Umroh (savings_used)
+ * DEBIT : 2-1103 Tabungan Umroh Jemaah (liability— hapus kewajiban)
+ * CREDIT: 4-1001 Pendapatan Paket Umroh (revenue+)
  *
  * Dipanggil dari: POST /savings/:id/use
  */
@@ -229,10 +391,14 @@ export async function journalSavingsUsed(opts: {
 }): Promise<void> {
   const ref = `auto:savings_used:${opts.transactionId}`;
   if (await alreadyJournaled(ref)) return;
-  await recordFinancialTransaction({
+
+  await recordDoubleEntry({
     bookingId: opts.bookingId,
     amount: opts.amount,
-    type: "income",
+    debitCode: "2-1103",  // Tabungan Umroh Jemaah (hapus liability, debit)
+    creditCode: "4-1001", // Pendapatan Paket Umroh (revenue+)
+    debitType: "income",
+    creditType: "income",
     category: "savings_used",
     description: `[Auto] Tabungan digunakan untuk booking — txn #${opts.transactionId}`,
     referenceNumber: ref,

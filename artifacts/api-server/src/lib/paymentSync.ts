@@ -123,18 +123,22 @@ export async function recordFinancialTransaction({
   description,
   referenceNumber,
   recordedBy,
+  accountId,
+  entryType,
 }: {
-  bookingId: string;
+  bookingId?: string | null;
   amount: number;
   type: "income" | "refund" | "expense";
   category: string;
   description: string;
   referenceNumber?: string;
   recordedBy?: string;
+  accountId?: string | null;
+  entryType?: "debit" | "credit";
 }): Promise<void> {
   await db.insert(financialTransactions).values({
     id: crypto.randomUUID(),
-    bookingId,
+    bookingId: bookingId ?? null,
     amount: String(amount),
     type,
     category,
@@ -142,6 +146,8 @@ export async function recordFinancialTransaction({
     referenceNumber: referenceNumber ?? null,
     transactionDate: new Date(),
     recordedBy: recordedBy ?? null,
+    accountId: accountId ?? null,
+    entryType: entryType ?? null,
     createdAt: new Date(),
   });
 }

@@ -66,6 +66,7 @@ router.get("/summary", async (req, res) => {
 
     // Use safeQuery so a single missing table/column doesn't crash the whole response.
     const [kpiRows, trendRows, packageRevenueRows, paymentStatusRows, bookingStatusRows, departureRows] = await Promise.all([
+      // B3: use booking_payments (kas ledger aktual) sebagai single source of truth untuk revenue
       safeQuery("kpi", db.execute(sql`
         with curr_bookings as (
           select id from bookings where created_at between ${start} and ${end} and status is distinct from 'cancelled'
@@ -76,8 +77,8 @@ router.get("/summary", async (req, res) => {
         select
           (select count(*)::int from curr_bookings) as curr_bookings,
           (select count(*)::int from prev_bookings) as prev_bookings,
-          (select coalesce(sum(amount),0)::bigint from payments where status = 'verified' and booking_id in (select id from curr_bookings)) as curr_revenue,
-          (select coalesce(sum(amount),0)::bigint from payments where status = 'verified' and booking_id in (select id from prev_bookings)) as prev_revenue,
+          (select coalesce(sum(bp.amount),0)::bigint from booking_payments bp where bp.is_voided = false and bp.booking_id in (select id from curr_bookings)) as curr_revenue,
+          (select coalesce(sum(bp.amount),0)::bigint from booking_payments bp where bp.is_voided = false and bp.booking_id in (select id from prev_bookings)) as prev_revenue,
           (select count(*)::int from booking_pilgrims where booking_id in (select id from curr_bookings)) as curr_pilgrims,
           (select count(*)::int from booking_pilgrims where booking_id in (select id from prev_bookings)) as prev_pilgrims
       `)),
@@ -96,9 +97,10 @@ router.get("/summary", async (req, res) => {
               group by 1
             ) b on b.bucket = d.bucket
             left join (
-              select date_trunc('month', coalesce(paid_at, created_at)) as bucket, sum(amount) as rev
-              from payments
-              where status = 'verified' and created_at between ${start} and ${end}
+              -- B3: booking_payments sebagai sumber revenue trend
+              select date_trunc('month', bp.paid_at) as bucket, sum(bp.amount) as rev
+              from booking_payments bp
+              where bp.is_voided = false and bp.paid_at between ${start} and ${end}
               group by 1
             ) p on p.bucket = d.bucket
             order by d.bucket
@@ -116,9 +118,10 @@ router.get("/summary", async (req, res) => {
               group by 1
             ) b on b.bucket = d.bucket
             left join (
-              select date_trunc('day', coalesce(paid_at, created_at)) as bucket, sum(amount) as rev
-              from payments
-              where status = 'verified' and created_at between ${start} and ${end}
+              -- B3: booking_payments sebagai sumber revenue trend
+              select date_trunc('day', bp.paid_at) as bucket, sum(bp.amount) as rev
+              from booking_payments bp
+              where bp.is_voided = false and bp.paid_at between ${start} and ${end}
               group by 1
             ) p on p.bucket = d.bucket
             order by d.bucket
@@ -128,10 +131,15 @@ router.get("/summary", async (req, res) => {
         select
           coalesce(pk.title, 'Tanpa Paket') as name,
           count(distinct b.id)::int as bookings,
-          coalesce(sum(pay.amount), 0)::bigint as revenue
+          -- B3: booking_payments sebagai sumber revenue per paket
+          coalesce(sum(bp_agg.total_paid), 0)::bigint as revenue
         from bookings b
         left join packages pk on pk.id = b.package_id
-        left join payments pay on pay.booking_id = b.id and pay.status = 'verified'
+        left join (
+          select booking_id, sum(amount) as total_paid
+          from booking_payments where is_voided = false
+          group by booking_id
+        ) bp_agg on bp_agg.booking_id = b.id
         where b.created_at between ${start} and ${end} and b.status is distinct from 'cancelled'
         group by coalesce(pk.title, 'Tanpa Paket')
         order by revenue desc

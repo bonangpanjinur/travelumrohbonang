@@ -857,12 +857,15 @@ router.get("/reports/cash-flow", async (req: Request, res: Response) => {
         GROUP BY month
         ORDER BY month
       `),
+      // B4: filter outflow ke entri debit saja (kas keluar nyata).
+      // Legacy entries tanpa entry_type (IS NULL) tetap dihitung untuk backward compat.
       db.execute(sql`
         SELECT
           DATE_TRUNC('month', ft.transaction_date) AS month,
           SUM(ft.amount::numeric) AS total
         FROM financial_transactions ft
         WHERE ft.type = 'expense'
+          AND (ft.entry_type = 'debit' OR ft.entry_type IS NULL)
           ${from ? sql`AND ft.transaction_date >= ${new Date(from)}` : sql``}
           ${to   ? sql`AND ft.transaction_date <= ${new Date(to)}`   : sql``}
         GROUP BY month
