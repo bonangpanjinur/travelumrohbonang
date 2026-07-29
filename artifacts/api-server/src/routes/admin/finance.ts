@@ -368,7 +368,7 @@ router.post("/piutang/remind", async (req: Request, res: Response) => {
       ) paid ON paid.booking_id = b.id
       LEFT JOIN package_departures dep ON dep.id = b.departure_id
       LEFT JOIN packages            pkg ON pkg.id = b.package_id
-      LEFT JOIN profiles            prof ON prof.id = b.user_id
+      LEFT JOIN profiles            prof ON prof.id::text = b.user_id
       WHERE b.id = ANY(${validIds}::text[])
         AND b.status NOT IN ('cancelled', 'draft')
         AND b.total_price - COALESCE(paid.total_paid, 0) > 0
@@ -612,7 +612,7 @@ router.get("/departure/:departureId", async (req: Request, res: Response) => {
           COALESCE(paid.total_paid, 0) AS total_paid,
           b.total_price - COALESCE(paid.total_paid, 0) AS outstanding
         FROM bookings b
-        LEFT JOIN profiles p ON p.id = b.user_id
+        LEFT JOIN profiles p ON p.id::text = b.user_id
         LEFT JOIN (
           SELECT booking_id, SUM(amount) AS total_paid
           FROM booking_payments WHERE is_voided = false
