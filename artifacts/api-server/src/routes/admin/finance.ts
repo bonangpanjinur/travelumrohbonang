@@ -107,20 +107,20 @@ router.get("/dashboard", async (req: Request, res: Response) => {
           FROM booking_payments WHERE is_voided = false
           GROUP BY booking_id
         ) paid ON paid.booking_id = b.id
-        WHERE dep.departure_date::timestamp BETWEEN NOW() AND NOW() + INTERVAL '90 days'
+        WHERE dep.departure_date::date BETWEEN NOW()::date AND (NOW() + INTERVAL '90 days')::date
           AND ${scopeCond}
         GROUP BY dep.id, dep.departure_date, pkg.title
-        ORDER BY dep.departure_date::timestamp ASC
+        ORDER BY dep.departure_date::date ASC
       `),
 
       // Aging buckets — berapa booking per bucket hari-ke-keberangkatan (scoped)
       db.execute(sql`
         SELECT
           CASE
-            WHEN dep.departure_date::timestamp < NOW() THEN 'overdue'
-            WHEN dep.departure_date::timestamp <= NOW() + INTERVAL '14 days'  THEN 'kritis'
-            WHEN dep.departure_date::timestamp <= NOW() + INTERVAL '30 days'  THEN 'mendesak'
-            WHEN dep.departure_date::timestamp <= NOW() + INTERVAL '60 days'  THEN 'perhatian'
+            WHEN dep.departure_date::date < NOW()::date THEN 'overdue'
+            WHEN dep.departure_date::date <= (NOW() + INTERVAL '14 days')::date THEN 'kritis'
+            WHEN dep.departure_date::date <= (NOW() + INTERVAL '30 days')::date THEN 'mendesak'
+            WHEN dep.departure_date::date <= (NOW() + INTERVAL '60 days')::date THEN 'perhatian'
             ELSE 'normal'
           END AS bucket,
           COUNT(DISTINCT b.id) AS count,
@@ -227,7 +227,7 @@ router.get("/piutang", async (req: Request, res: Response) => {
         b.total_price - COALESCE(paid.total_paid, 0)          AS outstanding,
         CASE
           WHEN dep.departure_date IS NULL THEN NULL
-          ELSE EXTRACT(DAY FROM (dep.departure_date::timestamp - NOW()))::int
+          ELSE EXTRACT(DAY FROM (dep.departure_date::date - NOW()::date))::int
         END AS days_to_departure
       FROM bookings b
       LEFT JOIN profiles            p   ON p.id = b.user_id::uuid
@@ -243,7 +243,7 @@ router.get("/piutang", async (req: Request, res: Response) => {
         AND ${scopeCond}
         ${package_id   ? sql`AND b.package_id   = ${package_id}`   : sql``}
         ${departure_id ? sql`AND b.departure_id = ${departure_id}` : sql``}
-      ORDER BY dep.departure_date::timestamp ASC NULLS LAST, b.created_at DESC
+      ORDER BY dep.departure_date::date ASC NULLS LAST, b.created_at DESC
     `);
 
     let data = ((rows as any).rows ?? rows).map((r: any) => {
@@ -497,7 +497,7 @@ router.get("/departures", async (req: Request, res: Response) => {
       JOIN packages pkg ON pkg.id = dep.package_id
       LEFT JOIN booking_agg ba ON ba.departure_id = dep.id
       LEFT JOIN hpp_agg ha ON ha.departure_id = dep.id
-      ORDER BY dep.departure_date::timestamp DESC
+      ORDER BY dep.departure_date::date DESC NULLS LAST
     `);
 
     const getRows = (r: any) => (r as any).rows ?? r;
@@ -899,6 +899,114 @@ router.get("/reports/cash-flow", async (req: Request, res: Response) => {
     });
   } catch (e) {
     sendError(res, "GET /admin/finance/reports/cash-flow", e);
+  }
+});
+
+// ── Laporan Komisi ─────────────────────────────────────────────────────────────
+// GET /api/admin/finance/reports/commission?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+router.get("/reports/commission", async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
+
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    if (startDate && !dateRe.test(startDate)) return res.status(400).json({ error: "Invalid startDate" });
+    if (endDate   && !dateRe.test(endDate))   return res.status(400).json({ error: "Invalid endDate" });
+
+    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const end   = endDate   ? new Date(endDate + "T23:59:59") : new Date();
+
+    // C-2: scope ke cabang/agen
+    const scope = await resolveUserScope(req);
+    const scopeCond = buildBookingScopeCondition(scope);
+
+    const rows = await db.execute(sql`
+      SELECT
+        b.id,
+        b.booking_code,
+        b.package_id,
+        b.pic_id,
+        b.pic_type,
+        pkg.title                                                       AS package_title,
+        COALESCE(pc.commission_amount, 0)                               AS commission_per_pilgrim,
+        COUNT(bp.id)::int                                               AS pilgrim_count,
+        (COALESCE(pc.commission_amount, 0) * COUNT(bp.id))::bigint      AS total_commission,
+        COALESCE(ag.name, br.name, prof.name, b.pic_name, '-')          AS pic_name
+      FROM bookings b
+      LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
+      LEFT JOIN package_commissions pc  ON pc.package_id = b.package_id
+                                        AND pc.label = b.pic_type
+      LEFT JOIN booking_pilgrims   bp   ON bp.booking_id = b.id
+      LEFT JOIN agents             ag   ON ag.id   = b.pic_id  AND b.pic_type = 'agen'
+      LEFT JOIN branches           br   ON br.id   = b.pic_id  AND b.pic_type = 'cabang'
+      LEFT JOIN profiles           prof ON prof.id::text = b.pic_id AND b.pic_type = 'karyawan'
+      WHERE b.pic_id  IS NOT NULL
+        AND b.pic_type IS NOT NULL
+        AND b.status   != 'cancelled'
+        AND b.created_at BETWEEN ${start} AND ${end}
+        AND ${scopeCond}
+      GROUP BY
+        b.id, b.booking_code, b.package_id, b.pic_id, b.pic_type,
+        pkg.title, pc.commission_amount,
+        ag.name, br.name, prof.name, b.pic_name
+      ORDER BY b.created_at DESC
+    `);
+
+    const getRows = (r: any) => (r as any).rows ?? r;
+    const data = getRows(rows) as Array<{
+      id: string;
+      booking_code: string;
+      package_id: string;
+      pic_id: string;
+      pic_type: string;
+      package_title: string | null;
+      commission_per_pilgrim: string | number;
+      pilgrim_count: number | string;
+      total_commission: string | number;
+      pic_name: string | null;
+    }>;
+
+    // Build row list
+    const resultRows = data.map((r) => ({
+      bookingCode:          r.booking_code,
+      packageTitle:         r.package_title ?? "-",
+      picId:                r.pic_id,
+      picName:              r.pic_name ?? "-",
+      picType:              r.pic_type,
+      pilgrimCount:         Number(r.pilgrim_count),
+      commissionPerPilgrim: Number(r.commission_per_pilgrim),
+      totalCommission:      Number(r.total_commission),
+    }));
+
+    // Build summary per PIC
+    const summaryMap: Record<string, {
+      picType: string; picName: string; picId: string;
+      totalPilgrims: number; totalCommission: number;
+    }> = {};
+
+    const typeTotals = { cabang: 0, agen: 0, karyawan: 0, grand: 0 };
+
+    resultRows.forEach((r) => {
+      const key = `${r.picType}_${r.picId}`;
+      if (!summaryMap[key]) {
+        summaryMap[key] = {
+          picType: r.picType, picName: r.picName, picId: r.picId,
+          totalPilgrims: 0, totalCommission: 0,
+        };
+      }
+      summaryMap[key].totalPilgrims  += r.pilgrimCount;
+      summaryMap[key].totalCommission += r.totalCommission;
+
+      if (r.picType in typeTotals) {
+        typeTotals[r.picType as keyof typeof typeTotals] += r.totalCommission;
+      }
+      typeTotals.grand += r.totalCommission;
+    });
+
+    const summaries = Object.values(summaryMap).sort((a, b) => b.totalCommission - a.totalCommission);
+
+    res.json({ rows: resultRows, summaries, totals: typeTotals });
+  } catch (e) {
+    sendError(res, "GET /admin/finance/reports/commission", e);
   }
 });
 

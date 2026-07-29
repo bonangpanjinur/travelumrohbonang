@@ -1,17 +1,20 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { useEffect, useState, useCallback } from "react";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { Badge } from "@/shared/components/ui/badge";
 import { DollarSign, Building2, User, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
+
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 interface CommissionRow {
   bookingCode: string;
   packageTitle: string;
+  picId: string;
   picName: string;
   picType: string;
   pilgrimCount: number;
@@ -27,10 +30,19 @@ interface CommissionSummary {
   totalCommission: number;
 }
 
+interface CommissionTotals {
+  cabang: number;
+  agen: number;
+  karyawan: number;
+  grand: number;
+}
+
 interface CommissionReportProps {
   startDate: Date;
   endDate: Date;
 }
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 const picTypeLabels: Record<string, string> = {
   cabang: "Cabang",
@@ -46,140 +58,57 @@ const picTypeIcons: Record<string, typeof Building2> = {
 
 const formatCurrency = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
 
+const toYMD = (d: Date) => d.toISOString().split("T")[0];
+
+// ── Component ──────────────────────────────────────────────────────────────────
+
 const CommissionReport = ({ startDate, endDate }: CommissionReportProps) => {
-  const [rows, setRows] = useState<CommissionRow[]>([]);
+  const [rows,      setRows]      = useState<CommissionRow[]>([]);
   const [summaries, setSummaries] = useState<CommissionSummary[]>([]);
-  const [totals, setTotals] = useState({ cabang: 0, agen: 0, karyawan: 0, grand: 0 });
-  const [loading, setLoading] = useState(true);
+  const [totals,    setTotals]    = useState<CommissionTotals>({ cabang: 0, agen: 0, karyawan: 0, grand: 0 });
+  const [loading,   setLoading]   = useState(true);
 
-  useEffect(() => {
-    fetchCommissionData();
-  }, [startDate, endDate]);
-
-  const fetchCommissionData = async () => {
+  const fetchCommissionData = useCallback(async () => {
     setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        startDate: toYMD(startDate),
+        endDate:   toYMD(endDate),
+      });
+      const result = await apiFetch<{
+        rows: CommissionRow[];
+        summaries: CommissionSummary[];
+        totals: CommissionTotals;
+      }>(`/api/admin/finance/reports/commission?${params}`);
 
-    // 1. Get bookings with PIC in the period (exclude cancelled)
-    const { data: bookings, error: bookingsError } = await supabase
-      .from("bookings")
-      .select("id, booking_code, package_id, pic_id, pic_type")
-      .not("pic_id", "is", null)
-      .not("pic_type", "is", null)
-      .neq("status", "cancelled")
-      .gte("created_at", startDate.toISOString())
-      .lte("created_at", endDate.toISOString());
-
-    if (bookingsError) {
-      toast.error(bookingsError.message || "Gagal memuat data komisi");
-      setLoading(false);
-      return;
-    }
-
-    if (!bookings || bookings.length === 0) {
+      setRows(result.rows ?? []);
+      setSummaries(result.summaries ?? []);
+      setTotals(result.totals ?? { cabang: 0, agen: 0, karyawan: 0, grand: 0 });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Gagal memuat data komisi");
       setRows([]);
       setSummaries([]);
       setTotals({ cabang: 0, agen: 0, karyawan: 0, grand: 0 });
+    } finally {
       setLoading(false);
-      return;
     }
+  }, [startDate, endDate]);
 
-    const bookingIds = bookings.map((b) => b.id);
-    const packageIds = [...new Set(bookings.map((b) => b.package_id).filter(Boolean))];
-    const picIds = [...new Set(bookings.map((b) => b.pic_id).filter(Boolean))];
-
-    // 2-5. Fetch pilgrim counts, commission rates, package titles, and PIC names in parallel.
-    const [pilgrimsRes, commissionsRes, packagesRes, agentsRes, branchesRes, profilesRes] = await Promise.all([
-      supabase.from("booking_pilgrims").select("booking_id").in("booking_id", bookingIds),
-      supabase.from("package_commissions").select("package_id, pic_type, commission_amount").in("package_id", packageIds as string[]),
-      supabase.from("packages").select("id, title").in("id", packageIds as string[]),
-      picIds.length > 0 ? supabase.from("agents").select("id, name").in("id", picIds as string[]) : Promise.resolve({ data: [], error: null }),
-      picIds.length > 0 ? supabase.from("branches").select("id, name").in("id", picIds as string[]) : Promise.resolve({ data: [], error: null }),
-      picIds.length > 0 ? supabase.from("profiles").select("id, name").in("id", picIds as string[]) : Promise.resolve({ data: [], error: null }),
-    ]);
-
-    const firstError = [pilgrimsRes, commissionsRes, packagesRes, agentsRes, branchesRes, profilesRes]
-      .find((r) => r.error)?.error;
-    if (firstError) {
-      toast.error(firstError.message || "Gagal memuat sebagian data komisi");
-    }
-
-    const pilgrimCounts: Record<string, number> = {};
-    pilgrimsRes.data?.forEach((p) => {
-      if (p.booking_id) pilgrimCounts[p.booking_id] = (pilgrimCounts[p.booking_id] || 0) + 1;
-    });
-
-    const commissionMap: Record<string, number> = {};
-    commissionsRes.data?.forEach((c) => {
-      commissionMap[`${c.package_id}_${c.pic_type}`] = c.commission_amount;
-    });
-
-    const packageMap: Record<string, string> = {};
-    packagesRes.data?.forEach((p) => { packageMap[p.id] = p.title; });
-
-    const picNameMap: Record<string, string> = {};
-    agentsRes.data?.forEach((a: any) => { picNameMap[a.id] = a.name; });
-    branchesRes.data?.forEach((b: any) => { picNameMap[b.id] = b.name; });
-    profilesRes.data?.forEach((p: any) => { picNameMap[p.id] = p.name; });
-
-    // 6. Build rows
-    const resultRows: CommissionRow[] = [];
-    const summaryMap: Record<string, CommissionSummary> = {};
-    const typeTotals = { cabang: 0, agen: 0, karyawan: 0, grand: 0 };
-
-    bookings.forEach((b) => {
-      const picType = b.pic_type || "";
-      const commKey = `${b.package_id}_${picType}`;
-      const commissionPerPilgrim = commissionMap[commKey] || 0;
-      const pCount = pilgrimCounts[b.id] || 0;
-      const total = commissionPerPilgrim * pCount;
-
-      resultRows.push({
-        bookingCode: b.booking_code,
-        packageTitle: packageMap[b.package_id || ""] || "-",
-        picName: picNameMap[b.pic_id || ""] || "-",
-        picType,
-        pilgrimCount: pCount,
-        commissionPerPilgrim,
-        totalCommission: total,
-      });
-
-      // Aggregate summary
-      const sumKey = `${picType}_${b.pic_id}`;
-      if (!summaryMap[sumKey]) {
-        summaryMap[sumKey] = {
-          picType,
-          picName: picNameMap[b.pic_id || ""] || "-",
-          picId: b.pic_id || "",
-          totalPilgrims: 0,
-          totalCommission: 0,
-        };
-      }
-      summaryMap[sumKey].totalPilgrims += pCount;
-      summaryMap[sumKey].totalCommission += total;
-
-      if (picType in typeTotals) {
-        typeTotals[picType as keyof typeof typeTotals] += total;
-      }
-      typeTotals.grand += total;
-    });
-
-    setRows(resultRows);
-    setSummaries(Object.values(summaryMap).sort((a, b) => b.totalCommission - a.totalCommission));
-    setTotals(typeTotals);
-    setLoading(false);
-  };
+  useEffect(() => {
+    fetchCommissionData();
+  }, [fetchCommissionData]);
 
   if (loading) {
     return (
       <div className="flex justify-center py-16">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold" />
       </div>
     );
   }
 
   const chartData = [
-    { name: "Cabang", komisi: totals.cabang },
-    { name: "Agen", komisi: totals.agen },
+    { name: "Cabang",   komisi: totals.cabang },
+    { name: "Agen",     komisi: totals.agen },
     { name: "Karyawan", komisi: totals.karyawan },
   ];
 
@@ -234,7 +163,7 @@ const CommissionReport = ({ startDate, endDate }: CommissionReportProps) => {
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" fontSize={12} />
-                <YAxis fontSize={12} tickFormatter={(v) => `${(v / 1000000).toFixed(1)}jt`} />
+                <YAxis fontSize={12} tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}jt`} />
                 <Tooltip formatter={(value: number) => formatCurrency(value)} />
                 <Bar dataKey="komisi" fill="hsl(45, 93%, 47%)" name="Komisi" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -264,7 +193,7 @@ const CommissionReport = ({ startDate, endDate }: CommissionReportProps) => {
                   {summaries.map((s) => (
                     <TableRow key={`${s.picType}_${s.picId}`}>
                       <TableCell>
-                        <Badge variant="outline">{picTypeLabels[s.picType] || s.picType}</Badge>
+                        <Badge variant="outline">{picTypeLabels[s.picType] ?? s.picType}</Badge>
                       </TableCell>
                       <TableCell className="font-semibold">{s.picName}</TableCell>
                       <TableCell className="text-center">{s.totalPilgrims}</TableCell>
@@ -307,7 +236,7 @@ const CommissionReport = ({ startDate, endDate }: CommissionReportProps) => {
                       <TableCell>{r.packageTitle}</TableCell>
                       <TableCell className="font-semibold">{r.picName}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{picTypeLabels[r.picType] || r.picType}</Badge>
+                        <Badge variant="outline">{picTypeLabels[r.picType] ?? r.picType}</Badge>
                       </TableCell>
                       <TableCell className="text-center">{r.pilgrimCount}</TableCell>
                       <TableCell className="text-right">{formatCurrency(r.commissionPerPilgrim)}</TableCell>

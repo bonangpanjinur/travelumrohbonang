@@ -229,7 +229,7 @@ router.get("/agent-stats", async (req, res) => {
         count(distinct b.id)::int as bookings,
         coalesce(sum(pay.amount), 0)::bigint as revenue
       from bookings b
-      join agents a on a.id = b.pic_id and b.pic_type = 'agent'
+      join agents a on a.id = b.pic_id and b.pic_type = 'agen'
       left join branches br on br.id = a.branch_id
       left join payments pay on pay.booking_id = b.id and pay.status = 'verified'
       where b.created_at between ${start} and ${end}
