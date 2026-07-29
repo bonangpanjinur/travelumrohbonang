@@ -7,6 +7,14 @@ import { Router, Request, Response } from "express";
 import { db, sql } from "@workspace/db";
 import { resolveUserScope } from "../../lib/scopeGuard";
 import { buildBookingScopeCondition } from "../../lib/scopeConditions";
+import {
+  generateIncomeStatementPdf,
+  generateBalanceSheetPdf,
+  generateCashFlowPdf,
+  type IncomeStatementData,
+  type BalanceSheetData,
+  type CashFlowData,
+} from "../../lib/financialPdf";
 
 const router = Router();
 
@@ -1013,6 +1021,391 @@ router.get("/reports/commission", async (req: Request, res: Response) => {
   }
 });
 
+
+// ── C4: Biaya vs Aktual (package_costs.unit_cost vs actual_amount) ────────────
+// GET /api/admin/finance/reports/cost-vs-actual?departureId=&packageId=
+router.get("/reports/cost-vs-actual", async (req: Request, res: Response) => {
+  try {
+    const { departureId, packageId } = req.query as Record<string, string>;
+
+    const rows = await db.execute(sql`
+      SELECT
+        dep.id               AS departure_id,
+        dep.departure_date,
+        dep.status           AS departure_status,
+        pkg.id               AS package_id,
+        pkg.title            AS package_title,
+        pc.id                AS cost_id,
+        COALESCE(pc.category, 'lainnya') AS category,
+        pc.item_name,
+        pc.qty::numeric      AS qty,
+        pc.unit,
+        pc.unit_cost::numeric AS unit_cost,
+        pc.is_per_pax,
+        pc.actual_amount::numeric AS actual_amount,
+        pc.invoice_reference,
+        pc.paid_at,
+        (
+          SELECT COUNT(*)::int FROM bookings b
+          WHERE b.departure_id = dep.id
+            AND b.status NOT IN ('cancelled', 'draft')
+        ) AS filled_seats
+      FROM package_costs pc
+      JOIN packages pkg ON pkg.id = pc.package_id
+      JOIN package_departures dep ON dep.id = pc.departure_id
+      WHERE pc.is_active = true
+        AND pc.departure_id IS NOT NULL
+        ${departureId ? sql`AND dep.id = ${departureId}` : sql``}
+        ${packageId   ? sql`AND pc.package_id = ${packageId}` : sql``}
+      ORDER BY dep.departure_date, pc.category, pc.sort_order, pc.item_name
+    `);
+
+    const getRows = (r: any) => (r as any).rows ?? r;
+    const data = getRows(rows);
+
+    // Group by departure → category
+    const departureMap = new Map<string, any>();
+
+    for (const r of data) {
+      const depId = r.departure_id as string;
+      if (!departureMap.has(depId)) {
+        departureMap.set(depId, {
+          departureId: depId,
+          departureDate: r.departure_date,
+          departureStatus: r.departure_status,
+          packageId: r.package_id,
+          packageTitle: r.package_title,
+          filledSeats: Number(r.filled_seats ?? 0),
+          categories: new Map<string, any>(),
+          totalBudgeted: 0,
+          totalActual: 0,
+        });
+      }
+
+      const dep = departureMap.get(depId);
+      const filledSeats = dep.filledSeats;
+      const qty = Number(r.qty ?? 1);
+      const unitCost = Number(r.unit_cost ?? 0);
+      const isPerPax = Boolean(r.is_per_pax);
+      const budgeted = unitCost * qty * (isPerPax ? filledSeats : 1);
+      const actual = Number(r.actual_amount ?? 0);
+      const variance = actual - budgeted;
+
+      const cat = r.category as string;
+      if (!dep.categories.has(cat)) {
+        dep.categories.set(cat, { category: cat, items: [], subtotalBudgeted: 0, subtotalActual: 0 });
+      }
+
+      const catObj = dep.categories.get(cat);
+      catObj.items.push({
+        costId: r.cost_id,
+        itemName: r.item_name,
+        qty,
+        unit: r.unit ?? "",
+        unitCost,
+        isPerPax,
+        budgeted,
+        actual,
+        variance,
+        variancePct: budgeted > 0 ? Math.round((variance / budgeted) * 1000) / 10 : 0,
+        invoiceReference: r.invoice_reference ?? null,
+        paidAt: r.paid_at ?? null,
+        isActualSet: r.actual_amount !== null,
+      });
+      catObj.subtotalBudgeted += budgeted;
+      catObj.subtotalActual  += actual;
+
+      dep.totalBudgeted += budgeted;
+      dep.totalActual   += actual;
+    }
+
+    const departures = Array.from(departureMap.values()).map((dep) => ({
+      ...dep,
+      categories: Array.from(dep.categories.values()).map((c: any) => ({
+        ...c,
+        subtotalVariance: c.subtotalActual - c.subtotalBudgeted,
+      })),
+      totalVariance: dep.totalActual - dep.totalBudgeted,
+      variancePct: dep.totalBudgeted > 0
+        ? Math.round(((dep.totalActual - dep.totalBudgeted) / dep.totalBudgeted) * 1000) / 10
+        : 0,
+    }));
+
+    const totalBudgeted = departures.reduce((s, d) => s + d.totalBudgeted, 0);
+    const totalActual   = departures.reduce((s, d) => s + d.totalActual, 0);
+
+    res.json({
+      departures,
+      summary: {
+        totalBudgeted,
+        totalActual,
+        totalVariance: totalActual - totalBudgeted,
+        variancePct: totalBudgeted > 0
+          ? Math.round(((totalActual - totalBudgeted) / totalBudgeted) * 1000) / 10
+          : 0,
+        departureCount: departures.length,
+      },
+    });
+  } catch (e) {
+    sendError(res, "GET /admin/finance/reports/cost-vs-actual", e);
+  }
+});
+
+// ── C5: Laporan Pajak — estimasi PPN / PPh otomatis ──────────────────────────
+// GET /api/admin/finance/reports/tax-summary?from=YYYY-MM-DD&to=YYYY-MM-DD
+router.get("/reports/tax-summary", async (req: Request, res: Response) => {
+  try {
+    const { from, to } = req.query as { from?: string; to?: string };
+
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    if (from && !dateRe.test(from)) return res.status(400).json({ error: "Invalid from date" });
+    if (to   && !dateRe.test(to))   return res.status(400).json({ error: "Invalid to date" });
+
+    const [revenueResult, expenseResult] = await Promise.all([
+      db.execute(sql`
+        SELECT COALESCE(SUM(bp.amount), 0)::numeric AS total_revenue
+        FROM booking_payments bp
+        WHERE bp.is_voided = false
+          ${from ? sql`AND bp.paid_at >= ${new Date(from)}` : sql``}
+          ${to   ? sql`AND bp.paid_at <= ${new Date(to)}`   : sql``}
+      `),
+      db.execute(sql`
+        SELECT
+          COALESCE(ft.category, 'lainnya') AS category,
+          SUM(ft.amount::numeric) AS total,
+          COUNT(*)::int AS count
+        FROM financial_transactions ft
+        WHERE ft.type IN ('expense', 'cost')
+          AND (ft.entry_type = 'debit' OR ft.entry_type IS NULL)
+          ${from ? sql`AND ft.transaction_date >= ${new Date(from)}` : sql``}
+          ${to   ? sql`AND ft.transaction_date <= ${new Date(to)}`   : sql``}
+        GROUP BY COALESCE(ft.category, 'lainnya')
+        ORDER BY total DESC
+      `),
+    ]);
+
+    const getRows = (r: any) => (r as any).rows ?? r;
+    const totalRevenue  = Number(getRows(revenueResult)[0]?.total_revenue ?? 0);
+    const expenseRows   = getRows(expenseResult);
+
+    // PPN 11% — jasa kena pajak (UU HPP No.7/2021)
+    const ppnRate   = 0.11;
+    const ppnAmount = Math.round(totalRevenue * ppnRate);
+
+    // PPh Final UMKM 0.5% (PP 55/2022) — berlaku peredaran bruto ≤ Rp 4,8 M/tahun
+    const pphFinalRate   = 0.005;
+    const pphFinalAmount = Math.round(totalRevenue * pphFinalRate);
+
+    // PPh 23 2% — atas penghasilan jasa yang dibayarkan ke badan/profesional
+    const pph23EligibleCategories = [
+      "commission_withdrawal", "refund_approved", "operasional",
+      "jasa", "komisi", "booking_payment", "installment_payment",
+    ];
+    const pph23Rate   = 0.02;
+    const pph23Base   = expenseRows
+      .filter((r: any) => pph23EligibleCategories.includes(String(r.category)))
+      .reduce((s: number, r: any) => s + Number(r.total), 0);
+    const pph23Amount = Math.round(pph23Base * pph23Rate);
+
+    // PPh 21 (estimated ~5%) — atas gaji karyawan
+    const pph21Categories = ["gaji", "salary", "thr", "biaya_gaji", "commission_withdrawal"];
+    const pph21Base       = expenseRows
+      .filter((r: any) => pph21Categories.includes(String(r.category)))
+      .reduce((s: number, r: any) => s + Number(r.total), 0);
+    const pph21Rate       = 0.05;
+    const pph21Amount     = Math.round(pph21Base * pph21Rate);
+
+    const breakdown = expenseRows.map((r: any) => ({
+      category:       r.category,
+      total:          Number(r.total),
+      count:          Number(r.count),
+      isPph23Eligible: pph23EligibleCategories.includes(String(r.category)),
+      pph23Estimated:  pph23EligibleCategories.includes(String(r.category))
+        ? Math.round(Number(r.total) * pph23Rate)
+        : 0,
+    }));
+
+    res.json({
+      period: { from: from ?? null, to: to ?? null },
+      revenue: {
+        totalRevenue,
+        ppn: {
+          rate: ppnRate, rateLabel: "11%",
+          base: totalRevenue, amount: ppnAmount,
+          note: "PPN atas peredaran jasa kena pajak (UU HPP No.7/2021)",
+        },
+        pphFinal: {
+          rate: pphFinalRate, rateLabel: "0.5%",
+          base: totalRevenue, amount: pphFinalAmount,
+          note: "PPh Final UMKM (PP 55/2022) — berlaku jika peredaran bruto ≤ Rp 4,8 M/tahun",
+        },
+      },
+      expenses: {
+        totalExpenses: expenseRows.reduce((s: number, r: any) => s + Number(r.total), 0),
+        pph23: {
+          rate: pph23Rate, rateLabel: "2%",
+          base: pph23Base, amount: pph23Amount,
+          note: "Estimasi PPh 23 atas jasa/komisi yang dibayarkan ke badan",
+        },
+        pph21Estimated: {
+          rate: pph21Rate, rateLabel: "~5%",
+          base: pph21Base, amount: pph21Amount,
+          note: "Perkiraan PPh 21 atas gaji. Tarif aktual bersifat progresif.",
+        },
+        breakdown,
+      },
+      summary: {
+        estimatedPPN:      ppnAmount,
+        estimatedPPhFinal: pphFinalAmount,
+        estimatedPPh23:    pph23Amount,
+        estimatedPPh21:    pph21Amount,
+        totalEstimatedTax: ppnAmount + pphFinalAmount + pph23Amount + pph21Amount,
+        disclaimer: "Angka ini adalah ESTIMASI untuk perencanaan. Konsultasikan dengan konsultan pajak untuk perhitungan resmi.",
+      },
+    });
+  } catch (e) {
+    sendError(res, "GET /admin/finance/reports/tax-summary", e);
+  }
+});
+
+// ── C6: PDF Export ─────────────────────────────────────────────────────────────
+
+async function fetchIncomeStatementData(from?: string, to?: string): Promise<IncomeStatementData> {
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+  const rows = await db.execute(sql`
+    SELECT
+      ft.type,
+      ft.category,
+      COALESCE(coa.name, ft.category) AS account_name,
+      COALESCE(coa.code, '')          AS account_code,
+      SUM(ft.amount::numeric)         AS total
+    FROM financial_transactions ft
+    LEFT JOIN chart_of_accounts coa ON coa.id = ft.account_id
+    WHERE ft.type IN ('income', 'expense')
+      ${from && dateRe.test(from) ? sql`AND ft.transaction_date >= ${new Date(from)}` : sql``}
+      ${to   && dateRe.test(to)   ? sql`AND ft.transaction_date <= ${new Date(to)}`   : sql``}
+    GROUP BY ft.type, ft.category, coa.name, coa.code
+    ORDER BY ft.type, SUM(ft.amount::numeric) DESC
+  `);
+  const data = ((rows as any).rows ?? rows) as any[];
+  const revenueItems = data.filter(r => r.type === "income").map(r => ({
+    category: r.category, accountName: r.account_name, accountCode: r.account_code, total: Number(r.total),
+  }));
+  const expenseItems = data.filter(r => r.type === "expense").map(r => ({
+    category: r.category, accountName: r.account_name, accountCode: r.account_code, total: Number(r.total),
+  }));
+  const totalRevenue = revenueItems.reduce((s, r) => s + r.total, 0);
+  const totalExpense = expenseItems.reduce((s, r) => s + r.total, 0);
+  return {
+    period: { from: from ?? null, to: to ?? null },
+    revenue: { items: revenueItems, total: totalRevenue },
+    expense: { items: expenseItems, total: totalExpense },
+    grossProfit: totalRevenue - totalExpense,
+    netIncome: totalRevenue - totalExpense,
+  };
+}
+
+// GET /api/admin/finance/reports/income-statement.pdf
+router.get("/reports/income-statement.pdf", async (req: Request, res: Response) => {
+  try {
+    const { from, to } = req.query as { from?: string; to?: string };
+    const data = await fetchIncomeStatementData(from, to);
+    const buffer = await generateIncomeStatementPdf(data);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="laporan-laba-rugi-${Date.now()}.pdf"`);
+    res.send(buffer);
+  } catch (e) {
+    sendError(res, "GET /admin/finance/reports/income-statement.pdf", e);
+  }
+});
+
+// GET /api/admin/finance/reports/balance-sheet.pdf
+router.get("/reports/balance-sheet.pdf", async (req: Request, res: Response) => {
+  try {
+    const { date } = req.query as { date?: string };
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    const rows = await db.execute(sql`
+      SELECT
+        coa.type, coa.category, coa.code, coa.name, coa.normal_balance,
+        COALESCE(SUM(CASE WHEN ft.entry_type = 'debit'  THEN ft.amount::numeric ELSE 0 END), 0) AS total_debit,
+        COALESCE(SUM(CASE WHEN ft.entry_type = 'credit' THEN ft.amount::numeric ELSE 0 END), 0) AS total_credit
+      FROM chart_of_accounts coa
+      LEFT JOIN financial_transactions ft ON ft.account_id = coa.id
+        ${date && dateRe.test(date) ? sql`AND ft.transaction_date <= ${new Date(date)}` : sql``}
+      WHERE coa.is_active = true AND coa.type IN ('asset', 'liability', 'equity')
+      GROUP BY coa.id, coa.type, coa.category, coa.code, coa.name, coa.normal_balance
+      ORDER BY coa.code
+    `);
+    const data2 = ((rows as any).rows ?? rows) as any[];
+    const computeBalance = (row: any) => {
+      const debit = Number(row.total_debit), credit = Number(row.total_credit);
+      return row.normal_balance === "debit" ? debit - credit : credit - debit;
+    };
+    const assets      = data2.filter(r => r.type === "asset").map(r => ({ code: r.code, name: r.name, category: r.category, balance: computeBalance(r) }));
+    const liabilities = data2.filter(r => r.type === "liability").map(r => ({ code: r.code, name: r.name, category: r.category, balance: computeBalance(r) }));
+    const equity      = data2.filter(r => r.type === "equity").map(r => ({ code: r.code, name: r.name, category: r.category, balance: computeBalance(r) }));
+    const totalAssets = assets.reduce((s, r) => s + r.balance, 0);
+    const totalLiab   = liabilities.reduce((s, r) => s + r.balance, 0);
+    const totalEq     = equity.reduce((s, r) => s + r.balance, 0);
+    const bsData: BalanceSheetData = {
+      asOf: date ?? new Date().toISOString().split("T")[0],
+      assets: { items: assets, total: totalAssets },
+      liabilities: { items: liabilities, total: totalLiab },
+      equity: { items: equity, total: totalEq },
+      totalLiabilitiesEquity: totalLiab + totalEq,
+    };
+    const buffer = await generateBalanceSheetPdf(bsData);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="neraca-${Date.now()}.pdf"`);
+    res.send(buffer);
+  } catch (e) {
+    sendError(res, "GET /admin/finance/reports/balance-sheet.pdf", e);
+  }
+});
+
+// GET /api/admin/finance/reports/cash-flow.pdf
+router.get("/reports/cash-flow.pdf", async (req: Request, res: Response) => {
+  try {
+    const { from, to } = req.query as { from?: string; to?: string };
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    const [inflows, outflows] = await Promise.all([
+      db.execute(sql`
+        SELECT DATE_TRUNC('month', bp.paid_at) AS month, SUM(bp.amount) AS total
+        FROM booking_payments bp
+        WHERE TRUE
+          ${from && dateRe.test(from) ? sql`AND bp.paid_at >= ${new Date(from)}` : sql``}
+          ${to   && dateRe.test(to)   ? sql`AND bp.paid_at <= ${new Date(to)}`   : sql``}
+        GROUP BY month ORDER BY month
+      `),
+      db.execute(sql`
+        SELECT DATE_TRUNC('month', ft.transaction_date) AS month, SUM(ft.amount::numeric) AS total
+        FROM financial_transactions ft
+        WHERE ft.type = 'expense'
+          AND (ft.entry_type = 'debit' OR ft.entry_type IS NULL)
+          ${from && dateRe.test(from) ? sql`AND ft.transaction_date >= ${new Date(from)}` : sql``}
+          ${to   && dateRe.test(to)   ? sql`AND ft.transaction_date <= ${new Date(to)}`   : sql``}
+        GROUP BY month ORDER BY month
+      `),
+    ]);
+    const getRows = (r: any) => (r as any).rows ?? r;
+    const inflowMap  = new Map(getRows(inflows).map((r: any)  => [new Date(r.month).toISOString().slice(0, 7), Number(r.total)]));
+    const outflowMap = new Map(getRows(outflows).map((r: any) => [new Date(r.month).toISOString().slice(0, 7), Number(r.total)]));
+    const allMonths  = Array.from(new Set([...inflowMap.keys(), ...outflowMap.keys()])).sort();
+    const monthly = allMonths.map(m => ({ month: m, inflow: inflowMap.get(m) ?? 0, outflow: outflowMap.get(m) ?? 0, net: (inflowMap.get(m) ?? 0) - (outflowMap.get(m) ?? 0) }));
+    const totalInflow  = monthly.reduce((s, r) => s + r.inflow,  0);
+    const totalOutflow = monthly.reduce((s, r) => s + r.outflow, 0);
+    const cfData: CashFlowData = {
+      period: { from: from ?? null, to: to ?? null },
+      monthly,
+      summary: { totalInflow, totalOutflow, netCashFlow: totalInflow - totalOutflow },
+    };
+    const buffer = await generateCashFlowPdf(cfData);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="arus-kas-${Date.now()}.pdf"`);
+    res.send(buffer);
+  } catch (e) {
+    sendError(res, "GET /admin/finance/reports/cash-flow.pdf", e);
+  }
+});
+
 export default router;
-
-
