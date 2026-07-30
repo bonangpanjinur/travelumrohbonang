@@ -32,6 +32,7 @@ import {
   syncOverdueStatus,
 } from "../lib/installments";
 import { generateBookingConfirmationPdf } from "../lib/pdf/bookingConfirmation";
+import QRCode from "qrcode";
 import { branches } from "@workspace/db";
 import {
   BookingListResponse,
@@ -365,6 +366,14 @@ router.get("/:id/confirmation.pdf", async (req, res) => {
       .from(bookingPilgrims)
       .where(eq(bookingPilgrims.bookingId, id));
 
+    // Build tracking URL for QR code (same URL used by the client-side invoice QR)
+    const appDomain =
+      process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : process.env.APP_URL ?? "";
+    const trackingUrl = `${appDomain}/track/${row.bookingCode}`;
+    const qrDataUrl = await QRCode.toDataURL(trackingUrl, { margin: 1, width: 200 });
+
     const pdfBuffer = await generateBookingConfirmationPdf({
       ...row,
       hotelMakkah: (hotelMakkahRow as any[])[0]?.name ?? null,
@@ -372,6 +381,7 @@ router.get("/:id/confirmation.pdf", async (req, res) => {
       airlineName: (airlineRow as any[])[0]?.name ?? null,
       rooms: rooms.map((r) => ({ roomType: r.roomType, quantity: r.quantity, subtotal: r.subtotal })),
       pilgrims: pilgrims.map((p) => ({ name: p.name, gender: p.gender, nik: p.nik })),
+      qrDataUrl,
     });
 
     res.setHeader("Content-Type", "application/pdf");

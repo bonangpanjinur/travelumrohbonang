@@ -11,6 +11,7 @@ import {
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
   renderToBuffer,
 } from "@react-pdf/renderer";
@@ -97,6 +98,21 @@ const styles = StyleSheet.create({
     borderTopColor: "#eee",
     paddingTop: 10,
   },
+  qrSection: {
+    marginTop: 16,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "flex-end",
+  },
+  qrBox: {
+    alignItems: "center",
+    padding: 8,
+    borderWidth: 1,
+    borderColor: "#e5c78a",
+    borderRadius: 4,
+  },
+  qrImage: { width: 72, height: 72 },
+  qrLabel: { fontSize: 7, color: "#888", marginTop: 4, textAlign: "center" },
 });
 
 function formatIDR(n: number | string | null | undefined): string {
@@ -138,6 +154,7 @@ export interface BookingConfirmationData {
   hotelMakkah?: string | null;
   hotelMadinah?: string | null;
   airlineName?: string | null;
+  qrDataUrl?: string | null;
 }
 
 export async function generateBookingConfirmationPdf(
@@ -306,6 +323,19 @@ export async function generateBookingConfirmationPdf(
         React.createElement(Text, { style: styles.totalLabel }, "Total Harga"),
         React.createElement(Text, { style: styles.totalValue }, formatIDR(data.totalPrice)),
       ),
+      // QR code
+      data.qrDataUrl &&
+        React.createElement(
+          View,
+          { style: styles.qrSection },
+          React.createElement(
+            View,
+            { style: styles.qrBox },
+            React.createElement(Image, { src: data.qrDataUrl, style: styles.qrImage }),
+            React.createElement(Text, { style: styles.qrLabel }, "Scan untuk Verifikasi"),
+            React.createElement(Text, { style: [styles.qrLabel, { fontWeight: 700, color: "#7a1f2b" }] }, data.bookingCode),
+          ),
+        ),
       // Footer
       React.createElement(
         Text,
