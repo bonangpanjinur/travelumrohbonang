@@ -463,7 +463,7 @@ importers:
         specifier: 'catalog:'
         version: 4.4.3
 
-  artifacts/throwaway-rescan:
+  artifacts/temp-rescan-dummy:
     devDependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0
