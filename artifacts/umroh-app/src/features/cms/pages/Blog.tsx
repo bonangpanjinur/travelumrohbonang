@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { toast } from "sonner";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
@@ -33,6 +34,18 @@ const Blog = () => {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
+  const [siteName, setSiteName] = useState<string>("UmrohPlus");
+
+  useEffect(() => {
+    apiFetch<{ data: Array<{ key: string; value: unknown }> }>("/api/cms/site-settings")
+      .then((result) => {
+        const branding = result?.data?.find((s) => s.key === "branding")?.value;
+        if (branding && typeof branding === "object" && "company_name" in branding) {
+          setSiteName((branding as { company_name: string }).company_name);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -97,7 +110,7 @@ const Blog = () => {
               animate={{ opacity: 1, y: 0 }}
               className="text-3xl md:text-5xl font-display font-bold text-primary-foreground mb-4"
             >
-              Blog <span className="text-gradient-gold">UmrohPlus</span>
+              Blog <span className="text-gradient-gold">{siteName}</span>
             </motion.h1>
             <p className="text-primary-foreground/80 max-w-xl mx-auto mb-8">
               Artikel, tips, dan informasi seputar ibadah umroh
