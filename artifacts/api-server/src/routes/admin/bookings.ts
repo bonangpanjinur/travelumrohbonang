@@ -294,13 +294,13 @@ router.get("/stats", async (req, res) => {
           FILTER (WHERE b.status NOT IN ('cancelled', 'completed')
             AND COALESCE(
               (SELECT SUM(pt.amount) FROM booking_payments pt
-               WHERE pt.booking_id = b.id AND NOT pt.is_voided), 0) = 0)
+               WHERE pt.booking_id = b.id AND pt.is_voided = false), 0) = 0)
           AS waiting_payment,
         COUNT(*)::int
           FILTER (WHERE b.total_price > 0
             AND COALESCE(
               (SELECT SUM(pt.amount) FROM booking_payments pt
-               WHERE pt.booking_id = b.id AND NOT pt.is_voided), 0) >= b.total_price)
+               WHERE pt.booking_id = b.id AND pt.is_voided = false), 0) >= b.total_price)
           AS paid,
         COUNT(*)::int
           FILTER (WHERE b.status NOT IN ('cancelled', 'completed')

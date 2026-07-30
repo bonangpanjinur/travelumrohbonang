@@ -27,7 +27,12 @@ async function pingSupabase(): Promise<boolean> {
 
   try {
     const headers: Record<string, string> = {};
-    if (SUPABASE_ANON_KEY) headers["apikey"] = SUPABASE_ANON_KEY;
+    if (SUPABASE_ANON_KEY) {
+      headers["apikey"] = SUPABASE_ANON_KEY;
+      // Supabase REST also requires Authorization to return 200 (not 401).
+      // Both headers together prevent noisy 401s in the browser console.
+      headers["Authorization"] = `Bearer ${SUPABASE_ANON_KEY}`;
+    }
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
       method: "HEAD",
