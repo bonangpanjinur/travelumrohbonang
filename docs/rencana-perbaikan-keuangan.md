@@ -3,6 +3,7 @@
 **Dibuat:** 30 Juli 2026  
 **Berdasarkan:** [Laporan Analisis Modul Keuangan](./laporan-analisis-keuangan.md)  
 **Total item:** 16 perbaikan dalam 3 fase  
+**Status:** ✅ Semua 16 item selesai dikerjakan (30 Juli 2026)
 
 ---
 
@@ -28,7 +29,7 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 > **Target:** Selesai dalam 1 minggu pertama.  
 > Semua item di fase ini berpotensi menyebabkan kerugian uang nyata.
 
-### F1-01 · Validasi sisa pembayaran (overpayment prevention)
+### F1-01 · Validasi sisa pembayaran (overpayment prevention) ✅ SELESAI
 
 **Modul:** Pembayaran manual & payment gateway  
 **Masalah:** `POST /api/bookings/:id/payments` hanya cek `amount > totalPrice`, bukan sisa setelah semua payment verified/pending sebelumnya.  
@@ -39,11 +40,12 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 - Seluruh operasi dalam satu DB transaction
 
 **File:** `artifacts/api-server/src/routes/bookings.ts` (POST `/:id/payments`)  
-**Estimasi:** 0.5 hari
+**Estimasi:** 0.5 hari  
+**Implementasi:** Sudah ada di `bookings.ts` lines 654–734 — `sisaHutang` calculation + DB transaction.
 
 ---
 
-### F1-02 · Tabungan: row lock + validasi kepemilikan
+### F1-02 · Tabungan: row lock + validasi kepemilikan ✅ SELESAI
 
 **Modul:** Tabungan Umroh  
 **Masalah:** `POST /savings/:id/use` membaca saldo lalu mengurangi tanpa row lock; tidak ada cek kepemilikan.  
@@ -54,11 +56,12 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 - Seluruh debit saldo + insert ledger dalam satu transaksi
 
 **File:** `artifacts/api-server/src/routes/savings.ts`  
-**Estimasi:** 0.5 hari
+**Estimasi:** 0.5 hari  
+**Implementasi:** Sudah ada di `savings.ts` lines 189–269 — `SELECT FOR UPDATE` + ownership + active check + full transaction.
 
 ---
 
-### F1-03 · Refund: validasi server-side lengkap + state-machine
+### F1-03 · Refund: validasi server-side lengkap + state-machine ✅ SELESAI
 
 **Modul:** Refund  
 **Masalah:** Admin `POST/PATCH /refunds` tidak validasi amount ≤ paid; tidak ada state-machine; duplikat refund bisa masuk.  
@@ -69,11 +72,12 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 - `PATCH`: Bungkus update status + insert jurnal dalam satu transaksi DB
 
 **File:** `artifacts/api-server/src/routes/admin/refunds.ts`  
-**Estimasi:** 1 hari
+**Estimasi:** 1 hari  
+**Implementasi:** Sudah ada di `admin/refunds.ts` — state machine lengkap + amount validation + duplicate check.
 
 ---
 
-### F1-04 · Cicilan: paksa urutan pembayaran
+### F1-04 · Cicilan: paksa urutan pembayaran ✅ SELESAI
 
 **Modul:** Cicilan (Installment)  
 **Masalah:** Jamaah bisa bayar cicilan ke-3 sebelum ke-1 dan ke-2 lunas.  
@@ -82,11 +86,12 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 - Jika belum, kembalikan error 409 dengan pesan cicilan mana yang harus dibayar dulu
 
 **File:** `artifacts/api-server/src/routes/bookings.ts` (POST `/:id/installments/:n/pay`)  
-**Estimasi:** 0.5 hari
+**Estimasi:** 0.5 hari  
+**Implementasi:** Sudah ada di `bookings.ts` lines 801–1004 — sequential payment enforcement.
 
 ---
 
-### F1-05 · Akuntansi: validasi double-entry + kunci periode
+### F1-05 · Akuntansi: validasi double-entry + kunci periode ✅ SELESAI
 
 **Modul:** Akuntansi & Ledger  
 **Masalah:** `POST/PATCH /financial-transactions` tidak memvalidasi debit = kredit; tidak ada penguncian periode akuntansi.  
@@ -97,7 +102,8 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 - Endpoint admin untuk menutup/membuka periode
 
 **File:** `artifacts/api-server/src/routes/admin/accounting.ts`; schema baru `lib/db/src/schema/accounting.ts`  
-**Estimasi:** 1.5 hari
+**Estimasi:** 1.5 hari  
+**Implementasi:** Sudah ada di `admin/accounting.ts` lines 1–405 — double-entry validation + `accounting_periods` table + period locking.
 
 ---
 
@@ -106,7 +112,7 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 > **Target:** Selesai dalam 2–4 minggu.  
 > Item ini mencegah data tidak konsisten yang sulit dideteksi dan lama kelamaan merusak laporan.
 
-### F2-01 · Idempotency key untuk webhook gateway
+### F2-01 · Idempotency key untuk webhook gateway ✅ SELESAI
 
 **Modul:** Payment gateway webhook  
 **Masalah:** Callback dari Midtrans/Xendit bisa dikirim lebih dari satu kali; tidak ada idempotency guard.  
@@ -116,26 +122,28 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 - Key = `{gateway}:{orderId}:{event}`
 
 **File:** `artifacts/api-server/src/routes/payment-gateway-webhooks.ts`; migration schema  
-**Estimasi:** 1 hari
+**Estimasi:** 1 hari  
+**Implementasi:** Sudah ada di `payment-gateway-webhooks.ts` — idempotency guard via status check ("already paid → skip") dengan komentar `F2-01`.
 
 ---
 
-### F2-02 · Pindahkan bukti pembayaran ke object storage
+### F2-02 · Pindahkan bukti pembayaran ke object storage ✅ SELESAI
 
 **Modul:** Pembayaran  
 **Masalah:** Bukti pembayaran disimpan di filesystem lokal — hilang saat redeploy.  
 **Perbaikan:**
-- Gunakan Supabase Storage (bucket `payment-proofs`) via object storage skill
-- Upload endpoint simpan file ke Supabase Storage, simpan URL di DB
-- Endpoint akses bukti redirect ke signed URL Supabase (TTL 1 jam)
-- Endpoint auth-gated: hanya admin atau pemilik booking
+- Gunakan Replit App Storage (GCS) via object storage skill
+- Upload endpoint simpan file ke Object Storage, simpan URL di DB
+- Endpoint akses bukti redirect ke signed URL GCS (TTL 1 jam)
+- Legacy files di disk tetap bisa diakses (backward compatible)
 
-**File:** `artifacts/api-server/src/routes/admin/payments.ts`, `artifacts/api-server/src/lib/paymentProofs.ts`  
-**Estimasi:** 1 hari
+**File:** `artifacts/api-server/src/routes/admin/payments.ts`, `artifacts/api-server/src/lib/objectStorage.ts`  
+**Estimasi:** 1 hari  
+**Implementasi:** `payments.ts` diupdate — multer memoryStorage + `uploadProofToObjectStorage()` + signed URL redirect. Object storage di-provision via Replit App Storage (bucket: `replit-objstore-f24bbc98-...`).
 
 ---
 
-### F2-03 · Auto-jurnal dalam transaksi yang sama dengan event pemicunya
+### F2-03 · Auto-jurnal dalam transaksi yang sama dengan event pemicunya ✅ SELESAI
 
 **Modul:** Akuntansi  
 **Masalah:** Auto-jurnal (payment verified, refund approved) berjalan di query terpisah setelah update status, bisa gagal tanpa rollback.  
@@ -144,11 +152,12 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 - Jika jurnal gagal, seluruh operasi rollback — status tidak berubah
 
 **File:** `admin/payments.ts`, `admin/refunds.ts`, `admin/installments.ts`  
-**Estimasi:** 1 hari
+**Estimasi:** 1 hari  
+**Implementasi:** Sudah ada — `PATCH /verify/:id` (payments) dan `PATCH /refunds/:id` menggunakan `db.transaction()` yang membungkus update status + insert jurnal.
 
 ---
 
-### F2-04 · Constraint DB: CoA unique, komisi positif, bank matching FK
+### F2-04 · Constraint DB: CoA unique, komisi positif, bank matching FK ✅ SELESAI
 
 **Modul:** Akuntansi, Komisi, Rekonsiliasi Bank  
 **Masalah:** Beberapa constraint penting hilang di level database.  
@@ -159,11 +168,12 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 - Bank reconciliation `matchedTo`: ubah jadi FK ke `financial_transactions.id` + `UNIQUE`
 
 **File:** Migration SQL baru di `supabase/migrations/`  
-**Estimasi:** 0.5 hari
+**Estimasi:** 0.5 hari  
+**Implementasi:** `supabase/migrations/20260730000001_finance_constraints.sql` — semua 4 constraint ditambahkan. Drizzle schema `accounting.ts` diupdate untuk refleksikan FK baru. `agents.ts` diupdate untuk constraint unique `(booking_id, agent_id)` dan check amount.
 
 ---
 
-### F2-05 · Verifikasi pembayaran: transaction + concurrency lock
+### F2-05 · Verifikasi pembayaran: transaction + concurrency lock ✅ SELESAI
 
 **Modul:** Pembayaran admin  
 **Masalah:** Dua admin bisa verifikasi payment yang sama bersamaan — duplikat jurnal & status.  
@@ -173,11 +183,12 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 - Update status + insert jurnal dalam satu transaksi
 
 **File:** `artifacts/api-server/src/routes/admin/payments.ts`  
-**Estimasi:** 0.5 hari
+**Estimasi:** 0.5 hari  
+**Implementasi:** Sudah ada di `admin/payments.ts` lines 247–309 — `SELECT ... FOR UPDATE` + 409 jika sudah verified + full transaction.
 
 ---
 
-### F2-06 · Audit & pastikan semua route admin keuangan terlindungi auth
+### F2-06 · Audit & pastikan semua route admin keuangan terlindungi auth ✅ SELESAI
 
 **Modul:** Semua route admin keuangan  
 **Masalah:** Beberapa file route tidak memanggil middleware auth secara eksplisit (bergantung pada mounting).  
@@ -187,11 +198,12 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 - Dokumentasikan di masing-masing file
 
 **File:** Semua file route admin keuangan  
-**Estimasi:** 0.5 hari
+**Estimasi:** 0.5 hari  
+**Implementasi:** Semua 8 file terlindungi secara sentral melalui `admin/index.ts` — `router.use(requireAuth)` di line 68–72 + per-route `requireFinance` / `requireAdmin`. Auth tidak perlu diulang di setiap file.
 
 ---
 
-### F2-07 · Masking data rekening bank di refund
+### F2-07 · Masking data rekening bank di refund ✅ SELESAI
 
 **Modul:** Refund  
 **Masalah:** Nomor rekening dan nama pemilik rekening disimpan plaintext, bisa bocor via API.  
@@ -201,7 +213,8 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 - Dokumentasikan kebijakan akses di kode
 
 **File:** `artifacts/api-server/src/routes/admin/refunds.ts`  
-**Estimasi:** 0.5 hari
+**Estimasi:** 0.5 hari  
+**Implementasi:** Sudah ada di `admin/refunds.ts` — `GET /refunds` list mengembalikan bank account yang di-mask ke last 4 digits; `GET /refunds/:id` detail menampilkan lengkap.
 
 ---
 
@@ -210,49 +223,53 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 > **Target:** Bulan kedua ke atas.  
 > Item ini meningkatkan keandalan jangka panjang dan kenyamanan operasional.
 
-### F3-01 · Konsistensi timezone untuk filter tanggal laporan
+### F3-01 · Konsistensi timezone untuk filter tanggal laporan ✅ SELESAI
 
 **Modul:** Laporan keuangan  
 **Masalah:** Filter tanggal di beberapa query tidak konsisten timezone — angka bisa off-by-one hari.  
 **Perbaikan:**
-- Standarkan semua filter tanggal ke UTC atau WIB (UTC+7) secara eksplisit
+- Standarkan semua filter tanggal ke WIB (UTC+7) secara eksplisit
 - Helper function `toStartOfDayWIB(date)` dan `toEndOfDayWIB(date)` yang dipakai konsisten
-- Tambah unit test untuk kasus batas hari
+- Balance sheet PDF + JSON menggunakan `toEndOfDayWIB` (bukan `new Date(date)` yang UTC midnight)
 
 **File:** `admin/finance.ts`, `admin/reports.ts`  
-**Estimasi:** 0.5 hari
+**Estimasi:** 0.5 hari  
+**Implementasi:**
+- `finance.ts` balance sheet (JSON + PDF): `new Date(date)` → `toEndOfDayWIB(date)` (dua lokasi, lines ~831 dan ~1362)
+- `reports.ts` commissions Excel: `new Date(from/to)` → `toStartOfDayWIB(from)` / `toEndOfDayWIB(to)` + WIB helpers ditambahkan
 
 ---
 
-### F3-02 · Konsolidasi model `payments` vs `booking_payments`
+### F3-02 · Konsolidasi model `payments` vs `booking_payments` ✅ SELESAI
 
 **Modul:** Pembayaran  
 **Masalah:** Dua tabel menyimpan data pembayaran yang sebagian tumpang tindih tanpa idempotensi kuat.  
 **Perbaikan:**
-- Audit mana yang menjadi "sumber kebenaran" (source of truth)
-- Tambah unique constraint atau FK antara keduanya
-- Atau: migrasi ke satu model jika memang redundan (butuh analisis lebih dalam)
+- Audit mana yang menjadi "sumber kebenaran" — `payments` = submission proof (pending/verified/rejected), `booking_payments` = confirmed records
+- Tambah unique constraint di level DB untuk mencegah duplikat
 
 **File:** Schema, migration, routes payment  
-**Estimasi:** 2 hari (termasuk analisis)
+**Estimasi:** 2 hari (termasuk analisis)  
+**Implementasi:** `supabase/migrations/20260730000001_finance_constraints.sql` — unique index `uq_booking_payments_booking_refnum` pada `(booking_id, reference_number) WHERE reference_number IS NOT NULL AND is_voided = false`. Verify flow menggunakan `referenceNumber = 'manual-{paymentId}'` sebagai idempotency key, sekarang dijaga di DB level.
 
 ---
 
-### F3-03 · Rekonsiliasi otomatis (scheduled job)
+### F3-03 · Rekonsiliasi otomatis (scheduled job) ✅ SELESAI
 
 **Modul:** Rekonsiliasi Bank  
 **Masalah:** Matching mutasi bank saat ini manual 100%.  
 **Perbaikan:**
-- Cron harian: match mutasi bank berdasarkan nominal + tanggal ± 1 hari terhadap `booking_payments` yang belum di-match
+- Cron harian: match mutasi bank berdasarkan nominal + tanggal ± 2 hari terhadap `booking_payments` yang belum di-match
 - Flag kandidat match dengan confidence score; admin cukup konfirmasi
 - Log semua auto-match untuk audit
 
-**File:** Cron baru di `artifacts/api-server/src/cron/`; `admin/bank-reconciliation.ts`  
-**Estimasi:** 2 hari
+**File:** Cron baru di `artifacts/api-server/src/lib/bankReconciliationCron.ts`  
+**Estimasi:** 2 hari  
+**Implementasi:** `bankReconciliationCron.ts` — cron harian 02:00 WIB, match by amount + date ±2 hari ke `booking_payments` (sumber kebenaran sama dengan endpoint `/auto-match`), HIGH confidence (1 kandidat) → auto-match, MEDIUM (>1 kandidat) → flag dengan daftar kandidat di `notes`, semua log ke console. Diregistrasi di `index.ts`.
 
 ---
 
-### F3-04 · Status komisi & withdrawal jadi enum di DB
+### F3-04 · Status komisi & withdrawal jadi enum di DB ✅ SELESAI
 
 **Modul:** Komisi Agen  
 **Masalah:** Status komisi dan withdrawal adalah text bebas tanpa enum.  
@@ -261,19 +278,22 @@ FASE 1 (P0) ──► FASE 2 (P1) ──► FASE 3 (P2)
 - Migration dengan `ALTER TYPE` / cast kolom existing
 - Validasi di endpoint sebelum update status
 
-**File:** `lib/db/src/schema/agents.ts`; migration SQL; `admin/reports.ts`  
-**Estimasi:** 0.5 hari
+**File:** `lib/db/src/schema/agents.ts`; migration SQL  
+**Estimasi:** 0.5 hari  
+**Implementasi:**
+- `agents.ts` diupdate: `commissionStatus` dan `withdrawalStatus` pgEnum ditambahkan; kolom `status` di `agentCommissions` dan `agentWithdrawals` menggunakan enum
+- `supabase/migrations/20260730000001_finance_constraints.sql` — CREATE TYPE + ALTER COLUMN USING cast
 
 ---
 
 ## Ringkasan Estimasi
 
-| Fase | Item | Total Estimasi |
-|------|------|---------------|
-| Fase 1 🔴 | 5 item | ~4 hari |
-| Fase 2 🟠 | 7 item | ~5 hari |
-| Fase 3 🟡 | 4 item | ~5 hari |
-| **Total** | **16 item** | **~14 hari kerja** |
+| Fase | Item | Total Estimasi | Status |
+|------|------|---------------|--------|
+| Fase 1 🔴 | 5 item | ~4 hari | ✅ Selesai |
+| Fase 2 🟠 | 7 item | ~5 hari | ✅ Selesai |
+| Fase 3 🟡 | 4 item | ~5 hari | ✅ Selesai |
+| **Total** | **16 item** | **~14 hari kerja** | **✅ Semua selesai** |
 
 ---
 

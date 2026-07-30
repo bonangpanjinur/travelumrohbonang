@@ -1,10 +1,20 @@
 import {
-  pgTable, text, integer, boolean, numeric, timestamp, uuid,
+  pgTable, pgEnum, text, integer, boolean, numeric, timestamp, uuid,
   index, uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { bookings } from "./bookings";
 import { branches } from "./masterdata";
+
+// ── F3-04: Enum types untuk status komisi dan withdrawal ──────────────────────
+// Migration 20260730000001 menciptakan tipe enum ini di DB.
+export const commissionStatus = pgEnum("commission_status", [
+  "pending", "approved", "paid", "cancelled",
+]);
+
+export const withdrawalStatus = pgEnum("withdrawal_status", [
+  "requested", "approved", "rejected", "paid",
+]);
 
 export const agents = pgTable("agents", {
   id: text("id").primaryKey(),
@@ -39,7 +49,8 @@ export const agentCommissions = pgTable("agent_commissions", {
   bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
   agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
   amount: integer("amount").notNull(),
-  status: text("status").notNull().default("pending"),
+  // F3-04: enum type — migration 20260730000001 harus dijalankan sebelum push schema
+  status: commissionStatus("status").notNull().default("pending"),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_agent_commissions_booking_id").on(t.bookingId),
@@ -50,7 +61,8 @@ export const agentWithdrawals = pgTable("agent_withdrawals", {
   id: text("id").primaryKey(),
   agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
   amount: integer("amount").notNull(),
-  status: text("status").notNull().default("requested"), // requested | approved | rejected | paid
+  // F3-04: enum type — migration 20260730000001 harus dijalankan sebelum push schema
+  status: withdrawalStatus("status").notNull().default("requested"), // requested | approved | rejected | paid
   // Separate bank fields (legacy `bank_details` text field kept for migration compatibility)
   bankName: text("bank_name"),
   bankAccount: text("bank_account"),

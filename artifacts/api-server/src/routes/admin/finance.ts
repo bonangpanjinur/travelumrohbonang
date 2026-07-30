@@ -828,7 +828,7 @@ router.get("/reports/balance-sheet", async (req: Request, res: Response) => {
       FROM chart_of_accounts coa
       LEFT JOIN financial_transactions ft
         ON ft.account_id = coa.id
-        ${date ? sql`AND ft.transaction_date <= ${new Date(date)}` : sql``}
+        ${date ? sql`AND ft.transaction_date <= ${toEndOfDayWIB(date)}` : sql``}
       WHERE coa.is_active = true AND coa.type IN ('asset', 'liability', 'equity')
       GROUP BY coa.id, coa.type, coa.category, coa.code, coa.name, coa.normal_balance
       ORDER BY coa.code
@@ -1359,7 +1359,7 @@ router.get("/reports/balance-sheet.pdf", async (req: Request, res: Response) => 
         COALESCE(SUM(CASE WHEN ft.entry_type = 'credit' THEN ft.amount::numeric ELSE 0 END), 0) AS total_credit
       FROM chart_of_accounts coa
       LEFT JOIN financial_transactions ft ON ft.account_id = coa.id
-        ${date && dateRe.test(date) ? sql`AND ft.transaction_date <= ${new Date(date)}` : sql``}
+        ${date && dateRe.test(date) ? sql`AND ft.transaction_date <= ${toEndOfDayWIB(date)}` : sql``}
       WHERE coa.is_active = true AND coa.type IN ('asset', 'liability', 'equity')
       GROUP BY coa.id, coa.type, coa.category, coa.code, coa.name, coa.normal_balance
       ORDER BY coa.code

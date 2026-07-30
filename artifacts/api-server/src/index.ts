@@ -7,6 +7,7 @@ import { startDocumentReminderCron } from "./lib/documentReminderCron";
 import { startFollowUpCron } from "./lib/followUpCron";
 import { startPaymentDeadlineAlertCron } from "./lib/paymentDeadlineAlertCron";
 import { startExchangeRateCron } from "./lib/exchangeRateCron";
+import { startBankReconciliationCron } from "./lib/bankReconciliationCron";
 
 // ── Step 1: Validate required env vars — fail fast before anything else ───────
 // If SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY are missing the process exits
@@ -50,6 +51,8 @@ app.listen(port, async (err) => {
   startPaymentDeadlineAlertCron();
   // F-14: start daily exchange rate sync scheduler (06:00 WIB)
   startExchangeRateCron();
+  // F3-03: start daily auto-reconciliation bank scheduler (02:00 WIB)
+  startBankReconciliationCron();
 
   logger.info({ port }, "Server listening");
 });

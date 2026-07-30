@@ -8,6 +8,7 @@ import {
   pgTable, text, integer, boolean, timestamp, numeric, date,
   index, unique,
 } from "drizzle-orm/pg-core";
+import { bookingPayments } from "./bookings";
 
 // ── Chart of Accounts ─────────────────────────────────────────────────────────
 // Kode akun standar akuntansi. Format kode: {type_digit}-{seq4}
@@ -39,7 +40,7 @@ export const bankMutations = pgTable("bank_mutations", {
   refNumber: text("ref_number"),           // no referensi dari bank
   bankAccount: text("bank_account"),       // nama/nomor rekening
   bankName: text("bank_name"),             // BCA | Mandiri | BNI | BRI
-  matchedTo: text("matched_to"),           // FK ke booking_payments.id (nullable)
+  matchedTo: text("matched_to").references(() => bookingPayments.id, { onDelete: "set null" }), // F2-04: FK ke booking_payments.id (nullable, unique via migration)
   isMatched: boolean("is_matched").notNull().default(false),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }),

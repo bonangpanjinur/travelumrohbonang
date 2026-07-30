@@ -2,11 +2,13 @@ import { Router } from "express";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
+import { objectStorageClient } from "../../lib/objectStorage";
 import {
   db,
   bookings,
   bookingPayments,
   payments,
+  paymentProofAccessLogs,
   profiles,
   eq,
   and,
@@ -39,26 +41,47 @@ import { journalPaymentVerified } from "../../lib/autoJournal";
 import { emailNotifications } from "../../lib/notifications/emailNotifications";
 import { waNotifications } from "../../lib/notifications/waNotifications";
 
-// ── Multer setup for payment proof uploads ────────────────────────────────────
-function getProofUploadDir(): string {
-  const dir =
-    process.env.VERCEL === "1" || process.cwd().startsWith("/var/task")
-      ? "/tmp/uploads/payment-proofs"
-      : path.join(process.cwd(), "uploads", "payment-proofs");
-  try { fs.mkdirSync(dir, { recursive: true }); } catch {}
-  return dir;
+// ── F2-02: Object Storage untuk bukti pembayaran ─────────────────────────────
+// File diunggah ke Replit App Storage (GCS) agar tidak hilang saat redeploy.
+// URL format: /api/admin/payments/proof-files/{objectPath_base64url}
+//
+// Legacy fallback: file lama yang tersimpan di disk lokal tetap bisa diakses
+// via endpoint yang sama menggunakan path tanpa prefix "/objects/".
+
+/**
+ * Upload buffer ke Replit Object Storage (GCS).
+ * Returns path dalam format "/objects/{bucket}/{dir}/{uuid}{ext}".
+ */
+async function uploadProofToObjectStorage(
+  buffer: Buffer,
+  originalname: string,
+  mimetype: string,
+): Promise<string> {
+  const privateDir = process.env.PRIVATE_OBJECT_DIR ?? "";
+  if (!privateDir) throw new Error("PRIVATE_OBJECT_DIR not set");
+
+  // Parse "/bucket-name/prefix" format
+  const stripped = privateDir.replace(/^\/+/, "");
+  const slashIdx = stripped.indexOf("/");
+  const bucketName = slashIdx === -1 ? stripped : stripped.slice(0, slashIdx);
+  const prefix = slashIdx === -1 ? "" : stripped.slice(slashIdx + 1);
+
+  const ext = path.extname(originalname) || ".bin";
+  const objectId = crypto.randomUUID();
+  const objectName = prefix
+    ? `${prefix}/payment-proofs/${objectId}${ext}`
+    : `payment-proofs/${objectId}${ext}`;
+
+  const bucket = objectStorageClient.bucket(bucketName);
+  const gcsFile = bucket.file(objectName);
+  await gcsFile.save(buffer, { contentType: mimetype, resumable: false });
+
+  return `/objects/${bucketName}/${objectName}`;
 }
 
-const proofStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, getProofUploadDir()),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || ".bin";
-    cb(null, `${Date.now()}-${crypto.randomUUID().slice(0, 8)}${ext}`);
-  },
-});
-
+// Use memory storage — file uploaded to GCS server-side instead of disk
 const proofUpload = multer({
-  storage: proofStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
@@ -66,31 +89,137 @@ const proofUpload = multer({
   },
 });
 
+// Keep legacy disk fallback for files uploaded before F2-02 migration
+function getLegacyProofPath(filename: string): string | null {
+  const dirs = [
+    path.join(process.cwd(), "uploads", "payment-proofs"),
+    "/tmp/uploads/payment-proofs",
+  ];
+  for (const dir of dirs) {
+    const p = path.join(dir, filename);
+    try { if (fs.existsSync(p)) return p; } catch {}
+  }
+  return null;
+}
+
 const router = Router({ mergeParams: true });
 
-// ── POST /upload-proof — upload bukti pembayaran ──────────────────────────────
+// ── POST /upload-proof — upload bukti pembayaran ke Object Storage (F2-02) ────
 router.post("/upload-proof", proofUpload.single("file"), async (req: any, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "File tidak diterima atau format tidak didukung (JPG/PNG/PDF)" });
     }
-    const url = `/api/admin/payments/proof-files/${req.file.filename}`;
-    return res.json({ url, filename: req.file.filename, size: req.file.size });
+    const objectPath = await uploadProofToObjectStorage(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype,
+    );
+    // Encode objectPath as base64url so it can be embedded in a URL segment
+    const encoded = Buffer.from(objectPath).toString("base64url");
+    const url = `/api/admin/payments/proof-files/${encoded}`;
+    return res.json({ url, size: req.file.size });
   } catch (err) {
     console.error("[admin/payments] upload-proof error:", err);
     return res.status(500).json({ error: "Gagal upload bukti pembayaran" });
   }
 });
 
-// ── GET /proof-files/:filename — serve uploaded proof files ──────────────────
-router.get("/proof-files/:filename", (req: any, res) => {
-  const { filename } = req.params;
-  if (!filename || filename.includes("..") || filename.includes("/")) {
+// ── GET /proof-files/:token — serve bukti pembayaran (F2-02) ─────────────────
+// token = base64url(objectPath) untuk file baru, atau plain filename untuk legacy
+//
+// Akses kontrol (F2-02 security requirement):
+//   - Global scope (super_admin, admin, finance, owner): akses penuh
+//   - Branch / agent scope: hanya boleh akses jika booking milik branch/agen mereka
+//   - Akses tanpa scope yang cocok: 403
+//   - Akses dicatat di paymentProofAccessLogs
+router.get("/proof-files/:token", async (req: any, res) => {
+  const { token } = req.params;
+  if (!token || token.includes("..")) {
+    return res.status(400).json({ error: "Invalid token" });
+  }
+
+  // ── 1. Resolve scope & authorize ─────────────────────────────────────────
+  const scope = await resolveUserScope(req);
+  const userId = req.user?.id as string | undefined;
+
+  // Non-global scopes must be validated against the booking that owns this proof
+  if (scope.type !== "global") {
+    // Look up which payment + booking owns this proof URL
+    const proofUrl = `/api/admin/payments/proof-files/${token}`;
+    const proofRows = await db
+      .select({
+        paymentId: payments.id,
+        bookingId: payments.bookingId,
+        branchId: bookings.branchId,
+        agentId: bookings.agentId,
+        picType: bookings.picType,
+        picId: bookings.picId,
+      })
+      .from(payments)
+      .leftJoin(bookings, eq(payments.bookingId, bookings.id))
+      .where(eq(payments.proofUrl, proofUrl))
+      .limit(1);
+
+    if (proofRows.length === 0) {
+      // Not found in DB — deny non-global users (don't leak file existence)
+      return res.status(403).json({ error: scopeDeniedMessage(scope) });
+    }
+
+    const row = proofRows[0];
+    const inScope = isBookingInScope(
+      { branchId: row.branchId, agentId: row.agentId, picType: row.picType, picId: row.picId },
+      scope,
+    );
+    if (!inScope) {
+      return res.status(403).json({ error: scopeDeniedMessage(scope) });
+    }
+
+    // Log access for audit (best-effort, never block the response)
+    void db.insert(paymentProofAccessLogs).values({
+      id: crypto.randomUUID(),
+      userId: userId ?? null,
+      bookingId: row.bookingId ?? null,
+      paymentId: row.paymentId ?? null,
+      context: "admin-proof-serve",
+      createdAt: new Date(),
+    }).catch((e) => console.warn("[admin/payments] proof access log error:", e));
+  }
+
+  // ── 2. Try to decode as base64url (new object storage paths) ─────────────
+  let objectPath: string | null = null;
+  try {
+    const decoded = Buffer.from(token, "base64url").toString("utf-8");
+    if (decoded.startsWith("/objects/")) objectPath = decoded;
+  } catch {}
+
+  if (objectPath) {
+    // New path: stream from GCS via signed URL redirect (TTL 1 jam)
+    try {
+      const stripped = objectPath.replace(/^\/objects\//, "");
+      const slashIdx = stripped.indexOf("/");
+      const bucketName = slashIdx === -1 ? stripped : stripped.slice(0, slashIdx);
+      const objectName = stripped.slice(slashIdx + 1);
+      const bucket = objectStorageClient.bucket(bucketName);
+      const gcsFile = bucket.file(objectName);
+      const [signedUrl] = await gcsFile.getSignedUrl({
+        action: "read",
+        expires: Date.now() + 60 * 60 * 1000,
+      });
+      return res.redirect(302, signedUrl);
+    } catch (err) {
+      console.error("[admin/payments] proof serve (gcs) error:", err);
+      return res.status(404).json({ error: "File not found" });
+    }
+  }
+
+  // ── 3. Legacy fallback: serve from local disk (files before F2-02) ────────
+  if (token.includes("/")) {
     return res.status(400).json({ error: "Invalid filename" });
   }
-  const filePath = path.join(getProofUploadDir(), filename);
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File not found" });
-  return res.sendFile(filePath);
+  const legacyPath = getLegacyProofPath(token);
+  if (!legacyPath) return res.status(404).json({ error: "File not found" });
+  return res.sendFile(legacyPath);
 });
 
 router.get("/all", async (req, res) => {

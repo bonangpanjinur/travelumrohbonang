@@ -4,17 +4,30 @@ import { generateCommissionsExcel } from "../../lib/excel/commissionsReport";
 
 const router = Router();
 
+// ── WIB timezone helpers (sama dengan finance.ts) ─────────────────────────────
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1_000;
+
+function toStartOfDayWIB(dateStr: string): Date {
+  return new Date(new Date(dateStr).getTime() - WIB_OFFSET_MS);
+}
+
+function toEndOfDayWIB(dateStr: string): Date {
+  return new Date(new Date(dateStr).getTime() - WIB_OFFSET_MS + 24 * 60 * 60 * 1_000 - 1);
+}
+
 /**
  * GET /api/admin/reports/commissions.xlsx?from=YYYY-MM-DD&to=YYYY-MM-DD
  * Excel export of agent commissions grouped by agent with subtotals (F-06).
+ *
+ * F3-01: Filter tanggal menggunakan WIB helpers agar tidak off-by-one.
  */
 router.get("/commissions.xlsx", async (req, res) => {
   try {
     const { from, to } = req.query as { from?: string; to?: string };
 
     const conditions = [];
-    if (from) conditions.push(gte(agentCommissions.createdAt, new Date(from)));
-    if (to) conditions.push(lte(agentCommissions.createdAt, new Date(to)));
+    if (from) conditions.push(gte(agentCommissions.createdAt, toStartOfDayWIB(from)));
+    if (to)   conditions.push(lte(agentCommissions.createdAt, toEndOfDayWIB(to)));
 
     const rows = await db
       .select({
