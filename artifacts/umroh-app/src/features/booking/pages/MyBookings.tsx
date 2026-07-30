@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
+const INSTALLMENT_SCHEMES = new Set(["dp", "installment", "cicilan"]);
 import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useMyBookings } from "@/features/booking/hooks/useMyBookings";
@@ -54,12 +56,17 @@ const MyBookings = () => {
     if (!user || bookings.length === 0) return;
 
     const ids = bookings.map((b) => b.id);
+    // BUG-10: Handle Supabase query errors gracefully instead of silently ignoring them
     supabase
       .from("contracts")
       .select("booking_id, signed_at")
       .in("booking_id", ids)
       .eq("user_id", user.id)
-      .then(({ data: contracts }) => {
+      .then(({ data: contracts, error: contractsError }) => {
+        if (contractsError) {
+          console.warn("[MyBookings] Failed to load contract signatures:", contractsError.message);
+          return;
+        }
         const map: Record<string, boolean> = {};
         (contracts ?? []).forEach((c: any) => {
           if (c.signed_at) map[c.booking_id] = true;
@@ -198,11 +205,14 @@ const MyBookings = () => {
                       )}
                     </div>
                   )}
-                  {/* F-05: Installment schedule (only shown for dp/cicilan bookings) */}
-                  <InstallmentSchedule bookingId={b.id} />
+                  {/* BUG-7: Only render (and call the API) for dp/installment/cicilan bookings */}
+                  {b.paymentScheme && INSTALLMENT_SCHEMES.has(b.paymentScheme) && (
+                    <InstallmentSchedule bookingId={b.id} />
+                  )}
 
                   <div className="mt-3 pt-3 border-t border-border flex gap-2 flex-wrap text-xs">
-                    <Link to="/refund-request" className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary min-h-[44px] px-1">
+                    {/* BUG-9: Pass bookingId so RefundRequest can pre-select this booking */}
+                    <Link to={`/refund-request?bookingId=${b.id}`} className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary min-h-[44px] px-1">
                       <Receipt className="w-3.5 h-3.5" />Ajukan Refund
                     </Link>
                     <Link to="/chat" className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary min-h-[44px] px-1">

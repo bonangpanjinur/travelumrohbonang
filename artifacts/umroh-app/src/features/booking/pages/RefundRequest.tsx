@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/shared/hooks/useAuth";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
@@ -95,11 +95,15 @@ function RefundTimeline({ refund }: { refund: any }) {
 const RefundRequest = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  // BUG-9: Read pre-selected bookingId from query params (set by "Ajukan Refund" link)
+  const [searchParams] = useSearchParams();
+  const preselectedBookingId = searchParams.get("bookingId") ?? "";
+
   const [bookings, setBookings] = useState<any[]>([]);
   const [refunds, setRefunds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ bookingId: "", reason: "", amount: "", bankName: "", bankAccount: "", accountHolder: "" });
+  const [form, setForm] = useState({ bookingId: preselectedBookingId, reason: "", amount: "", bankName: "", bankAccount: "", accountHolder: "" });
 
   const load = async () => {
     if (!user) return;

@@ -50,12 +50,11 @@ const router = Router();
 router.use(requireAuth);
 
 function generateBookingCode(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const random = Array.from(
-    { length: 8 },
-    () => chars[Math.floor(Math.random() * chars.length)],
-  ).join("");
-  return `BNG-${random}`;
+  // Use crypto.randomUUID() for collision-resistant codes (avoids Math.random() bias)
+  const now = new Date();
+  const yymm = `${now.getFullYear().toString().slice(2)}${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const hex = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
+  return `BNG-${yymm}-${hex}`;
 }
 
 router.get("/", async (req, res) => {
@@ -142,17 +141,68 @@ router.post("/refunds", async (req, res) => {
       accountHolder,
     } = req.body;
 
+    // BUG-5: Validate required fields server-side
+    if (!bookingId || typeof bookingId !== "string") {
+      res.status(400).json({ error: "bookingId wajib diisi" });
+      return;
+    }
+    if (!reason || typeof reason !== "string" || !reason.trim()) {
+      res.status(400).json({ error: "Alasan refund wajib diisi" });
+      return;
+    }
+    const parsedAmount = Number(amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      res.status(400).json({ error: "Nominal refund harus lebih dari 0" });
+      return;
+    }
+
+    // BUG-5: Verify booking ownership and existence
+    const [booking] = await db
+      .select({ userId: bookings.userId, totalPrice: bookings.totalPrice, status: bookings.status })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+
+    if (!booking || booking.userId !== userId) {
+      res.status(403).json({ error: "Booking tidak ditemukan atau bukan milik Anda" });
+      return;
+    }
+
+    // BUG-5: Refund only valid for paid bookings
+    if (booking.status !== "paid" && booking.status !== "completed") {
+      res.status(409).json({ error: "Refund hanya dapat diajukan untuk booking yang sudah lunas" });
+      return;
+    }
+
+    // BUG-5: Refund amount cannot exceed total price
+    if (parsedAmount > booking.totalPrice) {
+      res.status(400).json({ error: "Nominal refund tidak boleh melebihi total harga booking" });
+      return;
+    }
+
+    // BUG-5: Prevent duplicate pending refund for the same booking
+    const [existingRefund] = await db
+      .select({ id: refundRequests.id })
+      .from(refundRequests)
+      .where(and(eq(refundRequests.bookingId, bookingId), eq(refundRequests.status, "pending")))
+      .limit(1);
+
+    if (existingRefund) {
+      res.status(409).json({ error: "Sudah ada pengajuan refund yang sedang diproses untuk booking ini" });
+      return;
+    }
+
     const [created] = await db
       .insert(refundRequests)
       .values({
         id: crypto.randomUUID(),
         userId,
         bookingId,
-        reason,
-        amount,
-        bankName,
-        bankAccount,
-        accountHolder,
+        reason: reason.trim(),
+        amount: parsedAmount,
+        bankName: bankName || null,
+        bankAccount: bankAccount || null,
+        accountHolder: accountHolder || null,
         status: "pending",
         createdAt: new Date(),
       })
@@ -546,6 +596,11 @@ router.post(
         email: p.email ?? null,
         gender: p.gender,
         nik: p.nik ?? null,
+        // BUG-1: Passport & personal data fields were silently dropped — now preserved
+        birthDate: (p as any).birthDate ?? null,
+        nationality: (p as any).nationality ?? null,
+        passportNumber: (p as any).passportNumber ?? null,
+        passportExpiry: (p as any).passportExpiry ?? null,
         createdAt: new Date(),
       }));
 
@@ -598,8 +653,15 @@ router.post("/:id/payments", async (req, res) => {
     const userId = req.user!.id;
     const { amount, paymentMethod, paymentType, proofUrl } = req.body;
 
+    // BUG-3: Validate amount before touching DB
+    const parsedAmount = Number(amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      res.status(400).json({ error: "Jumlah pembayaran harus lebih dari 0" });
+      return;
+    }
+
     const [booking] = await db
-      .select({ userId: bookings.userId })
+      .select({ userId: bookings.userId, status: bookings.status, totalPrice: bookings.totalPrice })
       .from(bookings)
       .where(eq(bookings.id, id))
       .limit(1);
@@ -609,24 +671,45 @@ router.post("/:id/payments", async (req, res) => {
       return;
     }
 
-    const [created] = await db
-      .insert(payments)
-      .values({
-        id: crypto.randomUUID(),
-        bookingId: id,
-        amount,
-        paymentMethod,
-        paymentType,
-        proofUrl,
-        status: "pending",
-        createdAt: new Date(),
-      })
-      .returning();
+    // BUG-4: Don't accept payments on terminal or already-paid bookings
+    const TERMINAL_STATUSES = ["cancelled", "completed"];
+    if (TERMINAL_STATUSES.includes(booking.status ?? "")) {
+      res.status(409).json({ error: `Booking dengan status '${booking.status}' tidak dapat menerima pembayaran baru` });
+      return;
+    }
 
-    await db
-      .update(bookings)
-      .set({ status: "waiting_payment" })
-      .where(eq(bookings.id, id));
+    // BUG-3: Validate amount doesn't exceed total price
+    if (parsedAmount > booking.totalPrice) {
+      res.status(400).json({ error: "Jumlah pembayaran melebihi total harga booking" });
+      return;
+    }
+
+    // BUG-2: Wrap insert + status update in ONE transaction so they're atomic
+    const created = await db.transaction(async (tx) => {
+      const [payment] = await tx
+        .insert(payments)
+        .values({
+          id: crypto.randomUUID(),
+          bookingId: id,
+          amount: parsedAmount,
+          paymentMethod,
+          paymentType,
+          proofUrl,
+          status: "pending",
+          createdAt: new Date(),
+        })
+        .returning();
+
+      // BUG-4: Only update status when booking is still in a non-terminal, non-paid state
+      if (!TERMINAL_STATUSES.includes(booking.status ?? "") && booking.status !== "paid") {
+        await tx
+          .update(bookings)
+          .set({ status: "waiting_payment" })
+          .where(eq(bookings.id, id));
+      }
+
+      return payment;
+    });
 
     res.status(201).json(created);
   } catch {

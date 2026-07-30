@@ -9,6 +9,8 @@ export interface BookingItem {
   status: string | null;
   departureId: string | null;
   packageId: string | null;
+  // BUG-8: paymentScheme was missing — needed to conditionally show installment schedule
+  paymentScheme: string | null;
   createdAt: string | null;
   packageTitle: string | null;
   packageSlug: string | null;
