@@ -1,0 +1,61 @@
+[POST /api/admin/bookings/group] _DrizzleQueryError: Failed query: insert into "bookings" ("id", "booking_code", "user_id", "package_id", "departure_id", "branch_id", "agent_id", "pic_id", "pic_type", "status", "total_price", "currency", "exchange_rate", "payment_scheme", "notes", "is_group_booking", "group_name", "pic_name", "pic_phone", "pic_email", "pemesan_name", "pemesan_phone", "pemesan_email", "pax_count", "created_at") values ($1, $2, $3, $4, $5, $6, $7, default, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, default, $19, $20, $21, $22, $23) returning "id", "booking_code", "user_id", "package_id", "departure_id", "branch_id", "agent_id", "pic_id", "pic_type", "status", "total_price", "currency", "exchange_rate", "payment_scheme", "notes", "is_group_booking", "group_name", "pic_name", "pic_phone", "pic_email", "pemesan_name", "pemesan_phone", "pemesan_email", "pax_count", "created_at"
+params: 60670774-7f66-4da3-845d-6a702892761f,BNG-2607-CFD7487F,b27ad804-636b-4994-aeab-071d83f6ac03,9032a7b2-5853-45f6-80d2-c8030eee885b,9b883fd5-642c-4ce5-83d2-2cc958967f33,branch_pusat,,admin,confirmed,55000000,IDR,1,full,,true,,bpanjinur63,,bpanjinur63,,bpanjinur63@gmail.com,2,2026-07-30T08:38:15.994Z
+    at NodePgPreparedQuery.queryWithCache (file:///var/task/artifacts/api-server/dist/vercel.mjs:41873:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async file:///var/task/artifacts/api-server/dist/vercel.mjs:42160:26
+    ... 2 lines matching cause stack trace ...
+    at async file:///var/task/artifacts/api-server/dist/vercel.mjs:432321:21 {
+  query: 'insert into "bookings" ("id", "booking_code", "user_id", "package_id", "departure_id", "branch_id", "agent_id", "pic_id", "pic_type", "status", "total_price", "currency", "exchange_rate", "payment_scheme", "notes", "is_group_booking", "group_name", "pic_name", "pic_phone", "pic_email", "pemesan_name", "pemesan_phone", "pemesan_email", "pax_count", "created_at") values ($1, $2, $3, $4, $5, $6, $7, default, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, default, $19, $20, $21, $22, $23) returning "id", "booking_code", "user_id", "package_id", "departure_id", "branch_id", "agent_id", "pic_id", "pic_type", "status", "total_price", "currency", "exchange_rate", "payment_scheme", "notes", "is_group_booking", "group_name", "pic_name", "pic_phone", "pic_email", "pemesan_name", "pemesan_phone", "pemesan_email", "pax_count", "created_at"',
+  params: [
+    '60670774-7f66-4da3-845d-6a702892761f',
+    'BNG-2607-CFD7487F',
+    'b27ad804-636b-4994-aeab-071d83f6ac03',
+    '9032a7b2-5853-45f6-80d2-c8030eee885b',
+    '9b883fd5-642c-4ce5-83d2-2cc958967f33',
+    'branch_pusat',
+    null,
+    'admin',
+    'confirmed',
+    55000000,
+    'IDR',
+    1,
+    'full',
+    null,
+    true,
+    null,
+    'bpanjinur63',
+    null,
+    'bpanjinur63',
+    null,
+    'bpanjinur63@gmail.com',
+    2,
+    '2026-07-30T08:38:15.994Z'
+  ],
+  cause: error: Kuota keberangkatan penuh (departure_id: 9b883fd5-642c-4ce5-83d2-2cc958967f33)
+      at file:///var/task/artifacts/api-server/dist/vercel.mjs:32955:21
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///var/task/artifacts/api-server/dist/vercel.mjs:42167:22
+      at async NodePgPreparedQuery.queryWithCache (file:///var/task/artifacts/api-server/dist/vercel.mjs:41871:20)
+      at async file:///var/task/artifacts/api-server/dist/vercel.mjs:42160:26
+      at async file:///var/task/artifacts/api-server/dist/vercel.mjs:432322:28
+      at async _NodePgSession.transaction (file:///var/task/artifacts/api-server/dist/vercel.mjs:42229:26)
+      at async file:///var/task/artifacts/api-server/dist/vercel.mjs:432321:21 {
+    length: 205,
+    severity: 'ERROR',
+    code: '23514',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: 'PL/pgSQL function fn_booking_quota_on_insert() line 13 at RAISE',
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'pl_exec.c',
+    line: '3911',
+    routine: 'exec_stmt_raise'
+  }
+}

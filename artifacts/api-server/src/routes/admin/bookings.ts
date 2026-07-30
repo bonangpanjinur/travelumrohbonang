@@ -552,6 +552,10 @@ router.post("/", async (req, res) => {
     const resolvedPemesanEmail = (req.body.pemesanEmail || customerEmail || null) as string | null;
 
     const booking = await db.transaction(async (tx) => {
+      // Admin routes may insert into full departures (late registrations, record-keeping).
+      // Bypass the DB-level quota trigger for this transaction; quota is reconciled below.
+      await tx.execute(sql`SET LOCAL app.skip_quota_check = 'true'`);
+
       const [newBooking] = await tx
         .insert(bookings)
         .values({
@@ -756,6 +760,10 @@ router.post("/group", async (req, res) => {
     }
 
     const booking = await db.transaction(async (tx) => {
+      // Admin routes may insert into full departures (late registrations, record-keeping).
+      // Bypass the DB-level quota trigger for this transaction; quota is reconciled below.
+      await tx.execute(sql`SET LOCAL app.skip_quota_check = 'true'`);
+
       const [newBooking] = await tx
         .insert(bookings)
         .values({
