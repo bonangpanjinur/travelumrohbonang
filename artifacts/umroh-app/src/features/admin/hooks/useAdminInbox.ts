@@ -4,8 +4,12 @@
  * Fetches all conversations for the admin inbox and subscribes to Supabase
  * realtime for live updates (new conversations + new messages → badge update).
  *
- * Sprint 6 additions:
- * - Browser Notification API when admin tab is hidden
+ * Fixes applied:
+ * - Realtime enabled in all environments (removed DEV guard; polling covers dev)
+ * - snake_case → camelCase mapping on realtime INSERT payloads
+ * - markConversationRead() updates local state immediately (no refetch needed)
+ * - Polling fallback: conversations every 15 s, messages every 5 s
+ * - Optimistic update on admin sendMessage
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
@@ -108,10 +112,16 @@ export function useAdminInbox() {
     fetchConversations(filter);
   }, [filter, fetchConversations]);
 
-  // ── Realtime subscriptions ─────────────────────────────────────────────────
-  // Skipped in DEV: realtime is disconnected in client.ts to avoid 401 noise.
+  // ── Polling fallback — 15 s interval (covers dev + realtime outages) ────────
   useEffect(() => {
-    if (import.meta.env.DEV) return;
+    const interval = setInterval(() => {
+      fetchConversations(filter);
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, [filter, fetchConversations]);
+
+  // ── Realtime subscriptions ─────────────────────────────────────────────────
+  useEffect(() => {
     const channel = supabase
       .channel(`admin-inbox-${mountId}`)
       // New conversation created
@@ -167,6 +177,17 @@ export function useAdminInbox() {
     };
   }, [mountId, notify]);
 
+  // ── Mark conversation read locally + via API ──────────────────────────────
+  const markConversationRead = useCallback(async (id: string) => {
+    // Optimistic: clear badge immediately so it doesn't linger
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, unread_admin: 0 } : c)),
+    );
+    await apiFetch(`/api/admin/conversations/${id}/read`, {
+      method: "PATCH",
+    }).catch(() => {});
+  }, []);
+
   const totalUnread = conversations.reduce((n, c) => n + (c.unread_admin ?? 0), 0);
 
   return {
@@ -176,6 +197,7 @@ export function useAdminInbox() {
     setFilter,
     totalUnread,
     refetch: fetchConversations,
+    markConversationRead,
   };
 }
 
@@ -188,6 +210,18 @@ export function useConversationMessages(conversationId: string | null) {
     () => `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     [],
   );
+
+  // Silent fetch (no loading spinner) used for polling so UI doesn't flicker
+  const silentFetch = useCallback(async (id: string) => {
+    try {
+      const result = await apiFetch<{ data: ConvMessage[] }>(
+        `/api/admin/conversations/${id}/messages`,
+      );
+      setMessages(result.data ?? []);
+    } catch {
+      // Polling errors are silent
+    }
+  }, []);
 
   const fetchMessages = useCallback(async (id: string) => {
     setLoading(true);
@@ -203,6 +237,7 @@ export function useConversationMessages(conversationId: string | null) {
     }
   }, []);
 
+  // Initial fetch + realtime subscription
   useEffect(() => {
     if (!conversationId) {
       setMessages([]);
@@ -211,8 +246,7 @@ export function useConversationMessages(conversationId: string | null) {
     fetchMessages(conversationId);
 
     // Subscribe to new messages in this conversation.
-    // Skipped in DEV: realtime is disconnected in client.ts to avoid 401 noise.
-    if (import.meta.env.DEV) return;
+    // Realtime is always enabled; polling (below) provides dev/fallback coverage.
     const channel = supabase
       .channel(`conv-messages-${conversationId}-${mountId}`)
       .on(
@@ -224,15 +258,32 @@ export function useConversationMessages(conversationId: string | null) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          const msg = payload.new as ConvMessage;
+          // FIX: Supabase Realtime delivers raw snake_case — map to camelCase
+          const raw = payload.new as Record<string, unknown>;
+          const msg: ConvMessage = {
+            id:             raw.id as string,
+            conversationId: (raw.conversation_id ?? raw.conversationId) as string,
+            senderType:     (raw.sender_type    ?? raw.senderType)     as ConvMessage["senderType"],
+            senderId:       (raw.sender_id      ?? raw.senderId)       as string | null,
+            senderName:     (raw.sender_name    ?? raw.senderName)     as string,
+            message:        raw.message as string,
+            isRead:         (raw.is_read        ?? raw.isRead)         as boolean,
+            createdAt:      (raw.created_at     ?? raw.createdAt)      as string,
+          };
           setMessages((prev) => {
+            // Deduplicate: replace optimistic temp message if IDs differ but
+            // content is the same (sender + message + close timestamp).
+            // Simpler: just skip if real ID already present.
             if (prev.find((m) => m.id === msg.id)) return prev;
-            return [...prev, msg];
+            // Replace temp optimistic entry if present (senderType admin, temp id)
+            const withoutTemp = prev.filter(
+              (m) => !(m.id.startsWith("temp-") && m.senderType === "admin" && m.message === msg.message),
+            );
+            return [...withoutTemp, msg];
           });
         },
       )
       // Listen for isRead updates on messages (for ✓✓ ticks)
-      // NOTE: Supabase Realtime payload.new is raw DB row → snake_case column names
       .on(
         "postgres_changes",
         {
@@ -255,14 +306,47 @@ export function useConversationMessages(conversationId: string | null) {
     };
   }, [conversationId, fetchMessages, mountId]);
 
+  // ── Polling fallback — 5 s, silent (covers dev + realtime outages) ──────────
+  useEffect(() => {
+    if (!conversationId) return;
+    const interval = setInterval(() => silentFetch(conversationId), 5_000);
+    return () => clearInterval(interval);
+  }, [conversationId, silentFetch]);
+
+  // ── Send with optimistic update ────────────────────────────────────────────
   const sendMessage = useCallback(
-    async (message: string) => {
+    async (message: string, optimisticSenderName = "Admin") => {
       if (!conversationId || !message.trim()) return;
-      await apiFetch(`/api/admin/conversations/${conversationId}/messages`, {
-        method: "POST",
-        body: JSON.stringify({ message }),
-      });
-      // The realtime subscription will append the message automatically
+
+      const tempId = `temp-${Date.now()}`;
+      const tempMsg: ConvMessage = {
+        id: tempId,
+        conversationId,
+        senderType: "admin",
+        senderId: null,
+        senderName: optimisticSenderName,
+        message: message.trim(),
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Append immediately so the admin sees their own message at once
+      setMessages((prev) => [...prev, tempMsg]);
+
+      try {
+        const result = await apiFetch<{ data: ConvMessage }>(
+          `/api/admin/conversations/${conversationId}/messages`,
+          { method: "POST", body: JSON.stringify({ message }) },
+        );
+        // Replace temp with confirmed server message
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? result.data : m)),
+        );
+      } catch (err) {
+        // Roll back optimistic message on error
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        throw err;
+      }
     },
     [conversationId],
   );

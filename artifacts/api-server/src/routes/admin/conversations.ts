@@ -44,7 +44,7 @@ router.get("/", requireAuth, async (req, res) => {
     if (search) {
       const q = `%${search}%`;
       conditions.push(
-        sql`(c.guest_name ILIKE ${q} OR c.guest_phone ILIKE ${q} OR c.last_message_preview ILIKE ${q})`,
+        sql`(c.guest_name ILIKE ${q} OR c.guest_phone ILIKE ${q} OR c.last_message_preview ILIKE ${q} OR p.name ILIKE ${q})`,
       );
     }
 

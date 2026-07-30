@@ -123,7 +123,11 @@ export function useGuestChat() {
           {},
           token,
         );
-        setMessages(result.data ?? []);
+        const msgs = result.data ?? [];
+        setMessages(msgs);
+        // FIX: initialise unread count from actual DB state (admin messages not yet read)
+        const unread = msgs.filter((m) => m.senderType === "admin" && !m.isRead).length;
+        setUnreadCount(unread);
       } catch (err) {
         console.error("[useGuestChat] fetchMessages:", err);
       }

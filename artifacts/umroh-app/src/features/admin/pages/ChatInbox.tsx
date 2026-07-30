@@ -197,13 +197,17 @@ function ChatPanel({
   onClose,
   onAssign,
   onCloseConv,
+  onMarkRead,
   currentUserId,
+  currentUserName,
 }: {
   conv: AdminConversation;
   onClose: () => void;
   onAssign: (id: string) => void;
   onCloseConv: (id: string) => void;
+  onMarkRead: (id: string) => void;
   currentUserId?: string;
+  currentUserName?: string;
 }) {
   const { messages, loading, sendMessage, markRead } = useConversationMessages(conv.id);
   const [draft, setDraft] = useState("");
@@ -211,7 +215,8 @@ function ChatPanel({
   const [closing, setClosing] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [peerTyping, setPeerTyping] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  // FIX: use a ref to the scroll container (not scrollIntoView which breaks inside ScrollArea)
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // Keep a ref to the subscribed presence channel so broadcastTyping uses the same instance
@@ -226,15 +231,19 @@ function ChatPanel({
 
   const name = getDisplayName(conv);
 
-  // Mark as read when panel is opened
+  // FIX: markConversationRead updates local badge immediately (no refetch)
   useEffect(() => {
-    if (conv.unread_admin > 0) markRead();
-  }, [conv.id, conv.unread_admin, markRead]);
+    if (conv.unread_admin > 0) {
+      markRead();          // marks individual messages as read in DB
+      onMarkRead(conv.id); // clears badge in parent state immediately
+    }
+  }, [conv.id, conv.unread_admin, markRead, onMarkRead]);
 
-  // Scroll to bottom on new messages
+  // FIX: scroll container directly — scrollIntoView doesn't work inside Radix ScrollArea
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+    const el = messagesContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages.length, peerTyping]);
 
   // ── Supabase presence — typing indicator ──────────────────────────────────
   useEffect(() => {
@@ -296,7 +305,8 @@ function ChatPanel({
     broadcastTyping(false);
     setSending(true);
     try {
-      await sendMessage(draft.trim());
+      // Pass currentUserName so the optimistic bubble shows the real admin name
+      await sendMessage(draft.trim(), currentUserName ?? "Admin");
       setDraft("");
       textareaRef.current?.focus();
     } catch (err) {
@@ -304,7 +314,7 @@ function ChatPanel({
     } finally {
       setSending(false);
     }
-  }, [draft, sending, sendMessage, broadcastTyping]);
+  }, [draft, sending, sendMessage, broadcastTyping, currentUserName]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -415,8 +425,8 @@ function ChatPanel({
         </div>
       </div>
 
-      {/* Messages */}
-      <ScrollArea className="flex-1 px-4 py-3 bg-gray-50">
+      {/* Messages — native overflow div so scrollTop works correctly */}
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-3 bg-gray-50">
         {loading ? (
           <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
             Memuat pesan…
@@ -438,8 +448,7 @@ function ChatPanel({
             {peerTyping && <TypingDots />}
           </>
         )}
-        <div ref={bottomRef} />
-      </ScrollArea>
+      </div>
 
       {/* Input */}
       <div className="px-4 py-3 border-t bg-white flex-shrink-0">
@@ -480,12 +489,13 @@ function ChatPanel({
 
 export default function ChatInbox() {
   const { user } = useAuth();
-  const { conversations, loading, filter, setFilter, totalUnread, refetch } = useAdminInbox();
+  const { conversations, loading, filter, setFilter, totalUnread, refetch, markConversationRead } = useAdminInbox();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const selectedConv = conversations.find((c) => c.id === selectedId) ?? null;
+  const currentUserName: string = (user as any)?.name ?? (user as any)?.email ?? "Admin";
 
   // Debounced search
   useEffect(() => {
@@ -613,7 +623,9 @@ export default function ChatInbox() {
             onClose={() => setSelectedId(null)}
             onAssign={handleAssign}
             onCloseConv={handleCloseConv}
+            onMarkRead={markConversationRead}
             currentUserId={user?.id}
+            currentUserName={currentUserName}
           />
         ) : (
           <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-3">
