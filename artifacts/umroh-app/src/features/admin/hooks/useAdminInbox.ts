@@ -58,6 +58,7 @@ export interface InboxFilter {
   type: ConvType;
   status: ConvStatus;
   unreadOnly: boolean;
+  assignedToMe: boolean;
   search: string;
 }
 
@@ -70,6 +71,7 @@ export function useAdminInbox() {
     type: "all",
     status: "open",
     unreadOnly: false,
+    assignedToMe: false,
     search: "",
   });
 
@@ -91,6 +93,7 @@ export function useAdminInbox() {
       if (active.type !== "all") params.set("type", active.type);
       if (active.status !== "all") params.set("status", active.status);
       if (active.unreadOnly) params.set("unread", "true");
+      if (active.assignedToMe) params.set("assigned_to_me", "true");
       if (active.search) params.set("search", active.search);
       params.set("limit", "100");
 

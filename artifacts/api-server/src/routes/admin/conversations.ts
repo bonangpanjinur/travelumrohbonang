@@ -9,9 +9,33 @@
  */
 
 import { Router } from "express";
-import { db, conversations, conversationMessages, profiles } from "@workspace/db";
+import { db, conversations, conversationMessages, profiles, notifications } from "@workspace/db";
 import { eq, desc, and, sql, asc } from "drizzle-orm";
 import { requireAuth } from "../../middlewares/auth";
+
+// ── Helper: insert in-app notification for the user when admin replies ─────────
+async function notifyUser({
+  userId,
+  adminName,
+  preview,
+}: {
+  userId: string;
+  adminName: string;
+  preview: string;
+}): Promise<void> {
+  try {
+    await db.insert(notifications).values({
+      id: crypto.randomUUID(),
+      userId,
+      title: `Balasan dari ${adminName}`,
+      message: preview.slice(0, 80),
+      isRead: false,
+      createdAt: new Date(),
+    });
+  } catch (err) {
+    console.error("[conversations] notifyUser error:", err);
+  }
+}
 
 const router = Router();
 
@@ -25,6 +49,7 @@ router.get("/", requireAuth, async (req, res) => {
       type,
       status,
       unread,
+      assigned_to_me,
       search,
       limit = "50",
       offset = "0",
@@ -40,6 +65,9 @@ router.get("/", requireAuth, async (req, res) => {
     }
     if (unread === "true") {
       conditions.push(sql`c.unread_admin > 0`);
+    }
+    if (assigned_to_me === "true" && (req as any).user?.id) {
+      conditions.push(sql`c.assigned_admin_id = ${(req as any).user.id}`);
     }
     if (search) {
       const q = `%${search}%`;
@@ -181,16 +209,31 @@ router.post("/:id/messages", requireAuth, async (req, res) => {
       })
       .returning();
 
-    // Update conversation preview + reset admin unread + increment user unread
+    // Build update: preview + counters + auto-assign on first reply
+    const convUpdate: Record<string, unknown> = {
+      lastMessageAt: new Date(),
+      lastMessagePreview: message.trim().slice(0, 100),
+      unreadAdmin: 0,
+      unreadUser: sql`unread_user + 1`,
+    };
+    // Auto-assign: if no admin has claimed this conversation yet, claim it now
+    if (!conv.assignedAdminId && adminId !== "unknown") {
+      convUpdate.assignedAdminId = adminId;
+    }
+
     await db
       .update(conversations)
-      .set({
-        lastMessageAt: new Date(),
-        lastMessagePreview: message.trim().slice(0, 100),
-        unreadAdmin: 0,
-        unreadUser: sql`unread_user + 1`,
-      } as any)
+      .set(convUpdate as any)
       .where(eq(conversations.id, id));
+
+    // Notify the member via in-app bell if this is a member conversation
+    if (conv.userId) {
+      notifyUser({
+        userId: conv.userId,
+        adminName,
+        preview: message.trim(),
+      }).catch(() => {});
+    }
 
     return res.status(201).json({ data: inserted });
   } catch (err) {

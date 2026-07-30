@@ -508,15 +508,20 @@ export default function ChatInbox() {
 
   const handleTabChange = (tab: string) => {
     if (tab === "unread") {
-      setFilter((f) => ({ ...f, type: "all", unreadOnly: true }));
+      setFilter((f) => ({ ...f, type: "all", unreadOnly: true, assignedToMe: false }));
+    } else if (tab === "mine") {
+      setFilter((f) => ({ ...f, type: "all", unreadOnly: false, assignedToMe: true }));
     } else {
-      setFilter((f) => ({ ...f, type: tab as ConvType, unreadOnly: false }));
+      setFilter((f) => ({ ...f, type: tab as ConvType, unreadOnly: false, assignedToMe: false }));
     }
     setSelectedId(null);
   };
 
   const activeTab =
-    filter.unreadOnly ? "unread" : filter.type === "all" ? "all" : filter.type;
+    filter.unreadOnly ? "unread"
+    : filter.assignedToMe ? "mine"
+    : filter.type === "all" ? "all"
+    : filter.type;
 
   const handleCloseConv = useCallback(
     (_id: string) => {
@@ -564,7 +569,8 @@ export default function ChatInbox() {
               <TabsTrigger value="all" className="flex-1 text-xs px-1">Semua</TabsTrigger>
               <TabsTrigger value="guest" className="flex-1 text-xs px-1">Tamu</TabsTrigger>
               <TabsTrigger value="member" className="flex-1 text-xs px-1">Member</TabsTrigger>
-              <TabsTrigger value="unread" className="flex-1 text-xs px-1">Belum Dibaca</TabsTrigger>
+              <TabsTrigger value="mine" className="flex-1 text-xs px-1">Saya</TabsTrigger>
+              <TabsTrigger value="unread" className="flex-1 text-xs px-1">Belum Baca</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
