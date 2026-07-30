@@ -14,7 +14,6 @@
 
 import type { Request } from "express";
 import { db, agents, profiles, eq } from "@workspace/db";
-import { FULL_ADMIN_ROLES } from "./roleConstants";
 
 export type UserScopeType = "global" | "branch" | "agent";
 
@@ -69,10 +68,39 @@ export async function resolveUserScope(req: Request): Promise<UserScope> {
       .where(eq(agents.userId, userId))
       .limit(1);
 
+    let resolvedAgentId = agentRow?.id ?? null;
+
+    // Fallback: if agents.user_id not yet set, match by email and auto-link.
+    // This handles accounts created in the admin panel before the user logged in.
+    if (!resolvedAgentId) {
+      const [profileRow] = await db
+        .select({ email: profiles.email })
+        .from(profiles)
+        .where(eq(profiles.id, userId as any))
+        .limit(1);
+
+      if (profileRow?.email) {
+        const [agentByEmail] = await db
+          .select({ id: agents.id })
+          .from(agents)
+          .where(eq(agents.email, profileRow.email))
+          .limit(1);
+
+        if (agentByEmail) {
+          resolvedAgentId = agentByEmail.id;
+          // Auto-link so future requests skip this fallback
+          await db
+            .update(agents)
+            .set({ userId })
+            .where(eq(agents.id, agentByEmail.id));
+        }
+      }
+    }
+
     scope = {
       type: "agent",
       branchId: null,
-      agentId: agentRow?.id ?? null,
+      agentId: resolvedAgentId,
     };
   }
 

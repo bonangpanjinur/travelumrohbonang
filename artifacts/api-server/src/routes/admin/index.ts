@@ -109,7 +109,8 @@ router.use("/departures", requireStaff, adminDeparturesRouter);
 router.use("/packages/:packageId/departures", requireStaff, adminDeparturesRouter);
 router.use("/pilgrims", requireStaff, adminPilgrimsRouter);
 router.use("/chats", requireStaff, adminChatsRouter);
-router.use("/branches", requireStaff, adminBranchesRouter);
+// Agents need to read branches for the booking-list branch filter dropdown
+router.use("/branches", requireOperational, adminBranchesRouter);
 
 // ── Operational routes (adds agent access) ──────────────────────────────────
 router.use("/bookings", requireOperational, adminBookingsRouter);
