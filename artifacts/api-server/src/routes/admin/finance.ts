@@ -263,7 +263,7 @@ router.get("/piutang", async (req: Request, res: Response) => {
         b.total_price - COALESCE(paid.total_paid, 0)          AS outstanding,
         CASE
           WHEN dep.departure_date IS NULL THEN NULL
-          ELSE EXTRACT(DAY FROM (dep.departure_date::date - NOW()::date))::int
+          ELSE (dep.departure_date::date - NOW()::date)
         END AS days_to_departure
       FROM bookings b
       LEFT JOIN profiles            p   ON p.id::text = b.user_id::text
