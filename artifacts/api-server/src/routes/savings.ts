@@ -190,66 +190,79 @@ router.post("/:id/deposit", async (req, res) => {
 router.post("/:id/use", async (req, res) => {
   try {
     const userId = getUserId(req);
+    const accountId = req.params.id;
     const { bookingId, amount } = req.body as { bookingId: string; amount: number };
 
     if (!bookingId || !amount || amount <= 0) {
       return res.status(400).json({ error: "bookingId dan amount diperlukan" });
     }
 
-    const [account] = await db
-      .select()
-      .from(savingsAccounts)
-      .where(and(eq(savingsAccounts.id, req.params.id), eq(savingsAccounts.userId, userId)))
-      .limit(1);
-    if (!account) return res.status(404).json({ error: "Account not found" });
-    if (account.status !== "active") return res.status(409).json({ error: "Rekening tidak aktif" });
-    if (account.currentBalance < amount) return res.status(400).json({ error: "Saldo tabungan tidak mencukupi" });
+    // F1-02: Seluruh operasi dalam satu transaksi DB dengan SELECT FOR UPDATE
+    // untuk mencegah race condition (double spending) saat dua request bersamaan.
+    const { updatedAccount, txId } = await db.transaction(async (tx) => {
+      // Kunci baris rekening tabungan (FOR UPDATE) — request bersamaan akan antre
+      const locked = await tx.execute(
+        sql`SELECT * FROM savings_accounts WHERE id = ${accountId} AND user_id = ${userId} FOR UPDATE`,
+      );
+      const account = locked.rows[0] as Record<string, unknown> | undefined;
 
-    // Verify booking belongs to this user
-    const [booking] = await db
-      .select({ id: bookings.id })
-      .from(bookings)
-      .where(and(eq(bookings.id, bookingId), eq(bookings.userId, userId)))
-      .limit(1);
-    if (!booking) return res.status(404).json({ error: "Booking tidak ditemukan" });
+      if (!account) throw Object.assign(new Error("Account not found"), { status: 404 });
+      if (account["status"] !== "active") throw Object.assign(new Error("Rekening tidak aktif"), { status: 409 });
+      if (Number(account["current_balance"]) < amount) {
+        throw Object.assign(new Error("Saldo tabungan tidak mencukupi"), { status: 400 });
+      }
 
-    const now = new Date();
-    const txId = crypto.randomUUID();
+      // Verifikasi booking milik user ini
+      const [booking] = await tx
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(and(eq(bookings.id, bookingId), eq(bookings.userId, userId)))
+        .limit(1);
+      if (!booking) throw Object.assign(new Error("Booking tidak ditemukan"), { status: 404 });
 
-    await db.insert(savingsTransactions).values({
-      id: txId,
-      accountId: account.id,
-      amount: -Math.abs(amount),
-      type: "booking_payment",
-      status: "verified",
-      bookingId,
-      notes: `Digunakan untuk booking ${bookingId}`,
-      verifiedAt: now,
-      createdAt: now,
+      const now = new Date();
+      const newTxId = crypto.randomUUID();
+
+      // Insert transaksi debit tabungan
+      await tx.insert(savingsTransactions).values({
+        id: newTxId,
+        accountId: String(account["id"]),
+        amount: -Math.abs(amount),
+        type: "booking_payment",
+        status: "verified",
+        bookingId,
+        notes: `Digunakan untuk booking ${bookingId}`,
+        verifiedAt: now,
+        createdAt: now,
+      });
+
+      // Update saldo dalam transaksi yang sama
+      const [updated] = await tx
+        .update(savingsAccounts)
+        .set({
+          currentBalance: sql`current_balance - ${Math.abs(amount)}`,
+          updatedAt: now,
+        })
+        .where(eq(savingsAccounts.id, String(account["id"])))
+        .returning();
+
+      return { updatedAccount: updated, txId: newTxId };
     });
 
-    const [updated] = await db
-      .update(savingsAccounts)
-      .set({
-        currentBalance: sql`current_balance - ${Math.abs(amount)}`,
-        updatedAt: now,
-      })
-      .where(eq(savingsAccounts.id, account.id))
-      .returning();
-
-    // Record as a financial transaction so it appears in accounting
-    await recordFinancialTransaction({
+    // Catat di financial_transactions (di luar tx utama — non-critical, jangan block response)
+    recordFinancialTransaction({
       bookingId,
       amount: Math.abs(amount),
       type: "income",
       category: "booking_payment",
-      description: `Pembayaran dari tabungan umroh (${account.id})`,
+      description: `Pembayaran dari tabungan umroh (${accountId})`,
       referenceNumber: `savings-${txId}`,
       recordedBy: userId,
-    });
+    }).catch((err) => console.error("[savings] financial tx error:", err));
 
-    res.json({ account: updated, transaction: { id: txId } });
-  } catch (e) {
+    res.json({ account: updatedAccount, transaction: { id: txId } });
+  } catch (e: any) {
+    if (e?.status) return res.status(e.status).json({ error: e.message });
     console.error("[savings] use error:", e);
     res.status(500).json({ error: "Failed to use savings" });
   }

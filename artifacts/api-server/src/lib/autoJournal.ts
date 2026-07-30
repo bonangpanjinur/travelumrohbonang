@@ -26,6 +26,9 @@
 import { db, financialTransactions, chartOfAccounts, eq } from "@workspace/db";
 import { recordFinancialTransaction } from "./paymentSync";
 
+// Tipe generik untuk transaksi Drizzle (dipakai di semua fungsi jurnal)
+type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 // ── B2: CoA Lookup Cache ──────────────────────────────────────────────────────
 
 /** In-memory cache: CoA code → row id (populated lazily on first use) */
@@ -79,15 +82,16 @@ async function recordDoubleEntry(opts: {
   description: string;
   referenceNumber: string;
   recordedBy?: string;
-}): Promise<void> {
+}, tx?: DbOrTx): Promise<void> {
   const [debitAccountId, creditAccountId] = await Promise.all([
     getCoaId(opts.debitCode),
     getCoaId(opts.creditCode),
   ]);
 
   const now = new Date();
+  const runner = tx ?? db;
 
-  await db.insert(financialTransactions).values([
+  await (runner as typeof db).insert(financialTransactions).values([
     {
       id: crypto.randomUUID(),
       bookingId: opts.bookingId ?? null,
@@ -122,8 +126,9 @@ async function recordDoubleEntry(opts: {
 // ── Idempotency Guard ─────────────────────────────────────────────────────────
 
 /** Cek apakah jurnal dengan referenceNumber ini sudah ada (idempotency guard) */
-async function alreadyJournaled(ref: string): Promise<boolean> {
-  const rows = await db
+async function alreadyJournaled(ref: string, tx?: DbOrTx): Promise<boolean> {
+  const runner = tx ?? db;
+  const rows = await (runner as typeof db)
     .select({ id: financialTransactions.id })
     .from(financialTransactions)
     .where(eq(financialTransactions.referenceNumber, ref))
@@ -147,9 +152,9 @@ export async function journalPaymentVerified(opts: {
   amount: number;
   paymentId: string;
   adminId?: string;
-}): Promise<void> {
+}, tx?: DbOrTx): Promise<void> {
   const ref = `auto:payment_verified:${opts.paymentId}`;
-  if (await alreadyJournaled(ref)) return;
+  if (await alreadyJournaled(ref, tx)) return;
 
   await recordDoubleEntry({
     bookingId: opts.bookingId,
@@ -214,9 +219,9 @@ export async function journalRefundApproved(opts: {
   amount: number;
   refundId: string;
   adminId?: string;
-}): Promise<void> {
+}, tx?: DbOrTx): Promise<void> {
   const ref = `auto:refund_approved:${opts.refundId}`;
-  if (await alreadyJournaled(ref)) return;
+  if (await alreadyJournaled(ref, tx)) return;
 
   // Refund approved = kewajiban diakui (DEBIT Beban Refund, CREDIT Hutang Refund)
   // Gunakan 5-2001 (Biaya Operasional) sebagai proxy untuk Beban Refund karena
@@ -232,7 +237,7 @@ export async function journalRefundApproved(opts: {
     description: `[Auto] Refund disetujui — refund #${opts.refundId}`,
     referenceNumber: ref,
     recordedBy: opts.adminId,
-  });
+  }, tx);
 }
 
 /**
@@ -248,9 +253,9 @@ export async function journalRefundProcessed(opts: {
   amount: number;
   refundId: string;
   adminId?: string;
-}): Promise<void> {
+}, tx?: DbOrTx): Promise<void> {
   const ref = `auto:refund_processed:${opts.refundId}`;
-  if (await alreadyJournaled(ref)) return;
+  if (await alreadyJournaled(ref, tx)) return;
 
   await recordDoubleEntry({
     bookingId: opts.bookingId,
@@ -263,7 +268,7 @@ export async function journalRefundProcessed(opts: {
     description: `[Auto] Refund dicairkan ke jemaah — refund #${opts.refundId}`,
     referenceNumber: ref,
     recordedBy: opts.adminId,
-  });
+  }, tx);
 }
 
 /**

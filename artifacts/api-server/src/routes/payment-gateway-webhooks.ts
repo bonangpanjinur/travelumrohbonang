@@ -73,6 +73,18 @@ router.post("/midtrans", async (req, res) => {
   else if (transaction_status === "cancel" || transaction_status === "deny") newStatus = "cancelled";
 
   try {
+    // F2-01: Idempotency guard — jika orderId sudah berstatus "paid", skip proses ulang
+    const [existing] = await db
+      .select({ status: paymentGatewayTransactions.status, bookingId: paymentGatewayTransactions.bookingId, installmentScheduleId: paymentGatewayTransactions.installmentScheduleId, amount: paymentGatewayTransactions.amount })
+      .from(paymentGatewayTransactions)
+      .where(eq(paymentGatewayTransactions.orderId, order_id))
+      .limit(1);
+
+    if (existing?.status === "paid") {
+      console.info(`[webhook/midtrans] Order ${order_id} already paid — skipping duplicate callback`);
+      return res.json({ ok: true, idempotent: true });
+    }
+
     // 1. Update gateway transaction record.
     const [updated] = await db
       .update(paymentGatewayTransactions)
@@ -142,6 +154,18 @@ router.post("/xendit", async (req, res) => {
   const newStatus = status === "PAID" ? "paid" : status === "EXPIRED" ? "expired" : "pending";
 
   try {
+    // F2-01: Idempotency guard — jika orderId sudah berstatus "paid", skip proses ulang
+    const [existing] = await db
+      .select({ status: paymentGatewayTransactions.status })
+      .from(paymentGatewayTransactions)
+      .where(eq(paymentGatewayTransactions.orderId, external_id))
+      .limit(1);
+
+    if (existing?.status === "paid") {
+      console.info(`[webhook/xendit] Order ${external_id} already paid — skipping duplicate callback`);
+      return res.json({ ok: true, idempotent: true });
+    }
+
     // 1. Update gateway transaction record.
     const [updated] = await db
       .update(paymentGatewayTransactions)

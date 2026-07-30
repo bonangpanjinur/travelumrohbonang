@@ -242,92 +242,94 @@ router.patch("/verify/:id", async (req, res) => {
     const id = req.params.id;
     const adminId = (req as any).user?.id as string | undefined;
 
-    // Fetch the payment to get bookingId and amount.
-    const [payment] = await db
-      .select()
-      .from(payments)
-      .where(eq(payments.id, id))
-      .limit(1);
+    // F2-05: Seluruh verify (update status + bookingPayments + jurnal) dalam satu
+    // transaksi DB dengan SELECT FOR UPDATE untuk mencegah verifikasi bersamaan oleh dua admin.
+    const { updated, paymentData } = await db.transaction(async (tx) => {
+      // Lock baris payment sebelum update — request bersamaan akan antre
+      const locked = await tx.execute(
+        sql`SELECT * FROM payments WHERE id = ${id} FOR UPDATE`,
+      );
+      const payment = locked.rows[0] as Record<string, unknown> | undefined;
 
-    if (!payment) {
-      return res.status(404).json({ error: "Payment not found" });
-    }
+      if (!payment) throw Object.assign(new Error("Payment not found"), { status: 404 });
+      if (payment["status"] === "verified") throw Object.assign(new Error("Payment already verified"), { status: 409 });
 
-    if (payment.status === "verified") {
-      return res.status(409).json({ error: "Payment already verified" });
-    }
+      const now = new Date();
 
-    // 1. Update the payments record.
-    const now = new Date();
-    const [updated] = await db
-      .update(payments)
-      .set({
-        status: "verified",
-        verifiedBy: adminId ?? null,
-        verifiedAt: now,
-        paidAt: payment.paidAt ?? now,
-      })
-      .where(eq(payments.id, id))
-      .returning();
+      // 1. Update status payment
+      const [updatedRow] = await tx
+        .update(payments)
+        .set({
+          status: "verified",
+          verifiedBy: adminId ?? null,
+          verifiedAt: now,
+          paidAt: payment["paid_at"] != null ? new Date(payment["paid_at"] as string) : now,
+        })
+        .where(eq(payments.id, id))
+        .returning();
 
-    // 2. Create a bookingPayments record so payment status computation is accurate.
-    // Idempotency: check if a record for this payment already exists before inserting.
-    const alreadyRecorded = await db
-      .select({ id: bookingPayments.id })
-      .from(bookingPayments)
-      .where(
-        and(
-          eq(bookingPayments.bookingId, payment.bookingId),
-          eq(bookingPayments.referenceNumber, `manual-${payment.id}`),
-          eq(bookingPayments.isVoided, false),
-        ),
-      )
-      .limit(1);
+      // 2. Buat bookingPayments (idempotent)
+      const alreadyRecorded = await tx
+        .select({ id: bookingPayments.id })
+        .from(bookingPayments)
+        .where(
+          and(
+            eq(bookingPayments.bookingId, String(payment["booking_id"])),
+            eq(bookingPayments.referenceNumber, `manual-${id}`),
+            eq(bookingPayments.isVoided, false),
+          ),
+        )
+        .limit(1);
 
-    if (alreadyRecorded.length === 0) {
-      await db.insert(bookingPayments).values({
-        id: crypto.randomUUID(),
-        bookingId: payment.bookingId,
-        type: payment.paymentType ?? "manual",
-        amount: payment.amount,
-        paidAt: payment.paidAt ?? now,
-        method: payment.paymentMethod ?? "transfer",
-        referenceNumber: `manual-${payment.id}`,
-        notes: `Verified by admin (payment proof: ${payment.proofUrl ?? "n/a"})`,
-        recordedBy: adminId ?? null,
-        isVoided: false,
-        createdAt: now,
-      });
-    }
+      if (alreadyRecorded.length === 0) {
+        await tx.insert(bookingPayments).values({
+          id: crypto.randomUUID(),
+          bookingId: String(payment["booking_id"]),
+          type: (payment["payment_type"] as string | null) ?? "manual",
+          amount: Number(payment["amount"]),
+          paidAt: now,
+          method: (payment["payment_method"] as string | null) ?? "transfer",
+          referenceNumber: `manual-${id}`,
+          notes: `Verified by admin (payment proof: ${payment["proof_url"] ?? "n/a"})`,
+          recordedBy: adminId ?? null,
+          isVoided: false,
+          createdAt: now,
+        });
+      }
 
-    // 3. Sync booking status.
-    const { paymentStatus, totalPrice, totalPaid, remaining } =
-      await computePaymentStatus(payment.bookingId);
-    await syncBookingStatus(payment.bookingId, paymentStatus);
+      // 3. Auto-jurnal dalam transaksi yang sama (F2-03)
+      await journalPaymentVerified({
+        bookingId: String(payment["booking_id"]),
+        amount: Number(payment["amount"]),
+        paymentId: id,
+        adminId,
+      }, tx);
 
-    // 4. Record financial transaction (via autoJournal — idempotent).
-    await journalPaymentVerified({
-      bookingId: payment.bookingId,
-      amount:    payment.amount,
-      paymentId: id,
-      adminId,
+      return { updated: updatedRow, paymentData: payment };
     });
 
+    // 4. Sync booking status (idempotent, bisa di luar transaksi utama)
+    const bookingId = String(paymentData["booking_id"]);
+    const { paymentStatus, totalPrice, totalPaid, remaining } =
+      await computePaymentStatus(bookingId);
+    await syncBookingStatus(bookingId, paymentStatus);
+
     // 5. In-app notification — fetch userId from booking.
-    const [booking] = await db
+    const paymentAmount = Number(paymentData["amount"]);
+    const [bookingForNotif] = await db
       .select({ userId: bookings.userId })
       .from(bookings)
-      .where(eq(bookings.id, payment.bookingId))
+      .where(eq(bookings.id, bookingId))
       .limit(1);
 
-    if (booking?.userId) {
+    if (bookingForNotif?.userId) {
       const isFullyPaid = paymentStatus === "paid";
       await createNotification({
-        userId: booking.userId,
+        userId: bookingForNotif.userId,
         title: isFullyPaid ? "Pembayaran Lunas ✓" : "Pembayaran Dikonfirmasi",
         message: isFullyPaid
           ? "Selamat! Pembayaran Anda telah diverifikasi dan booking sudah dikonfirmasi."
-          : `Pembayaran sebesar Rp${payment.amount.toLocaleString("id-ID")} telah diverifikasi. Sisa pembayaran: Rp${remaining.toLocaleString("id-ID")}.`,
+          : `Pembayaran sebesar Rp${paymentAmount.toLocaleString("id-ID")} telah diverifikasi. Sisa pembayaran: Rp${remaining.toLocaleString("id-ID")}.`,
       });
     }
 
@@ -337,8 +339,8 @@ router.patch("/verify/:id", async (req, res) => {
     });
 
     // Fire-and-forget: email/WA failure must never affect the verify response.
-    void emailNotifications.paymentReceived(payment.bookingId, payment.amount);
-    void waNotifications.paymentReceived(payment.bookingId, payment.amount);
+    void emailNotifications.paymentReceived(bookingId, paymentAmount);
+    void waNotifications.paymentReceived(bookingId, paymentAmount);
   } catch (e) {
     console.error("[admin/payments] verify error:", e);
     res.status(500).json({ error: "Failed to verify payment" });

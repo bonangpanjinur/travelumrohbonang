@@ -23,6 +23,34 @@ function sendError(res: Response, label: string, err: unknown) {
   res.status(500).json({ error: "Terjadi kesalahan server" });
 }
 
+// ── F3-01: Timezone WIB (UTC+7) helpers ──────────────────────────────────────
+// Masalah: `new Date("YYYY-MM-DD")` menghasilkan UTC midnight, yang di WIB
+// adalah 07:00 hari itu — query dari/hingga tanggal jadi off-by-one.
+// Solusi: arahkan ke awal/akhir hari WIB secara eksplisit.
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000; // UTC+7
+
+/** "YYYY-MM-DD" → awal hari WIB dalam UTC (UTC midnight - 7h = 17:00 hari sebelumnya) */
+function toStartOfDayWIB(dateStr: string): Date {
+  // 00:00:00 WIB = UTC 17:00 hari sebelumnya
+  return new Date(new Date(dateStr).getTime() - WIB_OFFSET_MS);
+}
+
+/** "YYYY-MM-DD" → akhir hari WIB dalam UTC (23:59:59.999 WIB) */
+function toEndOfDayWIB(dateStr: string): Date {
+  const endOfDay = new Date(new Date(dateStr).getTime() - WIB_OFFSET_MS + 24 * 60 * 60 * 1000 - 1);
+  return endOfDay;
+}
+
+/** Konversi "YYYY-MM-DD" ke Date untuk filter `from` (awal hari WIB) */
+function fromDate(dateStr: string | undefined): Date | undefined {
+  return dateStr ? toStartOfDayWIB(dateStr) : undefined;
+}
+
+/** Konversi "YYYY-MM-DD" ke Date untuk filter `to` (akhir hari WIB) */
+function toDate(dateStr: string | undefined): Date | undefined {
+  return dateStr ? toEndOfDayWIB(dateStr) : undefined;
+}
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 router.get("/dashboard", async (req: Request, res: Response) => {
   try {
@@ -741,8 +769,8 @@ router.get("/reports/income-statement", async (req: Request, res: Response) => {
       FROM financial_transactions ft
       LEFT JOIN chart_of_accounts coa ON coa.id = ft.account_id
       WHERE ft.type IN ('income', 'expense')
-        ${from ? sql`AND ft.transaction_date >= ${new Date(from)}` : sql``}
-        ${to   ? sql`AND ft.transaction_date <= ${new Date(to)}`   : sql``}
+        ${from ? sql`AND ft.transaction_date >= ${fromDate(from)}` : sql``}
+        ${to   ? sql`AND ft.transaction_date <= ${toDate(to)}`   : sql``}
       GROUP BY ft.type, ft.category, coa.name, coa.code
       ORDER BY ft.type, SUM(ft.amount::numeric) DESC
     `);
@@ -860,8 +888,8 @@ router.get("/reports/cash-flow", async (req: Request, res: Response) => {
           SUM(bp.amount) AS total
         FROM booking_payments bp
         WHERE TRUE
-          ${from ? sql`AND bp.paid_at >= ${new Date(from)}` : sql``}
-          ${to   ? sql`AND bp.paid_at <= ${new Date(to)}`   : sql``}
+          ${from ? sql`AND bp.paid_at >= ${fromDate(from)}` : sql``}
+          ${to   ? sql`AND bp.paid_at <= ${toDate(to)}`   : sql``}
         GROUP BY month
         ORDER BY month
       `),
@@ -874,8 +902,8 @@ router.get("/reports/cash-flow", async (req: Request, res: Response) => {
         FROM financial_transactions ft
         WHERE ft.type = 'expense'
           AND (ft.entry_type = 'debit' OR ft.entry_type IS NULL)
-          ${from ? sql`AND ft.transaction_date >= ${new Date(from)}` : sql``}
-          ${to   ? sql`AND ft.transaction_date <= ${new Date(to)}`   : sql``}
+          ${from ? sql`AND ft.transaction_date >= ${fromDate(from)}` : sql``}
+          ${to   ? sql`AND ft.transaction_date <= ${toDate(to)}`   : sql``}
         GROUP BY month
         ORDER BY month
       `),
@@ -1166,8 +1194,8 @@ router.get("/reports/tax-summary", async (req: Request, res: Response) => {
         SELECT COALESCE(SUM(bp.amount), 0)::numeric AS total_revenue
         FROM booking_payments bp
         WHERE bp.is_voided = false
-          ${from ? sql`AND bp.paid_at >= ${new Date(from)}` : sql``}
-          ${to   ? sql`AND bp.paid_at <= ${new Date(to)}`   : sql``}
+          ${from ? sql`AND bp.paid_at >= ${fromDate(from)}` : sql``}
+          ${to   ? sql`AND bp.paid_at <= ${toDate(to)}`   : sql``}
       `),
       db.execute(sql`
         SELECT
@@ -1177,8 +1205,8 @@ router.get("/reports/tax-summary", async (req: Request, res: Response) => {
         FROM financial_transactions ft
         WHERE ft.type IN ('expense', 'cost')
           AND (ft.entry_type = 'debit' OR ft.entry_type IS NULL)
-          ${from ? sql`AND ft.transaction_date >= ${new Date(from)}` : sql``}
-          ${to   ? sql`AND ft.transaction_date <= ${new Date(to)}`   : sql``}
+          ${from ? sql`AND ft.transaction_date >= ${fromDate(from)}` : sql``}
+          ${to   ? sql`AND ft.transaction_date <= ${toDate(to)}`   : sql``}
         GROUP BY COALESCE(ft.category, 'lainnya')
         ORDER BY total DESC
       `),
@@ -1282,8 +1310,8 @@ async function fetchIncomeStatementData(from?: string, to?: string): Promise<Inc
     FROM financial_transactions ft
     LEFT JOIN chart_of_accounts coa ON coa.id = ft.account_id
     WHERE ft.type IN ('income', 'expense')
-      ${from && dateRe.test(from) ? sql`AND ft.transaction_date >= ${new Date(from)}` : sql``}
-      ${to   && dateRe.test(to)   ? sql`AND ft.transaction_date <= ${new Date(to)}`   : sql``}
+      ${from && dateRe.test(from) ? sql`AND ft.transaction_date >= ${fromDate(from)}` : sql``}
+      ${to   && dateRe.test(to)   ? sql`AND ft.transaction_date <= ${toDate(to)}`   : sql``}
     GROUP BY ft.type, ft.category, coa.name, coa.code
     ORDER BY ft.type, SUM(ft.amount::numeric) DESC
   `);
@@ -1373,8 +1401,8 @@ router.get("/reports/cash-flow.pdf", async (req: Request, res: Response) => {
         SELECT DATE_TRUNC('month', bp.paid_at) AS month, SUM(bp.amount) AS total
         FROM booking_payments bp
         WHERE TRUE
-          ${from && dateRe.test(from) ? sql`AND bp.paid_at >= ${new Date(from)}` : sql``}
-          ${to   && dateRe.test(to)   ? sql`AND bp.paid_at <= ${new Date(to)}`   : sql``}
+          ${from && dateRe.test(from) ? sql`AND bp.paid_at >= ${fromDate(from)}` : sql``}
+          ${to   && dateRe.test(to)   ? sql`AND bp.paid_at <= ${toDate(to)}`   : sql``}
         GROUP BY month ORDER BY month
       `),
       db.execute(sql`
@@ -1382,8 +1410,8 @@ router.get("/reports/cash-flow.pdf", async (req: Request, res: Response) => {
         FROM financial_transactions ft
         WHERE ft.type = 'expense'
           AND (ft.entry_type = 'debit' OR ft.entry_type IS NULL)
-          ${from && dateRe.test(from) ? sql`AND ft.transaction_date >= ${new Date(from)}` : sql``}
-          ${to   && dateRe.test(to)   ? sql`AND ft.transaction_date <= ${new Date(to)}`   : sql``}
+          ${from && dateRe.test(from) ? sql`AND ft.transaction_date >= ${fromDate(from)}` : sql``}
+          ${to   && dateRe.test(to)   ? sql`AND ft.transaction_date <= ${toDate(to)}`   : sql``}
         GROUP BY month ORDER BY month
       `),
     ]);

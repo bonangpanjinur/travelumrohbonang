@@ -15,9 +15,13 @@ import {
   airlines,
   eq,
   and,
+  or,
+  ne,
+  lt,
   desc,
   asc,
   sql,
+  sum,
 } from "@workspace/db";
 import { emailNotifications } from "../lib/notifications/emailNotifications";
 import { waNotifications } from "../lib/notifications/waNotifications";
@@ -678,9 +682,21 @@ router.post("/:id/payments", async (req, res) => {
       return;
     }
 
-    // BUG-3: Validate amount doesn't exceed total price
-    if (parsedAmount > booking.totalPrice) {
-      res.status(400).json({ error: "Jumlah pembayaran melebihi total harga booking" });
+    // F1-01: Hitung sisa hutang dari verified+pending payments di DB (overpayment prevention)
+    const [{ totalPaid }] = await db
+      .select({ totalPaid: sum(payments.amount) })
+      .from(payments)
+      .where(
+        and(
+          eq(payments.bookingId, id),
+          or(eq(payments.status, "verified"), eq(payments.status, "pending")),
+        ),
+      );
+    const sisaHutang = booking.totalPrice - Number(totalPaid ?? 0);
+    if (parsedAmount > sisaHutang) {
+      res.status(400).json({
+        error: `Jumlah pembayaran melebihi sisa tagihan. Sisa yang perlu dibayar: Rp ${sisaHutang.toLocaleString("id-ID")}`,
+      });
       return;
     }
 
@@ -825,6 +841,30 @@ router.post("/:id/installments/:n/pay", async (req, res) => {
     if (installment.status === "paid") {
       res.status(409).json({ error: "Installment already paid" });
       return;
+    }
+
+    // F1-04: Paksa urutan pembayaran — cicilan ke-N hanya bisa dibayar setelah ke-(N-1) lunas
+    if (installmentNumber > 0) {
+      const unpaidPrevious = await db
+        .select({
+          installmentNumber: installmentSchedules.installmentNumber,
+        })
+        .from(installmentSchedules)
+        .where(
+          and(
+            eq(installmentSchedules.bookingId, bookingId),
+            lt(installmentSchedules.installmentNumber, installmentNumber),
+            ne(installmentSchedules.status, "paid"),
+          ),
+        )
+        .limit(1);
+
+      if (unpaidPrevious.length > 0) {
+        res.status(409).json({
+          error: `Harap selesaikan cicilan ke-${unpaidPrevious[0].installmentNumber} terlebih dahulu sebelum membayar cicilan ke-${installmentNumber}`,
+        });
+        return;
+      }
     }
 
     const {

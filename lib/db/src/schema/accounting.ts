@@ -1,11 +1,12 @@
 /**
  * F-7: Chart of Accounts (CoA) + Buku Besar
  * F-10: Rekonsiliasi Bank — tabel bank_mutations
+ * F1-05: Accounting Periods (period locking)
  */
 
 import {
   pgTable, text, integer, boolean, timestamp, numeric, date,
-  index,
+  index, unique,
 } from "drizzle-orm/pg-core";
 
 // ── Chart of Accounts ─────────────────────────────────────────────────────────
@@ -46,4 +47,21 @@ export const bankMutations = pgTable("bank_mutations", {
   index("idx_bank_mutations_date").on(t.mutationDate),
   index("idx_bank_mutations_is_matched").on(t.isMatched),
   index("idx_bank_mutations_bank_account").on(t.bankAccount),
+]);
+
+// ── Accounting Periods ────────────────────────────────────────────────────────
+// F1-05: Kunci periode akuntansi — transaksi pada periode closed ditolak.
+// Status: 'open' (masih bisa ditransaksikan) | 'closed' (dikunci)
+export const accountingPeriods = pgTable("accounting_periods", {
+  id: text("id").primaryKey(),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(),  // 1-12
+  status: text("status").notNull().default("open"), // open | closed
+  closedAt: timestamp("closed_at", { withTimezone: true }),
+  closedBy: text("closed_by"),        // admin userId yang menutup periode
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+}, (t) => [
+  unique("uq_accounting_periods_year_month").on(t.year, t.month),
+  index("idx_accounting_periods_status").on(t.status),
 ]);

@@ -108,6 +108,13 @@ router.get("/withdrawals", async (req, res) => {
   }
 });
 
+// Status machine untuk withdrawal: transisi yang diizinkan
+const WITHDRAWAL_TRANSITIONS: Record<string, string[]> = {
+  requested: ["approved", "rejected"],
+  approved:  ["paid", "rejected"],
+  // paid & rejected adalah terminal
+};
+
 router.patch("/withdrawals/:id", async (req, res) => {
   try {
     const { status, adminNotes, proofUrl } = req.body as {
@@ -117,12 +124,24 @@ router.patch("/withdrawals/:id", async (req, res) => {
     };
     const adminId = (req as any).user?.id as string | undefined;
 
-    // Ambil data withdrawal sebelum update (untuk jurnal)
+    // Ambil data withdrawal sebelum update (untuk jurnal dan state-machine check)
     const [before] = await db
       .select({ agentId: agentWithdrawals.agentId, amount: agentWithdrawals.amount, status: agentWithdrawals.status })
       .from(agentWithdrawals)
       .where(eq(agentWithdrawals.id, req.params.id))
       .limit(1);
+
+    if (!before) return res.status(404).json({ error: "Withdrawal not found" });
+
+    // F3-04: State-machine — tolak transisi yang tidak diizinkan
+    if (status && status !== before.status) {
+      const allowedNext = WITHDRAWAL_TRANSITIONS[before.status ?? ""] ?? [];
+      if (!allowedNext.includes(status)) {
+        return res.status(409).json({
+          error: `Tidak dapat mengubah status withdrawal dari '${before.status}' ke '${status}'. Transisi yang diizinkan: ${allowedNext.join(", ") || "tidak ada"}`,
+        });
+      }
+    }
 
     const [data] = await db
       .update(agentWithdrawals)
@@ -131,7 +150,7 @@ router.patch("/withdrawals/:id", async (req, res) => {
         ...(adminNotes !== undefined ? { adminNotes } : {}),
         ...(proofUrl !== undefined ? { proofUrl } : {}),
         ...(status === "paid" || status === "approved" || status === "rejected"
-          ? { processedAt: new Date() }
+          ? { processedAt: new Date(), processedBy: adminId ?? null }
           : {}),
       })
       .where(eq(agentWithdrawals.id, req.params.id))
