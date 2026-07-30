@@ -109,7 +109,9 @@ export function useAdminInbox() {
   }, [filter, fetchConversations]);
 
   // ── Realtime subscriptions ─────────────────────────────────────────────────
+  // Skipped in DEV: realtime is disconnected in client.ts to avoid 401 noise.
   useEffect(() => {
+    if (import.meta.env.DEV) return;
     const channel = supabase
       .channel(`admin-inbox-${mountId}`)
       // New conversation created

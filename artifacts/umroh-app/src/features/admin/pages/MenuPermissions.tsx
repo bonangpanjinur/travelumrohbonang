@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { useAuth } from "@/shared/hooks/useAuth";
@@ -253,9 +253,9 @@ const MenuPermissions = () => {
               </thead>
               <tbody>
                 {menuGroups.map((group) => (
-                  <>
+                  <React.Fragment key={group.labelKey}>
                     {/* Group header row */}
-                    <tr key={`group-${group.label}`} className="bg-muted/20 border-b border-t">
+                    <tr className="bg-muted/20 border-b border-t">
                       <td
                         colSpan={ADMIN_ROLES.length + 1}
                         className="px-4 py-1.5 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
@@ -298,7 +298,7 @@ const MenuPermissions = () => {
                         </tr>
                       );
                     })}
-                  </>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

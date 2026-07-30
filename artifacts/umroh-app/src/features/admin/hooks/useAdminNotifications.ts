@@ -168,6 +168,11 @@ export function useAdminNotifications() {
   useEffect(() => {
     fetchAll();
 
+    // Realtime is disabled in development (supabase.realtime.disconnect() in client.ts).
+    // Skip creating channels entirely to prevent 401 HEAD requests to Supabase REST
+    // that the JS client fires as part of postgres_changes channel setup.
+    if (import.meta.env.DEV) return;
+
     // ── Real-time: new bookings ─────────────────────────────────────────────
     const bookingChannel = supabase
       .channel(`admin-realtime-bookings-${mountId}`)

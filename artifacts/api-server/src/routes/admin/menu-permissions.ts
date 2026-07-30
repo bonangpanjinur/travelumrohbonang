@@ -11,6 +11,20 @@ const ADMIN_ROLES = new Set(["super_admin", "owner", "admin", "branch_manager", 
 
 const router = Router();
 
+/**
+ * PostgREST returns snake_case column names (menu_key, updated_at).
+ * The frontend PermissionRow interface expects camelCase (menuKey).
+ * This normalizer converts a raw PostgREST row to the shape the frontend expects.
+ */
+function normalizeRow(row: Record<string, unknown>): { id: string; role: string; menuKey: string; enabled: boolean } {
+  return {
+    id: (row.id as string) ?? "",
+    role: (row.role as string) ?? "",
+    menuKey: (row.menu_key as string) ?? (row.menuKey as string) ?? "",
+    enabled: Boolean(row.enabled),
+  };
+}
+
 // When DATABASE_URL is not a real externally-reachable Postgres URL (e.g. Vercel
 // without a proper DATABASE_URL, or Replit-internal "helium" host), querying via
 // the Drizzle pool times out and this route returns 503. Fall back to forwarding
@@ -61,7 +75,7 @@ router.get("/my", async (req, res) => {
         res.status(sbRes.status === 401 || sbRes.status === 403 ? sbRes.status : 502).json({ error: "Supabase request failed", detail: body });
         return;
       }
-      res.json({ data: body });
+      res.json({ data: (body as Record<string, unknown>[]).map(normalizeRow) });
     } catch (err) {
       sendAdminError(res, "GET /api/admin/menu-permissions/my", err);
     }
@@ -99,7 +113,7 @@ router.get("/", async (req, res) => {
         res.status(sbRes.status === 401 || sbRes.status === 403 ? sbRes.status : 502).json({ error: "Supabase request failed", detail: body });
         return;
       }
-      res.json({ data: body });
+      res.json({ data: (body as Record<string, unknown>[]).map(normalizeRow) });
     } catch (err) {
       sendAdminError(res, "GET /api/admin/menu-permissions", err);
     }

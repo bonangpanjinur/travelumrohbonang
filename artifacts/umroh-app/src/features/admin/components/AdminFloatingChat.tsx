@@ -87,8 +87,10 @@ function MiniChatBox({ conv }: { conv: AdminConversation }) {
     }).catch(() => {});
   }, [conv.id, load]);
 
-  // Realtime subscription — new messages in this conversation
+  // Realtime subscription — new messages in this conversation.
+  // Skipped in DEV: realtime is disconnected in client.ts to avoid 401 noise.
   useEffect(() => {
+    if (import.meta.env.DEV) return;
     const channel = supabase
       .channel(`fab-conv-${conv.id}-${mountId}`)
       .on(
