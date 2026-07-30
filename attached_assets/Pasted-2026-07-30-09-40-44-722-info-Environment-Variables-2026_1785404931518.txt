@@ -1,0 +1,26 @@
+2026-07-30 09:40:44.722 [info] ── Environment Variables ─────────────────────────────────────
+2026-07-30 09:40:44.722 [info] ✓ AVAILABLE  NODE_ENV                     (optional)
+2026-07-30 09:40:44.722 [info] ✗ MISSING    PORT                         (required)
+2026-07-30 09:40:44.722 [info] ✓ AVAILABLE  SUPABASE_URL                 (optional)
+2026-07-30 09:40:44.722 [info] ✓ AVAILABLE  SUPABASE_SERVICE_ROLE_KEY    (optional)
+2026-07-30 09:40:44.722 [info] ✓ AVAILABLE  SUPABASE_ANON_KEY            (optional)
+2026-07-30 09:40:44.723 [info] ✓ AVAILABLE  VITE_SUPABASE_URL            (optional)
+2026-07-30 09:40:44.723 [info] ✓ AVAILABLE  VITE_SUPABASE_ANON_KEY       (optional)
+2026-07-30 09:40:44.723 [info] ✓ AVAILABLE  DATABASE_URL                 (optional)
+2026-07-30 09:40:44.723 [info] ✓ AVAILABLE  ALLOWED_ORIGINS              (optional)
+2026-07-30 09:40:44.723 [info] ✗ MISSING    ADMIN_EMAILS                 (optional)
+2026-07-30 09:40:44.723 [info] ✓ AVAILABLE  SESSION_SECRET               (optional)
+2026-07-30 09:40:44.723 [info] ✗ MISSING    LOG_LEVEL                    (optional)
+2026-07-30 09:40:44.723 [info] ✗ MISSING    MIDTRANS_SERVER_KEY          (optional)
+2026-07-30 09:40:44.723 [info] ✗ MISSING    XENDIT_API_KEY               (optional)
+2026-07-30 09:40:44.723 [info] ✗ MISSING    XENDIT_WEBHOOK_TOKEN         (optional)
+2026-07-30 09:40:44.723 [info] ✗ MISSING    RESEND_API_KEY               (optional)
+2026-07-30 09:40:44.724 [info] ✗ MISSING    EMAIL_FROM                   (optional)
+2026-07-30 09:40:44.724 [info] ✗ MISSING    EMAIL_FROM_NAME              (optional)
+2026-07-30 09:40:44.724 [info] ──────────────────────────────────────────────────────────────
+2026-07-30 09:40:44.724 [info] ── Supabase Key Diagnostics (no secrets printed) ──────────────
+2026-07-30 09:40:44.725 [info] SUPABASE_SERVICE_ROLE_KEY: len=219 prefix=eyJhbGci... role=service_role ref=yakjpqqobknrmhfmybhe exp=2036-07-10T11:58:21.000Z
+2026-07-30 09:40:44.725 [info] URL: https://yakjpqqobknrmhfmybhe.supabase.co
+2026-07-30 09:40:44.725 [info] ──────────────────────────────────────────────────────────────
+2026-07-30 09:40:44.794 [error] (node:4) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-07-30 09:40:47.013 [info] {"level":30,"time":1785404447011,"pid":4,"hostname":"169.254.62.231","req":{"id":1,"method":"GET","url":"/api/admin/masterdata/muthawifs"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (file:///var/task/artifacts/api-server/dist/vercel.mjs:28671:45)\n    at ServerResponse.onResponseComplete (file:///var/task/artifacts/api-server/dist/vercel.mjs:28721:18)\n    at ServerResponse.emit (node:events:521:24)\n    at /opt/rust/nodejs.js:17:7253\n    at AsyncLocalStorage.run (node:internal/async_local_storage/async_context_frame:59:14)\n    at /opt/rust/nodejs.js:17:7241\n    at AsyncLocalStorage.run (node:internal/async_local_storage/async_context_frame:59:14)\n    at Xr.e.emit (/opt/rust/nodejs.js:17:7229)\n    at onFinish (node:_http_outgoing:1031:10)\n    at callback (node:internal/streams/writable:764:21)\n    at afterWrite (node:internal/streams/writable:708:5)\n    at afterWriteTick (node:internal/streams/writable:694:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)"},"responseTime":2284,"msg":"→ GET /muthawifs  500  [failed with status code 500]"}
