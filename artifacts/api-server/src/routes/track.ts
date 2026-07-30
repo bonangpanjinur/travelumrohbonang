@@ -20,7 +20,7 @@ router.get("/:code", async (req, res) => {
       FROM bookings b
       LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
       LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
-      LEFT JOIN profiles           prof ON prof.id::text = b.user_id
+      LEFT JOIN profiles           prof ON prof.id::text = b.user_id::text
       WHERE b.booking_code = ${code}
       LIMIT 1
     `);

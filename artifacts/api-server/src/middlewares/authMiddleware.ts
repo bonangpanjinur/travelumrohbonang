@@ -304,7 +304,9 @@ async function resolveUser(token: string): Promise<AuthUser | null> {
       tokenCache.set(token, { user, expiresAt: Date.now() + CACHE_TTL_MS });
     }
     return user;
-  } catch {
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    console.log(`[authMiddleware] resolveUser threw: ${msg}`);
     return null;
   }
 }

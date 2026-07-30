@@ -93,7 +93,7 @@ router.get("/export.xlsx", async (req, res) => {
       FROM bookings b
       LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
       LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
-      LEFT JOIN profiles           prof ON prof.id::text = b.user_id
+      LEFT JOIN profiles           prof ON prof.id::text = b.user_id::text
       LEFT JOIN branches           br   ON br.id   = b.branch_id
       ${whereClause}
       ORDER BY b.created_at DESC
@@ -234,7 +234,7 @@ router.get("/", async (req, res) => {
         FROM bookings b
         LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
         LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
-        LEFT JOIN profiles           prof ON prof.id::text = b.user_id
+        LEFT JOIN profiles           prof ON prof.id::text = b.user_id::text
         LEFT JOIN branches           br   ON br.id   = b.branch_id
         ${whereClause}
         ORDER BY b.created_at DESC
@@ -245,7 +245,7 @@ router.get("/", async (req, res) => {
         SELECT COUNT(*)::int AS count
         FROM bookings b
         LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
-        LEFT JOIN profiles           prof ON prof.id::text = b.user_id
+        LEFT JOIN profiles           prof ON prof.id::text = b.user_id::text
         ${whereClause}
       `),
     ]);
@@ -1291,7 +1291,7 @@ router.get("/:id/invoice-data", async (req, res) => {
           FROM bookings b
           LEFT JOIN packages           pkg  ON pkg.id  = b.package_id
           LEFT JOIN package_departures dep  ON dep.id  = b.departure_id
-          LEFT JOIN profiles           prof ON prof.id::text = b.user_id
+          LEFT JOIN profiles           prof ON prof.id::text = b.user_id::text
           WHERE b.id = ${id} OR b.booking_code = ${id.toUpperCase()}
           LIMIT 1
         `),
