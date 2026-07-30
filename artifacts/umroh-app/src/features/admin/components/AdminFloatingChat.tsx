@@ -354,7 +354,9 @@ const AdminFloatingChat = () => {
   }, [loadConversations]);
 
   // ── Realtime: new/updated conversations → update badge & list ────────────
+  // Skipped in DEV: realtime is disconnected in client.ts to avoid 401 noise.
   useEffect(() => {
+    if (import.meta.env.DEV) return;
     const channel = supabase
       .channel(`fab-inbox-${mountId}`)
       // New conversation created

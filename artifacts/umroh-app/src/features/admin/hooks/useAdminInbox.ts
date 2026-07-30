@@ -210,7 +210,9 @@ export function useConversationMessages(conversationId: string | null) {
     }
     fetchMessages(conversationId);
 
-    // Subscribe to new messages in this conversation
+    // Subscribe to new messages in this conversation.
+    // Skipped in DEV: realtime is disconnected in client.ts to avoid 401 noise.
+    if (import.meta.env.DEV) return;
     const channel = supabase
       .channel(`conv-messages-${conversationId}-${mountId}`)
       .on(
