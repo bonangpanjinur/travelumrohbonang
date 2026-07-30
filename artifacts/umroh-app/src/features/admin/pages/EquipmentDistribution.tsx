@@ -33,7 +33,7 @@ interface DistributionResult {
   equipment: Equipment[];
   stats: { totalPilgrims: number; totalAssignments: number; distributed: number; returned: number; pending: number };
 }
-interface Departure { id: string; departureDate: string; packageTitle?: string; package_title?: string; }
+interface Departure { id: string; departureDate: string; packageTitle?: string; package_title?: string; package?: { id: string; title: string } | null; }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   pending: { label: "Pending", color: "bg-yellow-100 text-yellow-700" },
@@ -127,7 +127,7 @@ export default function EquipmentDistribution() {
           <SelectContent>
             {departures.map((d) => (
               <SelectItem key={d.id} value={d.id}>
-                {d.packageTitle ?? d.package_title ?? "?"} — {d.departureDate}
+                {d.package?.title ?? d.packageTitle ?? d.package_title ?? "?"} — {d.departureDate}
               </SelectItem>
             ))}
           </SelectContent>
