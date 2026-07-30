@@ -45,5 +45,9 @@ Thumbs.db
 .github/instructions/nx.instructions.md
 
 # Replit
-.cache/
+.cache
+
+# Uploaded diagnostic/debug files — not part of the codebase
+attached_assets/Pasted-2026-07-30-*
+attached_assets/image_1785404*
 .local/
