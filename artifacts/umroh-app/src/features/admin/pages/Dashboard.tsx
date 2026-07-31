@@ -52,6 +52,23 @@ interface DashboardStats {
   monthlyTrend: MonthlyTrend[];
 }
 
+interface AgentStats {
+  totalBookings: number;
+  activeBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
+  totalValue: number;
+  totalCommission: number;
+  recentBookings: {
+    id: string;
+    bookingCode: string;
+    status: string;
+    totalPrice: number;
+    createdAt: string;
+    packageTitle: string | null;
+  }[];
+}
+
 interface AgingBucket {
   bucket: "overdue" | "kritis" | "mendesak" | "perhatian" | "normal";
   count: number;
@@ -194,6 +211,7 @@ const AdminDashboard = () => {
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([]);
   const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrend[]>([]);
   const [financeDash, setFinanceDash]     = useState<FinanceDashboard | null>(null);
+  const [agentStats, setAgentStats]       = useState<AgentStats | null>(null);
   const [loading, setLoading]             = useState(true);
   const [refreshing, setRefreshing]       = useState(false);
   const [lastUpdated, setLastUpdated]     = useState<Date | null>(null);
@@ -220,18 +238,24 @@ const AdminDashboard = () => {
   const fetchAll = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
     try {
-      const [statsResult, recentResult, financeResult] = await Promise.all([
-        apiFetch<DashboardStats>("/api/admin/analytics/dashboard-stats").catch(() => null),
-        apiFetch<{ data: RecentBooking[] }>("/api/admin/bookings?limit=5").catch(() => ({ data: [] as RecentBooking[] })),
-        apiFetch<FinanceDashboard>("/api/admin/finance/dashboard").catch(() => null),
-      ]);
-      if (statsResult) {
-        const { monthlyTrend: trend, ...counts } = statsResult;
-        setStats(counts);
-        setMonthlyTrend(trend ?? []);
+      if (role === "agent") {
+        // Agents only fetch their own stats — dashboard-stats is gated by requireFinance
+        const agentResult = await apiFetch<AgentStats>("/api/admin/analytics/my-stats").catch(() => null);
+        if (agentResult) setAgentStats(agentResult);
+      } else {
+        const [statsResult, recentResult, financeResult] = await Promise.all([
+          apiFetch<DashboardStats>("/api/admin/analytics/dashboard-stats").catch(() => null),
+          apiFetch<{ data: RecentBooking[] }>("/api/admin/bookings?limit=5").catch(() => ({ data: [] as RecentBooking[] })),
+          apiFetch<FinanceDashboard>("/api/admin/finance/dashboard").catch(() => null),
+        ]);
+        if (statsResult) {
+          const { monthlyTrend: trend, ...counts } = statsResult;
+          setStats(counts);
+          setMonthlyTrend(trend ?? []);
+        }
+        setRecentBookings(recentResult?.data || []);
+        if (financeResult) setFinanceDash(financeResult);
       }
-      setRecentBookings(recentResult?.data || []);
-      if (financeResult) setFinanceDash(financeResult);
       setLastUpdated(new Date());
     } catch (err) {
       console.error("Dashboard fetch error:", err);
@@ -240,7 +264,7 @@ const AdminDashboard = () => {
       setLoading(false);
       if (isManual) setRefreshing(false);
     }
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     fetchAll(false);
@@ -406,6 +430,134 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* ══════════════════════════════════════════════════
+           AGENT-SPECIFIC DASHBOARD
+           Shown only when role === 'agent'
+      ══════════════════════════════════════════════════ */}
+      {role === "agent" && (
+        <div className="space-y-6">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3">
+            <KpiCard
+              title="Total Booking"
+              value={agentStats?.totalBookings ?? 0}
+              icon={ShoppingBag}
+              iconBg="bg-blue-500"
+              loading={loading}
+              href="/admin/bookings"
+            />
+            <KpiCard
+              title="Booking Aktif"
+              value={agentStats?.activeBookings ?? 0}
+              icon={Clock}
+              iconBg="bg-amber-500"
+              loading={loading}
+              href="/admin/bookings"
+            />
+            <KpiCard
+              title="Selesai"
+              value={agentStats?.completedBookings ?? 0}
+              icon={CheckCircle2}
+              iconBg="bg-emerald-500"
+              loading={loading}
+              href="/admin/bookings"
+            />
+            <KpiCard
+              title="Dibatalkan"
+              value={agentStats?.cancelledBookings ?? 0}
+              icon={AlertCircle}
+              iconBg="bg-red-400"
+              loading={loading}
+              alert={(agentStats?.cancelledBookings ?? 0) > 0}
+              alertLevel="warning"
+              href="/admin/bookings"
+            />
+            <KpiCard
+              title="Total Nilai Booking"
+              value={agentStats?.totalValue ?? 0}
+              icon={Wallet}
+              iconBg="bg-cyan-500"
+              loading={loading}
+              isCurrency
+            />
+            <KpiCard
+              title="Komisi Diterima"
+              value={agentStats?.totalCommission ?? 0}
+              icon={TrendingUp}
+              iconBg="bg-purple-500"
+              loading={loading}
+              isCurrency
+            />
+          </div>
+
+          {/* Recent Bookings */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Booking Terbaru Anda</CardTitle>
+              <CardDescription>5 booking terakhir yang Anda tangani</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="h-8 w-8 bg-muted animate-pulse rounded-full shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-3.5 bg-muted animate-pulse rounded w-3/4" />
+                        <div className="h-3 bg-muted animate-pulse rounded w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : !agentStats || agentStats.recentBookings.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Belum ada booking yang ditangani</p>
+              ) : (
+                <div className="space-y-1">
+                  {agentStats.recentBookings.map((b) => {
+                    const s = STATUS_MAP[b.status] ?? { label: b.status, className: "bg-muted text-muted-foreground border-muted" };
+                    return (
+                      <Link key={b.id} to="/admin/bookings" className="block">
+                        <div className="flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-muted/40 transition-colors cursor-pointer">
+                          <div className="bg-primary/10 p-1.5 rounded-full shrink-0">
+                            <ShoppingBag className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium leading-none truncate">{b.bookingCode}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">{b.packageTitle ?? "—"}</p>
+                            <p className="text-[10px] text-muted-foreground/60 mt-0.5 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {format(new Date(b.createdAt), "d MMM yyyy, HH:mm", { locale: localeId })}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full border", s.className)}>
+                              {s.label}
+                            </span>
+                            <p className="text-xs font-semibold mt-1 text-muted-foreground">{formatRp(b.totalPrice)}</p>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                  <div className="pt-2">
+                    <Link to="/admin/bookings">
+                      <Button variant="outline" size="sm" className="w-full text-xs">
+                        Lihat Semua Booking <ExternalLink className="w-3 h-3 ml-1.5" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════
+           ADMIN / FINANCE / OTHER ROLES DASHBOARD
+      ══════════════════════════════════════════════════ */}
+      {role !== "agent" && <>
 
       {/* ── DEBT WARNING BANNER ── */}
       {!loading && isUrgent && !warningDismissed && (
@@ -992,6 +1144,8 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      </> /* end role !== "agent" section */}
 
       {/* ── Target Setting Dialog ── */}
       <Dialog open={targetDialog} onOpenChange={setTargetDialog}>

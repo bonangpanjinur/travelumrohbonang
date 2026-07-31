@@ -64,6 +64,7 @@ import adminBankReconciliationRouter from "./bank-reconciliation";
 import adminDocumentTypesRouter from "./document-types";
 import adminAccountingExportRouter from "./accounting-export";
 import adminBudgetRouter from "./budget";
+import adminAgentMyStatsRouter from "./agent-my-stats";
 
 const router = Router();
 
@@ -79,6 +80,10 @@ router.use("/integrations", requireSuperAdmin, adminIntegrationsRouter);
 // GET readable by all admin roles; PUT/DELETE restricted to super_admin inside the router
 router.use("/menu-permissions", requireOperational, adminMenuPermissionsRouter);
 router.use("/feature-flags", requireSuperAdmin, adminFeatureFlagsRouter);
+// Agent personal stats — accessible to role='agent' (requireOperational)
+// Must be registered BEFORE the finance-gated analytics mount so agents
+// can reach this one specific endpoint without hitting requireFinance.
+router.use("/analytics/my-stats", requireOperational, adminAgentMyStatsRouter);
 router.use("/analytics", requireFinance, adminAnalyticsRouter);
 router.use("/reports", requireFinance, adminReportsRouter);
 router.use("/accounting", requireFinance, adminAccountingRouter);
