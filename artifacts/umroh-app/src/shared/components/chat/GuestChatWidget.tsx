@@ -362,7 +362,19 @@ function ChatPanel({
 
 // ── Main Widget ───────────────────────────────────────────────────────────────
 
-export default function GuestChatWidget() {
+interface GuestChatWidgetProps {
+  /**
+   * Controlled mode — hides the standalone FAB and lets the parent drive
+   * open/close state. Pass `controlledOpen={true}` to show the panel.
+   */
+  controlledOpen?: boolean;
+  onControlledClose?: () => void;
+}
+
+export default function GuestChatWidget({
+  controlledOpen,
+  onControlledClose,
+}: GuestChatWidgetProps = {}) {
   const { user, loading: authLoading } = useAuth();
 
   const {
@@ -377,21 +389,32 @@ export default function GuestChatWidget() {
     markRead,
   } = useGuestChat();
 
-  // Panel display state
+  const isControlled = controlledOpen !== undefined;
+
+  // Panel display state (used only in standalone / uncontrolled mode)
   const [panel, setPanel] = useState<PanelState>("collapsed");
+
+  // In controlled mode, derive the effective panel from hasExistingSession/status
+  const effectivePanel: PanelState = isControlled
+    ? controlledOpen
+      ? status === "ready" || hasExistingSession
+        ? "chat"
+        : "form"
+      : "collapsed"
+    : panel;
 
   // When panel opens to chat, mark messages as read
   useEffect(() => {
-    if (panel === "chat") {
+    if (effectivePanel === "chat") {
       void markRead();
     }
-  }, [panel, markRead]);
+  }, [effectivePanel, markRead]);
 
   // Don't render for logged-in users — they use useMyChat / /chat route
   if (authLoading) return null;
   if (user) return null;
 
-  const fabBadge = unreadCount > 0 && panel === "collapsed";
+  const fabBadge = unreadCount > 0 && effectivePanel === "collapsed";
 
   const openPanel = () => {
     if (status === "ready" || hasExistingSession) {
@@ -403,107 +426,127 @@ export default function GuestChatWidget() {
 
   const handleFormSubmit = async (name: string, phone: string, email: string) => {
     await startChat({ name, phone, email });
-    setPanel("chat");
+    if (!isControlled) setPanel("chat");
   };
 
-  const handleCollapse = () => setPanel("collapsed");
+  const handleCollapse = () => {
+    if (isControlled) {
+      onControlledClose?.();
+    } else {
+      setPanel("collapsed");
+    }
+  };
 
+  // Shared chat panel markup
+  const chatPanelMarkup = (
+    <motion.div
+      key="chat-panel"
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 20, scale: 0.95 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      // Mobile: full-screen. Desktop: fixed width floating card.
+      className={[
+        "bg-white shadow-2xl border border-gray-100 flex flex-col overflow-hidden",
+        // Mobile full-screen
+        "fixed inset-0 rounded-none",
+        // sm and above: floating card
+        "sm:static sm:inset-auto sm:w-[360px] sm:rounded-2xl",
+      ].join(" ")}
+      style={{
+        maxHeight: "min(520px, calc(100vh - 112px))",
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 bg-indigo-600 text-white flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+          <MessageCircle className="w-4 h-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold leading-none">Chat dengan Admin</p>
+          <p className="text-[10px] text-indigo-200 mt-0.5">
+            Biasanya membalas dalam 1 jam
+          </p>
+        </div>
+        <button
+          onClick={handleCollapse}
+          className="w-7 h-7 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
+          aria-label="Minimasi chat"
+        >
+          <ChevronDown className="w-4 h-4 sm:block hidden" />
+          <X className="w-4 h-4 sm:hidden" />
+        </button>
+        <button
+          onClick={handleCollapse}
+          className="w-7 h-7 rounded-full hover:bg-white/20 items-center justify-center transition-colors hidden sm:flex"
+          aria-label="Tutup chat"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Body — form or chat */}
+      <div className="flex flex-col flex-1 min-h-0">
+        {effectivePanel === "form" ? (
+          <>
+            <div className="px-4 pt-4 pb-1 text-center flex-shrink-0">
+              <p className="text-sm font-semibold text-gray-800">Ada pertanyaan?</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Admin kami siap membantu. Isi data di bawah untuk mulai.
+              </p>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              <IdentityForm
+                onSubmit={handleFormSubmit}
+                loading={status === "loading"}
+                error={error}
+              />
+            </div>
+          </>
+        ) : (
+          <ChatPanel
+            messages={messages}
+            onSend={sendMessage}
+            loading={status === "loading"}
+            conversationId={conversationId}
+          />
+        )}
+      </div>
+    </motion.div>
+  );
+
+  // ── Controlled mode — panel only, no FAB ──────────────────────────────────
+  if (isControlled) {
+    return (
+      <AnimatePresence>
+        {controlledOpen && (
+          // Position panel above the Hubungi Kami button (bottom-6 = 24px + button height ~52px + gap)
+          <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end">
+            {chatPanelMarkup}
+          </div>
+        )}
+      </AnimatePresence>
+    );
+  }
+
+  // ── Standalone mode — FAB + panel ─────────────────────────────────────────
   return (
     // bottom-24 keeps the FAB above other FloatingButtons (at bottom-6)
     <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-3">
-      {/* ── Chat Panel ──────────────────────────────────────────────────────── */}
       <AnimatePresence>
-        {panel !== "collapsed" && (
-          <motion.div
-            key="chat-panel"
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            // Mobile: full-screen. Desktop: fixed width floating card.
-            className={[
-              "bg-white shadow-2xl border border-gray-100 flex flex-col overflow-hidden",
-              // Mobile full-screen
-              "fixed inset-0 rounded-none",
-              // sm and above: floating card
-              "sm:static sm:inset-auto sm:w-[360px] sm:rounded-2xl",
-            ].join(" ")}
-            style={{
-              // On small screens this is handled by Tailwind `fixed inset-0` above.
-              // On sm+, respect the max-height so it doesn't overflow.
-              maxHeight: "min(520px, calc(100vh - 112px))",
-            }}
-          >
-            {/* Header */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-indigo-600 text-white flex-shrink-0">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                <MessageCircle className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold leading-none">Chat dengan Admin</p>
-                <p className="text-[10px] text-indigo-200 mt-0.5">
-                  Biasanya membalas dalam 1 jam
-                </p>
-              </div>
-              <button
-                onClick={handleCollapse}
-                className="w-7 h-7 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors"
-                aria-label="Minimasi chat"
-              >
-                <ChevronDown className="w-4 h-4 sm:block hidden" />
-                <X className="w-4 h-4 sm:hidden" />
-              </button>
-              <button
-                onClick={handleCollapse}
-                className="w-7 h-7 rounded-full hover:bg-white/20 items-center justify-center transition-colors hidden sm:flex"
-                aria-label="Tutup chat"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Body — form or chat */}
-            <div className="flex flex-col flex-1 min-h-0">
-              {panel === "form" ? (
-                <>
-                  {/* Welcome text */}
-                  <div className="px-4 pt-4 pb-1 text-center flex-shrink-0">
-                    <p className="text-sm font-semibold text-gray-800">Ada pertanyaan?</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Admin kami siap membantu. Isi data di bawah untuk mulai.
-                    </p>
-                  </div>
-                  <div className="overflow-y-auto flex-1">
-                    <IdentityForm
-                      onSubmit={handleFormSubmit}
-                      loading={status === "loading"}
-                      error={error}
-                    />
-                  </div>
-                </>
-              ) : (
-                <ChatPanel
-                  messages={messages}
-                  onSend={sendMessage}
-                  loading={status === "loading"}
-                  conversationId={conversationId}
-                />
-              )}
-            </div>
-          </motion.div>
-        )}
+        {effectivePanel !== "collapsed" && chatPanelMarkup}
       </AnimatePresence>
 
       {/* ── FAB ─────────────────────────────────────────────────────────────── */}
       <motion.button
-        onClick={panel === "collapsed" ? openPanel : handleCollapse}
+        onClick={effectivePanel === "collapsed" ? openPanel : handleCollapse}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         className="relative w-14 h-14 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 active:bg-indigo-800 flex items-center justify-center transition-colors"
-        aria-label={panel === "collapsed" ? "Buka chat" : "Tutup chat"}
+        aria-label={effectivePanel === "collapsed" ? "Buka chat" : "Tutup chat"}
       >
         <AnimatePresence mode="wait">
-          {panel !== "collapsed" ? (
+          {effectivePanel !== "collapsed" ? (
             <motion.span
               key="close"
               initial={{ rotate: -90, opacity: 0 }}

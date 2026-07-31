@@ -6,7 +6,8 @@
  * 1. Scroll-to-top button  — appears after scrolling 400 px down, sits ABOVE
  *    the contact buttons so they never overlap.
  * 2. Contact / WhatsApp buttons — the existing CMS-driven FloatingButtons,
- *    anchored to the bottom-right corner.
+ *    anchored to the bottom-right corner. Always includes a "Chat" option
+ *    that opens the in-app GuestChatWidget panel.
  *
  * Hidden automatically on /admin/* routes.
  */
@@ -78,6 +79,7 @@ function useScrollY(threshold = 400) {
 const GlobalFloatingWidgets = () => {
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const showScrollTop = useScrollY(400);
 
   // Hide entirely on admin and auth pages
@@ -100,11 +102,13 @@ const GlobalFloatingWidgets = () => {
     pathname.startsWith("/refund-request") ||
     pathname === "/chat";
 
+  const handleOpenChat = () => {
+    setMenuOpen(false);
+    setChatOpen(true);
+  };
+
   return (
     <>
-      {/* ── Guest chat widget — shown on all public pages ────────────────── */}
-      {!isAuthenticatedRoute && <GuestChatWidget />}
-
       {/* ── Scroll-to-top ───────────────────────────────────────────────── */}
       <AnimatePresence>
         {showScrollTop && (
@@ -123,20 +127,38 @@ const GlobalFloatingWidgets = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Contact / Social buttons ─────────────────────────────────────── */}
-      <ContactButtons menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
+      {/* ── In-app chat panel (controlled mode — no separate FAB) ────────── */}
+      {!isAuthenticatedRoute && (
+        <>
+          {/* Chat panel driven from the Hubungi Kami menu */}
+          <GuestChatWidget
+            controlledOpen={chatOpen}
+            onControlledClose={() => setChatOpen(false)}
+          />
+        </>
+      )}
+
+      {/* ── Contact / Social buttons + Chat ──────────────────────────────── */}
+      <ContactButtons
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
+        onOpenChat={!isAuthenticatedRoute ? handleOpenChat : undefined}
+      />
     </>
   );
 };
 
-// ── ContactButtons — fetches CMS config, renders single pill or expand menu ──
+// ── ContactButtons ────────────────────────────────────────────────────────────
 
 const ContactButtons = ({
   menuOpen,
   setMenuOpen,
+  onOpenChat,
 }: {
   menuOpen: boolean;
   setMenuOpen: (v: boolean) => void;
+  /** When provided, a "Chat" menu item is shown. */
+  onOpenChat?: () => void;
 }) => {
   const { data: rawButtons = [] } = useQuery({
     queryKey: ["floating-buttons-cms"],
@@ -152,10 +174,13 @@ const ContactButtons = ({
   });
 
   const buttons = rawButtons.filter((b) => b.isActive);
-  if (buttons.length === 0) return null;
 
-  /* ── Single button — pill with pulsing ring ──────────────────────────── */
-  if (buttons.length === 1) {
+  // Total items in the expanded menu = CMS buttons + chat option (if enabled)
+  const hasChatOption = !!onOpenChat;
+  const totalItems = buttons.length + (hasChatOption ? 1 : 0);
+
+  /* ── Single CMS button + no chat → direct pill, no expand ──────────── */
+  if (totalItems === 1 && buttons.length === 1 && !hasChatOption) {
     const btn = buttons[0];
     const Icon = iconMap[btn.icon] ?? MessageCircle;
     const color = bgClass[btn.platform] ?? "bg-primary";
@@ -179,18 +204,68 @@ const ContactButtons = ({
     );
   }
 
-  /* ── Multiple buttons — expandable labeled stack ─────────────────────── */
+  /* ── Only chat option (no CMS buttons) → single "Chat" pill ─────────── */
+  if (totalItems === 1 && hasChatOption) {
+    return (
+      <motion.button
+        onClick={onOpenChat}
+        initial={{ scale: 0, x: 80 }}
+        animate={{ scale: 1, x: 0 }}
+        transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.8 }}
+        aria-label="Chat dengan Admin"
+        className="fixed bottom-6 right-4 z-50 flex items-center gap-2.5 pl-4 pr-5 py-3 rounded-full text-white font-semibold text-sm shadow-xl active:scale-95 transition-all select-none bg-indigo-600 hover:bg-indigo-700"
+      >
+        <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-indigo-600" />
+        <MessageCircle className="w-5 h-5 shrink-0 relative z-10" />
+        <span className="relative z-10 whitespace-nowrap">Chat dengan Kami</span>
+      </motion.button>
+    );
+  }
+
+  /* ── Nothing to show ──────────────────────────────────────────────────── */
+  if (totalItems === 0) return null;
+
+  /* ── Multiple items — expandable labeled stack ───────────────────────── */
+  // Build the list: CMS buttons first, then the Chat item
+  const allItems = [
+    ...buttons.map((btn, i) => ({ type: "cms" as const, btn, i })),
+    ...(hasChatOption ? [{ type: "chat" as const, btn: null, i: buttons.length }] : []),
+  ];
+
   return (
     <div className="fixed bottom-6 right-4 z-50 flex flex-col items-end gap-2.5">
       <AnimatePresence>
         {menuOpen &&
-          buttons.map((btn, i) => {
-            const Icon = iconMap[btn.icon] ?? MessageCircle;
-            const color = bgClass[btn.platform] ?? "bg-primary";
+          allItems.map(({ type, btn, i }) => {
+            if (type === "chat") {
+              return (
+                <motion.button
+                  key="__chat__"
+                  onClick={onOpenChat}
+                  initial={{ opacity: 0, scale: 0.6, x: 40 }}
+                  animate={{
+                    opacity: 1, scale: 1, x: 0,
+                    transition: { delay: i * 0.06, type: "spring", stiffness: 340, damping: 26 },
+                  }}
+                  exit={{
+                    opacity: 0, scale: 0.6, x: 40,
+                    transition: { delay: (allItems.length - 1 - i) * 0.04, duration: 0.15 },
+                  }}
+                  className="flex items-center gap-2.5 pl-4 pr-5 py-2.5 rounded-full text-white font-semibold text-sm shadow-lg active:scale-95 whitespace-nowrap bg-indigo-600 hover:bg-indigo-700"
+                >
+                  <MessageCircle className="w-4 h-4 shrink-0" />
+                  <span>Chat dengan Kami</span>
+                </motion.button>
+              );
+            }
+
+            // CMS button
+            const Icon = iconMap[btn!.icon] ?? MessageCircle;
+            const color = bgClass[btn!.platform] ?? "bg-primary";
             return (
               <motion.a
-                key={btn.id}
-                href={btn.url}
+                key={btn!.id}
+                href={btn!.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 initial={{ opacity: 0, scale: 0.6, x: 40 }}
@@ -200,12 +275,12 @@ const ContactButtons = ({
                 }}
                 exit={{
                   opacity: 0, scale: 0.6, x: 40,
-                  transition: { delay: (buttons.length - 1 - i) * 0.04, duration: 0.15 },
+                  transition: { delay: (allItems.length - 1 - i) * 0.04, duration: 0.15 },
                 }}
                 className={`flex items-center gap-2.5 pl-4 pr-5 py-2.5 rounded-full text-white font-semibold text-sm shadow-lg active:scale-95 whitespace-nowrap ${color}`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
-                <span>{btn.label}</span>
+                <span>{btn!.label}</span>
               </motion.a>
             );
           })}
