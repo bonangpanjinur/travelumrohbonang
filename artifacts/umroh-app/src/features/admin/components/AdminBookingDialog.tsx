@@ -105,6 +105,7 @@ interface Props {
 const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const isAgent = user?.role === "agent";
   const [step, setStep] = useState<Step>(1);
   const [saving, setSaving] = useState(false);
 
@@ -180,6 +181,18 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
       })));
     }).catch(() => {});
   }, [open]);
+
+  // ── Auto-fill agentId untuk user berperan agen ────────────────────────────
+  // Ambil profil agen dari /api/agent/profile, pre-fill dan kunci field agen.
+
+  useEffect(() => {
+    if (!open || !isAgent) return;
+    apiFetch<{ id: string }>("/api/agent/profile")
+      .then((profile) => {
+        if (profile?.id) setAgentId(profile.id);
+      })
+      .catch(() => {}); // Graceful — backend still enforces via scope
+  }, [open, isAgent]);
 
   // ── Auto-fill pemesan dari akun yang sedang login ──────────────────────────
   // Hanya diisi otomatis saat form baru dibuka (pemesanName masih kosong).
@@ -630,9 +643,20 @@ const AdminBookingDialog = ({ open, onOpenChange, onSuccess }: Props) => {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Agen Referral <span className="text-muted-foreground text-xs">(opsional)</span></Label>
-                <Select value={agentId || "__none__"} onValueChange={(v) => setAgentId(v === "__none__" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Pilih agen..." /></SelectTrigger>
+                <Label>
+                  Agen Referral{" "}
+                  {isAgent
+                    ? <span className="text-muted-foreground text-xs">(terisi otomatis)</span>
+                    : <span className="text-muted-foreground text-xs">(opsional)</span>}
+                </Label>
+                <Select
+                  value={agentId || "__none__"}
+                  onValueChange={(v) => !isAgent && setAgentId(v === "__none__" ? "" : v)}
+                  disabled={isAgent}
+                >
+                  <SelectTrigger disabled={isAgent}>
+                    <SelectValue placeholder="Pilih agen..." />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">— Tanpa agen —</SelectItem>
                     {agents.map((a) => (

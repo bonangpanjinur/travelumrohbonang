@@ -469,12 +469,23 @@ router.post("/", async (req, res) => {
       roomType,
     } = req.body;
 
+    // Task #5: If requester is an agent, override PIC fields — cannot be spoofed from frontend
+    const singleScope = await resolveUserScope(req);
+    let effectiveAgentId = agentId;
+    let effectivePicType = "admin";
+    let effectivePicId: string | null = null;
+    if (singleScope.type === "agent" && singleScope.agentId) {
+      effectiveAgentId = singleScope.agentId;
+      effectivePicType = "agen";
+      effectivePicId = singleScope.agentId;
+    }
+
     // BK-DB01: Validate agentId exists if provided
-    if (agentId) {
+    if (effectiveAgentId) {
       const [agentRow] = await db
         .select({ id: agents.id })
         .from(agents)
-        .where(eq(agents.id, agentId))
+        .where(eq(agents.id, effectiveAgentId))
         .limit(1);
       if (!agentRow) {
         res.status(400).json({ error: "Agen tidak ditemukan" });
@@ -569,10 +580,11 @@ router.post("/", async (req, res) => {
           paymentScheme: paymentScheme || "full",
           notes,
           branchId,
-          agentId,
+          agentId: effectiveAgentId,
           userId,
           status: "confirmed",
-          picType: "admin",
+          picType: effectivePicType,
+          picId: effectivePicId,
           pemesanName: resolvedPemesanName,
           pemesanPhone: resolvedPemesanPhone,
           pemesanEmail: resolvedPemesanEmail,
@@ -695,6 +707,17 @@ router.post("/group", async (req, res) => {
       }
     }
 
+    // Task #5: If requester is an agent, override PIC fields — cannot be spoofed from frontend
+    const groupScope = await resolveUserScope(req);
+    let groupAgentId = agentId;
+    let groupPicType = "admin";
+    let groupPicId: string | null = null;
+    if (groupScope.type === "agent" && groupScope.agentId) {
+      groupAgentId = groupScope.agentId;
+      groupPicType = "agen";
+      groupPicId = groupScope.agentId;
+    }
+
     // P0: Validate departure — existence, package relation, active status, not past
     const [dep] = await db
       .select({
@@ -778,9 +801,10 @@ router.post("/group", async (req, res) => {
           paymentScheme: paymentScheme || "full",
           notes: notes || null,
           branchId: branchId || null,
-          agentId: agentId || null,
+          agentId: groupAgentId || null,
           status: "confirmed",
-          picType: "admin",
+          picType: groupPicType,
+          picId: groupPicId,
           isGroupBooking: true,
           groupName: groupName || null,
           pemesanName: pemesanName.trim(),
