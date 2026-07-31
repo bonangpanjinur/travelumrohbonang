@@ -1,0 +1,33 @@
+diff --git a/lib/index.js b/lib/index.js
+index 170d4b6428c0e942961548cdcb3081eb77947a18..f53133ff751cfccc4cbbb27ad79a6c9f01b3bdab 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -1,5 +1,4 @@
+ import fs from 'fs';
+-import url from 'url';
+ import path from 'path';
+ import _PNG from 'png-js';
+ import _JPEG from 'jay-peg';
+@@ -151,12 +150,18 @@ const isDataImageSrc = (src) => {
+ };
+ const isDataUri = (imageSrc) => 'uri' in imageSrc && imageSrc.uri.startsWith('data:');
+ const getAbsoluteLocalPath = (src) => {
+-    const { protocol, auth, host, port, hostname, path: pathname, } = url.parse(src);
+-    const absolutePath = pathname ? path.resolve(src) : undefined;
+-    if ((protocol && protocol !== 'file:') || auth || host || port || hostname) {
++    let parsed;
++    try {
++        parsed = new URL(src);
++    } catch {
++        // Not a valid URL — treat as a local file path
++        return path.resolve(src);
++    }
++    const { protocol, username, host, port, hostname, pathname } = parsed;
++    if ((protocol && protocol !== 'file:') || username || host || port || hostname) {
+         return undefined;
+     }
+-    return absolutePath;
++    return pathname ? path.resolve(src) : undefined;
+ };
+ const fetchLocalFile = (src) => new Promise((resolve, reject) => {
+     try {
