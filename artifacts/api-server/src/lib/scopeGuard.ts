@@ -14,6 +14,7 @@
 
 import type { Request } from "express";
 import { db, agents, profiles, eq } from "@workspace/db";
+import { FULL_ADMIN_ROLES } from "./roleConstants";
 
 export type UserScopeType = "global" | "branch" | "agent";
 
