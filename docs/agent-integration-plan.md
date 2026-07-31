@@ -15,7 +15,7 @@
 
 ---
 
-## Task #4 — Auto-Register & Auto-Link Data Agen saat Role Diberikan
+## Task #4 — Auto-Register & Auto-Link Data Agen saat Role Diberikan ✅ SELESAI
 
 ### Deskripsi
 Setiap kali admin mengubah role sebuah akun menjadi `'agent'`, sistem harus otomatis memastikan ada baris `agents` yang terhubung ke akun tersebut.
@@ -62,7 +62,7 @@ WHERE p.email = a.email
 
 ---
 
-## Task #5 — PIC Otomatis Terisi Agen saat Agen Membuat Booking
+## Task #5 — PIC Otomatis Terisi Agen saat Agen Membuat Booking ✅ SELESAI
 
 ### Deskripsi
 Saat agen login ke panel admin dan membuat booking (tombol "Tambah Booking"), PIC harus otomatis terisi nama agen tersebut — baik dari form panel admin maupun dari frontend publik.
@@ -126,12 +126,16 @@ const agentIdFromProfile = /* dari useAuth atau /api/agent/profile */;
 
 ---
 
-## Task #6 — Dashboard Statistik Khusus Agen
+## Task #6 — Dashboard Statistik Khusus Agen 🔶 SEBAGIAN SELESAI
+
+> **Status:** Backend endpoint sudah ada. Frontend Dashboard belum memanggil endpoint ini secara kondisional untuk role agent — masih selalu memanggil `dashboard-stats`.
+>
+> **Yang masih kurang:** `Dashboard.tsx` perlu ditambah logika: jika `role === 'agent'` → panggil `/api/admin/analytics/agent-stats` sebagai ganti (atau tambahan) `dashboard-stats`.
 
 ### Deskripsi
 Endpoint `/api/admin/analytics/dashboard-stats` di-gate oleh `requireFinance` yang tidak termasuk role `agent`. Agen perlu melihat performa mereka sendiri di dashboard.
 
-### Endpoint Baru: `GET /api/admin/analytics/agent-stats`
+### Endpoint Baru: `GET /api/admin/analytics/agent-stats` ✅ Sudah ada di backend
 
 **Gate:** `requireOperational` (termasuk agent)
 
@@ -169,23 +173,24 @@ WHERE (b.agent_id = $agentId OR (b.pic_type = 'agen' AND b.pic_id = $agentId))
 
 ### File yang Diubah
 
-| File | Perubahan |
-|------|-----------|
-| `artifacts/api-server/src/routes/admin/analytics.ts` | Tambah route `GET /agent-stats` |
-| `artifacts/api-server/src/routes/admin/index.ts` | Mount `/analytics/agent-stats` dengan `requireOperational` |
-| `artifacts/umroh-app/src/features/admin/pages/Dashboard.tsx` | Conditional: jika role agent → panggil `/agent-stats` |
+| File | Status | Perubahan |
+|------|--------|-----------|
+| `artifacts/api-server/src/routes/admin/analytics.ts` | ✅ Selesai | Route `GET /agent-stats` sudah ada |
+| `artifacts/api-server/src/routes/admin/index.ts` | ✅ Selesai | Mount dengan `requireOperational` |
+| `artifacts/umroh-app/src/features/admin/pages/Dashboard.tsx` | ❌ Belum | Conditional: jika role agent → panggil `/agent-stats`, render kartu statistik agen |
 
 ---
 
 ## Urutan Pengerjaan
 
 ```
-Task #4 (Auto-register)
+Task #4 (Auto-register) ✅
     │
     ├──────────────────┐
     ▼                  ▼
 Task #5           Task #6
 (Auto-fill PIC)   (Dashboard stats)
+✅ Selesai        🔶 Frontend masih kurang
 ```
 
 - **#4 dikerjakan pertama** — jadi fondasi agar #5 punya `agentId` yang valid
