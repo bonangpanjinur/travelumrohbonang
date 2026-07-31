@@ -1,3 +1,4 @@
+- [Agent role sync](agent-role-sync.md) — syncAgentRecord() in admin/users.ts auto-creates/links agents row on role→'agent'; unlinks on role change away; backfill SQL in supabase/migrations.
 - [Vercel-import artifact duplication](vercel-import-artifact-dupes.md) — a `.migration-backup`/import tree with its own `.replit-artifact` folders gets auto-registered as duplicate artifacts/workflows; delete those folders from the backup tree, not the real ones.
 - [Supabase dev/prod REST split](supabase-dev-prod-rest-split.md) — pattern for apps ported from Supabase-backed Vercel/Lovable exports: dev uses a local API shim, prod can point at real Supabase, by user's explicit choice.
 - [react-pdf in esbuild api-server](react-pdf-esbuild-swc-helpers.md) — bundling @react-pdf/renderer with esbuild needs `react` + `@swc/helpers` as explicit deps or the built server crashes at runtime with ERR_MODULE_NOT_FOUND.
