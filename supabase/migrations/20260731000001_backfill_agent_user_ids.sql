@@ -3,7 +3,7 @@
 -- Safe to run multiple times (idempotent).
 
 UPDATE agents a
-SET user_id = p.id::text
+SET user_id = p.id
 FROM profiles p
 JOIN user_roles ur ON ur.user_id = p.id
 WHERE p.email = a.email
