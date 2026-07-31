@@ -11,8 +11,20 @@ import {
   type AdminUpdatePackageInput,
 } from "@workspace/api-zod";
 import { validate } from "../../middlewares/validate";
+import { STAFF_ROLES } from "../../lib/roleConstants";
 
 const router = Router();
+
+// Agents have read-only access — block writes at the router level
+router.use((req, res, next) => {
+  if (req.method === "GET") return next();
+  const role = (req.user as any)?.role as string | undefined;
+  if (!role || !STAFF_ROLES.has(role)) {
+    res.status(403).json({ error: "Aksi ini membutuhkan akses staff." });
+    return;
+  }
+  next();
+});
 
 /**
  * GET /api/admin/packages

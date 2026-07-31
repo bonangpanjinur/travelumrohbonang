@@ -30,9 +30,21 @@ import { generateManifestPdf } from "../../lib/pdf/manifest";
 import { sendAdminError } from "../../lib/adminApiError";
 import { resolveUserScope } from "../../lib/scopeGuard";
 import { buildBookingScopeCondition } from "../../lib/scopeConditions";
+import { STAFF_ROLES } from "../../lib/roleConstants";
 
 // mergeParams: true so req.params.packageId from parent router is accessible here
 const router = Router({ mergeParams: true });
+
+// Agents have read-only access — block writes at the router level
+router.use((req, res, next) => {
+  if (req.method === "GET") return next();
+  const role = (req.user as any)?.role as string | undefined;
+  if (!role || !STAFF_ROLES.has(role)) {
+    res.status(403).json({ error: "Aksi ini membutuhkan akses staff." });
+    return;
+  }
+  next();
+});
 
 router.get("/", async (req, res) => {
   try {

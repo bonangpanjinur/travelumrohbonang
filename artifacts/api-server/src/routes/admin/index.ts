@@ -109,9 +109,11 @@ router.use("/seo", requireAdmin, adminSeoRouter);
 router.use("/masterdata", requireAdmin, adminMasterdataRouter);
 
 // ── Staff routes (super_admin, admin, branch_manager, staff) ────────────────
-router.use("/packages", requireStaff, adminPackagesRouter);
-router.use("/departures", requireStaff, adminDeparturesRouter);
-router.use("/packages/:packageId/departures", requireStaff, adminDeparturesRouter);
+// Agents need read access to packages & departures for the booking flow.
+// Write operations (POST/PATCH/DELETE) are guarded inside each router.
+router.use("/packages", requireOperational, adminPackagesRouter);
+router.use("/departures", requireOperational, adminDeparturesRouter);
+router.use("/packages/:packageId/departures", requireOperational, adminDeparturesRouter);
 router.use("/pilgrims", requireStaff, adminPilgrimsRouter);
 router.use("/chats", requireStaff, adminChatsRouter);
 // Agents need to read branches for the booking-list branch filter dropdown
