@@ -124,7 +124,12 @@ export function useGuestChat() {
           token,
         );
         const msgs = result.data ?? [];
-        setMessages(msgs);
+        // Merge: pertahankan pesan lokal (optimistic) yang belum ada di server
+        setMessages((prev) => {
+          const ids = new Set(msgs.map((m) => m.id));
+          const pending = prev.filter((m) => !ids.has(m.id) && m.id.startsWith("local-"));
+          return [...msgs, ...pending];
+        });
         // FIX: initialise unread count from actual DB state (admin messages not yet read)
         const unread = msgs.filter((m) => m.senderType === "admin" && !m.isRead).length;
         setUnreadCount(unread);
