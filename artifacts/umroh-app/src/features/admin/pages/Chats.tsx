@@ -45,8 +45,8 @@ const AdminChats = () => {
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : filtered.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">Belum ada percakapan</p>
             ) : filtered.map((c) => (
-              <button key={c.booking_id} onClick={() => setSelected(c)}
-                className={`w-full text-left p-2 rounded-lg border ${selected?.booking_id === c.booking_id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"}`}>
+              <button key={c.bookingId} onClick={() => setSelected(c)}
+                className={`w-full text-left p-2 rounded-lg border ${selected?.bookingId === c.bookingId ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"}`}>
                 <div className="font-mono text-xs">{c.bookingCode}</div>
                 <div className="text-xs text-muted-foreground truncate mt-0.5">{c.message}</div>
                 <div className="text-[10px] text-muted-foreground mt-0.5">{format(new Date(c.createdAt), "dd MMM HH:mm")}</div>
