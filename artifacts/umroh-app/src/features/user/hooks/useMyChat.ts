@@ -146,14 +146,28 @@ export function useMyChat() {
   const sendMessage = useCallback(
     async (message: string) => {
       if (!conversationId || !message.trim()) return;
-      await apiFetch(`/api/chat/conversations/${conversationId}/messages`, {
-        method: "POST",
-        body: JSON.stringify({ message }),
-      });
-      // Realtime subscription will append the message automatically
+      const result = await apiFetch<{ data?: MyChatMessage }>(
+        `/api/chat/conversations/${conversationId}/messages`,
+        { method: "POST", body: JSON.stringify({ message }) },
+      );
+      // Optimistic append — jangan bergantung pada realtime saja
+      const sent: MyChatMessage = result?.data ?? {
+        id: `local-${Date.now()}`,
+        conversationId,
+        senderType: "member",
+        senderId: null,
+        senderName: "Anda",
+        message: message.trim(),
+        isRead: true,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) =>
+        prev.some((m) => m.id === sent.id) ? prev : [...prev, sent],
+      );
     },
     [conversationId],
   );
+
 
   const markRead = useCallback(async () => {
     if (!conversationId) return;
