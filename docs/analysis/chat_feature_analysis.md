@@ -52,9 +52,15 @@ Kebijakan RLS untuk `conversation_messages` menggunakan subquery `EXISTS` ke tab
 
 | Komponen | Tindakan Rekomendasi |
 | :--- | :--- |
-| **RLS** | Perbarui fungsi `is_admin` untuk menyertakan peran `staff` dan `branch_manager`. |
-| **Triggers** | Buat trigger `fn_update_conversation_metadata()` untuk mengotomatisasi preview dan unread count. |
+| **RLS** | Perbarui fungsi `is_admin` untuk menyertakan peran `staff` dan `branch_manager`. (FIXED) |
+| **Triggers** | Buat trigger `fn_update_conversation_metadata()` untuk mengotomatisasi preview dan unread count. (FIXED) |
 | **Realtime** | Jika ingin tamu mendapatkan realtime, pertimbangkan penggunaan *Private Channels* atau integrasikan `guest_token` ke dalam *Custom Claims* JWT jika memungkinkan. |
 | **Schema** | Seragamkan tipe data ID menggunakan `UUID` untuk konsistensi dengan sistem autentikasi Supabase. |
+
+## Update 01 Agustus 2026
+Bug utama dan rekomendasi arsitektur telah diperbaiki:
+1.  **Fungsi `is_admin`** telah diperbarui untuk menyertakan peran `staff` dan `branch_manager`.
+2.  **RLS untuk Tamu** telah diperbaiki agar mendukung realtime dengan validasi `guest_token`.
+3.  **Database Triggers** telah diimplementasikan untuk mengotomatisasi pembaruan metadata percakapan, dan logika manual di API server telah dihapus.
 
 Analisis ini menunjukkan bahwa fitur chat sudah memiliki pondasi yang kuat namun memerlukan sinkronisasi lebih lanjut antara logika API Server dan kebijakan keamanan Database (RLS).

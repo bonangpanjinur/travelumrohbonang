@@ -241,30 +241,10 @@ router.post("/conversations/:id/messages", writeLimiter, chatAuth, async (req, r
       })
       .returning();
 
-    // Update preview + increment unread for the other side
-    if (senderType === "admin") {
-      await db
-        .update(conversations)
-        .set({
-          lastMessageAt: new Date(),
-          lastMessagePreview: message.trim().slice(0, 100),
-          unreadAdmin: 0,
-          unreadUser: sql`unread_user + 1`,
-        } as any)
-        .where(eq(conversations.id, id));
-    } else {
-      await db
-        .update(conversations)
-        .set({
-          lastMessageAt: new Date(),
-          lastMessagePreview: message.trim().slice(0, 100),
-          unreadUser: 0,
-          unreadAdmin: sql`unread_admin + 1`,
-        } as any)
-        .where(eq(conversations.id, id));
-
-      // ── Notify all admin users ─────────────────────────────────────────────
-      // Fire-and-forget: do not let notification errors block the response.
+    // ── Notify all admin users ─────────────────────────────────────────────
+    // Fire-and-forget: do not let notification errors block the response.
+    // Note: Metadata updates (preview, unread count) are now handled by DB triggers.
+    if (senderType !== "admin") {
       notifyAdmins({
         conversationId: id,
         senderName,
