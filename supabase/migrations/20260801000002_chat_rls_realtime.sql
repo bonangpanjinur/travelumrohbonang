@@ -1,17 +1,8 @@
 -- ============================================================
 -- Live Chat fix: RLS, GRANT, dan Realtime untuk tabel percakapan
 --
--- Jalankan pada database Supabase produksi:
---   node scripts/apply-sql.mjs docs/sql/20260801_chat_rls_realtime.sql
--- (butuh env SUPABASE_DATABASE_URL)
---
--- Masalah: migrasi 20260727000007 membuat tabel conversations &
--- conversation_messages tanpa RLS, tanpa GRANT, dan tanpa
--- keanggotaan publication supabase_realtime. Akibatnya semua
--- subscription realtime di frontend (useGuestChat, useMyChat,
--- useAdminInbox) tidak pernah menerima event.
---
--- Idempoten: aman dijalankan berulang.
+-- Perbaikan: user_id sekarang bertipe UUID, sehingga perbandingan
+-- dengan auth.uid() tidak memerlukan casting ::text lagi.
 -- ============================================================
 
 -- ── Grants ────────────────────────────────────────────────────
@@ -19,8 +10,6 @@ GRANT SELECT ON public.conversations TO authenticated;
 GRANT SELECT ON public.conversation_messages TO authenticated;
 GRANT ALL ON public.conversations TO service_role;
 GRANT ALL ON public.conversation_messages TO service_role;
--- Penulisan selalu lewat API server (service role); anon/authenticated
--- tidak diberi INSERT/UPDATE/DELETE.
 
 -- ── RLS ───────────────────────────────────────────────────────
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
@@ -32,7 +21,7 @@ CREATE POLICY "conversations_select_own_or_admin"
   FOR SELECT
   TO authenticated
   USING (
-    user_id = auth.uid()::text
+    user_id = auth.uid()
     OR public.is_admin(auth.uid())
   );
 
@@ -46,7 +35,7 @@ CREATE POLICY "conv_messages_select_own_or_admin"
     OR EXISTS (
       SELECT 1 FROM public.conversations c
       WHERE c.id = conversation_messages.conversation_id
-        AND c.user_id = auth.uid()::text
+        AND c.user_id = auth.uid()
     )
   );
 
