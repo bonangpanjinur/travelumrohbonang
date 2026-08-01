@@ -88,7 +88,7 @@ export default function ChatBox({ bookingId, asAdmin = false }: Props) {
           return (
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${mine ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                <div className="text-[10px] opacity-70 mb-0.5">{m.senderRole} · {format(new Date(m.createdAt), "HH:mm")}</div>
+                <div className="text-[10px] opacity-70 mb-0.5">{m.senderRole ?? m.sender_role} · {format(new Date(m.createdAt ?? m.created_at), "HH:mm")}</div>
                 <div className="whitespace-pre-wrap">{m.message}</div>
               </div>
             </div>
