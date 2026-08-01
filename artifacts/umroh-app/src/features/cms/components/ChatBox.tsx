@@ -25,24 +25,33 @@ export default function ChatBox({ bookingId, asAdmin = false }: Props) {
   useEffect(() => {
     if (!bookingId) return;
     let active = true;
-    (async () => {
+
+    const load = async (showError: boolean) => {
       try {
         const { data } = await apiFetch<{ data: any[] }>(`/api/cms/chat-messages?booking_id=${bookingId}`);
         if (active) setMessages(data || []);
       } catch (error: any) {
         console.error(error);
-        if (active) {
+        if (active && showError) {
           toast({ title: "Gagal memuat pesan", description: error?.message, variant: "destructive" });
         }
       }
-    })();
+    };
 
-    // Real-time was removed from Supabase, so we'll just poll or rely on manual refresh for now if needed.
-    // However, the instructions didn't specify a replacement for real-time.
-    // I'll remove the supabase.channel part.
-    
-    return () => { active = false; };
+    load(true);
+
+    // Realtime tidak tersedia untuk tabel ini — polling ringan sebagai gantinya.
+    const interval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      load(false);
+    }, 5_000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, [bookingId]);
+
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
@@ -75,11 +84,11 @@ export default function ChatBox({ bookingId, asAdmin = false }: Props) {
         {messages.length === 0 ? (
           <div className="text-center text-sm text-muted-foreground py-10">Belum ada pesan. Mulai percakapan.</div>
         ) : messages.map((m) => {
-          const mine = m.sender_id === user?.id;
+          const mine = (m.senderId ?? m.sender_id) === user?.id;
           return (
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${mine ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                <div className="text-[10px] opacity-70 mb-0.5">{m.senderRole} · {format(new Date(m.createdAt), "HH:mm")}</div>
+                <div className="text-[10px] opacity-70 mb-0.5">{m.senderRole ?? m.sender_role} · {format(new Date(m.createdAt ?? m.created_at), "HH:mm")}</div>
                 <div className="whitespace-pre-wrap">{m.message}</div>
               </div>
             </div>

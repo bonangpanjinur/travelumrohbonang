@@ -7,19 +7,14 @@ import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 
 export default defineConfig(async ({ command }) => {
   // `vite build` (e.g. on Vercel) never reads `server.port`/`preview.port` —
-  // only `vite`/`vite preview` (command === "serve") do. Requiring PORT at
-  // build time broke external build pipelines (Vercel) that don't set it, so
-  // only enforce it when actually starting a dev/preview server.
+  // only `vite`/`vite preview` (command === "serve") do. PORT is optional:
+  // some environments pass `--port` on the CLI instead, so fall back to 8080
+  // for dev/preview and 5173 otherwise instead of throwing.
   const isServe = command === 'serve';
   const rawPort = process.env.PORT;
 
-  if (isServe && !rawPort) {
-    throw new Error(
-      'PORT environment variable is required but was not provided.',
-    );
-  }
+  const port = Number(rawPort ?? (isServe ? 8080 : 5173));
 
-  const port = Number(rawPort ?? 5173);
 
   if (Number.isNaN(port) || port <= 0) {
     throw new Error(`Invalid PORT value: "${rawPort}"`);

@@ -124,7 +124,12 @@ export function useGuestChat() {
           token,
         );
         const msgs = result.data ?? [];
-        setMessages(msgs);
+        // Merge: pertahankan pesan lokal (optimistic) yang belum ada di server
+        setMessages((prev) => {
+          const ids = new Set(msgs.map((m) => m.id));
+          const pending = prev.filter((m) => !ids.has(m.id) && m.id.startsWith("local-"));
+          return [...msgs, ...pending];
+        });
         // FIX: initialise unread count from actual DB state (admin messages not yet read)
         const unread = msgs.filter((m) => m.senderType === "admin" && !m.isRead).length;
         setUnreadCount(unread);
@@ -139,6 +144,19 @@ export function useGuestChat() {
     if (!conversationId || !guestToken) return;
     fetchMessages(conversationId, guestToken);
   }, [conversationId, guestToken, fetchMessages]);
+
+  // ── Polling fallback — 5 s ────────────────────────────────────────────────
+  // Realtime bisa tidak tersedia (tabel belum masuk publication, koneksi WS
+  // diblokir jaringan). Polling ringan memastikan balasan admin tetap masuk.
+  useEffect(() => {
+    if (!conversationId || !guestToken) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      fetchMessages(conversationId, guestToken);
+    }, 5_000);
+    return () => clearInterval(interval);
+  }, [conversationId, guestToken, fetchMessages]);
+
 
   // ── Supabase realtime — new messages ──────────────────────────────────────
   useEffect(() => {
@@ -221,15 +239,29 @@ export function useGuestChat() {
   const sendMessage = useCallback(
     async (message: string) => {
       if (!conversationId || !guestToken || !message.trim()) return;
-      await guestFetch(
+      const result = await guestFetch<{ data?: GuestMessage }>(
         `/api/chat/conversations/${conversationId}/messages`,
         { method: "POST", body: JSON.stringify({ message }) },
         guestToken,
       );
-      // Realtime subscription will append the message
+      // Optimistic append — jangan bergantung pada realtime saja
+      const sent: GuestMessage = result?.data ?? {
+        id: `local-${Date.now()}`,
+        conversationId,
+        senderType: "guest",
+        senderId: null,
+        senderName: "Anda",
+        message: message.trim(),
+        isRead: true,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) =>
+        prev.some((m) => m.id === sent.id) ? prev : [...prev, sent],
+      );
     },
     [conversationId, guestToken],
   );
+
 
   // ── Mark as read ──────────────────────────────────────────────────────────
   const markRead = useCallback(async () => {
