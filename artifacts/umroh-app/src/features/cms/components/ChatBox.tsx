@@ -84,7 +84,7 @@ export default function ChatBox({ bookingId, asAdmin = false }: Props) {
         {messages.length === 0 ? (
           <div className="text-center text-sm text-muted-foreground py-10">Belum ada pesan. Mulai percakapan.</div>
         ) : messages.map((m) => {
-          const mine = m.sender_id === user?.id;
+          const mine = (m.senderId ?? m.sender_id) === user?.id;
           return (
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${mine ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
