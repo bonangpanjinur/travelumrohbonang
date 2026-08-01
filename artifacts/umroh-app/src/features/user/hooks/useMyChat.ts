@@ -72,7 +72,13 @@ export function useMyChat() {
       const result = await apiFetch<{ data: MyChatMessage[] }>(
         `/api/chat/conversations/${id}/messages`,
       );
-      setMessages(result.data ?? []);
+      const msgs = result.data ?? [];
+      // Merge: pertahankan pesan lokal (optimistic) yang belum ada di server
+      setMessages((prev) => {
+        const ids = new Set(msgs.map((m) => m.id));
+        const pending = prev.filter((m) => !ids.has(m.id) && m.id.startsWith("local-"));
+        return [...msgs, ...pending];
+      });
     } catch (err) {
       console.error("[useMyChat] fetchMessages:", err);
     } finally {
@@ -84,6 +90,17 @@ export function useMyChat() {
     if (!conversationId) return;
     fetchMessages(conversationId);
   }, [conversationId, fetchMessages]);
+
+  // ── Polling fallback — 5 s (realtime bisa tidak tersedia) ──────────────────
+  useEffect(() => {
+    if (!conversationId) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      fetchMessages(conversationId);
+    }, 5_000);
+    return () => clearInterval(interval);
+  }, [conversationId, fetchMessages]);
+
 
   // ── Supabase realtime — new messages in this conversation ──────────────────
   useEffect(() => {
