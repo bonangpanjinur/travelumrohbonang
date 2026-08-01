@@ -101,7 +101,7 @@ router.get("/", requireAuth, async (req, res) => {
           c.created_at,
           p.name AS member_name
         FROM conversations c
-        LEFT JOIN profiles p ON p.id::text = c.user_id
+        LEFT JOIN profiles p ON p.id::text = c.user_id::text
         ${whereClause}
         ORDER BY
           c.unread_admin DESC,
