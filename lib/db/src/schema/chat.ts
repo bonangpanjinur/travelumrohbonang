@@ -16,6 +16,7 @@ import {
   boolean,
   timestamp,
   index,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { bookings } from "./bookings";
 
@@ -28,7 +29,7 @@ export const conversations = pgTable(
     type: text("type").notNull(),                        // 'guest' | 'member' | 'booking'
 
     // User identity
-    userId: text("user_id"),                             // NULL for guests; Supabase auth.users id
+    userId: uuid("user_id"),                             // NULL for guests; Supabase auth.users id
     guestName: text("guest_name"),
     guestPhone: text("guest_phone"),
     guestEmail: text("guest_email"),
@@ -41,7 +42,7 @@ export const conversations = pgTable(
 
     // Status
     status: text("status").notNull().default("open"),    // 'open' | 'closed'
-    assignedAdminId: text("assigned_admin_id"),
+    assignedAdminId: uuid("assigned_admin_id"),
 
     // Preview & sorting
     lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
@@ -73,7 +74,7 @@ export const conversationMessages = pgTable(
 
     // Sender
     senderType: text("sender_type").notNull(),           // 'admin' | 'member' | 'guest'
-    senderId: text("sender_id"),                         // Supabase user_id (null for guests)
+    senderId: uuid("sender_id"),                         // Supabase user_id (null for guests)
     senderName: text("sender_name").notNull(),           // display name
 
     // Content

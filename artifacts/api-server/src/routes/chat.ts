@@ -34,9 +34,22 @@ async function notifyAdmins({
   preview: string;
 }): Promise<void> {
   try {
-    // Query user_roles table directly — profiles table has no role column
+    // Query user_roles and join with profiles to filter by branch if needed
+    // For now, we increase the limit and prioritize super_admins/admins
     const adminRows = await db.execute(
-      sql`SELECT user_id FROM user_roles WHERE role = ANY(ARRAY['super_admin','admin','branch_manager','staff']) LIMIT 50`,
+      sql`
+        SELECT ur.user_id 
+        FROM user_roles ur
+        LEFT JOIN profiles p ON ur.user_id = p.id
+        WHERE ur.role = ANY(ARRAY['super_admin','admin','branch_manager','staff'])
+        ORDER BY 
+          CASE 
+            WHEN ur.role = 'super_admin' THEN 1 
+            WHEN ur.role = 'admin' THEN 2 
+            ELSE 3 
+          END ASC
+        LIMIT 100
+      `,
     );
     const adminIds = (adminRows.rows as { user_id: string }[]).map((r) => r.user_id);
     if (adminIds.length === 0) return;
