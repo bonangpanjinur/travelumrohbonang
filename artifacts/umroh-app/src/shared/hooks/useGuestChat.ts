@@ -239,15 +239,29 @@ export function useGuestChat() {
   const sendMessage = useCallback(
     async (message: string) => {
       if (!conversationId || !guestToken || !message.trim()) return;
-      await guestFetch(
+      const result = await guestFetch<{ data?: GuestMessage }>(
         `/api/chat/conversations/${conversationId}/messages`,
         { method: "POST", body: JSON.stringify({ message }) },
         guestToken,
       );
-      // Realtime subscription will append the message
+      // Optimistic append — jangan bergantung pada realtime saja
+      const sent: GuestMessage = result?.data ?? {
+        id: `local-${Date.now()}`,
+        conversationId,
+        senderType: "guest",
+        senderId: null,
+        senderName: "Anda",
+        message: message.trim(),
+        isRead: true,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) =>
+        prev.some((m) => m.id === sent.id) ? prev : [...prev, sent],
+      );
     },
     [conversationId, guestToken],
   );
+
 
   // ── Mark as read ──────────────────────────────────────────────────────────
   const markRead = useCallback(async () => {
