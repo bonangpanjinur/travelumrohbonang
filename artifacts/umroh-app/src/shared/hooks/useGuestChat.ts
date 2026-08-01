@@ -140,6 +140,19 @@ export function useGuestChat() {
     fetchMessages(conversationId, guestToken);
   }, [conversationId, guestToken, fetchMessages]);
 
+  // ── Polling fallback — 5 s ────────────────────────────────────────────────
+  // Realtime bisa tidak tersedia (tabel belum masuk publication, koneksi WS
+  // diblokir jaringan). Polling ringan memastikan balasan admin tetap masuk.
+  useEffect(() => {
+    if (!conversationId || !guestToken) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      fetchMessages(conversationId, guestToken);
+    }, 5_000);
+    return () => clearInterval(interval);
+  }, [conversationId, guestToken, fetchMessages]);
+
+
   // ── Supabase realtime — new messages ──────────────────────────────────────
   useEffect(() => {
     if (!conversationId) return;
