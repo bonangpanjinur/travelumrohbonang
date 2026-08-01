@@ -25,24 +25,33 @@ export default function ChatBox({ bookingId, asAdmin = false }: Props) {
   useEffect(() => {
     if (!bookingId) return;
     let active = true;
-    (async () => {
+
+    const load = async (showError: boolean) => {
       try {
         const { data } = await apiFetch<{ data: any[] }>(`/api/cms/chat-messages?booking_id=${bookingId}`);
         if (active) setMessages(data || []);
       } catch (error: any) {
         console.error(error);
-        if (active) {
+        if (active && showError) {
           toast({ title: "Gagal memuat pesan", description: error?.message, variant: "destructive" });
         }
       }
-    })();
+    };
 
-    // Real-time was removed from Supabase, so we'll just poll or rely on manual refresh for now if needed.
-    // However, the instructions didn't specify a replacement for real-time.
-    // I'll remove the supabase.channel part.
-    
-    return () => { active = false; };
+    load(true);
+
+    // Realtime tidak tersedia untuk tabel ini — polling ringan sebagai gantinya.
+    const interval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      load(false);
+    }, 5_000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, [bookingId]);
+
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
