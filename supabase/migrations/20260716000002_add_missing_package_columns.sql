@@ -29,11 +29,11 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
-DO $ BEGIN
+DO $$ BEGIN
   ALTER TABLE packages ADD CONSTRAINT packages_airport_id_airports_id_fk
     FOREIGN KEY (airport_id) REFERENCES airports(id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
-END $;
+END $$;
 
 -- ─── bookings: group booking columns (added by group_booking migration) ──────
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS is_group_booking boolean NOT NULL DEFAULT false;
