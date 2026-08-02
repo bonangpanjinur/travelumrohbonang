@@ -24,7 +24,7 @@ interface ContactSettings {
 
 const defaultBranding: BrandingSettings = {
   logo_url: "",
-  company_name: "Vins Tour Travel",
+  company_name: "Umroh Plus",
   tagline: "Perjalanan Terbaik Menuju Baitullah",
   favicon_url: "",
   display_mode: "both",

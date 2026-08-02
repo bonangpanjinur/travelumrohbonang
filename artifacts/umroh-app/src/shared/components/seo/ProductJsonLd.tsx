@@ -21,7 +21,7 @@ const ProductJsonLd = ({
   description,
   image,
   sku,
-  brand = "Vins Tour Travel",
+  brand = "Umroh Plus",
   price,
   currency = "IDR",
   availability = "InStock",

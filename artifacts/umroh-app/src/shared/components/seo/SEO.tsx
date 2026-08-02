@@ -33,7 +33,7 @@ interface SeoSettings {
 }
 
 const defaultBranding: BrandingSettings = {
-  company_name: "Vins Tour Travel",
+  company_name: "Umroh Plus",
   tagline: "Perjalanan Terbaik Menuju Baitullah",
 };
 
@@ -113,7 +113,7 @@ const SEO = ({
   const effectiveNoIndex = override?.noindex ?? noIndex;
   const suffix = defaultSuffix || siteName;
   // siteTitle from SEO settings is the admin-configured full default title
-  // (e.g. "Vins Tour Travel - Perjalanan Terbaik Menuju Baitullah")
+  // (e.g. "Umroh Plus - Perjalanan Terbaik Menuju Baitullah")
   const fullTitle = effectiveTitle
     ? `${effectiveTitle}${suffix ? ` | ${suffix}` : ""}`
     : (siteTitle || `${siteName} - ${branding.tagline}`);

@@ -35,7 +35,7 @@ const PromoPdfButton = ({ packageData }: Props) => {
         hotelMadinah: packageData.hotel_madinah,
         airline: packageData.airline,
         pageUrl,
-        brandName: "Vins Tour Travel",
+        brandName: "Umroh Plus",
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
