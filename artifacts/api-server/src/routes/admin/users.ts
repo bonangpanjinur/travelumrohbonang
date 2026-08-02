@@ -98,7 +98,7 @@ router.get("/", async (req, res) => {
           .limit(8)
       : await db.select().from(profiles).limit(200);
     res.json({ data, total: data.length });
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to fetch users" });
   }
 });
@@ -119,7 +119,7 @@ router.get("/:id", async (req, res) => {
     }
 
     res.json(ProfileSchema.parse(profile));
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to fetch user" });
   }
 });
@@ -166,7 +166,7 @@ router.patch("/:id", validate(AdminUpdateUserRequest), async (req, res) => {
     }
 
     res.json(ProfileSchema.parse(updated));
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to update user" });
   }
 });

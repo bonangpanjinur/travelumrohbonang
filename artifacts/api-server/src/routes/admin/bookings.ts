@@ -272,7 +272,7 @@ router.get("/recent", async (req, res) => {
       .orderBy(desc(bookings.createdAt))
       .limit(20);
     res.json(data);
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to fetch recent bookings" });
   }
 });

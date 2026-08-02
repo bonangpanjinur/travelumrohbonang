@@ -277,7 +277,8 @@ router.get("/recent-pending", async (req, res) => {
       .orderBy(desc(payments.createdAt))
       .limit(20);
     res.json(data);
-  } catch {
+  } catch (e) {
+    console.error("[GET /recent-pending]", e);
     res.status(500).json({ error: "Failed to fetch recent pending payments" });
   }
 });
@@ -708,7 +709,8 @@ router.get("/:paymentId", async (req, res) => {
     }
 
     res.json(BookingPaymentSchema.parse(payment));
-  } catch {
+  } catch (e) {
+    console.error("[GET /:bookingId/payments/:paymentId]", e);
     res.status(500).json({ error: "Failed to fetch payment" });
   }
 });
@@ -756,7 +758,7 @@ router.patch(
         payment: BookingPaymentSchema.parse(updated),
         summary: { totalPrice, totalPaid, remaining, paymentStatus },
       });
-    } catch {
+    } catch (e) { console.error("[route error]", e);
       res.status(500).json({ error: "Failed to update payment" });
     }
   },
@@ -791,7 +793,7 @@ router.delete("/:paymentId", async (req, res) => {
       message: "Payment voided successfully",
       summary: { totalPrice, totalPaid, remaining, paymentStatus },
     });
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to void payment" });
   }
 });

@@ -94,7 +94,7 @@ router.get("/", async (_req, res) => {
       .leftJoin(bookings, eq(contracts.bookingId, bookings.id))
       .orderBy(desc(contracts.createdAt));
     res.json(data);
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to fetch contracts" });
   }
 });
@@ -109,7 +109,7 @@ router.get("/:id", async (req, res) => {
       .limit(1);
     if (!contract) return res.status(404).json({ error: "Contract not found" });
     res.json(contract);
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to fetch contract" });
   }
 });
@@ -131,7 +131,7 @@ router.patch("/:id", async (req, res) => {
       .returning();
     if (!updated) return res.status(404).json({ error: "Contract not found" });
     res.json(updated);
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to update contract" });
   }
 });
@@ -145,7 +145,7 @@ router.delete("/:id", requireAdmin, async (req, res) => {
       .returning();
     if (!deleted) return res.status(404).json({ error: "Contract not found" });
     res.json({ success: true });
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to delete contract" });
   }
 });

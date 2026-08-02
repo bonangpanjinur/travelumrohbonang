@@ -97,7 +97,7 @@ router.get("/", async (req, res) => {
         pilgrims: pilgrimChecklists,
       }),
     );
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to fetch document checklist" });
   }
 });
@@ -135,7 +135,7 @@ router.get("/pilgrims/:pilgrimId", async (req, res) => {
         documents: docs.map((d) => PilgrimDocumentSchema.parse(d)),
       }),
     );
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to fetch pilgrim documents" });
   }
 });
@@ -230,7 +230,7 @@ router.put(
         void emailNotifications.documentsComplete(bookingId);
         void waNotifications.documentsComplete(bookingId);
       }
-    } catch {
+    } catch (e) { console.error("[route error]", e);
       res.status(500).json({ error: "Failed to upsert document" });
     }
   },
@@ -268,7 +268,7 @@ router.delete("/pilgrims/:pilgrimId/:documentType", async (req, res) => {
     const completionPct = computePilgrimCompletion(remaining);
 
     res.json({ message: "Document record reset successfully", pilgrimCompletionPct: completionPct });
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to delete document" });
   }
 });

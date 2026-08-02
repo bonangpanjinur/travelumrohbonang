@@ -39,7 +39,7 @@ async function isInClosedPeriod(date: Date): Promise<boolean> {
       .where(and(eq(accountingPeriods.year, year), eq(accountingPeriods.month, month)))
       .limit(1);
     return period?.status === "closed";
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     return false; // Jika tabel belum ada, anggap semua periode open
   }
 }

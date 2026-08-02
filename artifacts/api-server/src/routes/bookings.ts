@@ -98,7 +98,7 @@ router.get("/", async (req, res) => {
       .orderBy(desc(bookings.createdAt));
 
     res.json(BookingListResponse.parse({ data, total: data.length }));
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to fetch bookings" });
   }
 });
@@ -129,7 +129,7 @@ router.get("/refunds", async (req, res) => {
       .orderBy(desc(refundRequests.createdAt));
 
     res.json(data);
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to fetch refunds" });
   }
 });
@@ -214,7 +214,7 @@ router.post("/refunds", async (req, res) => {
       .returning();
 
     res.status(201).json(created);
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to create refund request" });
   }
 });
@@ -298,7 +298,7 @@ router.get("/:id", async (req, res) => {
       rooms,
       pilgrims,
     });
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to fetch booking" });
   }
 });
@@ -571,7 +571,7 @@ router.post(
       res
         .status(201)
         .json({ data: created.map((r) => BookingRoomSchema.parse(r)) });
-    } catch {
+    } catch (e) { console.error("[route error]", e);
       res.status(500).json({ error: "Failed to create booking rooms" });
     }
   },
@@ -656,7 +656,7 @@ router.get("/:id/payments", async (req, res) => {
       .orderBy(desc(payments.createdAt));
 
     res.json(data);
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to fetch payments" });
   }
 });
@@ -738,7 +738,7 @@ router.post("/:id/payments", async (req, res) => {
     });
 
     res.status(201).json(created);
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to create payment" });
   }
 });
@@ -758,7 +758,7 @@ router.post("/payments/proof-access-log", async (req, res) => {
     });
 
     res.status(204).end();
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to log access" });
   }
 });

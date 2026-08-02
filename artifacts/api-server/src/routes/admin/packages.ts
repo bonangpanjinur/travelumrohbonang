@@ -108,7 +108,7 @@ router.get("/:id/document-requirements", async (req, res) => {
       ? JSON.parse(pkg.requiredDocTypes)
       : ["paspor", "ktp", "foto"];
     return res.json({ packageId: id, requiredDocTypes: types });
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     return res.status(500).json({ error: "Failed to fetch document requirements" });
   }
 });
@@ -126,7 +126,7 @@ router.patch("/:id/document-requirements", async (req, res) => {
       .set({ requiredDocTypes: JSON.stringify(requiredDocTypes) })
       .where(eq(packages.id, id));
     return res.json({ packageId: id, requiredDocTypes });
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     return res.status(500).json({ error: "Failed to update document requirements" });
   }
 });
@@ -275,7 +275,7 @@ router.patch("/:id", validate(AdminUpdatePackageRequest), async (req, res) => {
     }
 
     res.json(PackageSchema.parse(updated));
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to update package" });
   }
 });
@@ -295,7 +295,7 @@ router.delete("/:id", async (req, res) => {
     }
 
     res.json({ message: "Package deleted successfully" });
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to delete package" });
   }
 });
@@ -323,7 +323,7 @@ router.get("/:id/extra-hotels", async (req, res) => {
       .where(eq(departureHotels.departureId, firstDep.id))
       .orderBy(asc(departureHotels.sortOrder));
     res.json({ data });
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to fetch extra hotels" });
   }
 });
@@ -348,7 +348,7 @@ router.get("/:id/commissions", async (req, res) => {
       .where(eq(packageCommissions.packageId, req.params.id))
       .orderBy(asc(packageCommissions.createdAt));
     res.json({ data });
-  } catch {
+  } catch (e) { console.error("[route error]", e);
     res.status(500).json({ error: "Failed to fetch commissions" });
   }
 });
