@@ -25,12 +25,19 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
   }
 }
 
+// Use a project-specific storage key so switching Supabase projects
+// automatically invalidates stale sessions from the previous project.
+// Supabase's default key format is `sb-{ref}-auth-token` — we replicate
+// that pattern using the project ID injected by vite.config.ts.
+const projectRef = (import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined)
+  || (SUPABASE_URL ? new URL(SUPABASE_URL).hostname.split('.')[0] : 'local');
+
 export const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storageKey: 'sb-auth-session',
+    storageKey: `sb-${projectRef}-auth-token`,
     flowType: 'pkce',
   },
 });
