@@ -46,7 +46,10 @@ function buildDefaultMatrix(): Record<string, Record<AdminRole, boolean>> {
     for (const item of group.items) {
       matrix[item.labelKey] = {} as Record<AdminRole, boolean>;
       for (const r of ADMIN_ROLES) {
-        matrix[item.labelKey][r.value] = staticDefault(item.roles, r.value);
+        // Super Admin is locked to full access in the UI — keep the data in sync
+        // so the counters and the saved rows never disagree with the checkboxes.
+        matrix[item.labelKey][r.value] =
+          r.value === "super_admin" ? true : staticDefault(item.roles, r.value);
       }
     }
   }
@@ -69,13 +72,15 @@ const MenuPermissions = () => {
   const [resetting, setResetting] = useState(false);
 
   // Build matrix from DB + static defaults
-  const defaultMatrix = useMemo(() => buildDefaultMatrix(), []);
-
   useEffect(() => {
     const m = buildDefaultMatrix();
-    // Override with DB values
+    // Override with DB values (super_admin stays locked to full access)
     for (const row of dbData?.data ?? []) {
-      if (m[row.menuKey] && ADMIN_ROLES.some((r) => r.value === row.role)) {
+      if (
+        row.role !== "super_admin" &&
+        m[row.menuKey] &&
+        ADMIN_ROLES.some((r) => r.value === row.role)
+      ) {
         (m[row.menuKey] as Record<string, boolean>)[row.role] = row.enabled;
       }
     }
@@ -93,13 +98,26 @@ const MenuPermissions = () => {
     setDirty(true);
   };
 
+  /** Toggle every menu in a group on/off for one role at once. */
+  const toggleGroup = (menuKeys: string[], role: AdminRole, next: boolean) => {
+    if (!isSuper || role === "super_admin") return;
+    setMatrix((prev) => {
+      const updated = { ...prev };
+      for (const key of menuKeys) {
+        updated[key] = { ...updated[key], [role]: next };
+      }
+      return updated;
+    });
+    setDirty(true);
+  };
+
   const save = async () => {
     setSaving(true);
     try {
       const permissions: Array<{ role: string; menuKey: string; enabled: boolean }> = [];
       for (const [menuKey, roleMap] of Object.entries(matrix)) {
         for (const [role, enabled] of Object.entries(roleMap)) {
-          permissions.push({ role, menuKey, enabled });
+          permissions.push({ role, menuKey, enabled: role === "super_admin" ? true : enabled });
         }
       }
       await apiFetch("/api/admin/menu-permissions", {
@@ -252,16 +270,37 @@ const MenuPermissions = () => {
                 </tr>
               </thead>
               <tbody>
-                {menuGroups.map((group) => (
+                {menuGroups.map((group) => {
+                  const groupKeys = group.items.map((i) => i.labelKey);
+                  return (
                   <React.Fragment key={group.labelKey}>
-                    {/* Group header row */}
+                    {/* Group header row — with per-role "toggle all" boxes */}
                     <tr className="bg-muted/20 border-b border-t">
-                      <td
-                        colSpan={ADMIN_ROLES.length + 1}
-                        className="px-4 py-1.5 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
-                      >
+                      <td className="px-4 py-1.5 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                         {group.label}
                       </td>
+                      {ADMIN_ROLES.map((r) => {
+                        const isLocked = r.value === "super_admin";
+                        const allOn =
+                          !isLocked &&
+                          groupKeys.length > 0 &&
+                          groupKeys.every((k) => matrix[k]?.[r.value]);
+                        return (
+                          <td key={r.value} className="px-3 py-1.5 text-center">
+                            <Checkbox
+                              checked={isLocked ? true : allOn}
+                              disabled={isLocked || !isSuper}
+                              aria-label={`Aktifkan semua menu ${group.label} untuk ${r.label}`}
+                              onCheckedChange={() => toggleGroup(groupKeys, r.value as AdminRole, !allOn)}
+                              className={cn(
+                                "h-3.5 w-3.5",
+                                isLocked && "opacity-50 cursor-not-allowed",
+                                !isLocked && isSuper && "cursor-pointer",
+                              )}
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
                     {/* Menu item rows */}
                     {group.items.map((item) => {
@@ -299,7 +338,8 @@ const MenuPermissions = () => {
                       );
                     })}
                   </React.Fragment>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

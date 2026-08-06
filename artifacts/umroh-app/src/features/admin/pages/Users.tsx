@@ -24,6 +24,18 @@ interface UserWithRole {
 
 interface BranchOption { id: string; name: string; }
 
+/** Highest privilege first — used to resolve users that hold multiple roles. */
+const ROLE_PRIORITY = [
+  "super_admin",
+  "owner",
+  "admin",
+  "branch_manager",
+  "finance",
+  "staff",
+  "agent",
+  "buyer",
+];
+
 const AdminUsers = () => {
   const { role } = useAuth();
   const isSuperAdmin = role === "super_admin";
@@ -74,8 +86,15 @@ const AdminUsers = () => {
 
       if (rolesError) throw rolesError;
 
+      // A user can have multiple rows in user_roles (unique is on user_id+role).
+      // Always surface the highest-privilege role instead of whichever row came last.
       const roleMap = new Map<string, string>();
-      roles?.forEach((r) => roleMap.set(r.user_id, r.role));
+      roles?.forEach((r) => {
+        const current = roleMap.get(r.user_id);
+        if (!current || ROLE_PRIORITY.indexOf(r.role) < ROLE_PRIORITY.indexOf(current)) {
+          roleMap.set(r.user_id, r.role);
+        }
+      });
 
       const combined: UserWithRole[] = (profiles || []).map((p: any) => ({
         ...p,
@@ -106,17 +125,25 @@ const AdminUsers = () => {
   const handleRoleChange = async (userId: string, newRole: string) => {
     setUpdatingId(userId);
     try {
-      // Atomic upsert on user_id avoids a race between the existence check
-      // and the subsequent insert/update.
-      // id is required (TEXT PRIMARY KEY, no DB default) — crypto.randomUUID()
-      // is ignored on UPDATE (conflict on user_id) but needed for INSERT path.
-      const { error } = await supabase
+      // The unique constraint is on (user_id, role) — NOT user_id alone — so an
+      // upsert with onConflict "user_id" errors out ("no unique or exclusion
+      // constraint matching the ON CONFLICT specification"). Replace the user's
+      // roles instead: insert the new one first, then drop the stale ones so the
+      // user is never left without a role.
+      const { error: insertError } = await supabase
         .from("user_roles")
         .upsert(
           { id: crypto.randomUUID(), user_id: userId, role: newRole },
-          { onConflict: "user_id" },
+          { onConflict: "user_id,role", ignoreDuplicates: true },
         );
-      if (error) throw error;
+      if (insertError) throw insertError;
+
+      const { error: cleanupError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .neq("role", newRole);
+      if (cleanupError) throw cleanupError;
 
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
