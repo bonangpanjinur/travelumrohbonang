@@ -197,7 +197,7 @@ export default defineConfig(async ({ command, mode }) => {
       fs: {
         strict: true,
       },
-      proxy: buildProxy({ vitePort: port, supabaseUrl, apiTargetOverride: process.env.API_PROXY_TARGET, apiPort: Number(process.env.API_PORT ?? 3001) }),
+      proxy,
     },
 
     preview: {
