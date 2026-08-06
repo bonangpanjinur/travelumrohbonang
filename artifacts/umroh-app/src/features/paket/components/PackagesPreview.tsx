@@ -4,7 +4,41 @@ import { Button } from "@/shared/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "@/shared/lib/apiClient";
+import { supabase } from "@/shared/integrations/supabase/client";
 import PackageCard, { type PackageCardData } from "./PackageCard";
+
+/**
+ * Fallback ketika /api/packages tidak tersedia (api-server mati):
+ * ambil langsung dari database lewat REST agar homepage tetap berisi.
+ */
+async function fetchPackagesFromDb(): Promise<PackageCardData[]> {
+  const { data, error } = await supabase
+    .from("packages")
+    .select(
+      `id, title, slug, image_url, duration_days, package_type,
+       package_departures ( id, departure_date, return_date, quota, remaining_quota, status,
+         departure_prices ( price, room_type ) )`,
+    )
+    .eq("is_active", true)
+    .limit(6);
+
+  if (error || !data) return [];
+
+  return (data as any[]).map((p) => {
+    const departures = (p.package_departures ?? []).map((d: any) => ({
+      ...d,
+      prices: d.departure_prices ?? [],
+    }));
+    const prices = departures.flatMap((d: any) =>
+      (d.prices ?? []).map((pr: any) => Number(pr.price)),
+    );
+    return {
+      ...p,
+      departures,
+      lowestPrice: prices.length ? Math.min(...prices) : undefined,
+    } as PackageCardData;
+  });
+}
 
 const PackagesPreview = () => {
   const [packages, setPackages] = useState<PackageCardData[]>([]);
@@ -16,7 +50,7 @@ const PackagesPreview = () => {
         const result = await apiFetch<{ data: PackageCardData[] }>("/api/packages");
         setPackages(result.data || []);
       } catch {
-        setPackages([]);
+        setPackages(await fetchPackagesFromDb().catch(() => []));
       } finally {
         setLoading(false);
       }
@@ -24,6 +58,7 @@ const PackagesPreview = () => {
 
     fetchPackages();
   }, []);
+
 
   return (
     <section className="section-padding bg-background">
