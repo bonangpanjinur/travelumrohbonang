@@ -46,7 +46,10 @@ function buildDefaultMatrix(): Record<string, Record<AdminRole, boolean>> {
     for (const item of group.items) {
       matrix[item.labelKey] = {} as Record<AdminRole, boolean>;
       for (const r of ADMIN_ROLES) {
-        matrix[item.labelKey][r.value] = staticDefault(item.roles, r.value);
+        // Super Admin is locked to full access in the UI — keep the data in sync
+        // so the counters and the saved rows never disagree with the checkboxes.
+        matrix[item.labelKey][r.value] =
+          r.value === "super_admin" ? true : staticDefault(item.roles, r.value);
       }
     }
   }
