@@ -24,7 +24,29 @@ type ProxyOpts = {
  * proxied straight to Supabase so the public pages still get their data,
  * and /api answers with a fast 503 instead of hanging.
  */
-function buildProxy({ vitePort, supabaseUrl, apiTargetOverride, apiPort }: ProxyOpts) {
+async function isReachable(target: string): Promise<boolean> {
+  try {
+    const url = new URL(target);
+    const net = await import('node:net');
+    return await new Promise<boolean>((resolve) => {
+      const socket = net.connect({
+        host: url.hostname,
+        port: Number(url.port || (url.protocol === 'https:' ? 443 : 80)),
+      });
+      const done = (ok: boolean) => {
+        socket.destroy();
+        resolve(ok);
+      };
+      socket.setTimeout(700, () => done(false));
+      socket.once('connect', () => done(true));
+      socket.once('error', () => done(false));
+    });
+  } catch {
+    return false;
+  }
+}
+
+async function buildProxy({ vitePort, supabaseUrl, apiTargetOverride, apiPort }: ProxyOpts) {
   const fail = (detail: string) => ({
     configure: (proxy: any) => {
       proxy.on('error', (_err: unknown, _req: unknown, res: any) => {
@@ -39,13 +61,16 @@ function buildProxy({ vitePort, supabaseUrl, apiTargetOverride, apiPort }: Proxy
     apiTargetOverride ??
     (apiPort && apiPort !== vitePort ? `http://localhost:${apiPort}` : undefined);
 
-  // Guard against self-proxy loops regardless of how the target was provided.
-  const apiTarget =
+  // Guard against self-proxy loops regardless of how the target was provided,
+  // and only use the API server when it is actually listening.
+  const candidate =
     rawApiTarget && !new RegExp(`:${vitePort}(/|$)`).test(rawApiTarget)
       ? rawApiTarget
       : undefined;
+  const apiTarget = candidate && (await isReachable(candidate)) ? candidate : undefined;
 
   const dataTarget = apiTarget ?? (supabaseUrl || undefined);
+
 
   const proxy: Record<string, any> = {};
 
