@@ -24,6 +24,18 @@ interface UserWithRole {
 
 interface BranchOption { id: string; name: string; }
 
+/** Highest privilege first — used to resolve users that hold multiple roles. */
+const ROLE_PRIORITY = [
+  "super_admin",
+  "owner",
+  "admin",
+  "branch_manager",
+  "finance",
+  "staff",
+  "agent",
+  "buyer",
+];
+
 const AdminUsers = () => {
   const { role } = useAuth();
   const isSuperAdmin = role === "super_admin";
@@ -74,8 +86,15 @@ const AdminUsers = () => {
 
       if (rolesError) throw rolesError;
 
+      // A user can have multiple rows in user_roles (unique is on user_id+role).
+      // Always surface the highest-privilege role instead of whichever row came last.
       const roleMap = new Map<string, string>();
-      roles?.forEach((r) => roleMap.set(r.user_id, r.role));
+      roles?.forEach((r) => {
+        const current = roleMap.get(r.user_id);
+        if (!current || ROLE_PRIORITY.indexOf(r.role) < ROLE_PRIORITY.indexOf(current)) {
+          roleMap.set(r.user_id, r.role);
+        }
+      });
 
       const combined: UserWithRole[] = (profiles || []).map((p: any) => ({
         ...p,
