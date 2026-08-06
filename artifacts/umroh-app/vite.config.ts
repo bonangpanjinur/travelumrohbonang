@@ -114,7 +114,16 @@ export default defineConfig(async ({ command, mode }) => {
     ?? (supabaseUrl ? (new URL(supabaseUrl).hostname.split('.')[0]) : '');
 
 
+  const proxy = buildProxy({
+    vitePort: port,
+    supabaseUrl,
+    apiTargetOverride: env.API_PROXY_TARGET,
+    apiPort: Number(env.API_PORT ?? 3001),
+  });
+  const apiAvailable = Boolean(proxy['/api']);
+
   return {
+
     base: basePath,
     define: {
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
