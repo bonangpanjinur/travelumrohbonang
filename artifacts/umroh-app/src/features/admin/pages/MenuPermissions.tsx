@@ -270,16 +270,37 @@ const MenuPermissions = () => {
                 </tr>
               </thead>
               <tbody>
-                {menuGroups.map((group) => (
+                {menuGroups.map((group) => {
+                  const groupKeys = group.items.map((i) => i.labelKey);
+                  return (
                   <React.Fragment key={group.labelKey}>
-                    {/* Group header row */}
+                    {/* Group header row — with per-role "toggle all" boxes */}
                     <tr className="bg-muted/20 border-b border-t">
-                      <td
-                        colSpan={ADMIN_ROLES.length + 1}
-                        className="px-4 py-1.5 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground"
-                      >
+                      <td className="px-4 py-1.5 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                         {group.label}
                       </td>
+                      {ADMIN_ROLES.map((r) => {
+                        const isLocked = r.value === "super_admin";
+                        const allOn =
+                          !isLocked &&
+                          groupKeys.length > 0 &&
+                          groupKeys.every((k) => matrix[k]?.[r.value]);
+                        return (
+                          <td key={r.value} className="px-3 py-1.5 text-center">
+                            <Checkbox
+                              checked={isLocked ? true : allOn}
+                              disabled={isLocked || !isSuper}
+                              aria-label={`Aktifkan semua menu ${group.label} untuk ${r.label}`}
+                              onCheckedChange={() => toggleGroup(groupKeys, r.value as AdminRole, !allOn)}
+                              className={cn(
+                                "h-3.5 w-3.5",
+                                isLocked && "opacity-50 cursor-not-allowed",
+                                !isLocked && isSuper && "cursor-pointer",
+                              )}
+                            />
+                          </td>
+                        );
+                      })}
                     </tr>
                     {/* Menu item rows */}
                     {group.items.map((item) => {
