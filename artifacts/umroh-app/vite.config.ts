@@ -76,13 +76,18 @@ function buildProxy({ vitePort, supabaseUrl, apiTargetOverride, apiPort }: Proxy
 }
 
 
-export default defineConfig(async ({ command }) => {
+export default defineConfig(async ({ command, mode }) => {
+  // Load .env files so SUPABASE_* / VITE_SUPABASE_* are available here even
+  // when they are not exported into the shell environment.
+  const fileEnv = loadEnv(mode, path.resolve(import.meta.dirname, '..', '..'), '');
+  const env = { ...fileEnv, ...process.env } as Record<string, string | undefined>;
+
   // `vite build` (e.g. on Vercel) never reads `server.port`/`preview.port` —
   // only `vite`/`vite preview` (command === "serve") do. PORT is optional:
   // some environments pass `--port` on the CLI instead, so fall back to 8080
   // for dev/preview and 5173 otherwise instead of throwing.
   const isServe = command === 'serve';
-  const rawPort = process.env.PORT;
+  const rawPort = env.PORT;
 
   const port = Number(rawPort ?? (isServe ? 8080 : 5173));
 
@@ -94,15 +99,20 @@ export default defineConfig(async ({ command }) => {
   // BASE_PATH affects build output (asset URLs), so it's read at build time
   // too, but defaults to "/" for external deployments (e.g. Vercel) that
   // serve the app at the domain root instead of Replit's path-based routing.
-  const basePath = process.env.BASE_PATH ?? '/';
+  const basePath = env.BASE_PATH ?? '/';
 
   // Map server-side Supabase secrets to VITE_ env vars so they are available
   // to the browser bundle without requiring duplicate env entries.
-  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? '';
-  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY ?? '';
+  const supabaseUrl = env.SUPABASE_URL || env.VITE_SUPABASE_URL || '';
+  const supabaseAnonKey =
+    env.SUPABASE_ANON_KEY ||
+    env.VITE_SUPABASE_ANON_KEY ||
+    env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    '';
   // Extract project-ref (subdomain) from the URL, e.g. https://abcdef.supabase.co → abcdef
-  const supabaseProjectId = process.env.VITE_SUPABASE_PROJECT_ID
+  const supabaseProjectId = env.VITE_SUPABASE_PROJECT_ID
     ?? (supabaseUrl ? (new URL(supabaseUrl).hostname.split('.')[0]) : '');
+
 
   return {
     base: basePath,
