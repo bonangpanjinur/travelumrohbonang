@@ -125,6 +125,30 @@ export default defineConfig(async ({ command, mode }) => {
       react(),
       tailwindcss(),
       runtimeErrorOverlay(),
+      // Without a local api-server, /api has no proxy. Answer immediately with
+      // a JSON 503 instead of letting Vite serve index.html (which surfaced as
+      // confusing "non-JSON response" errors and slow, hanging pages).
+      {
+        name: 'api-unavailable-fallback',
+        configureServer(server: any) {
+          server.middlewares.use((req: any, res: any, next: any) => {
+            if (!apiAvailable && req.url?.startsWith('/api/')) {
+              res.statusCode = 503;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(
+                JSON.stringify({
+                  error: 'API server tidak tersedia',
+                  detail:
+                    'Jalankan workflow api-server (API_PORT/API_PROXY_TARGET) agar endpoint /api aktif.',
+                }),
+              );
+              return;
+            }
+            next();
+          });
+        },
+      },
+
       ...(process.env.NODE_ENV !== 'production' &&
       process.env.REPL_ID !== undefined
         ? [
