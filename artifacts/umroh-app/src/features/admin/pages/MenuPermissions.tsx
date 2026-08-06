@@ -72,13 +72,15 @@ const MenuPermissions = () => {
   const [resetting, setResetting] = useState(false);
 
   // Build matrix from DB + static defaults
-  const defaultMatrix = useMemo(() => buildDefaultMatrix(), []);
-
   useEffect(() => {
     const m = buildDefaultMatrix();
-    // Override with DB values
+    // Override with DB values (super_admin stays locked to full access)
     for (const row of dbData?.data ?? []) {
-      if (m[row.menuKey] && ADMIN_ROLES.some((r) => r.value === row.role)) {
+      if (
+        row.role !== "super_admin" &&
+        m[row.menuKey] &&
+        ADMIN_ROLES.some((r) => r.value === row.role)
+      ) {
         (m[row.menuKey] as Record<string, boolean>)[row.role] = row.enabled;
       }
     }
@@ -96,13 +98,26 @@ const MenuPermissions = () => {
     setDirty(true);
   };
 
+  /** Toggle every menu in a group on/off for one role at once. */
+  const toggleGroup = (menuKeys: string[], role: AdminRole, next: boolean) => {
+    if (!isSuper || role === "super_admin") return;
+    setMatrix((prev) => {
+      const updated = { ...prev };
+      for (const key of menuKeys) {
+        updated[key] = { ...updated[key], [role]: next };
+      }
+      return updated;
+    });
+    setDirty(true);
+  };
+
   const save = async () => {
     setSaving(true);
     try {
       const permissions: Array<{ role: string; menuKey: string; enabled: boolean }> = [];
       for (const [menuKey, roleMap] of Object.entries(matrix)) {
         for (const [role, enabled] of Object.entries(roleMap)) {
-          permissions.push({ role, menuKey, enabled });
+          permissions.push({ role, menuKey, enabled: role === "super_admin" ? true : enabled });
         }
       }
       await apiFetch("/api/admin/menu-permissions", {
