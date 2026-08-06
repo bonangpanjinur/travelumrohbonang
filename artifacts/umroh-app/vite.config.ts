@@ -139,7 +139,7 @@ export default defineConfig(async ({ command, mode }) => {
     ?? (supabaseUrl ? (new URL(supabaseUrl).hostname.split('.')[0]) : '');
 
 
-  const proxy = buildProxy({
+  const proxy = await buildProxy({
     vitePort: port,
     supabaseUrl,
     apiTargetOverride: env.API_PROXY_TARGET,
