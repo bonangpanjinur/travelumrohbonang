@@ -338,7 +338,8 @@ const MenuPermissions = () => {
                       );
                     })}
                   </React.Fragment>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
