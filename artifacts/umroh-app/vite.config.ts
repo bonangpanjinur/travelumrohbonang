@@ -5,6 +5,77 @@ import { defineConfig } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 
+type ProxyOpts = {
+  vitePort: number;
+  supabaseUrl: string;
+  apiTargetOverride?: string;
+  apiPort: number;
+};
+
+/**
+ * Build dev proxies.
+ *
+ * IMPORTANT: the API target must never be the Vite dev-server port itself.
+ * Proxying to our own port makes every /api and /rest/v1 request loop back
+ * into Vite, exhausting local sockets (`connect EAGAIN 127.0.0.1:8080`) and
+ * making even the HTML document take >15s to load (blank/slow homepage).
+ *
+ * When no separate API server is configured, /rest/v1 and /storage/v1 are
+ * proxied straight to Supabase so the public pages still get their data,
+ * and /api answers with a fast 503 instead of hanging.
+ */
+function buildProxy({ vitePort, supabaseUrl, apiTargetOverride, apiPort }: ProxyOpts) {
+  const fail = (detail: string) => ({
+    configure: (proxy: any) => {
+      proxy.on('error', (_err: unknown, _req: unknown, res: any) => {
+        if (!res || res.headersSent) return;
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'API server tidak tersedia', detail }));
+      });
+    },
+  });
+
+  const rawApiTarget =
+    apiTargetOverride ??
+    (apiPort && apiPort !== vitePort ? `http://localhost:${apiPort}` : undefined);
+
+  // Guard against self-proxy loops regardless of how the target was provided.
+  const apiTarget =
+    rawApiTarget && !new RegExp(`:${vitePort}(/|$)`).test(rawApiTarget)
+      ? rawApiTarget
+      : undefined;
+
+  const dataTarget = apiTarget ?? (supabaseUrl || undefined);
+
+  const proxy: Record<string, any> = {};
+
+  if (apiTarget) {
+    proxy['/api'] = {
+      target: apiTarget,
+      changeOrigin: true,
+      ...fail('Pastikan workflow api-server berjalan.'),
+    };
+  }
+
+  if (dataTarget) {
+    proxy['/rest/v1'] = {
+      target: dataTarget,
+      changeOrigin: true,
+      secure: true,
+      ...fail('REST proxy tidak bisa dijangkau.'),
+    };
+    proxy['/storage/v1'] = {
+      target: dataTarget,
+      changeOrigin: true,
+      secure: true,
+      ...fail('Storage server tidak tersedia.'),
+    };
+  }
+
+  return proxy;
+}
+
+
 export default defineConfig(async ({ command }) => {
   // `vite build` (e.g. on Vercel) never reads `server.port`/`preview.port` —
   // only `vite`/`vite preview` (command === "serve") do. PORT is optional:
