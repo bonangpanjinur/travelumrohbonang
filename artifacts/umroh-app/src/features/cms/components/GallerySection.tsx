@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { useAsyncRetry } from "@/shared/hooks/useAsyncRetry";
+import { GalleryGridSkeleton, SectionError } from "@/shared/components/common/SectionSkeleton";
 
 interface GalleryItem {
   id: string;
@@ -10,26 +11,22 @@ interface GalleryItem {
 }
 
 const GallerySection = () => {
-  const [images, setImages] = useState<GalleryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchGallery = async () => {
+  const { data, loading, error, retry } = useAsyncRetry<GalleryItem[]>(
+    async () => {
       const { data, error } = await supabase
         .from("gallery")
         .select("id, title, image_url, category")
         .eq("is_active", true)
         .order("sort_order", { ascending: true })
         .limit(5);
+      if (error) throw error;
+      return (data || []) as GalleryItem[];
+    },
+    [],
+    { retries: 2, retryDelayMs: 1000, timeoutMs: 8000 },
+  );
 
-      if (!error && data) {
-        setImages(data);
-      }
-      setLoading(false);
-    };
-
-    fetchGallery();
-  }, []);
+  const images = data ?? [];
 
   // Helper to determine span based on index for a masonry-like look
   const getSpanClass = (index: number) => {
@@ -55,14 +52,7 @@ const GallerySection = () => {
         </motion.div>
 
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[200px]">
-            {[...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                className={`rounded-xl bg-muted animate-pulse ${i === 0 || i === 3 ? "col-span-2 row-span-2" : ""}`}
-              />
-            ))}
-          </div>
+          <GalleryGridSkeleton count={5} />
         ) : images.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[200px]">
             {images.map((img, index) => (
@@ -89,6 +79,8 @@ const GallerySection = () => {
               </motion.div>
             ))}
           </div>
+        ) : error ? (
+          <SectionError onRetry={retry} message="Gagal memuat galeri foto." />
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             <p>Belum ada foto galeri untuk ditampilkan.</p>

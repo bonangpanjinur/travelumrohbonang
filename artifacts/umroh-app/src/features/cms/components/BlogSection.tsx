@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { Button } from "@/shared/components/ui/button";
@@ -6,6 +5,8 @@ import { ArrowRight, Calendar, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
+import { useAsyncRetry } from "@/shared/hooks/useAsyncRetry";
+import { CardGridSkeleton, SectionError } from "@/shared/components/common/SectionSkeleton";
 
 interface BlogPost {
   id: string;
@@ -20,41 +21,38 @@ interface BlogPost {
 }
 
 const BlogSection = () => {
-  const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchPosts = async () => {
-      const { data } = await supabase
+  const { data, loading, error, retry } = useAsyncRetry<BlogPost[]>(
+    async () => {
+      const { data, error } = await supabase
         .from("blog_posts")
         .select("id, title, slug, excerpt, image_url, category, author, published_at, created_at")
         .eq("is_published", true)
         .order("published_at", { ascending: false })
         .limit(3);
+      if (error) throw error;
+      return (data || []) as BlogPost[];
+    },
+    [],
+    { retries: 2, retryDelayMs: 1000, timeoutMs: 8000 },
+  );
 
-      setPosts((data || []) as BlogPost[]);
-      setLoading(false);
-    };
-
-    fetchPosts();
-  }, []);
+  const posts = data ?? [];
 
   if (loading) {
     return (
       <section className="section-padding bg-muted/50">
         <div className="container-custom">
-          <div className="grid md:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="rounded-xl overflow-hidden bg-card border border-border">
-                <div className="h-48 bg-muted animate-pulse" />
-                <div className="p-5 space-y-3">
-                  <div className="h-5 bg-muted animate-pulse rounded w-3/4" />
-                  <div className="h-4 bg-muted animate-pulse rounded w-full" />
-                  <div className="h-4 bg-muted animate-pulse rounded w-2/3" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <CardGridSkeleton count={3} />
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="section-padding bg-muted/50">
+        <div className="container-custom">
+          <SectionError onRetry={retry} message="Gagal memuat artikel terbaru." />
         </div>
       </section>
     );
