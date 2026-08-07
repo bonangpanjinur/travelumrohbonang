@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowRight } from "lucide-react";
@@ -6,6 +5,8 @@ import { Link } from "react-router-dom";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { supabase } from "@/shared/integrations/supabase/client";
 import PackageCard, { type PackageCardData } from "./PackageCard";
+import { useAsyncRetry } from "@/shared/hooks/useAsyncRetry";
+import { CardGridSkeleton, SectionError } from "@/shared/components/common/SectionSkeleton";
 
 /**
  * Fallback ketika /api/packages tidak tersedia (api-server mati):
@@ -41,24 +42,21 @@ async function fetchPackagesFromDb(): Promise<PackageCardData[]> {
 }
 
 const PackagesPreview = () => {
-  const [packages, setPackages] = useState<PackageCardData[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchPackages = async () => {
+  const { data, loading, error, retry } = useAsyncRetry<PackageCardData[]>(
+    async () => {
       try {
         const result = await apiFetch<{ data: PackageCardData[] }>("/api/packages");
-        setPackages(result.data || []);
+        if (result?.data?.length) return result.data;
       } catch {
-        setPackages(await fetchPackagesFromDb().catch(() => []));
-      } finally {
-        setLoading(false);
+        // fallback ke database di bawah
       }
-    };
+      return await fetchPackagesFromDb();
+    },
+    [],
+    { retries: 2, retryDelayMs: 1000, timeoutMs: 8000 },
+  );
 
-    fetchPackages();
-  }, []);
-
+  const packages = data ?? [];
 
   return (
     <section className="section-padding bg-background">
@@ -81,22 +79,9 @@ const PackagesPreview = () => {
         </motion.div>
 
         {loading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="rounded-2xl overflow-hidden bg-card border border-border">
-                <div className="h-48 bg-muted animate-pulse" />
-                <div className="p-5 space-y-3">
-                  <div className="h-6 bg-muted animate-pulse rounded w-3/4" />
-                  <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
-                  <div className="h-2 bg-muted animate-pulse rounded w-full" />
-                  <div className="flex justify-between items-end pt-2">
-                    <div className="h-7 bg-muted animate-pulse rounded w-28" />
-                    <div className="h-9 bg-muted animate-pulse rounded w-20" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <CardGridSkeleton count={3} />
+        ) : error ? (
+          <SectionError onRetry={retry} message="Gagal memuat paket umroh. Silakan coba lagi." />
         ) : packages.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             Belum ada paket tersedia
