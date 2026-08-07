@@ -14,6 +14,7 @@ import CTASection from "@/features/cms/components/CTASection";
 import Footer from "@/shared/components/layout/Footer";
 import SEO from "@/shared/components/seo/SEO";
 import LocalBusinessJsonLd from "@/shared/components/seo/LocalBusinessJsonLd";
+import BackendStatusBanner from "@/shared/components/layout/BackendStatusBanner";
 
 const Index = () => {
   useEffect(() => { captureReferralFromUrl(); }, []);
