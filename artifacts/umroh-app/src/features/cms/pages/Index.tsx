@@ -48,6 +48,7 @@ const Index = () => {
         jsonLd={faqJsonLd}
       />
       <LocalBusinessJsonLd />
+      <BackendStatusBanner />
       <Navbar />
       <main>
         <HeroSection />
