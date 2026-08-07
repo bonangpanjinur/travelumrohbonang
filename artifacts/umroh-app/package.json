@@ -99,6 +99,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@types/papaparse": "^5.5.2",
-    "papaparse": "^5.5.4"
+    "papaparse": "^5.5.4",
+    "vite": "catalog:"
   }
 }
