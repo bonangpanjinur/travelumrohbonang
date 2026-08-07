@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Star, Quote } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
+import { useAsyncRetry } from "@/shared/hooks/useAsyncRetry";
+import { TestimonialGridSkeleton, SectionError } from "@/shared/components/common/SectionSkeleton";
 
 interface Testimonial {
   id: string;
@@ -14,41 +15,42 @@ interface Testimonial {
   content: string;
 }
 
+interface TestimonialPayload {
+  testimonials: Testimonial[];
+  backgroundPattern: string;
+}
+
 const TestimonialsSection = () => {
-  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [backgroundPattern, setBackgroundPattern] = useState("islamic");
+  const { data, loading, error, retry } = useAsyncRetry<TestimonialPayload>(
+    async () => {
+      const [{ data: testimonialsData, error: tErr }, { data: settingsData }] = await Promise.all([
+        supabase
+          .from("testimonials")
+          .select("*")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+          .limit(6),
+        supabase
+          .from("site_settings")
+          .select("value")
+          .eq("key", "background_pattern")
+          .maybeSingle(),
+      ]);
+      if (tErr) throw tErr;
+      return {
+        testimonials: (testimonialsData || []) as Testimonial[],
+        backgroundPattern:
+          settingsData?.value && typeof settingsData.value === "string"
+            ? settingsData.value
+            : "islamic",
+      };
+    },
+    [],
+    { retries: 2, retryDelayMs: 1000, timeoutMs: 8000 },
+  );
 
-  useEffect(() => {
-    const fetchData = async () => {
-      // Fetch testimonials
-      const { data: testimonialsData } = await supabase
-        .from("testimonials")
-        .select("*")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true })
-        .limit(6);
-
-      if (testimonialsData && testimonialsData.length > 0) {
-        setTestimonials(testimonialsData as Testimonial[]);
-      }
-
-      // Fetch background pattern
-      const { data: settingsData } = await supabase
-        .from("site_settings")
-        .select("value")
-        .eq("key", "background_pattern")
-        .maybeSingle();
-
-      if (settingsData?.value && typeof settingsData.value === "string") {
-        setBackgroundPattern(settingsData.value);
-      }
-
-      setLoading(false);
-    };
-
-    fetchData();
-  }, []);
+  const testimonials = data?.testimonials ?? [];
+  const backgroundPattern = data?.backgroundPattern ?? "islamic";
 
   const getBackgroundClass = () => {
     switch (backgroundPattern) {
@@ -116,6 +118,15 @@ const TestimonialsSection = () => {
           </h2>
         </motion.div>
 
+        {loading ? (
+          <TestimonialGridSkeleton count={3} />
+        ) : error ? (
+          <SectionError
+            tone="onPrimary"
+            onRetry={retry}
+            message="Gagal memuat testimoni jamaah."
+          />
+        ) : (
         <div className="grid md:grid-cols-3 gap-8">
           {displayTestimonials.slice(0, 3).map((t, index) => (
             <motion.div
@@ -152,6 +163,7 @@ const TestimonialsSection = () => {
             </motion.div>
           ))}
         </div>
+        )}
       </div>
     </section>
   );
