@@ -1,7 +1,7 @@
 {
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/umroh-app run build",
-  "outputDirectory": "artifacts/umroh-app/dist/public",
+  "outputDirectory": "artifacts/umroh-app/dist",
   "functions": {
     "api/[...all].mjs": {
       "includeFiles": "artifacts/api-server/dist/**",

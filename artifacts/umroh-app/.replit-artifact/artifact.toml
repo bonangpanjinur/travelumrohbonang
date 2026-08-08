@@ -16,7 +16,7 @@ run = "pnpm --filter @workspace/umroh-app run dev"
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/umroh-app", "run", "build" ]
 serve = "static"
-publicDir = "artifacts/umroh-app/dist/public"
+publicDir = "artifacts/umroh-app/dist"
 
 [[services.production.rewrites]]
 from = "/*"
