@@ -2001,17 +2001,12 @@ router.delete("/:id", requireSuperAdmin, async (req, res) => {
       return;
     }
 
-    // Restore departure quota if booking had a departure
-    if (existing.departureId) {
-      await db
-        .update(packageDepartures)
-        .set({ remainingQuota: sql`${packageDepartures.remainingQuota} + 1` })
-        .where(eq(packageDepartures.id, existing.departureId));
-    }
-
     // Delete booking — cascades to bookingRooms, bookingPilgrims,
     // bookingPayments, bookingStatusLogs, pilgrimDocuments via DB constraints
     await db.delete(bookings).where(eq(bookings.id, id));
+
+    // Kursi dikembalikan otomatis setelah booking dihapus
+    await syncDepartureQuota(existing.departureId);
 
     res.json({ success: true, message: `Booking ${existing.bookingCode} berhasil dihapus` });
   } catch (e) {
