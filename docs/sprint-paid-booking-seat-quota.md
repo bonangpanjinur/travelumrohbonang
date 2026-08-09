@@ -196,7 +196,6 @@ Booking tidak dihitung apabila:
 
 ## File Terkait
 
-- `docs/paid-booking-seat-quota.md`
 - `artifacts/api-server/src/lib/seatQuota.ts`
 - `artifacts/api-server/src/routes/bookings.ts`
 - `artifacts/api-server/src/routes/packages.ts`
