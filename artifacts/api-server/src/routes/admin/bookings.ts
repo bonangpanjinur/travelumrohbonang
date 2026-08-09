@@ -287,29 +287,25 @@ router.get("/stats", async (req, res) => {
     const scopeCond = buildBookingScopeCondition(scope);
     const result = await db.execute(sql`
       SELECT
-        COUNT(*)::int
-          FILTER (WHERE b.status NOT IN ('cancelled', 'completed'))
+        (COUNT(*) FILTER (WHERE b.status NOT IN ('cancelled', 'completed')))::int
           AS active,
-        COUNT(*)::int
-          FILTER (WHERE b.status NOT IN ('cancelled', 'completed')
+        (COUNT(*) FILTER (WHERE b.status NOT IN ('cancelled', 'completed')
             AND COALESCE(
               (SELECT SUM(pt.amount) FROM booking_payments pt
-               WHERE pt.booking_id = b.id AND pt.is_voided = false), 0) = 0)
+               WHERE pt.booking_id = b.id AND pt.is_voided = false), 0) = 0))::int
           AS waiting_payment,
-        COUNT(*)::int
-          FILTER (WHERE b.total_price > 0
+        (COUNT(*) FILTER (WHERE b.total_price > 0
             AND COALESCE(
               (SELECT SUM(pt.amount) FROM booking_payments pt
-               WHERE pt.booking_id = b.id AND pt.is_voided = false), 0) >= b.total_price)
+               WHERE pt.booking_id = b.id AND pt.is_voided = false), 0) >= b.total_price))::int
           AS paid,
-        COUNT(*)::int
-          FILTER (WHERE b.status NOT IN ('cancelled', 'completed')
+        (COUNT(*) FILTER (WHERE b.status NOT IN ('cancelled', 'completed')
             AND EXISTS (
               SELECT 1 FROM package_departures pd
               WHERE pd.id = b.departure_id
                 AND pd.departure_date BETWEEN CURRENT_DATE
                 AND CURRENT_DATE + INTERVAL '30 days'
-            ))
+            )))::int
           AS departing_soon
       FROM bookings b
       WHERE ${scopeCond}
