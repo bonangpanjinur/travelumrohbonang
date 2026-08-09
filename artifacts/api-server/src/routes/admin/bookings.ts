@@ -1970,15 +1970,12 @@ router.delete("/bulk", requireSuperAdmin, async (req, res) => {
     }
 
     await db.transaction(async (tx) => {
-      // Restore remaining_quota per departure
-      for (const [depId, count] of departureGroups.entries()) {
-        await tx
-          .update(packageDepartures)
-          .set({ remainingQuota: sql`${packageDepartures.remainingQuota} + ${count}` })
-          .where(eq(packageDepartures.id, depId));
-      }
       // Hapus semua booking sekaligus (cascade via DB constraints)
       await tx.delete(bookings).where(inArray(bookings.id, ids));
+      // Kursi dihitung ulang dari booking terbayar yang tersisa
+      for (const depId of departureGroups.keys()) {
+        await syncDepartureQuota(depId, tx);
+      }
     });
 
     res.json({ success: true, deleted: toDelete.length });
