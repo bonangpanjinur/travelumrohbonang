@@ -34,6 +34,7 @@ import {
   type AdminUpdateBookingStatusInput,
 } from "@workspace/api-zod";
 import { validate } from "../../middlewares/validate";
+import { syncDepartureQuota } from "../../lib/seatQuota";
 import { sendAdminError } from "../../lib/adminApiError";
 import { awardLoyaltyPointsForBooking } from "../../lib/loyalty";
 import { requireSuperAdmin, requireStaff } from "../../middlewares/requireAdmin";
@@ -610,28 +611,8 @@ router.post("/", async (req, res) => {
         });
       }
 
-      // P0: Sync remaining_quota from real booking count, then decrement.
-      // Admin routes skip quota gate — stored column can be stale; use COUNT for accuracy.
-      const quotaResult = await tx.execute(sql`
-        UPDATE package_departures
-        SET
-          remaining_quota = GREATEST(0,
-            quota - (SELECT COUNT(*) FROM bookings WHERE departure_id = package_departures.id AND status != 'cancelled') - 1
-          ),
-          status = CASE
-            WHEN quota - (SELECT COUNT(*) FROM bookings WHERE departure_id = package_departures.id AND status != 'cancelled') - 1 <= 0
-            THEN 'penuh' ELSE 'active'
-          END
-        WHERE id = ${departureId}
-        RETURNING id
-      `);
-      const quotaRows = (quotaResult as any).rows ?? quotaResult;
-      if (!Array.isArray(quotaRows) || quotaRows.length === 0) {
-        throw Object.assign(
-          new Error("Keberangkatan tidak ditemukan saat update kuota"),
-          { code: "DEPARTURE_NOT_FOUND" },
-        );
-      }
+      // Kursi hanya berkurang jika booking sudah dibayar — sinkronkan dari data pembayaran.
+      await syncDepartureQuota(departureId, tx);
 
       return newBooking;
     });
@@ -846,28 +827,8 @@ router.post("/group", async (req, res) => {
         });
       }
 
-      // P0: Sync remaining_quota dari total jemaah (pax_count), bukan jumlah booking.
-      // Satu booking grup bisa berisi banyak jemaah — harus pakai SUM(pax_count).
-      const groupQuotaResult = await tx.execute(sql`
-        UPDATE package_departures
-        SET
-          remaining_quota = GREATEST(0,
-            quota - COALESCE((SELECT SUM(pax_count) FROM bookings WHERE departure_id = package_departures.id AND status != 'cancelled'), 0) - ${jamaah.length}
-          ),
-          status = CASE
-            WHEN quota - COALESCE((SELECT SUM(pax_count) FROM bookings WHERE departure_id = package_departures.id AND status != 'cancelled'), 0) - ${jamaah.length} <= 0
-            THEN 'penuh' ELSE 'active'
-          END
-        WHERE id = ${departureId}
-        RETURNING id
-      `);
-      const groupQuotaRows = (groupQuotaResult as any).rows ?? groupQuotaResult;
-      if (!Array.isArray(groupQuotaRows) || groupQuotaRows.length === 0) {
-        throw Object.assign(
-          new Error(`Keberangkatan tidak ditemukan saat update kuota`),
-          { code: "DEPARTURE_NOT_FOUND" },
-        );
-      }
+      // Kursi hanya berkurang jika booking sudah dibayar — sinkronkan dari data pembayaran.
+      await syncDepartureQuota(departureId, tx);
 
       return newBooking;
     });
@@ -949,13 +910,7 @@ router.patch(
         // Restore quota when booking transitions to cancelled (use paxCount for group bookings)
         if (newStatus === "cancelled" && current.status !== "cancelled" && current.departureId) {
           // Restore quota and reset status from 'penuh' → 'active' if seats open up again
-          await tx.execute(sql`
-            UPDATE package_departures
-            SET
-              remaining_quota = remaining_quota + ${current.paxCount ?? 1},
-              status = CASE WHEN status = 'penuh' AND remaining_quota + ${current.paxCount ?? 1} > 0 THEN 'active' ELSE status END
-            WHERE id = ${current.departureId}
-          `);
+          await syncDepartureQuota(current.departureId, tx);
         }
 
         // BK-03: Log status change audit trail
@@ -1053,15 +1008,7 @@ router.patch("/bulk-status", async (req, res) => {
           notes: "Bulk status update",
         });
         if (newStatus === "cancelled" && row.departureId) {
-          const seats = paxMap.get(row.id) ?? 1;
-          // Restore quota and reset status from 'penuh' → 'active' if seats open up again
-          await tx.execute(sql`
-            UPDATE package_departures
-            SET
-              remaining_quota = remaining_quota + ${seats},
-              status = CASE WHEN status = 'penuh' AND remaining_quota + ${seats} > 0 THEN 'active' ELSE status END
-            WHERE id = ${row.departureId}
-          `);
+          await syncDepartureQuota(row.departureId, tx);
         }
       }
       return rows.length;
