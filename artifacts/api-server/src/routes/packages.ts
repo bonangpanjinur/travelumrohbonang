@@ -34,24 +34,9 @@ async function getRealRemainingMap(
   depIds: string[],
   quotaByDep: Map<string, number>,
 ): Promise<Map<string, number>> {
-  if (!depIds.length) return new Map();
-  const counts = await db
-    .select({
-      departureId: bookings.departureId,
-      filled: sql<number>`COALESCE(SUM(${bookings.paxCount}), 0)::int`,
-    })
-    .from(bookings)
-    .where(and(inArray(bookings.departureId, depIds), ne(bookings.status, "cancelled")))
-    .groupBy(bookings.departureId);
-  const filledMap = new Map(counts.map((r) => [r.departureId!, Number(r.filled)]));
-  const result = new Map<string, number>();
-  for (const id of depIds) {
-    const quota = quotaByDep.get(id) ?? 0;
-    const filled = filledMap.get(id) ?? 0;
-    result.set(id, Math.max(0, quota - filled));
-  }
-  return result;
+  return getRemainingSeatsMap(depIds, quotaByDep);
 }
+import { getRemainingSeatsMap } from "../lib/seatQuota";
 import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SERVER_KEY } from "../lib/supabaseEnv";
 import { shouldUseSupabaseHttp } from "../lib/dbFlags";
 

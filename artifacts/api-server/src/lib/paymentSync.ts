@@ -10,6 +10,7 @@
  * gateway retry.
  */
 
+import { syncDepartureQuota } from "./seatQuota";
 import {
   db,
   bookings,
@@ -110,6 +111,15 @@ export async function syncBookingStatus(
       .set({ status: newStatus })
       .where(eq(bookings.id, bookingId));
   }
+
+  // Kursi keberangkatan hanya terpakai oleh booking yang sudah dibayar —
+  // hitung ulang setiap kali status pembayaran berubah.
+  const [depRow] = await db
+    .select({ departureId: bookings.departureId })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  await syncDepartureQuota(depRow?.departureId ?? null);
 }
 
 // ── recordFinancialTransaction ─────────────────────────────────────────────────

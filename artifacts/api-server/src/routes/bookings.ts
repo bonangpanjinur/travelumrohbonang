@@ -1,3 +1,4 @@
+import { getFilledSeatsMap, syncDepartureQuota } from "../lib/seatQuota";
 import { Router } from "express";
 import {
   db,
@@ -420,7 +421,7 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
     // P3-10: Validasi kapasitas keberangkatan sebelum booking dibuat
     if (departureId) {
       const [dep] = await db
-        .select({ remainingQuota: packageDepartures.remainingQuota, status: packageDepartures.status })
+        .select({ quota: packageDepartures.quota, status: packageDepartures.status })
         .from(packageDepartures)
         .where(eq(packageDepartures.id, departureId))
         .limit(1);
@@ -428,7 +429,10 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
         res.status(404).json({ error: "Keberangkatan tidak ditemukan" });
         return;
       }
-      if (dep.remainingQuota <= 0 || dep.status === "penuh") {
+      // Kursi terpakai dihitung dari booking yang SUDAH DIBAYAR saja
+      const filledMap = await getFilledSeatsMap([departureId]);
+      const remainingSeats = Math.max(0, (dep.quota ?? 0) - (filledMap.get(departureId) ?? 0));
+      if (remainingSeats <= 0 || dep.status === "penuh") {
         res.status(409).json({ error: "Maaf, kapasitas keberangkatan ini sudah penuh. Silakan pilih jadwal lain." });
         return;
       }
@@ -449,24 +453,8 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
     // happen in ONE atomic transaction so they all succeed or all roll back.
     // The quota UPDATE uses WHERE remaining_quota > 0 to prevent last-seat races.
     const created = await db.transaction(async (tx) => {
-      if (departureId) {
-        const decremented = await tx.execute(sql`
-          UPDATE package_departures
-          SET
-            remaining_quota = remaining_quota - 1,
-            status = CASE WHEN remaining_quota - 1 <= 0 THEN 'penuh' ELSE status END
-          WHERE id = ${departureId} AND remaining_quota > 0
-          RETURNING id
-        `);
-        const updatedRows = (decremented as any).rows ?? decremented;
-        if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
-          const err = new Error(
-            "Maaf, kapasitas keberangkatan ini sudah penuh. Silakan pilih jadwal lain.",
-          );
-          (err as any).code = "CAPACITY_FULL";
-          throw err;
-        }
-      }
+      // Kursi hanya berkurang saat booking dibayar — sinkronkan dari data pembayaran.
+      await syncDepartureQuota(departureId, tx);
 
       // Loyalty point redemption inside the same tx — rolled back automatically
       // if the subsequent booking insert fails (no dangling deductions).
