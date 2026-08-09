@@ -28,7 +28,7 @@ export async function getFilledSeatsMap(depIds: string[]): Promise<Map<string, n
     SELECT b.departure_id AS departure_id,
            COALESCE(SUM(b.pax_count), 0)::int AS filled
     FROM bookings b
-    WHERE b.departure_id IN (${depIds})
+    WHERE b.departure_id IN ${depIds}
       AND ${PAID_SEAT_CONDITION}
     GROUP BY b.departure_id
   `);
