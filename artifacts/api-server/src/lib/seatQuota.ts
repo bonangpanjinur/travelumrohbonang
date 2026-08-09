@@ -43,7 +43,7 @@ export async function getFilledSeatsMap(depIds: string[]): Promise<Map<string, n
 /** Sisa kursi per departure = quota - kursi terpakai (terbayar). */
 export async function getRemainingSeatsMap(
   depIds: string[],
-  quotaByDep: Map<string, number>,
+  quotaByDep: Map<any, any>,
 ): Promise<Map<string, number>> {
   const filledMap = await getFilledSeatsMap(depIds);
   const result = new Map<string, number>();
