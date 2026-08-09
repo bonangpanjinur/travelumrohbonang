@@ -27,6 +27,7 @@ import {
   count,
 } from "@workspace/db";
 import { generateManifestPdf } from "../../lib/pdf/manifest";
+import { getFilledSeatsMap } from "../../lib/seatQuota";
 import { sendAdminError } from "../../lib/adminApiError";
 import { resolveUserScope } from "../../lib/scopeGuard";
 import { buildBookingScopeCondition } from "../../lib/scopeConditions";
@@ -90,25 +91,7 @@ router.get("/", async (req, res) => {
 
     // Hitung jemaah aktif (non-cancelled) per keberangkatan secara real-time.
     // Gunakan SUM(pax_count) bukan COUNT(id) — satu booking bisa berisi banyak jemaah.
-    const filledCountMap = new Map<string, number>();
-    if (departureIds.length) {
-      const counts = await db
-        .select({
-          departureId: bookings.departureId,
-          filled: sql<number>`COALESCE(SUM(${bookings.paxCount}), 0)::int`,
-        })
-        .from(bookings)
-        .where(
-          and(
-            inArray(bookings.departureId, departureIds),
-            ne(bookings.status, "cancelled"),
-          ),
-        )
-        .groupBy(bookings.departureId);
-      for (const row of counts) {
-        if (row.departureId) filledCountMap.set(row.departureId, Number(row.filled));
-      }
-    }
+    const filledCountMap = await getFilledSeatsMap(departureIds);
 
     const allPrices = departureIds.length
       ? await db
@@ -952,16 +935,9 @@ router.post("/:id/sync-quota", async (req, res) => {
 
     if (!dep) return res.status(404).json({ error: "Departure not found" });
 
-    // Hitung dari SUM(pax_count) — satu booking bisa berisi banyak jemaah
-    const [{ filled }] = await db
-      .select({ filled: sql<number>`COALESCE(SUM(${bookings.paxCount}), 0)::int` })
-      .from(bookings)
-      .where(and(
-        eq(bookings.departureId, departureId),
-        ne(bookings.status, "cancelled"),
-      ));
-
-    const realFilled = Number(filled);
+    // Hanya booking TERBAYAR yang mengurangi kursi
+    const filledMap = await getFilledSeatsMap([departureId]);
+    const realFilled = filledMap.get(departureId) ?? 0;
     const newRemaining = Math.max(0, (dep.quota ?? 0) - realFilled);
     const newStatus = newRemaining === 0 ? "penuh" : "active";
 
