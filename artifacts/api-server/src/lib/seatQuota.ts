@@ -12,13 +12,10 @@ import { db, sql } from "@workspace/db";
  */
 export const PAID_SEAT_CONDITION = sql`
   b.status IS DISTINCT FROM 'cancelled'
-  AND (
-    b.status IN ('paid', 'lunas', 'completed', 'confirmed')
-    OR COALESCE((
-      SELECT SUM(pt.amount) FROM booking_payments pt
-      WHERE pt.booking_id = b.id AND pt.is_voided = false
-    ), 0) > 0
-  )
+  AND COALESCE((
+    SELECT SUM(pt.amount) FROM booking_payments pt
+    WHERE pt.booking_id = b.id AND pt.is_voided = false
+  ), 0) > 0
 `;
 
 /** Jumlah kursi terpakai (hanya booking terbayar) per departure. */
@@ -28,7 +25,7 @@ export async function getFilledSeatsMap(depIds: string[]): Promise<Map<string, n
     SELECT b.departure_id AS departure_id,
            COALESCE(SUM(b.pax_count), 0)::int AS filled
     FROM bookings b
-    WHERE b.departure_id IN ${depIds}
+    WHERE b.departure_id = ANY(${depIds}::text[])
       AND ${PAID_SEAT_CONDITION}
     GROUP BY b.departure_id
   `);
@@ -39,6 +36,7 @@ export async function getFilledSeatsMap(depIds: string[]): Promise<Map<string, n
   }
   return map;
 }
+
 
 /** Sisa kursi per departure = quota - kursi terpakai (terbayar). */
 export async function getRemainingSeatsMap(
