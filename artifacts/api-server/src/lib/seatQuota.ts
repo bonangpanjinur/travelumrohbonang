@@ -21,11 +21,15 @@ export const PAID_SEAT_CONDITION = sql`
 /** Jumlah kursi terpakai (hanya booking terbayar) per departure. */
 export async function getFilledSeatsMap(depIds: string[]): Promise<Map<string, number>> {
   if (!depIds.length) return new Map();
+  // NOTE: interpolating a JS array in drizzle's `sql` expands it into a tuple
+  // ($1, $2, ...) which is NOT a valid array for `= ANY(...)` (Postgres 42846).
+  // Pass a single comma-separated text param and split it server-side instead.
+  const idsCsv = depIds.join(",");
   const result = await db.execute(sql`
     SELECT b.departure_id AS departure_id,
            COALESCE(SUM(b.pax_count), 0)::int AS filled
     FROM bookings b
-    WHERE b.departure_id = ANY(${depIds}::text[])
+    WHERE b.departure_id::text = ANY(string_to_array(${idsCsv}, ','))
       AND ${PAID_SEAT_CONDITION}
     GROUP BY b.departure_id
   `);
