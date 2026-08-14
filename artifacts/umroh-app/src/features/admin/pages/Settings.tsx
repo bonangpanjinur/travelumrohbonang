@@ -79,6 +79,7 @@ interface BackgroundSettings {
 
 interface TemplateSettings {
   active_template: string;
+  active_layout: string;
   font_style: string;
   custom_primary_hex?: string;
   custom_accent_hex?: string;
@@ -277,6 +278,7 @@ const defaultBackground: BackgroundSettings = {
 
 const defaultTemplate: TemplateSettings = {
   active_template: "classic",
+  active_layout: "classic-home",
   font_style: "playfair",
   custom_primary_hex: "",
   custom_accent_hex: "",
@@ -502,10 +504,10 @@ const AdminSettings = () => {
               <div>
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <Layout className="w-5 h-5 text-primary" />
-                  Pilih Template Website
+                  Tema Visual Website
                 </h2>
                 <p className="text-muted-foreground text-sm mt-1">
-                  Pilih satu dari 3 template lalu sesuaikan warna dan tipografi sesuai brand Anda. Perubahan langsung terlihat di website.
+                  Atur warna dan tipografi brand secara terpisah dari layout halaman depan. Layout dapat diubah tanpa mengubah konten CMS.
                 </p>
               </div>
               <Button
@@ -591,6 +593,28 @@ const AdminSettings = () => {
                   </button>
                 );
               })}
+            </div>
+
+            {/* Homepage Layouts */}
+            <div className="border rounded-xl p-5 space-y-4">
+              <div>
+                <h3 className="font-semibold text-sm flex items-center gap-2"><Layout className="w-4 h-4 text-primary" /> Pilih Layout Halaman Depan</h3>
+                <p className="text-xs text-muted-foreground mt-1">Ini mengubah struktur dan susunan halaman depan, bukan hanya warna.</p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-4">
+                {[
+                  { id: "classic-home", name: "Klasik Terpercaya", description: "Hero besar, layanan, paket, profil, panduan, testimoni, galeri, blog, dan FAQ.", tone: "from-amber-950 via-amber-800 to-amber-400", blocks: ["w-2/3", "w-1/2", "w-3/4"] },
+                  { id: "conversion-home", name: "Fokus Penjualan", description: "Paket unggulan dan tombol booking tampil lebih awal untuk mendorong konversi.", tone: "from-slate-950 via-blue-900 to-sky-500", blocks: ["w-1/2", "w-3/4", "w-1/3"] },
+                  { id: "story-home", name: "Cerita Perjalanan", description: "Profil, keunggulan, pengalaman jemaah, dan galeri menjadi alur utama halaman.", tone: "from-emerald-950 via-teal-800 to-orange-400", blocks: ["w-3/4", "w-1/3", "w-2/3"] },
+                ].map((layout) => {
+                  const selected = (template.active_layout || "classic-home") === layout.id;
+                  return <button key={layout.id} type="button" onClick={() => setTemplate({ ...template, active_layout: layout.id })} className={cn("relative overflow-hidden rounded-xl border-2 text-left transition-all hover:shadow-lg", selected ? "border-primary bg-primary/5 shadow-md" : "border-border hover:border-primary/50")}>
+                    {selected && <div className="absolute right-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow"><Check className="h-3.5 w-3.5" /></div>}
+                    <div className={`h-24 bg-gradient-to-br ${layout.tone} p-3`}><div className="flex h-full flex-col justify-end gap-1.5">{layout.blocks.map((width) => <div key={width} className={`h-1.5 rounded-full bg-white/70 ${width}`} />)}</div></div>
+                    <div className="p-3"><h4 className="font-semibold text-sm">{layout.name}</h4><p className="mt-1 text-xs leading-snug text-muted-foreground">{layout.description}</p></div>
+                  </button>;
+                })}
+              </div>
             </div>
 
             {/* Custom Colors */}

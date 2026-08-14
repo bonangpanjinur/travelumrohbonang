@@ -11,37 +11,37 @@ import BlogSection from "@/features/cms/components/BlogSection";
 import FAQSection from "@/features/cms/components/FAQSection";
 import CTASection from "@/features/cms/components/CTASection";
 
-type FrontendTheme = "classic" | "modern" | "premium";
+type FrontendLayout = "classic-home" | "conversion-home" | "story-home";
 
-function useFrontendTheme(): FrontendTheme {
-  const [theme, setTheme] = useState<FrontendTheme>("classic");
+function useFrontendLayout(): FrontendLayout {
+  const [layout, setLayout] = useState<FrontendLayout>("classic-home");
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       const { data } = await supabase.from("site_settings").select("value").eq("category", "appearance").eq("key", "template").maybeSingle();
       if (cancelled) return;
-      const value = data?.value as { active_template?: string } | null;
-      const active = value?.active_template;
-      setTheme(active === "modern" || active === "premium" ? active : "classic");
+      const value = data?.value as { active_layout?: string } | null;
+      const active = value?.active_layout;
+      setLayout(active === "conversion-home" || active === "story-home" ? active : "classic-home");
     };
     load();
     const channel = supabase.channel("frontend-template-selection").on("postgres_changes", { event: "*", schema: "public", table: "site_settings", filter: "category=eq.appearance" }, load).subscribe();
     return () => { cancelled = true; supabase.removeChannel(channel); };
   }, []);
 
-  return theme;
+  return layout;
 }
 
 export default function FrontendThemeHome() {
-  const theme = useFrontendTheme();
+  const layout = useFrontendLayout();
 
-  if (theme === "modern") {
-    return <main className="bg-slate-50"><div className="bg-slate-950 text-white"><HeroSection /></div><PackagesPreview /><ServicesSection /><div className="bg-white"><AboutSection /></div><GuideSection /><div className="bg-slate-100"><GallerySection /></div><BlogSection /><TestimonialsSection /><FAQSection /><div className="bg-slate-950 text-white"><CTASection /></div></main>;
+  if (layout === "conversion-home") {
+    return <main className="bg-slate-50"><div className="bg-slate-950 text-white"><HeroSection /></div><PackagesPreview /><CTASection /><ServicesSection /><div className="bg-white"><AboutSection /></div><TestimonialsSection /><FAQSection /><GuideSection /><GallerySection /><BlogSection /></main>;
   }
 
-  if (theme === "premium") {
-    return <main className="bg-[#fbf8f4]"><div className="bg-[#151126] text-white"><HeroSection /></div><PackagesPreview /><div className="bg-[#f4eee7]"><AboutSection /></div><ServicesSection /><TestimonialsSection /><div className="bg-[#eee7df]"><GallerySection /></div><GuideSection /><BlogSection /><FAQSection /><div className="bg-[#151126] text-white"><CTASection /></div></main>;
+  if (layout === "story-home") {
+    return <main className="bg-[#fbf8f4]"><div className="bg-emerald-950 text-white"><HeroSection /></div><AboutSection /><ServicesSection /><div className="bg-[#f4eee7]"><TestimonialsSection /></div><GallerySection /><GuideSection /><PackagesPreview /><BlogSection /><FAQSection /><CTASection /></main>;
   }
 
   return <main className="bg-background"><HeroSection /><ServicesSection /><PackagesPreview /><AboutSection /><GuideSection /><TestimonialsSection /><GallerySection /><BlogSection /><FAQSection /><CTASection /></main>;
