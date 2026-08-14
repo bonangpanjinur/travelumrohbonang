@@ -1,4 +1,9 @@
 import { Toaster } from "@/shared/components/ui/toaster";
+import { lazy, Suspense, useEffect } from "react";
+import { installGlobalErrorHandlers } from "@/shared/lib/errorLogger";
+import ErrorBoundary from "@/shared/components/common/ErrorBoundary";
+import MobileBottomNav from "@/shared/components/layout/MobileBottomNav";
+import GlobalFloatingWidgets from "@/shared/components/common/GlobalFloatingWidgets";
 import { Toaster as Sonner } from "@/shared/components/ui/sonner";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -37,62 +42,62 @@ import AdminLayout from "@/features/admin/components/AdminLayout";
 import AdminRoute from "@/features/admin/AdminRoute";
 import AuthRoute from "@/shared/components/common/AuthRoute";
 import ImpersonationBanner from "@/shared/components/common/ImpersonationBanner";
-import AdminDashboard from "./features/admin/pages/Dashboard";
-import AdminPackages from "./features/admin/pages/Packages";
-import AdminDepartures from "./features/admin/pages/Departures";
-import AdminBookings from "./features/admin/pages/Bookings";
-import AdminBookingDetail from "./features/admin/pages/BookingDetailPage";
-import AdminPayments from "./features/admin/pages/Payments";
-import AdminItineraries from "./features/admin/pages/Itineraries";
-import AdminReports from "./features/admin/pages/Reports";
-import AdminAnalyticsDashboard from "./features/admin/pages/AnalyticsDashboard";
-import AdminNotificationsPage from "./features/admin/pages/AdminNotifications";
-import AdminPages from "./features/admin/pages/Pages";
-import AdminHotels from "./features/admin/pages/Hotels";
-import AdminAirlines from "./features/admin/pages/Airlines";
-import AdminEquipment from "./features/admin/pages/Equipment";
-import AdminAirports from "./features/admin/pages/Airports";
-import AdminBranches from "./features/admin/pages/Branches";
-import AdminGallery from "./features/admin/pages/Gallery";
-import AdminTestimonials from "./features/admin/pages/Testimonials";
-import AdminFAQ from "./features/admin/pages/FAQ";
-import AdminFloatingButtons from "./features/admin/pages/FloatingButtons";
-import AdminBlog from "./features/admin/pages/Blog";
-import AdminSettings from "./features/admin/pages/Settings";
-import AdminNavigation from "./features/admin/pages/Navigation";
-import AdminPilgrims from "./features/admin/pages/Pilgrims";
-import AdminPilgrimsDatabase from "./features/admin/pages/PilgrimsDatabase";
-import AdminAgents from "./features/admin/pages/Agents";
-import AdminMuthawifs from "./features/admin/pages/Muthawifs";
-import AdminUsers from "./features/admin/pages/Users";
-import AdminCoupons from "./features/admin/pages/Coupons";
-import AdminAdvantages from "./features/admin/pages/Advantages";
-import AdminGuideSteps from "./features/admin/pages/GuideSteps";
-import AdminServices from "./features/admin/pages/Services";
-import AdminPlaceholder from "./features/admin/pages/Placeholder";
-import AdminAccounting from "./features/admin/pages/Accounting";
-import AdminCRM from "./features/admin/pages/CRM";
-import AdminDocuments from "./features/admin/pages/Documents";
+const AdminDashboard = lazy(() => import("./features/admin/pages/Dashboard"));
+const AdminPackages = lazy(() => import("./features/admin/pages/Packages"));
+const AdminDepartures = lazy(() => import("./features/admin/pages/Departures"));
+const AdminBookings = lazy(() => import("./features/admin/pages/Bookings"));
+const AdminBookingDetail = lazy(() => import("./features/admin/pages/BookingDetailPage"));
+const AdminPayments = lazy(() => import("./features/admin/pages/Payments"));
+const AdminItineraries = lazy(() => import("./features/admin/pages/Itineraries"));
+const AdminReports = lazy(() => import("./features/admin/pages/Reports"));
+const AdminAnalyticsDashboard = lazy(() => import("./features/admin/pages/AnalyticsDashboard"));
+const AdminNotificationsPage = lazy(() => import("./features/admin/pages/AdminNotifications"));
+const AdminPages = lazy(() => import("./features/admin/pages/Pages"));
+const AdminHotels = lazy(() => import("./features/admin/pages/Hotels"));
+const AdminAirlines = lazy(() => import("./features/admin/pages/Airlines"));
+const AdminEquipment = lazy(() => import("./features/admin/pages/Equipment"));
+const AdminAirports = lazy(() => import("./features/admin/pages/Airports"));
+const AdminBranches = lazy(() => import("./features/admin/pages/Branches"));
+const AdminGallery = lazy(() => import("./features/admin/pages/Gallery"));
+const AdminTestimonials = lazy(() => import("./features/admin/pages/Testimonials"));
+const AdminFAQ = lazy(() => import("./features/admin/pages/FAQ"));
+const AdminFloatingButtons = lazy(() => import("./features/admin/pages/FloatingButtons"));
+const AdminBlog = lazy(() => import("./features/admin/pages/Blog"));
+const AdminSettings = lazy(() => import("./features/admin/pages/Settings"));
+const AdminNavigation = lazy(() => import("./features/admin/pages/Navigation"));
+const AdminPilgrims = lazy(() => import("./features/admin/pages/Pilgrims"));
+const AdminPilgrimsDatabase = lazy(() => import("./features/admin/pages/PilgrimsDatabase"));
+const AdminAgents = lazy(() => import("./features/admin/pages/Agents"));
+const AdminMuthawifs = lazy(() => import("./features/admin/pages/Muthawifs"));
+const AdminUsers = lazy(() => import("./features/admin/pages/Users"));
+const AdminCoupons = lazy(() => import("./features/admin/pages/Coupons"));
+const AdminAdvantages = lazy(() => import("./features/admin/pages/Advantages"));
+const AdminGuideSteps = lazy(() => import("./features/admin/pages/GuideSteps"));
+const AdminServices = lazy(() => import("./features/admin/pages/Services"));
+const AdminPlaceholder = lazy(() => import("./features/admin/pages/Placeholder"));
+const AdminAccounting = lazy(() => import("./features/admin/pages/Accounting"));
+const AdminCRM = lazy(() => import("./features/admin/pages/CRM"));
+const AdminDocuments = lazy(() => import("./features/admin/pages/Documents"));
 // AdminDocumentTypes route now redirects to /admin/documents?tab=pengaturan
-import AdminPaymentGateway from "./features/admin/pages/PaymentGateway";
-import AdminAnalyticsAI from "./features/admin/pages/AnalyticsAI";
-import AdminMultiBranch from "./features/admin/pages/MultiBranch";
-import AdminTenantSites from "./features/admin/pages/TenantSites";
-import AdminTemplateUpgrades from "./features/admin/pages/TemplateUpgrades";
-import AdminInstallments from "./features/admin/pages/Installments";
-import AdminSavings from "./features/admin/pages/Savings";
+const AdminPaymentGateway = lazy(() => import("./features/admin/pages/PaymentGateway"));
+const AdminAnalyticsAI = lazy(() => import("./features/admin/pages/AnalyticsAI"));
+const AdminMultiBranch = lazy(() => import("./features/admin/pages/MultiBranch"));
+const AdminTenantSites = lazy(() => import("./features/admin/pages/TenantSites"));
+const AdminTemplateUpgrades = lazy(() => import("./features/admin/pages/TemplateUpgrades"));
+const AdminInstallments = lazy(() => import("./features/admin/pages/Installments"));
+const AdminSavings = lazy(() => import("./features/admin/pages/Savings"));
 import MySavings from "./features/jamaah/pages/MySavings";
-import AdminManifest from "./features/admin/pages/Manifest";
-import AdminEquipmentReport from "./features/admin/pages/EquipmentReport";
-import AdminProofAccessLogs from "./features/admin/pages/PaymentProofAccessLogs";
-import AdminAgentWithdrawals from "./features/admin/pages/AgentWithdrawals";
-import AdminRefunds from "./features/admin/pages/Refunds";
-import AdminContracts from "./features/admin/pages/AdminContracts";
-import AdminAuditLogs from "./features/admin/pages/AuditLogs";
-import AdminSystemHealth from "./features/admin/pages/SystemHealth";
-import AdminSlugRedirects from "./features/admin/pages/SlugRedirects";
-import AdminChats from "./features/admin/pages/Chats";
-import ChatInbox from "./features/admin/pages/ChatInbox";
+const AdminManifest = lazy(() => import("./features/admin/pages/Manifest"));
+const AdminEquipmentReport = lazy(() => import("./features/admin/pages/EquipmentReport"));
+const AdminProofAccessLogs = lazy(() => import("./features/admin/pages/PaymentProofAccessLogs"));
+const AdminAgentWithdrawals = lazy(() => import("./features/admin/pages/AgentWithdrawals"));
+const AdminRefunds = lazy(() => import("./features/admin/pages/Refunds"));
+const AdminContracts = lazy(() => import("./features/admin/pages/AdminContracts"));
+const AdminAuditLogs = lazy(() => import("./features/admin/pages/AuditLogs"));
+const AdminSystemHealth = lazy(() => import("./features/admin/pages/SystemHealth"));
+const AdminSlugRedirects = lazy(() => import("./features/admin/pages/SlugRedirects"));
+const AdminChats = lazy(() => import("./features/admin/pages/Chats"));
+const ChatInbox = lazy(() => import("./features/admin/pages/ChatInbox"));
 import ChatPage from "./features/user/pages/ChatPage";
 import AgentCommissions from "./features/agent/pages/AgentCommissions";
 import MuthawifDashboard from "./features/muthawif/pages/MuthawifDashboard";
@@ -100,57 +105,61 @@ import MuthawifJamaahList from "./features/muthawif/pages/MuthawifJamaahList";
 import MuthawifLaporanHarian from "./features/muthawif/pages/MuthawifLaporanHarian";
 import RefundRequest from "./features/booking/pages/RefundRequest";
 import ETicket from "./features/booking/pages/ETicket";
-import AdminLeaderboard from "./features/admin/pages/Leaderboard";
-import AdminCurrencies from "./features/admin/pages/Currencies";
+const AdminLeaderboard = lazy(() => import("./features/admin/pages/Leaderboard"));
+const AdminCurrencies = lazy(() => import("./features/admin/pages/Currencies"));
 import { CurrencyProvider } from "@/shared/hooks/useCurrency";
 import Wishlist from "./features/wishlist/pages/Wishlist";
 import Loyalty from "./features/loyalty/pages/Loyalty";
 import Compare from "./features/paket/pages/Compare";
-import AdminReviews from "./features/admin/pages/Reviews";
-import AdminLoyalty from "./features/admin/pages/Loyalty";
-import AdminDepartureGallery from "./features/admin/pages/DepartureGallery";
-import AdminCheckIn from "./features/admin/pages/CheckIn";
-import AdminRoomAssignment from "./features/admin/pages/RoomAssignment";
-import AdminSocialKit from "./features/admin/pages/SocialKit";
-import AdminManasik from "./features/admin/pages/Manasik";
+const AdminReviews = lazy(() => import("./features/admin/pages/Reviews"));
+const AdminLoyalty = lazy(() => import("./features/admin/pages/Loyalty"));
+const AdminDepartureGallery = lazy(() => import("./features/admin/pages/DepartureGallery"));
+const AdminCheckIn = lazy(() => import("./features/admin/pages/CheckIn"));
+const AdminRoomAssignment = lazy(() => import("./features/admin/pages/RoomAssignment"));
+const AdminSocialKit = lazy(() => import("./features/admin/pages/SocialKit"));
+const AdminManasik = lazy(() => import("./features/admin/pages/Manasik"));
 import Manasik from "./features/cms/pages/Manasik";
 import Jadwal from "./features/cms/pages/Jadwal";
 import AffiliateRedirect from "./features/agent/pages/AffiliateRedirect";
 import Account2FA from "./features/auth/pages/Account2FA";
 import ContractSign from "./features/jamaah/pages/ContractSign";
-import AdminErrorLogs from "./features/admin/pages/ErrorLogs";
-import AdminRestDiagLogs from "./features/admin/pages/RestDiagLogs";
-import AdminIncidentReportView from "./features/admin/pages/IncidentReportView";
-import AdminIncidentManagement from "./features/admin/pages/IncidentManagement";
+const AdminErrorLogs = lazy(() => import("./features/admin/pages/ErrorLogs"));
+const AdminRestDiagLogs = lazy(() => import("./features/admin/pages/RestDiagLogs"));
+const AdminIncidentReportView = lazy(() => import("./features/admin/pages/IncidentReportView"));
+const AdminIncidentManagement = lazy(() => import("./features/admin/pages/IncidentManagement"));
 // AdminDocumentTracking route now redirects to /admin/documents?tab=tracking
-import AdminIntegrations from "./features/admin/pages/Integrations";
-import AdminLoginSettings from "./features/admin/pages/LoginSettings";
-import AdminSEO from "./features/admin/pages/SEO";
-import PackageCosts from "./features/admin/pages/PackageCosts";
-import AdminPackageCategories from "./features/admin/pages/PackageCategories";
-import AdminMenuPermissions from "./features/admin/pages/MenuPermissions";
-import AdminFeatureManagement from "./features/admin/pages/FeatureManagement";
-import FinanceDashboard from "./features/admin/pages/FinanceDashboard";
-import Piutang from "./features/admin/pages/Piutang";
-import DepartureFinance from "./features/admin/pages/DepartureFinance";
-import ChartOfAccounts from "./features/admin/pages/ChartOfAccounts";
-import GeneralLedger from "./features/admin/pages/GeneralLedger";
-import TrialBalance from "./features/admin/pages/TrialBalance";
-import FinancialReports from "./features/admin/pages/FinancialReports";
-import VisaTracking from "./features/admin/pages/VisaTracking";
-import SeatAssignment from "./features/admin/pages/SeatAssignment";
-import DepartureChecklist from "./features/admin/pages/DepartureChecklist";
-import DepartureReadiness from "./features/admin/pages/DepartureReadiness";
-import EquipmentDistribution from "./features/admin/pages/EquipmentDistribution";
-import BankReconciliation from "./features/admin/pages/BankReconciliation";
-import AccountingExport from "./features/admin/pages/AccountingExport";
-import BudgetCashFlow from "./features/admin/pages/BudgetCashFlow";
-import { useEffect } from "react";
-import { installGlobalErrorHandlers } from "@/shared/lib/errorLogger";
-import ErrorBoundary from "@/shared/components/common/ErrorBoundary";
-import MobileBottomNav from "@/shared/components/layout/MobileBottomNav";
-import GlobalFloatingWidgets from "@/shared/components/common/GlobalFloatingWidgets";
-const queryClient = new QueryClient();
+const AdminIntegrations = lazy(() => import("./features/admin/pages/Integrations"));
+const AdminLoginSettings = lazy(() => import("./features/admin/pages/LoginSettings"));
+const AdminSEO = lazy(() => import("./features/admin/pages/SEO"));
+const PackageCosts = lazy(() => import("./features/admin/pages/PackageCosts"));
+const AdminPackageCategories = lazy(() => import("./features/admin/pages/PackageCategories"));
+const AdminMenuPermissions = lazy(() => import("./features/admin/pages/MenuPermissions"));
+const AdminFeatureManagement = lazy(() => import("./features/admin/pages/FeatureManagement"));
+const FinanceDashboard = lazy(() => import("./features/admin/pages/FinanceDashboard"));
+const Piutang = lazy(() => import("./features/admin/pages/Piutang"));
+const DepartureFinance = lazy(() => import("./features/admin/pages/DepartureFinance"));
+const ChartOfAccounts = lazy(() => import("./features/admin/pages/ChartOfAccounts"));
+const GeneralLedger = lazy(() => import("./features/admin/pages/GeneralLedger"));
+const TrialBalance = lazy(() => import("./features/admin/pages/TrialBalance"));
+const FinancialReports = lazy(() => import("./features/admin/pages/FinancialReports"));
+const VisaTracking = lazy(() => import("./features/admin/pages/VisaTracking"));
+const SeatAssignment = lazy(() => import("./features/admin/pages/SeatAssignment"));
+const DepartureChecklist = lazy(() => import("./features/admin/pages/DepartureChecklist"));
+const DepartureReadiness = lazy(() => import("./features/admin/pages/DepartureReadiness"));
+const EquipmentDistribution = lazy(() => import("./features/admin/pages/EquipmentDistribution"));
+const BankReconciliation = lazy(() => import("./features/admin/pages/BankReconciliation"));
+const AccountingExport = lazy(() => import("./features/admin/pages/AccountingExport"));
+const BudgetCashFlow = lazy(() => import("./features/admin/pages/BudgetCashFlow"));
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 10 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 /**
  * React Router keeps the existing document mounted during navigation, so the
@@ -187,6 +196,9 @@ const AppContent = () => {
       <ImpersonationBanner />
       <MobileBottomNav />
       <GlobalFloatingWidgets />
+      <Suspense fallback={<div className="flex min-h-[240px] items-center justify-center p-8">
+              <p className="text-sm text-muted-foreground">Memuat halaman admin...</p>
+            </div>}>
       <Routes>
       {/* Public Routes */}
       <Route path="/" element={<Index />} />
@@ -341,6 +353,7 @@ const AppContent = () => {
       <Route path="/:slug" element={<DynamicPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
+      </Suspense>
     </>
   );
 };

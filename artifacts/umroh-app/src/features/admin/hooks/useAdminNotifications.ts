@@ -122,17 +122,18 @@ export function useAdminNotifications() {
 
   const fetchAll = useCallback(async () => {
     try {
-      // Bookings: use Express API to avoid FK embed requirement on PostgREST.
-      // Direct Supabase query with profile:profiles!bookings_user_id_profiles_fkey(name)
-      // returns 400 when the FK constraint is missing in the live DB.
-      const bookingsResult = await apiFetch<{ data: Array<{
-        id: string; bookingCode: string; createdAt: string; userName: string | null;
-      }> }>("/api/admin/bookings?limit=20").catch(() => ({ data: [] as any[] }));
-
-      // Payments: use Express API instead of direct Supabase to avoid RLS 401 errors
-      const pendingPayments = await apiFetch<Array<{
-        id: string; amount: number; status: string; createdAt: string; bookingCode: string | null;
-      }>>("/api/admin/payments/recent-pending").catch(() => []);
+      // These endpoints are independent; run them concurrently so the slower one
+      // does not delay the notification widget unnecessarily.
+      const [bookingsResult, pendingPayments] = await Promise.all([
+        // Bookings: use Express API to avoid FK embed requirement on PostgREST.
+        apiFetch<{ data: Array<{
+          id: string; bookingCode: string; createdAt: string; userName: string | null;
+        }> }>("/api/admin/bookings?limit=20").catch(() => ({ data: [] as any[] })),
+        // Payments: use Express API instead of direct Supabase to avoid RLS 401 errors.
+        apiFetch<Array<{
+          id: string; amount: number; status: string; createdAt: string; bookingCode: string | null;
+        }>>("/api/admin/payments/recent-pending").catch(() => []),
+      ]);
 
       const paymentsWithCode = pendingPayments.map((p) => ({
         id: p.id,
