@@ -14,6 +14,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Summary {
@@ -149,6 +150,12 @@ const FinanceDashboard = () => {
   const kritisAlerts = upcomingDepartures.filter(
     d => d.belumLunasCount > 0 && new Date(d.departureDate) <= new Date(Date.now() + 30 * 864e5)
   );
+  const overdue = aging.find((item) => item.bucket === "overdue");
+  const exceptions = [
+    ...(overdue && overdue.count > 0 ? [{ label: `${overdue.count} booking melewati jatuh tempo`, detail: shortRp(overdue.outstanding), href: "/admin/installments", tone: "border-red-200 bg-red-50 text-red-700" }] : []),
+    ...(kritisAlerts.length > 0 ? [{ label: `${kritisAlerts.length} keberangkatan berisiko dalam 30 hari`, detail: "Belum semua jemaah lunas", href: "/admin/departure-readiness", tone: "border-orange-200 bg-orange-50 text-orange-700" }] : []),
+    ...(upcomingDepartures.filter((d) => d.pctCollected < 50).length > 0 ? [{ label: `${upcomingDepartures.filter((d) => d.pctCollected < 50).length} keberangkatan terkumpul < 50%`, detail: "Perlu tindak lanjut penagihan", href: "/admin/departure-readiness", tone: "border-amber-200 bg-amber-50 text-amber-700" }] : []),
+  ];
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
@@ -184,7 +191,13 @@ const FinanceDashboard = () => {
         </div>
       )}
 
-      {/* Stat cards */}
+      {/* Actionable exception center */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <div className="flex items-start justify-between gap-3 mb-4"><div><h2 className="text-base font-semibold">Pusat Pengecualian Keuangan</h2><p className="text-xs text-muted-foreground mt-1">Item yang membutuhkan tindakan hari ini.</p></div><Badge variant={exceptions.length ? "destructive" : "outline"}>{exceptions.length ? `${exceptions.length} perlu tindakan` : "Tidak ada pengecualian"}</Badge></div>
+        {exceptions.length === 0 ? <div className="flex items-center gap-2 text-sm text-emerald-600"><CheckCircle2 className="w-4 h-4" /> Semua indikator keuangan dalam batas normal.</div> : <div className="grid md:grid-cols-3 gap-3">{exceptions.map((item) => <Link key={item.label} to={item.href} className={`group rounded-lg border p-3 transition hover:shadow-sm ${item.tone}`}><div className="flex items-start justify-between gap-2"><div><p className="text-sm font-semibold">{item.label}</p><p className="text-xs mt-1 opacity-80">{item.detail}</p></div><ChevronRight className="w-4 h-4 shrink-0 transition group-hover:translate-x-1" /></div></Link>)}</div>}
+      </div>
+
+      {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
           label="Pemasukan Bulan Ini"
