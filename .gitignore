@@ -55,3 +55,11 @@ attached_assets/image_1785404*
 # Local diagnostic assets and migration backups — not part of the deployable codebase
 attached_assets/
 .migration-backup/
+
+# Local screenshots and generated workspace artifacts
+screenshots/
+artifacts/**/dist/
+artifacts/**/node_modules/
+lib/**/dist/
+lib/**/node_modules/
+scripts/node_modules/
