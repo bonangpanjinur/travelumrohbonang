@@ -39,12 +39,12 @@ const coaCache = new Map<string, string>();
  * Returns null if the account hasn't been seeded yet — callers fall back
  * to inserting a journal entry with accountId=null (backward-compatible).
  */
-async function getCoaId(code: string): Promise<string | null> {
+async function getCoaId(code: string, runner: DbOrTx = db): Promise<string | null> {
   const cached = coaCache.get(code);
   if (cached) return cached;
 
   try {
-    const [row] = await db
+    const [row] = await runner
       .select({ id: chartOfAccounts.id })
       .from(chartOfAccounts)
       .where(eq(chartOfAccounts.code, code))
@@ -84,8 +84,8 @@ async function recordDoubleEntry(opts: {
   recordedBy?: string;
 }, tx?: DbOrTx): Promise<void> {
   const [debitAccountId, creditAccountId] = await Promise.all([
-    getCoaId(opts.debitCode),
-    getCoaId(opts.creditCode),
+    getCoaId(opts.debitCode, tx),
+    getCoaId(opts.creditCode, tx),
   ]);
 
   const now = new Date();
@@ -167,7 +167,7 @@ export async function journalPaymentVerified(opts: {
     description: `[Auto] Bukti bayar diverifikasi — payment #${opts.paymentId}`,
     referenceNumber: ref,
     recordedBy: opts.adminId,
-  });
+  }, tx);
 }
 
 /**

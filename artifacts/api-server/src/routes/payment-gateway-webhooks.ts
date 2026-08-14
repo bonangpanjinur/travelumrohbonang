@@ -99,6 +99,9 @@ router.post("/midtrans", async (req, res) => {
     // 2-4. Sync booking status + financials + notification (paid only).
     if (newStatus === "paid" && updated?.bookingId) {
       const amountInt = Math.round(parseFloat(gross_amount ?? "0"));
+      if (!Number.isSafeInteger(amountInt) || amountInt <= 0 || amountInt !== updated.amount) {
+        throw new Error(`Gateway amount mismatch for order ${order_id}`);
+      }
       await syncFromGatewayTransaction({
         bookingId: updated.bookingId,
         amount: amountInt,
@@ -180,6 +183,9 @@ router.post("/xendit", async (req, res) => {
     // 2-4. Sync booking status + financials + notification (paid only).
     if (newStatus === "paid" && updated?.bookingId) {
       const amountInt = Math.round(amount ?? updated.amount ?? 0);
+      if (!Number.isSafeInteger(amountInt) || amountInt <= 0 || amountInt !== updated.amount) {
+        throw new Error(`Gateway amount mismatch for order ${external_id}`);
+      }
       await syncFromGatewayTransaction({
         bookingId: updated.bookingId,
         amount: amountInt,

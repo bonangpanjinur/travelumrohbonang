@@ -8,12 +8,14 @@ import {
   bookings,
   bookingPayments,
   payments,
+  financialTransactions,
   paymentProofAccessLogs,
   profiles,
   eq,
   and,
   sql,
   desc,
+  sum,
 } from "@workspace/db";
 import { sbGetBooking, sbGetPayments } from "../../lib/supabaseFallback";
 import { resolveUserScope } from "../../lib/scopeGuard";
@@ -103,6 +105,17 @@ function getLegacyProofPath(filename: string): string | null {
 }
 
 const router = Router({ mergeParams: true });
+
+async function paymentBookingInScope(req: any, bookingId: string): Promise<boolean> {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  const [booking] = await db
+    .select({ branchId: bookings.branchId, agentId: bookings.agentId, picType: bookings.picType, picId: bookings.picId })
+    .from(bookings)
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+  return !!booking && isBookingInScope(booking, scope);
+}
 
 // ── POST /upload-proof — upload bukti pembayaran ke Object Storage (F2-02) ────
 router.post("/upload-proof", proofUpload.single("file"), async (req: any, res) => {
@@ -304,6 +317,10 @@ router.post("/bulk-verify", async (req, res) => {
           results.push({ id, ok: false, error: "Not found or not pending" });
           continue;
         }
+        if (!(await paymentBookingInScope(req, payment.bookingId))) {
+          results.push({ id, ok: false, error: "Payment operation is outside your scope" });
+          continue;
+        }
 
         const now = new Date();
         await db.update(payments).set({
@@ -382,6 +399,9 @@ router.patch("/verify/:id", async (req, res) => {
       const payment = locked.rows[0] as Record<string, unknown> | undefined;
 
       if (!payment) throw Object.assign(new Error("Payment not found"), { status: 404 });
+      if (!(await paymentBookingInScope(req, String(payment["booking_id"])))) {
+        throw Object.assign(new Error("Payment operation is outside your scope"), { status: 403 });
+      }
       if (payment["status"] === "verified") throw Object.assign(new Error("Payment already verified"), { status: 409 });
 
       const now = new Date();
@@ -471,9 +491,10 @@ router.patch("/verify/:id", async (req, res) => {
     // Fire-and-forget: email/WA failure must never affect the verify response.
     void emailNotifications.paymentReceived(bookingId, paymentAmount);
     void waNotifications.paymentReceived(bookingId, paymentAmount);
-  } catch (e) {
+  } catch (e: any) {
     console.error("[admin/payments] verify error:", e);
-    res.status(500).json({ error: "Failed to verify payment" });
+    const status = Number.isInteger(e?.status) && e.status >= 400 && e.status < 500 ? e.status : 500;
+    res.status(status).json({ error: status === 500 ? "Failed to verify payment" : e?.message });
   }
 });
 
@@ -495,6 +516,9 @@ router.patch("/reject/:id", async (req, res) => {
 
     if (!payment) {
       return res.status(404).json({ error: "Payment not found" });
+    }
+    if (!(await paymentBookingInScope(req, payment.bookingId))) {
+      return res.status(403).json({ error: "Payment operation is outside your scope" });
     }
 
     if (payment.status === "verified") {
@@ -644,8 +668,14 @@ router.post("/", validate(AdminRecordPaymentRequest), async (req, res) => {
     const body = req.body as AdminRecordPaymentInput;
     const adminId = req.user?.id;
 
+    const paidAt = new Date(body.paidAt);
+    if (Number.isNaN(paidAt.getTime())) {
+      res.status(400).json({ error: "paidAt must be a valid date" });
+      return;
+    }
+
     const [booking] = await db
-      .select({ id: bookings.id })
+      .select({ id: bookings.id, totalPrice: bookings.totalPrice })
       .from(bookings)
       .where(eq(bookings.id, bookingId))
       .limit(1);
@@ -655,23 +685,46 @@ router.post("/", validate(AdminRecordPaymentRequest), async (req, res) => {
       return;
     }
 
-    const [created] = await db
-      .insert(bookingPayments)
-      .values({
-        id: crypto.randomUUID(),
+    const [paidRow] = await db
+      .select({ total: sum(bookingPayments.amount) })
+      .from(bookingPayments)
+      .where(and(eq(bookingPayments.bookingId, bookingId), eq(bookingPayments.isVoided, false)));
+    const totalPaidBefore = Number(paidRow?.total ?? 0);
+    if (totalPaidBefore + body.amount > booking.totalPrice) {
+      res.status(400).json({
+        error: "Payment exceeds the remaining booking balance",
+        remaining: Math.max(0, booking.totalPrice - totalPaidBefore),
+      });
+      return;
+    }
+
+    const created = await db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(bookingPayments)
+        .values({
+          id: crypto.randomUUID(),
+          bookingId,
+          type: body.type,
+          amount: body.amount,
+          paidAt,
+          method: body.method ?? null,
+          referenceNumber: body.referenceNumber ?? null,
+          notes: body.notes ?? null,
+          proofUrl: body.proofUrl ?? null,
+          recordedBy: adminId ?? null,
+          isVoided: false,
+          createdAt: new Date(),
+        })
+        .returning();
+
+      await journalPaymentVerified({
         bookingId,
-        type: body.type,
         amount: body.amount,
-        paidAt: new Date(body.paidAt),
-        method: body.method ?? null,
-        referenceNumber: body.referenceNumber ?? null,
-        notes: body.notes ?? null,
-        proofUrl: body.proofUrl ?? null,
-        recordedBy: adminId ?? null,
-        isVoided: false,
-        createdAt: new Date(),
-      })
-      .returning();
+        paymentId: inserted.id,
+        adminId,
+      }, tx);
+      return inserted;
+    });
 
     const { totalPrice, totalPaid, remaining, paymentStatus } =
       await computePaymentStatus(bookingId);
@@ -724,11 +777,49 @@ router.patch(
       const paymentId = req.params.paymentId as string;
       const updates = req.body as AdminUpdatePaymentInput;
 
+      const [existingPayment] = await db
+        .select({ id: bookingPayments.id, isVoided: bookingPayments.isVoided })
+        .from(bookingPayments)
+        .where(and(eq(bookingPayments.id, paymentId), eq(bookingPayments.bookingId, bookingId)))
+        .limit(1);
+      if (!existingPayment) {
+        res.status(404).json({ error: "Payment not found" });
+        return;
+      }
+      if (!(await paymentBookingInScope(req, bookingId))) {
+        res.status(403).json({ error: "Payment operation is outside your scope" });
+        return;
+      }
+      if (existingPayment.isVoided) {
+        res.status(409).json({ error: "Voided payment cannot be edited" });
+        return;
+      }
+      if (updates.amount !== undefined && (!Number.isSafeInteger(updates.amount) || updates.amount <= 0)) {
+        res.status(400).json({ error: "amount must be a positive integer" });
+        return;
+      }
+      const parsedPaidAt = updates.paidAt !== undefined ? new Date(updates.paidAt) : undefined;
+      if (parsedPaidAt && Number.isNaN(parsedPaidAt.getTime())) {
+        res.status(400).json({ error: "paidAt must be a valid date" });
+        return;
+      }
+      if (updates.amount !== undefined || updates.paidAt !== undefined) {
+        const [postedJournal] = await db
+          .select({ id: financialTransactions.id })
+          .from(financialTransactions)
+          .where(eq(financialTransactions.referenceNumber, `auto:payment_verified:${paymentId}`))
+          .limit(1);
+        if (postedJournal) {
+          res.status(409).json({ error: "Posted payment is immutable; use a reversal workflow" });
+          return;
+        }
+      }
+
       const setValues: Record<string, unknown> = {};
       if (updates.type !== undefined) setValues.type = updates.type;
       if (updates.amount !== undefined) setValues.amount = updates.amount;
-      if (updates.paidAt !== undefined)
-        setValues.paidAt = new Date(updates.paidAt);
+      if (parsedPaidAt !== undefined)
+        setValues.paidAt = parsedPaidAt;
       if (updates.method !== undefined) setValues.method = updates.method;
       if (updates.referenceNumber !== undefined)
         setValues.referenceNumber = updates.referenceNumber;
@@ -768,6 +859,18 @@ router.delete("/:paymentId", async (req, res) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
     const paymentId = req.params.paymentId as string;
+    if (!(await paymentBookingInScope(req, bookingId))) {
+      return res.status(403).json({ error: "Payment operation is outside your scope" });
+    }
+
+    const [postedJournal] = await db
+      .select({ id: financialTransactions.id })
+      .from(financialTransactions)
+      .where(eq(financialTransactions.referenceNumber, `auto:payment_verified:${paymentId}`))
+      .limit(1);
+    if (postedJournal) {
+      return res.status(409).json({ error: "Posted payment cannot be voided without a reversal workflow" });
+    }
 
     const [voided] = await db
       .update(bookingPayments)

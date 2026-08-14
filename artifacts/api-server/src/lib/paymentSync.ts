@@ -23,6 +23,8 @@ import {
 } from "@workspace/db";
 import { emailNotifications } from "./notifications/emailNotifications";
 
+type DbRunner = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type PaymentStatus = "unpaid" | "partial" | "paid";
@@ -39,8 +41,9 @@ export interface PaymentSummary {
 
 export async function computePaymentStatus(
   bookingId: string,
+  runner: DbRunner = db,
 ): Promise<PaymentSummary> {
-  const [booking] = await db
+  const [booking] = await runner
     .select({ totalPrice: bookings.totalPrice })
     .from(bookings)
     .where(eq(bookings.id, bookingId))
@@ -48,7 +51,7 @@ export async function computePaymentStatus(
 
   const totalPrice = booking?.totalPrice ?? 0;
 
-  const [result] = await db
+  const [result] = await runner
     .select({ total: sum(bookingPayments.amount) })
     .from(bookingPayments)
     .where(
@@ -80,8 +83,10 @@ export async function computePaymentStatus(
 export async function syncBookingStatus(
   bookingId: string,
   paymentStatus: PaymentStatus,
+  runner: DbRunner = db,
+  skipQuotaSync = false,
 ): Promise<void> {
-  const [current] = await db
+  const [current] = await runner
     .select({ status: bookings.status })
     .from(bookings)
     .where(eq(bookings.id, bookingId))
@@ -106,7 +111,7 @@ export async function syncBookingStatus(
   }
 
   if (newStatus) {
-    await db
+    await runner
       .update(bookings)
       .set({ status: newStatus })
       .where(eq(bookings.id, bookingId));
@@ -114,12 +119,12 @@ export async function syncBookingStatus(
 
   // Kursi keberangkatan hanya terpakai oleh booking yang sudah dibayar —
   // hitung ulang setiap kali status pembayaran berubah.
-  const [depRow] = await db
+  const [depRow] = await runner
     .select({ departureId: bookings.departureId })
     .from(bookings)
     .where(eq(bookings.id, bookingId))
     .limit(1);
-  await syncDepartureQuota(depRow?.departureId ?? null);
+  if (!skipQuotaSync) await syncDepartureQuota(depRow?.departureId ?? null);
 }
 
 // ── recordFinancialTransaction ─────────────────────────────────────────────────
@@ -135,6 +140,7 @@ export async function recordFinancialTransaction({
   recordedBy,
   accountId,
   entryType,
+  runner,
 }: {
   bookingId?: string | null;
   amount: number;
@@ -145,8 +151,20 @@ export async function recordFinancialTransaction({
   recordedBy?: string;
   accountId?: string | null;
   entryType?: "debit" | "credit";
+  runner?: DbRunner;
 }): Promise<void> {
-  await db.insert(financialTransactions).values({
+  const dbRunner = runner ?? db;
+
+  if (referenceNumber) {
+    const [existing] = await dbRunner
+      .select({ id: financialTransactions.id })
+      .from(financialTransactions)
+      .where(eq(financialTransactions.referenceNumber, referenceNumber))
+      .limit(1);
+    if (existing) return;
+  }
+
+  await dbRunner.insert(financialTransactions).values({
     id: crypto.randomUUID(),
     bookingId: bookingId ?? null,
     amount: String(amount),
@@ -221,53 +239,69 @@ export async function syncFromGatewayTransaction({
     return;
   }
 
-  // Idempotency guard — gateway may deliver duplicate webhooks.
-  // Check if we already have a bookingPayments record for this orderId.
-  const existing = await db
-    .select({ id: bookingPayments.id })
-    .from(bookingPayments)
-    .where(
-      and(
-        eq(bookingPayments.bookingId, bookingId),
-        eq(bookingPayments.referenceNumber, orderId),
-        eq(bookingPayments.isVoided, false),
-      ),
-    )
-    .limit(1);
-
-  if (existing.length > 0) {
-    console.info(`[paymentSync] orderId=${orderId} already recorded — skipping duplicate`);
-    return;
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    throw new Error(`Invalid gateway payment amount: ${amount}`);
   }
 
-  // Record the payment in bookingPayments.
-  await db.insert(bookingPayments).values({
-    id: crypto.randomUUID(),
-    bookingId,
-    type: "gateway",
-    amount,
-    paidAt: new Date(),
-    method: gateway,
-    referenceNumber: orderId,
-    notes: `Auto-recorded from ${gateway} webhook`,
-    recordedBy: null,
-    isVoided: false,
-    createdAt: new Date(),
+  const paymentResult = await db.transaction(async (tx) => {
+    // Idempotency guard and insert happen under one transaction. The database
+    // unique index remains the final protection against concurrent callbacks.
+    const existing = await tx
+      .select({ id: bookingPayments.id })
+      .from(bookingPayments)
+      .where(
+        and(
+          eq(bookingPayments.bookingId, bookingId),
+          eq(bookingPayments.referenceNumber, orderId),
+          eq(bookingPayments.isVoided, false),
+        ),
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      console.info(`[paymentSync] orderId=${orderId} already recorded — skipping duplicate`);
+      return { duplicate: true, paymentStatus: "paid" as PaymentStatus };
+    }
+
+    const [paidRow] = await tx
+      .select({ total: sum(bookingPayments.amount) })
+      .from(bookingPayments)
+      .where(and(eq(bookingPayments.bookingId, bookingId), eq(bookingPayments.isVoided, false)));
+    const currentPaid = Number(paidRow?.total ?? 0);
+    if (currentPaid + amount > booking.totalPrice) {
+      throw new Error(`Gateway payment exceeds booking balance for ${bookingId}`);
+    }
+
+    await tx.insert(bookingPayments).values({
+      id: crypto.randomUUID(),
+      bookingId,
+      type: "gateway",
+      amount,
+      paidAt: new Date(),
+      method: gateway,
+      referenceNumber: orderId,
+      notes: `Auto-recorded from ${gateway} webhook`,
+      recordedBy: null,
+      isVoided: false,
+      createdAt: new Date(),
+    });
+
+    const { paymentStatus } = await computePaymentStatus(bookingId, tx);
+    await syncBookingStatus(bookingId, paymentStatus, tx, true);
+    await recordFinancialTransaction({
+      bookingId,
+      amount,
+      type: "income",
+      category: "booking_payment",
+      description: `Payment via ${gateway} (${orderId})`,
+      referenceNumber: `gateway:${orderId}`,
+      runner: tx,
+    });
+    return { duplicate: false, paymentStatus };
   });
 
-  // Compute new payment status and sync booking.
-  const { paymentStatus } = await computePaymentStatus(bookingId);
-  await syncBookingStatus(bookingId, paymentStatus);
-
-  // Record financial transaction.
-  await recordFinancialTransaction({
-    bookingId,
-    amount,
-    type: "income",
-    category: "booking_payment",
-    description: `Payment via ${gateway} (${orderId})`,
-    referenceNumber: orderId,
-  });
+  if (paymentResult.duplicate) return;
+  const { paymentStatus } = paymentResult;
 
   // In-app notification for the jamaah.
   if (booking.userId) {
