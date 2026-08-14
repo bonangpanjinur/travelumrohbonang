@@ -20,6 +20,8 @@ import {
   sql,
 } from "@workspace/db";
 import { sendAdminError, isTableMissing } from "../../lib/adminApiError";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import { buildBookingScopeCondition, isBookingInScope } from "../../lib/scopeConditions";
 import { journalRefundApproved, journalRefundProcessed } from "../../lib/autoJournal";
 
 const router = Router();
@@ -44,12 +46,13 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "amount harus berupa angka positif" });
     }
 
+    const scope = await resolveUserScope(req);
     const [booking] = await db
-      .select({ id: bookings.id, userId: bookings.userId })
+      .select({ id: bookings.id, userId: bookings.userId, branchId: bookings.branchId, agentId: bookings.agentId, picType: bookings.picType, picId: bookings.picId })
       .from(bookings)
       .where(eq(bookings.id, bookingId))
       .limit(1);
-    if (!booking) return res.status(404).json({ error: "Booking tidak ditemukan" });
+    if (!booking || !isBookingInScope(booking, scope)) return res.status(404).json({ error: "Booking tidak ditemukan" });
 
     // F1-03a: Hitung total yang sudah diverifikasi; tolak jika refund melebihi jumlah tersebut
     const [{ totalVerified }] = await db
@@ -104,6 +107,7 @@ router.post("/", async (req, res) => {
 // ── GET / — daftar semua refund request ──────────────────────────────────────
 router.get("/", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
     const data = await db
       .select({
         id: refundRequests.id,
@@ -130,6 +134,7 @@ router.get("/", async (req, res) => {
       })
       .from(refundRequests)
       .leftJoin(bookings, eq(refundRequests.bookingId, bookings.id))
+      .where(buildBookingScopeCondition(scope, "bookings"))
       .orderBy(desc(refundRequests.createdAt));
     res.json(data);
   } catch (e) {
@@ -141,13 +146,15 @@ router.get("/", async (req, res) => {
 // ── GET /:id — detail refund (tampilkan nomor rekening penuh, admin only) ────
 router.get("/:id", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
     const [refund] = await db
-      .select()
+      .select({ refund: refundRequests, booking: { branchId: bookings.branchId, agentId: bookings.agentId, picType: bookings.picType, picId: bookings.picId } })
       .from(refundRequests)
-      .where(eq(refundRequests.id, req.params.id))
+      .leftJoin(bookings, eq(refundRequests.bookingId, bookings.id))
+      .where(and(eq(refundRequests.id, req.params.id), buildBookingScopeCondition(scope, "bookings")))
       .limit(1);
     if (!refund) return res.status(404).json({ error: "Refund tidak ditemukan" });
-    res.json(refund);
+    res.json(refund.refund);
   } catch (e) {
     sendAdminError(res, "GET /api/admin/refunds/:id", e);
   }
@@ -159,6 +166,7 @@ router.patch("/:id", async (req, res) => {
     const id = req.params.id;
     const { status, adminNotes, processedBy } = req.body;
     const adminId = (req as any).user?.id as string | undefined;
+    const scope = await resolveUserScope(req);
     const now = new Date();
 
     // Ambil data refund sebelum update
@@ -167,12 +175,17 @@ router.patch("/:id", async (req, res) => {
         bookingId: refundRequests.bookingId,
         amount:    refundRequests.amount,
         status:    refundRequests.status,
+        branchId: bookings.branchId,
+        agentId: bookings.agentId,
+        picType: bookings.picType,
+        picId: bookings.picId,
       })
       .from(refundRequests)
+      .leftJoin(bookings, eq(refundRequests.bookingId, bookings.id))
       .where(eq(refundRequests.id, id))
       .limit(1);
 
-    if (!before) {
+    if (!before || !isBookingInScope(before, scope)) {
       return res.status(404).json({ error: "Refund tidak ditemukan" });
     }
 
