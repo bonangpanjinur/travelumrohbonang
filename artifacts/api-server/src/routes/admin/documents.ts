@@ -11,6 +11,8 @@ import {
 import { validate } from "../../middlewares/validate";
 import { emailNotifications } from "../../lib/notifications/emailNotifications";
 import { waNotifications } from "../../lib/notifications/waNotifications";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import { buildBookingScopeCondition, isBookingInScope } from "../../lib/scopeConditions";
 
 const router = Router({ mergeParams: true });
 
@@ -45,13 +47,14 @@ router.get("/", async (req, res) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
 
+    const scope = await resolveUserScope(req);
     const [booking] = await db
-      .select({ id: bookings.id })
+      .select({ id: bookings.id, branchId: bookings.branchId, agentId: bookings.agentId, picType: bookings.picType, picId: bookings.picId })
       .from(bookings)
       .where(eq(bookings.id, bookingId))
       .limit(1);
 
-    if (!booking) {
+    if (!booking || !isBookingInScope(booking, scope)) {
       res.status(404).json({ error: "Booking not found" });
       return;
     }
@@ -106,6 +109,12 @@ router.get("/pilgrims/:pilgrimId", async (req, res) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
     const pilgrimId = req.params.pilgrimId as string;
+    const scope = await resolveUserScope(req);
+    const [booking] = await db.select({ branchId: bookings.branchId, agentId: bookings.agentId, picType: bookings.picType, picId: bookings.picId }).from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+    if (!booking || !isBookingInScope(booking, scope)) {
+      res.status(404).json({ error: "Pilgrim not found" });
+      return;
+    }
 
     const [pilgrim] = await db
       .select({ id: bookingPilgrims.id, name: bookingPilgrims.name })
@@ -148,6 +157,12 @@ router.put(
       const bookingId = (req.params as Record<string, string>).bookingId;
       const pilgrimId = req.params.pilgrimId as string;
       const documentType = req.params.documentType as string;
+      const scope = await resolveUserScope(req);
+      const [booking] = await db.select({ branchId: bookings.branchId, agentId: bookings.agentId, picType: bookings.picType, picId: bookings.picId }).from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+      if (!booking || !isBookingInScope(booking, scope)) {
+        res.status(404).json({ error: "Pilgrim not found" });
+        return;
+      }
       const body = req.body as AdminUpsertDocumentInput;
       const adminId = req.user?.id;
 
@@ -241,6 +256,12 @@ router.delete("/pilgrims/:pilgrimId/:documentType", async (req, res) => {
     const bookingId = (req.params as Record<string, string>).bookingId;
     const pilgrimId = req.params.pilgrimId as string;
     const documentType = req.params.documentType as string;
+    const scope = await resolveUserScope(req);
+    const [booking] = await db.select({ branchId: bookings.branchId, agentId: bookings.agentId, picType: bookings.picType, picId: bookings.picId }).from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+    if (!booking || !isBookingInScope(booking, scope)) {
+      res.status(404).json({ error: "Document record not found" });
+      return;
+    }
 
     const [deleted] = await db
       .delete(pilgrimDocuments)
@@ -278,6 +299,7 @@ router.delete("/pilgrims/:pilgrimId/:documentType", async (req, res) => {
 router.get("/departure-summary", async (req, res) => {
   try {
     const { departureId } = req.query as Record<string, string>;
+    const scope = await resolveUserScope(req);
     if (!departureId) {
       res.status(400).json({ error: "departureId is required" });
       return;
@@ -294,7 +316,7 @@ router.get("/departure-summary", async (req, res) => {
       .from(bookings)
       .leftJoin(packages,          eq(bookings.packageId,    packages.id))
       .leftJoin(packageDepartures, eq(bookings.departureId,  packageDepartures.id))
-      .where(eq(bookings.departureId, departureId));
+      .where(and(eq(bookings.departureId, departureId), buildBookingScopeCondition(scope, "bookings")));
 
     if (!departureBookings.length) {
       res.json({ totalPilgrims: 0, fullyVerified: 0, partial: 0, notStarted: 0, pilgrims: [], departureInfo: null });
