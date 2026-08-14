@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "@/shared/lib/apiClient";
+import { supabaseAuth } from "@/shared/integrations/supabase/auth-client";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -218,6 +219,27 @@ const AdminDepartures = () => {
       setForm(f => ({ ...f, packageId: pkgFilterId }));
     }
   }, [pkgFilterId, loading]);
+
+  const handleDownloadManifestPdf = async (departureId: string) => {
+    try {
+      const { data: { session } } = await supabaseAuth.auth.getSession();
+      const headers = new Headers();
+      if (session?.access_token) headers.set("Authorization", `Bearer ${session.access_token}`);
+      const response = await fetch(`/api/admin/departures/${departureId}/manifest.pdf`, { headers, credentials: "include" });
+      if (!response.ok) throw new Error(`Gagal mengunduh manifest PDF (HTTP ${response.status})`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `manifest-${departureId}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast({ title: "Gagal mengunduh manifest PDF", description: error?.message || "Silakan coba lagi.", variant: "destructive" });
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -971,7 +993,7 @@ const AdminDepartures = () => {
                       <Button
                         variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
                         title="Unduh Manifest PDF"
-                        onClick={() => window.open(`/api/admin/departures/${dep.id}/manifest.pdf`, "_blank")}
+                        onClick={() => void handleDownloadManifestPdf(dep.id)}
                       >
                         <FileDown className="w-4 h-4" />
                       </Button>
