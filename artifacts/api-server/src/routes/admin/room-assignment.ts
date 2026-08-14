@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { db, bookingPilgrims, bookings, packageDepartures, packages, eq, desc, and, asc, sql } from "@workspace/db";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import { buildBookingScopeCondition, isBookingInScope } from "../../lib/scopeConditions";
 
 /** O-12: Kapasitas maksimum per tipe kamar */
 const ROOM_CAPACITY: Record<string, number> = {
@@ -41,6 +43,7 @@ router.get("/departures", async (_req, res) => {
  */
 router.get("/:departureId/pilgrims", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
     const { departureId } = req.params;
     const data = await db
       .select({
@@ -55,7 +58,7 @@ router.get("/:departureId/pilgrims", async (req, res) => {
       })
       .from(bookingPilgrims)
       .innerJoin(bookings, eq(bookingPilgrims.bookingId, bookings.id))
-      .where(eq(bookings.departureId, departureId))
+      .where(and(eq(bookings.departureId, departureId), buildBookingScopeCondition(scope, "bookings")))
       .orderBy(asc(bookingPilgrims.roomType), asc(bookingPilgrims.name));
     res.json(data);
   } catch (err) {
@@ -72,6 +75,9 @@ router.patch("/pilgrims/:pilgrimId", async (req, res) => {
   try {
     const { pilgrimId } = req.params;
     const { roomType, roomNumber } = req.body as { roomType?: string; roomNumber?: string };
+    const scope = await resolveUserScope(req);
+    const [ownership] = await db.select({ branchId: bookings.branchId, agentId: bookings.agentId, picType: bookings.picType, picId: bookings.picId }).from(bookingPilgrims).innerJoin(bookings, eq(bookingPilgrims.bookingId, bookings.id)).where(eq(bookingPilgrims.id, pilgrimId)).limit(1);
+    if (!ownership || !isBookingInScope(ownership, scope)) return res.status(404).json({ error: "Jemaah tidak ditemukan" });
 
     const updateData: Record<string, unknown> = {};
     if (roomType !== undefined) updateData.roomType = roomType;
@@ -153,6 +159,7 @@ router.patch("/pilgrims/:pilgrimId", async (req, res) => {
 router.post("/:departureId/bulk", async (req, res) => {
   try {
     const { departureId } = req.params;
+    const scope = await resolveUserScope(req);
     const assignments = req.body as Array<{ pilgrimId: string; roomNumber: string; roomType?: string }>;
     if (!Array.isArray(assignments) || assignments.length === 0) {
       return res.status(400).json({ error: "Data assignment tidak valid" });
@@ -165,7 +172,11 @@ router.post("/:departureId/bulk", async (req, res) => {
       .select({ id: bookingPilgrims.id, gender: bookingPilgrims.gender, roomNumber: bookingPilgrims.roomNumber })
       .from(bookingPilgrims)
       .innerJoin(bookings, eq(bookingPilgrims.bookingId, bookings.id))
-      .where(eq(bookings.departureId, departureId));
+      .where(and(eq(bookings.departureId, departureId), buildBookingScopeCondition(scope, "bookings")));
+
+    if (assignments.some((assignment) => !existingPilgrims.some((pilgrim) => pilgrim.id === assignment.pilgrimId))) {
+      return res.status(404).json({ error: "Sebagian jemaah tidak ditemukan dalam scope Anda" });
+    }
 
     // Build map dari pilgrimId → gender (dari data existing)
     const genderMap = new Map(existingPilgrims.map((p) => [p.id, p.gender]));
