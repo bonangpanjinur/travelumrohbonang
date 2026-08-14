@@ -46,6 +46,8 @@ const AdminAgentWithdrawals = () => {
 
   useEffect(() => { load(); }, []);
 
+  const totals = items.reduce((acc, item) => { const amount = Number(item.amount) || 0; const key = item.status as keyof typeof acc.count; acc.amount[key] = (acc.amount[key] || 0) + amount; acc.count[key] = (acc.count[key] || 0) + 1; return acc; }, { amount: { requested: 0, approved: 0, paid: 0, rejected: 0 } as Record<string, number>, count: { requested: 0, approved: 0, paid: 0, rejected: 0 } as Record<string, number> });
+
   const updateStatus = async (status: "approved" | "rejected" | "paid") => {
     if (!selected) return;
     setSaving(true);
@@ -70,6 +72,10 @@ const AdminAgentWithdrawals = () => {
       <div className="flex items-center gap-2">
         <Wallet className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-bold">Pencairan Komisi Agen</h1>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[{ key: "requested", label: "Menunggu Review", tone: "text-amber-600" }, { key: "approved", label: "Disetujui", tone: "text-blue-600" }, { key: "paid", label: "Sudah Dibayar", tone: "text-emerald-600" }, { key: "rejected", label: "Ditolak", tone: "text-red-600" }].map((item) => <Card key={item.key}><CardContent className="p-4"><p className="text-xs text-muted-foreground">{item.label}</p><p className={`text-xl font-bold ${item.tone}`}>{totals.count[item.key] || 0}</p><p className="text-xs text-muted-foreground mt-1">Rp {(totals.amount[item.key] || 0).toLocaleString("id-ID")}</p></CardContent></Card>)}
       </div>
 
       <Card>
