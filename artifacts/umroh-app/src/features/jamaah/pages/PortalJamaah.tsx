@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { Bell, CalendarDays, ChevronRight, FileText, Headphones, MessageCircle, Plane, Receipt, ShieldCheck, Wallet } from "lucide-react";
+import { CalendarDays, ChevronRight, FileText, Headphones, MessageCircle, Plane, Receipt, ShieldCheck, Wallet } from "lucide-react";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useMyBookings } from "@/features/booking/hooks/useMyBookings";
 import { Card, CardContent } from "@/shared/components/ui/card";
+import NotificationBell from "@/shared/components/notifications/NotificationBell";
 import { Button } from "@/shared/components/ui/button";
 
 const formatRupiah = (value: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value);
@@ -31,7 +32,7 @@ export default function PortalJamaah() {
               <h1 className="mt-1 text-2xl font-semibold tracking-tight">Assalamu'alaikum, {firstName}</h1>
               <p className="mt-2 max-w-md text-sm text-primary-foreground/75">Semua persiapan perjalanan umrah Anda dalam satu tempat.</p>
             </div>
-            <Link to="/notifications" aria-label="Notifikasi" className="rounded-full bg-white/10 p-3 hover:bg-white/20"><Bell className="h-5 w-5" /></Link>
+            <div className="rounded-full bg-white/10 p-1 text-primary-foreground"><NotificationBell /></div>
           </div>
           <div className="mt-6 flex items-center gap-2 text-xs text-primary-foreground/70"><ShieldCheck className="h-4 w-4" /> Data perjalanan Anda terlindungi</div>
         </div>
