@@ -194,7 +194,7 @@ async function buildBrandedManifestWorkbook(rows: any[][], title: string) {
   const worksheet = workbook.addWorksheet("MANIFEST", { views: [{ state: "frozen", ySplit: 7 }] });
   const branding = await getExcelBranding();
   const columns = MANIFEST_HEADERS;
-  worksheet.columns = columns.map((header, index) => ({ header, key: `c${index}`, width: [8, 30, 10, 18, 18, 8, 18, 18, 18, 18, 18, 14, 32][index] || 16 }));
+  worksheet.columns = columns.map((_header, index) => ({ key: `c${index}`, width: [8, 30, 10, 18, 18, 8, 18, 18, 18, 18, 18, 14, 32][index] || 16 }));
   await addBrandingHeader(workbook, worksheet, branding, columns.length);
   worksheet.getCell("A4").value = "DOKUMEN";
   worksheet.getCell("B4").value = title;

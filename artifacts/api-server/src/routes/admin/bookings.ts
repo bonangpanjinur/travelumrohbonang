@@ -110,7 +110,7 @@ router.get("/export.xlsx", async (req, res) => {
     const ws = wb.addWorksheet("Booking", { views: [{ state: "frozen", ySplit: 5 }] });
     const branding = await getExcelBranding();
     const columns = rows.length > 0 ? Object.keys(rows[0]) : ["Kode Booking", "Nama Jamaah", "Email", "Telepon", "Paket", "Tgl Berangkat", "Cabang", "Status", "Total Harga", "Skema", "Dibuat"];
-    ws.columns = columns.map((key) => ({ header: key, key, width: Math.max(16, Math.min(28, key.length + 8)) }));
+    ws.columns = columns.map((key) => ({ key, width: Math.max(16, Math.min(28, key.length + 8)) }));
     await addBrandingHeader(wb, ws, branding, columns.length);
     const headerRow = 5;
     ws.getRow(headerRow).values = columns;
