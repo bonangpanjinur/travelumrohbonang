@@ -1,5 +1,6 @@
 -- O-11: Pre-departure checklist per keberangkatan
 -- Idempotent migration for production databases where the table is missing.
+-- profiles.id is UUID, therefore departure_checklists.done_by must also be UUID.
 
 CREATE TABLE IF NOT EXISTS departure_checklists (
   id TEXT PRIMARY KEY,
@@ -8,7 +9,7 @@ CREATE TABLE IF NOT EXISTS departure_checklists (
   category TEXT,
   item TEXT NOT NULL,
   is_done BOOLEAN NOT NULL DEFAULT FALSE,
-  done_by TEXT REFERENCES profiles(id) ON DELETE SET NULL,
+  done_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   done_at TIMESTAMPTZ,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
