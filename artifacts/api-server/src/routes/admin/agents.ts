@@ -1,15 +1,30 @@
 import { Router } from "express";
-import { db, agents, agentCommissions, agentWithdrawals, affiliateClicks, userRoles, eq, desc, and } from "@workspace/db";
+import { db, agents, agentCommissions, agentWithdrawals, affiliateClicks, userRoles, eq, desc, and, inArray } from "@workspace/db";
 import { requireSuperAdmin } from "../../middlewares/requireAdmin";
 import { journalCommissionWithdrawal } from "../../lib/autoJournal";
 import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
 
+async function agentIdsForScope(scope: Awaited<ReturnType<typeof resolveUserScope>>) {
+  if (scope.type === "global") return null;
+  if (scope.type === "agent") return scope.agentId ? [scope.agentId] : [];
+  if (!scope.branchId) return [];
+  const rows = await db.select({ id: agents.id }).from(agents).where(eq(agents.branchId, scope.branchId));
+  return rows.map((row) => row.id);
+}
+
+async function agentInScope(agentId: string, scope: Awaited<ReturnType<typeof resolveUserScope>>) {
+  const ids = await agentIdsForScope(scope);
+  return ids === null || ids.includes(agentId);
+}
+
 // Agents
 router.get("/", async (req, res) => {
   try {
-    const data = await db.select().from(agents);
+    const scope = await resolveUserScope(req);
+    const ids = await agentIdsForScope(scope);
+    const data = ids === null ? await db.select().from(agents) : ids.length ? await db.select().from(agents).where(inArray(agents.id, ids)) : [];
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch agents" });
@@ -32,6 +47,9 @@ router.post("/", async (req, res) => {
 
 router.patch("/:id", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    const existing = await db.select({ id: agents.id }).from(agents).where(eq(agents.id, req.params.id)).limit(1);
+    if (!existing[0] || !(await agentInScope(existing[0].id, scope))) return res.status(404).json({ error: "Agent not found" });
     // Strip immutable fields to prevent accidental overwrite of PK / createdAt
     const { id: _id, createdAt: _createdAt, ...updates } = req.body;
     const [data] = await db.update(agents).set(updates).where(eq(agents.id, req.params.id)).returning();
@@ -44,6 +62,8 @@ router.patch("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    if (!(await agentInScope(req.params.id, scope))) return res.status(404).json({ error: "Agent not found" });
     const [deleted] = await db.delete(agents).where(eq(agents.id, req.params.id as string)).returning();
     if (!deleted) return res.status(404).json({ error: "Agent not found" });
     res.json({ success: true });
@@ -56,10 +76,10 @@ router.delete("/:id", async (req, res) => {
 router.get("/commissions", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
-    // Agen hanya boleh melihat komisi miliknya sendiri
-    const query = scope.type === "agent" && scope.agentId
-      ? db.select().from(agentCommissions).where(eq(agentCommissions.agentId, scope.agentId)).orderBy(desc(agentCommissions.createdAt))
-      : db.select().from(agentCommissions).orderBy(desc(agentCommissions.createdAt));
+    const ids = await agentIdsForScope(scope);
+    const query = ids === null
+      ? db.select().from(agentCommissions).orderBy(desc(agentCommissions.createdAt))
+      : ids.length ? db.select().from(agentCommissions).where(inArray(agentCommissions.agentId, ids)).orderBy(desc(agentCommissions.createdAt)) : Promise.resolve([]);
     const data = await query;
     res.json(data);
   } catch (err) {
@@ -69,6 +89,9 @@ router.get("/commissions", async (req, res) => {
 
 router.patch("/commissions/:id", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    const [commission] = await db.select({ agentId: agentCommissions.agentId }).from(agentCommissions).where(eq(agentCommissions.id, req.params.id)).limit(1);
+    if (!commission || !(await agentInScope(commission.agentId, scope))) return res.status(404).json({ error: "Komisi tidak ditemukan" });
     const [data] = await db.update(agentCommissions).set(req.body).where(eq(agentCommissions.id, req.params.id)).returning();
     res.json(data);
   } catch (err) {
@@ -80,6 +103,9 @@ router.patch("/commissions/:id", async (req, res) => {
 router.get("/withdrawals", async (req, res) => {
   try {
     // Join with agents to get agent name/email for display
+    const scope = await resolveUserScope(req);
+    const ids = await agentIdsForScope(scope);
+    if (ids !== null && ids.length === 0) return res.json([]);
     const data = await db
       .select({
         id: agentWithdrawals.id,
@@ -101,6 +127,7 @@ router.get("/withdrawals", async (req, res) => {
       })
       .from(agentWithdrawals)
       .leftJoin(agents, eq(agentWithdrawals.agentId, agents.id))
+      .where(ids === null ? undefined : inArray(agentWithdrawals.agentId, ids))
       .orderBy(desc(agentWithdrawals.createdAt));
     res.json(data);
   } catch (err) {
@@ -124,6 +151,7 @@ router.patch("/withdrawals/:id", async (req, res) => {
     };
     const adminId = (req as any).user?.id as string | undefined;
 
+    const scope = await resolveUserScope(req);
     // Ambil data withdrawal sebelum update (untuk jurnal dan state-machine check)
     const [before] = await db
       .select({ agentId: agentWithdrawals.agentId, amount: agentWithdrawals.amount, status: agentWithdrawals.status })
@@ -132,8 +160,9 @@ router.patch("/withdrawals/:id", async (req, res) => {
       .limit(1);
 
     if (!before) return res.status(404).json({ error: "Withdrawal not found" });
+    if (!(await agentInScope(before.agentId, scope))) return res.status(404).json({ error: "Withdrawal not found" });
 
-    // F3-04: State-machine — tolak transisi yang tidak diizinkan
+    // State-machine — tolak transisi yang tidak diizinkan
     if (status && status !== before.status) {
       const allowedNext = WITHDRAWAL_TRANSITIONS[before.status ?? ""] ?? [];
       if (!allowedNext.includes(status)) {
