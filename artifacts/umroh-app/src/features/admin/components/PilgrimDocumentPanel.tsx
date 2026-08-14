@@ -8,9 +8,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { useToast } from "@/shared/hooks/use-toast";
 import {
-  ChevronDown, ChevronRight, Upload, CheckCircle2, Clock,
+  ChevronRight, Upload, CheckCircle2, Clock,
   XCircle, FileText, ExternalLink, Loader2, Trash2, Search,
 } from "lucide-react";
 
@@ -51,6 +52,7 @@ function DocSlot({
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const status = doc?.status ?? "missing";
   const cfg = STATUS_CFG[status] ?? STATUS_CFG.missing;
@@ -82,6 +84,7 @@ function DocSlot({
       toast({ title: "Gagal upload", description: err?.message, variant: "destructive" });
     } finally {
       setUploading(false);
+      setUploadOpen(false);
     }
   };
 
@@ -144,14 +147,35 @@ function DocSlot({
           </>
         )}
         <Button
-          size="sm" variant="outline" className="h-6 text-[10px] px-2 gap-1"
-          onClick={() => fileRef.current?.click()}
+          size="sm" variant="outline" className="h-7 rounded-lg px-2.5 text-[10px] gap-1"
+          onClick={() => setUploadOpen(true)}
           disabled={uploading}
         >
           {uploading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Upload className="w-2.5 h-2.5" />}
           {doc ? "Ganti" : "Upload"}
         </Button>
       </div>
+      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{doc ? "Ganti dokumen" : "Upload dokumen"}</DialogTitle>
+            <DialogDescription>{label} untuk jemaah ini. Format yang didukung: JPG, PNG, WEBP, atau PDF.</DialogDescription>
+          </DialogHeader>
+          <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-6 text-center">
+            <Upload className="mx-auto mb-2 h-7 w-7 text-primary" />
+            <p className="text-sm font-medium">Pilih file dokumen</p>
+            <p className="mt-1 text-xs text-muted-foreground">Maksimalkan kualitas scan agar mudah diverifikasi.</p>
+            <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" className="hidden" onChange={handleUpload} />
+            <Button className="mt-4" onClick={() => fileRef.current?.click()} disabled={uploading}>
+              {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              {uploading ? "Mengupload…" : "Pilih File"}
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadOpen(false)} disabled={uploading}>Batal</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -176,13 +200,14 @@ function PilgrimDocAccordion({ pilgrim, bookingId }: { pilgrim: Pilgrim; booking
   const total = DOCUMENT_TYPES.length;
 
   return (
-    <div className="border border-border/50 rounded-lg overflow-hidden">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <div className="border border-border/50 rounded-xl overflow-hidden bg-background shadow-sm">
       <button
-        className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
-        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-3 py-3 text-sm hover:bg-muted/50 transition-colors"
       >
         <div className="flex items-center gap-2 min-w-0">
-          {open ? <ChevronDown className="w-3.5 h-3.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
+          <ChevronRight className="w-3.5 h-3.5 shrink-0" />
           <span className="font-medium truncate">{pilgrim.name}</span>
         </div>
         <div className="ml-3 flex min-w-[112px] items-center gap-2">
@@ -194,15 +219,20 @@ function PilgrimDocAccordion({ pilgrim, bookingId }: { pilgrim: Pilgrim; booking
           </span>
         </div>
       </button>
-
-      {open && (
-        <div className="px-3 pb-2 pt-1 bg-muted/20">
-          {isLoading ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
-              <Loader2 className="w-3 h-3 animate-spin" /> Memuat…
-            </div>
-          ) : (
-            DOCUMENT_TYPES.map(({ key, label }) => (
+        </div>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Dokumen {pilgrim.name}</DialogTitle>
+          <DialogDescription>Kelola, lihat, dan verifikasi dokumen jemaah dari pop-up ini.</DialogDescription>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Memuat dokumen…
+          </div>
+        ) : (
+          <div className="rounded-xl border bg-muted/20 px-3 py-1">
+            {DOCUMENT_TYPES.map(({ key, label }) => (
               <DocSlot
                 key={key}
                 pilgrimId={pilgrim.id}
@@ -212,11 +242,11 @@ function PilgrimDocAccordion({ pilgrim, bookingId }: { pilgrim: Pilgrim; booking
                 doc={docs.find((d) => d.documentType === key)}
                 onRefresh={refresh}
               />
-            ))
-          )}
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
