@@ -43,6 +43,7 @@ import {
 import { journalPaymentVerified } from "../../lib/autoJournal";
 import { emailNotifications } from "../../lib/notifications/emailNotifications";
 import { waNotifications } from "../../lib/notifications/waNotifications";
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../../lib/supabaseEnv";
 
 // ── F2-02: Object Storage untuk bukti pembayaran ─────────────────────────────
 // File diunggah ke Replit App Storage (GCS) agar tidak hilang saat redeploy.
@@ -61,7 +62,9 @@ async function uploadProofToObjectStorage(
   mimetype: string,
 ): Promise<string> {
   const privateDir = process.env.PRIVATE_OBJECT_DIR ?? "";
-  if (!privateDir) throw new Error("PRIVATE_OBJECT_DIR not set");
+  if (!privateDir) {
+    return uploadProofToSupabaseStorage(buffer, originalname, mimetype);
+  }
 
   // Parse "/bucket-name/prefix" format
   const stripped = privateDir.replace(/^\/+/, "");
@@ -80,6 +83,42 @@ async function uploadProofToObjectStorage(
   await gcsFile.save(buffer, { contentType: mimetype, resumable: false });
 
   return `/objects/${bucketName}/${objectName}`;
+}
+
+/**
+ * Serverless fallback for Vercel: upload to the private Supabase Storage bucket
+ * instead of the Replit GCS sidecar, which is unavailable outside Replit.
+ */
+async function uploadProofToSupabaseStorage(
+  buffer: Buffer,
+  originalname: string,
+  mimetype: string,
+): Promise<string> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Supabase Storage is not configured: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
+  }
+
+  const bucketName = process.env.SUPABASE_PAYMENT_PROOF_BUCKET || "payment-proofs";
+  const ext = path.extname(originalname) || ".bin";
+  const objectName = `admin/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}${ext}`;
+  const encodedPath = objectName.split("/").map(encodeURIComponent).join("/");
+  const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(bucketName)}/${encodedPath}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      "Content-Type": mimetype,
+      "x-upsert": "false",
+    },
+    body: buffer,
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`Supabase Storage upload failed (${response.status}): ${detail.slice(0, 300)}`);
+  }
+
+  return `/supabase-objects/${bucketName}/${objectName}`;
 }
 
 // Use memory storage — file uploaded to GCS server-side instead of disk
@@ -202,10 +241,40 @@ router.get("/proof-files/:token", async (req: any, res) => {
 
   // ── 2. Try to decode as base64url (new object storage paths) ─────────────
   let objectPath: string | null = null;
+  let supabaseObjectPath: string | null = null;
   try {
     const decoded = Buffer.from(token, "base64url").toString("utf-8");
     if (decoded.startsWith("/objects/")) objectPath = decoded;
+    if (decoded.startsWith("/supabase-objects/")) supabaseObjectPath = decoded;
   } catch {}
+
+  if (supabaseObjectPath) {
+    try {
+      if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error("Supabase Storage is not configured");
+      const stripped = supabaseObjectPath.replace(/^\/supabase-objects\//, "");
+      const slashIdx = stripped.indexOf("/");
+      if (slashIdx <= 0) throw new Error("Invalid Supabase object path");
+      const bucketName = stripped.slice(0, slashIdx);
+      const objectName = stripped.slice(slashIdx + 1);
+      const response = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${encodeURIComponent(bucketName)}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: SUPABASE_SERVICE_ROLE_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ expiresIn: 3600, paths: [objectName] }),
+      });
+      if (!response.ok) throw new Error(`Supabase signed URL failed (${response.status})`);
+      const payload = await response.json() as { signedURLs?: Array<{ signedURL?: string }> };
+      const signedPath = payload.signedURLs?.[0]?.signedURL;
+      if (!signedPath) throw new Error("Supabase signed URL missing");
+      return res.redirect(302, signedPath.startsWith("http") ? signedPath : `${SUPABASE_URL}/storage/v1${signedPath}`);
+    } catch (err) {
+      console.error("[admin/payments] proof serve (supabase) error:", err);
+      return res.status(404).json({ error: "File not found" });
+    }
+  }
 
   if (objectPath) {
     // New path: stream from GCS via signed URL redirect (TTL 1 jam)
