@@ -49,14 +49,14 @@ async function assertSavingsAccountScope(req: any, accountId: string) {
 router.get("/stats", async (req, res) => {
   try {
     const scopeFilter = await getSavingsScopeFilter(req, "p");
-    const [totals] = await db.execute(sql`
+    const totals = await db.execute(sql`
       SELECT count(sa.*)::int AS "totalAccounts",
              coalesce(sum(sa.current_balance), 0)::int AS "totalBalance",
              count(*) FILTER (WHERE sa.status = 'active')::int AS "activeAccounts"
       FROM savings_accounts sa
       LEFT JOIN profiles p ON p.id::text = sa.user_id
       WHERE ${scopeFilter}
-    `).then(r => ((r as any).rows ?? r)[0]);
+    `).then((r: any) => ((r as any).rows ?? r)[0] ?? {});
 
     const pendingRows = await db.execute(sql`
       SELECT
@@ -143,7 +143,7 @@ router.get("/:id", async (req, res) => {
       LEFT JOIN profiles p ON p.id::text = sa.user_id
       WHERE sa.id = ${id}
       LIMIT 1
-    `).then(r => r.rows ?? r);
+    `).then((r: any) => r.rows ?? r);
 
     if (!account) return res.status(404).json({ error: "Account not found" });
 
@@ -167,7 +167,7 @@ router.post("/:id/verify/:txId", async (req, res) => {
     if (!(await assertSavingsAccountScope(req, id))) return res.status(403).json({ error: "Akses rekening tabungan ditolak untuk scope Anda" });
     const adminId = (req as any).user?.id as string | undefined;
 
-    const result = await db.transaction(async (txDb) => {
+    const result = await db.transaction(async (txDb: any) => {
       const lockedAccount = await txDb.execute(sql`
         SELECT * FROM savings_accounts WHERE id = ${id} FOR UPDATE
       `);
@@ -261,7 +261,7 @@ router.post("/:id/approve-withdrawal/:txId", async (req, res) => {
     const { id, txId } = req.params;
     if (!(await assertSavingsAccountScope(req, id))) return res.status(403).json({ error: "Akses rekening tabungan ditolak untuk scope Anda" });
     const adminId = (req as any).user?.id as string | undefined;
-    const result = await db.transaction(async (txDb) => {
+    const result = await db.transaction(async (txDb: any) => {
       const locked = await txDb.execute(sql`SELECT * FROM savings_accounts WHERE id = ${id} FOR UPDATE`);
       const account = ((locked as any).rows ?? locked)[0] as any;
       if (!account) throw Object.assign(new Error("Account not found"), { status: 404 });
@@ -295,7 +295,7 @@ router.post("/:id/reject-withdrawal/:txId", async (req, res) => {
     const [txRow] = await db.select().from(savingsTransactions).where(and(eq(savingsTransactions.id, txId), eq(savingsTransactions.accountId, id))).limit(1);
     if (!txRow) return res.status(404).json({ error: "Transaction not found" });
     if (txRow.type !== "withdrawal" || txRow.status !== "pending") return res.status(409).json({ error: "Withdrawal sudah diproses atau tidak valid" });
-    await db.transaction(async (txDb) => {
+    await db.transaction(async (txDb: any) => {
       await txDb.update(savingsTransactions).set({ status: "rejected", rejectionReason: reason, recordedBy: adminId ?? null, verifiedAt: new Date() }).where(and(eq(savingsTransactions.id, txId), eq(savingsTransactions.status, "pending")));
       await txDb.update(savingsAccounts).set({ status: "active", updatedAt: new Date() }).where(eq(savingsAccounts.id, id));
     });
