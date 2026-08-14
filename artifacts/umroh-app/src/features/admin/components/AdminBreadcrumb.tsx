@@ -1,10 +1,11 @@
 import { useLocation, Link } from "react-router-dom";
 import { ChevronRight, Home } from "lucide-react";
 import { menuGroups } from "./adminMenuConfig";
+import { useLanguage } from "@/shared/i18n/LanguageContext";
 
 const breadcrumbMap: Record<string, string> = {};
 menuGroups.forEach(g => g.items.forEach(i => {
-  breadcrumbMap[i.href] = i.label;
+  breadcrumbMap[i.href] = i.labelKey;
 }));
 
 /** Returns true if a URL segment looks like a raw ID (UUID, short hash, or numeric) */
@@ -18,6 +19,7 @@ function isIdSegment(seg: string) {
 
 const AdminBreadcrumb = () => {
   const location = useLocation();
+  const { t } = useLanguage();
   const path = location.pathname;
 
   if (path === "/admin") return null;
@@ -32,7 +34,7 @@ const AdminBreadcrumb = () => {
   for (let i = segments.length; i >= 1; i--) {
     const candidate = "/" + segments.slice(0, i).join("/");
     if (breadcrumbMap[candidate]) {
-      label = breadcrumbMap[candidate];
+      label = t(breadcrumbMap[candidate]);
       matchedHref = candidate;
       break;
     }
@@ -41,7 +43,7 @@ const AdminBreadcrumb = () => {
   // Fallback: use last non-ID segment, prettified
   if (!label) {
     const fallbackSeg = [...segments].reverse().find(s => !isIdSegment(s));
-    label = fallbackSeg?.replace(/-/g, " ") ?? "";
+    label = fallbackSeg ? fallbackSeg.replace(/-/g, " ") : "";
   }
 
   if (!label) return null;
@@ -50,7 +52,7 @@ const AdminBreadcrumb = () => {
     <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
       <Link to="/admin" className="flex items-center gap-1 hover:text-foreground transition-colors">
         <Home className="w-3.5 h-3.5" />
-        <span>Dashboard</span>
+        <span>{t("menu.dashboard")}</span>
       </Link>
       <ChevronRight className="w-3.5 h-3.5" />
       {matchedHref && matchedHref !== path ? (

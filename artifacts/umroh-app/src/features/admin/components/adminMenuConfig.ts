@@ -115,7 +115,7 @@ export const menuGroups: MenuGroup[] = [
     labelKey: "menu.group.main",
     icon: LayoutDashboard,
     items: [
-      { label: "Dashboard", labelKey: "menu.dashboard", href: "/admin", icon: LayoutDashboard, roles: FINANCE_OPERATIONAL },
+      { label: "Dasbor", labelKey: "menu.dashboard", href: "/admin", icon: LayoutDashboard, roles: FINANCE_OPERATIONAL },
       { label: "Notifikasi", labelKey: "menu.notifications", href: "/admin/notifications", icon: BellRing, roles: FINANCE_OPERATIONAL },
     ],
   },
@@ -127,13 +127,13 @@ export const menuGroups: MenuGroup[] = [
       // ── 1. Setup Paket ────────────────────────────────────────────────────────
       { label: "Paket", labelKey: "menu.packages", href: "/admin/packages", icon: Package, roles: ALL_STAFF },
       { label: "Jadwal Keberangkatan", labelKey: "menu.departures", href: "/admin/departures", icon: Calendar, roles: ALL_STAFF },
-      { label: "Itinerary Perjalanan", labelKey: "menu.itineraries", href: "/admin/itineraries", icon: MapPin, roles: ALL_STAFF },
+      { label: "Rencana Perjalanan", labelKey: "menu.itineraries", href: "/admin/itineraries", icon: MapPin, roles: ALL_STAFF },
       // ── 2. Booking & Jemaah ───────────────────────────────────────────────────
-      { label: "Booking", labelKey: "menu.bookings", href: "/admin/bookings", icon: Ticket, roles: OPERATIONAL, featureId: "bookings" },
+      { label: "Pemesanan", labelKey: "menu.bookings", href: "/admin/bookings", icon: Ticket, roles: OPERATIONAL, featureId: "bookings" },
       { label: "Data Jemaah", labelKey: "menu.pilgrims", href: "/admin/pilgrims", icon: Users, roles: ALL_STAFF, featureId: "jamaah" },
       // ── 3. Dokumen & Visa ─────────────────────────────────────────────────────
       { label: "Dokumen Jemaah", labelKey: "menu.pilgrim_documents", href: "/admin/documents", icon: FileCheck, roles: OPERATIONAL, featureId: "documents" },
-      { label: "Tracking Visa", labelKey: "menu.visa_tracking", href: "/admin/visa-tracking", icon: IdCard, roles: OPERATIONAL },
+      { label: "Pelacakan Visa", labelKey: "menu.visa_tracking", href: "/admin/visa-tracking", icon: IdCard, roles: OPERATIONAL },
       // ── 4. Perlengkapan ───────────────────────────────────────────────────────
       { label: "Materi Manasik", labelKey: "menu.manasik_kit", href: "/admin/manasik", icon: BookOpen, roles: SUPER_ADMIN_ADMIN, featureId: "equipment" },
       { label: "Distribusi Perlengkapan", labelKey: "menu.equipment_distribution", href: "/admin/equipment-distribution", icon: Truck, roles: SUPER_ADMIN_ADMIN, featureId: "equipment" },
@@ -141,9 +141,9 @@ export const menuGroups: MenuGroup[] = [
       { label: "Penempatan Kamar", labelKey: "menu.room_assignment", href: "/admin/room-assignment", icon: BedDouble, roles: ALL_STAFF, featureId: "room_assignment" },
       { label: "Penempatan Kursi", labelKey: "menu.seat_assignment", href: "/admin/seat-assignment", icon: Armchair, roles: OPERATIONAL },
       { label: "Manifest Keberangkatan", labelKey: "menu.manifest", href: "/admin/manifest", icon: ClipboardList, roles: ALL_STAFF, featureId: "jamaah" },
-      { label: "Checklist Keberangkatan", labelKey: "menu.departure_checklist", href: "/admin/departure-checklist", icon: ListChecks, roles: ALL_STAFF },
+      { label: "Daftar Periksa Keberangkatan", labelKey: "menu.departure_checklist", href: "/admin/departure-checklist", icon: ListChecks, roles: ALL_STAFF },
       { label: "Kesiapan Keberangkatan", labelKey: "menu.departure_readiness", href: "/admin/departure-readiness", icon: Activity, roles: OPERATIONAL },
-      { label: "Check-In Keberangkatan", labelKey: "menu.checkin_qr", href: "/admin/check-in", icon: ShieldCheck, roles: ALL_STAFF, featureId: "check_in" },
+      { label: "Daftar Masuk Keberangkatan", labelKey: "menu.checkin_qr", href: "/admin/check-in", icon: ShieldCheck, roles: ALL_STAFF, featureId: "check_in" },
       // ── 6. Laporan Operasional ────────────────────────────────────────────────
       { label: "Laporan Perlengkapan", labelKey: "menu.equipment_report", href: "/admin/equipment-report", icon: PackageCheck, roles: ALL_STAFF, featureId: "equipment" },
       { label: "Laporan Insiden", labelKey: "menu.incident_management", href: "/admin/incident-management", icon: AlertTriangle, roles: OPERATIONAL, featureId: "incident_management" },
@@ -155,7 +155,7 @@ export const menuGroups: MenuGroup[] = [
     icon: Wallet,
     items: [
       // ── Ringkasan ──────────────────────────────────────────────────────────
-      { label: "Dashboard Keuangan",       labelKey: "menu.finance_dashboard",   href: "/admin/finance-dashboard",  icon: LayoutDashboard, roles: FINANCE, featureId: "reports" },
+      { label: "Dasbor Keuangan",       labelKey: "menu.finance_dashboard",   href: "/admin/finance-dashboard",  icon: LayoutDashboard, roles: FINANCE, featureId: "reports" },
       { label: "Keuangan Keberangkatan",   labelKey: "menu.departure_finance",   href: "/admin/departure-finance",  icon: BarChart3, roles: FINANCE, featureId: "reports" },
       // ── Penerimaan ─────────────────────────────────────────────────────────
       { label: "Pembayaran Jemaah",        labelKey: "menu.payments",             href: "/admin/payments",           icon: CreditCard, roles: FINANCE_OPERATIONAL, featureId: "payments" },
@@ -163,26 +163,26 @@ export const menuGroups: MenuGroup[] = [
       { label: "Tabungan Umroh",           labelKey: "menu.savings",              href: "/admin/savings",            icon: PiggyBank, roles: FINANCE },
       // ── Piutang ────────────────────────────────────────────────────────────
       { label: "Piutang Jemaah",           labelKey: "menu.piutang",              href: "/admin/piutang",            icon: TrendingDown, roles: FINANCE, featureId: "payments" },
-      { label: "Refund Jamaah",            labelKey: "menu.refunds",              href: "/admin/refunds",            icon: Receipt, roles: SUPER_ADMIN_ADMIN, featureId: "refunds" },
+      { label: "Pengembalian Dana Jemaah",            labelKey: "menu.refunds",              href: "/admin/refunds",            icon: Receipt, roles: SUPER_ADMIN_ADMIN, featureId: "refunds" },
       // ── Keuangan Paket ─────────────────────────────────────────────────────
       { label: "HPP & Profitabilitas",     labelKey: "menu.cost_profitability",   href: "/admin/package-costs",      icon: Calculator, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
       // ── Pembukuan ──────────────────────────────────────────────────────────
       { label: "Akuntansi & Keuangan",     labelKey: "menu.accounting",           href: "/admin/accounting",         icon: BarChart3, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
       // ── F-7/8/10 ──────────────────────────────────────────────────────────────
-      { label: "Chart of Accounts",        labelKey: "menu.coa",                  href: "/admin/chart-of-accounts",  icon: BarChart3, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
+      { label: "Bagan Akun",        labelKey: "menu.coa",                  href: "/admin/chart-of-accounts",  icon: BarChart3, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
       { label: "Buku Besar",               labelKey: "menu.general_ledger",       href: "/admin/general-ledger",     icon: BookOpen, roles: FINANCE, featureId: "reports" },
       { label: "Neraca Saldo",             labelKey: "menu.trial_balance",        href: "/admin/trial-balance",      icon: Scale, roles: FINANCE, featureId: "reports" },
       { label: "Laporan Keuangan",         labelKey: "menu.financial_reports",    href: "/admin/financial-reports",  icon: FileText, roles: FINANCE, featureId: "reports" },
       { label: "Rekonsiliasi Bank",        labelKey: "menu.bank_reconciliation",  href: "/admin/bank-reconciliation", icon: CreditCard, roles: FINANCE, featureId: "reports" },
-      { label: "Budget & Cash Flow",       labelKey: "menu.budget_cashflow",      href: "/admin/budget-cashflow",     icon: BarChart2, roles: FINANCE, featureId: "reports" },
+      { label: "Anggaran & Arus Kas",       labelKey: "menu.budget_cashflow",      href: "/admin/budget-cashflow",     icon: BarChart2, roles: FINANCE, featureId: "reports" },
       { label: "Aturan Pembayaran",         labelKey: "menu.payment_policies",      href: "/admin/payment-policies",     icon: Settings, roles: FINANCE, featureId: "payments" },
-      { label: "Export Akuntansi",         labelKey: "menu.accounting_export",    href: "/admin/accounting-export",   icon: FileText, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
+      { label: "Ekspor Akuntansi",         labelKey: "menu.accounting_export",    href: "/admin/accounting-export",   icon: FileText, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
       // ── Existing ──────────────────────────────────────────────────────────────
-      { label: "Dashboard Analitik",       labelKey: "menu.analytics_dashboard",  href: "/admin/analytics",          icon: LineChart, roles: FINANCE, featureId: "reports" },
+      { label: "Dasbor Analitik",       labelKey: "menu.analytics_dashboard",  href: "/admin/analytics",          icon: LineChart, roles: FINANCE, featureId: "reports" },
       { label: "Laporan",                  labelKey: "menu.reports",              href: "/admin/reports",            icon: FileText, roles: FINANCE, featureId: "reports" },
       // ── Konfigurasi Keuangan ───────────────────────────────────────────────
       { label: "Pencairan Komisi Agen",    labelKey: "menu.agent_withdrawals",    href: "/admin/agent-withdrawals",  icon: Wallet, roles: SUPER_ADMIN_ADMIN, featureId: "agents" },
-      { label: "Payment Gateway",          labelKey: "menu.payment_gateway",      href: "/admin/payment-gateway",    icon: Wallet, roles: SUPER_ADMIN_ADMIN, featureId: "payments" },
+      { label: "Gerbang Pembayaran",          labelKey: "menu.payment_gateway",      href: "/admin/payment-gateway",    icon: Wallet, roles: SUPER_ADMIN_ADMIN, featureId: "payments" },
       { label: "Kontrak Jamaah",           labelKey: "menu.contracts",            href: "/admin/contracts",          icon: FileCheck, roles: ALL_STAFF, featureId: "contracts" },
       { label: "Histori Akses Bukti",      labelKey: "menu.proof_access_logs",    href: "/admin/proof-access-logs",  icon: ShieldCheck, roles: SUPER_ADMIN_ADMIN, featureId: "payments" },
     ],
@@ -192,7 +192,7 @@ export const menuGroups: MenuGroup[] = [
     labelKey: "menu.group.communication",
     icon: MessageCircle,
     items: [
-      { label: "Chat Jamaah", labelKey: "menu.pilgrim_chat", href: "/admin/chat", icon: MessageCircle, roles: ALL_STAFF, featureId: "chats" },
+      { label: "Percakapan Jemaah", labelKey: "menu.pilgrim_chat", href: "/admin/chat", icon: MessageCircle, roles: ALL_STAFF, featureId: "chats" },
     ],
   },
   {
@@ -200,10 +200,10 @@ export const menuGroups: MenuGroup[] = [
     labelKey: "menu.group.marketing",
     icon: Megaphone,
     items: [
-      { label: "CRM & Pipeline", labelKey: "menu.crm", href: "/admin/crm", icon: MessageCircle, roles: SUPER_ADMIN_ADMIN, featureId: "crm" },
-      { label: "Social Media Kit", labelKey: "menu.social_kit", href: "/admin/social-kit", icon: Megaphone, roles: SUPER_ADMIN_ADMIN, featureId: "social_kit" },
+      { label: "Pelanggan & Tindak Lanjut", labelKey: "menu.crm", href: "/admin/crm", icon: MessageCircle, roles: SUPER_ADMIN_ADMIN, featureId: "crm" },
+      { label: "Materi Media Sosial", labelKey: "menu.social_kit", href: "/admin/social-kit", icon: Megaphone, roles: SUPER_ADMIN_ADMIN, featureId: "social_kit" },
       { label: "Kupon", labelKey: "menu.coupons", href: "/admin/coupons", icon: Ticket, roles: SUPER_ADMIN_ADMIN, featureId: "coupons" },
-      { label: "Leaderboard Agen", labelKey: "menu.agent_leaderboard", href: "/admin/leaderboard", icon: Trophy, roles: [...SUPER_ADMIN_ADMIN, "branch_manager", "agent"], featureId: "agents" },
+      { label: "Papan Peringkat Agen", labelKey: "menu.agent_leaderboard", href: "/admin/leaderboard", icon: Trophy, roles: [...SUPER_ADMIN_ADMIN, "branch_manager", "agent"], featureId: "agents" },
       { label: "Ulasan Paket", labelKey: "menu.reviews", href: "/admin/reviews", icon: Star, roles: SUPER_ADMIN_ADMIN, featureId: "testimonials" },
       { label: "Poin Loyalitas", labelKey: "menu.loyalty", href: "/admin/loyalty", icon: Coins, roles: SUPER_ADMIN_ADMIN, featureId: "loyalty" },
       // "Analitik AI" disembunyikan sementara — halaman ini memanggil Supabase Edge Function
@@ -212,7 +212,7 @@ export const menuGroups: MenuGroup[] = [
     ],
   },
   {
-    label: "Master Data",
+    label: "Data Master",
     labelKey: "menu.group.master_data",
     icon: Database,
     items: [
@@ -247,16 +247,16 @@ export const menuGroups: MenuGroup[] = [
     icon: SlidersHorizontal,
     items: [
       { label: "Navigasi", labelKey: "menu.navigation", href: "/admin/navigation", icon: Menu, roles: SUPER_ADMIN_ADMIN },
-      { label: "Floating Button", labelKey: "menu.floating_buttons", href: "/admin/floating-buttons", icon: MessageCircle, roles: SUPER_ADMIN_ADMIN },
+      { label: "Tombol Mengambang", labelKey: "menu.floating_buttons", href: "/admin/floating-buttons", icon: MessageCircle, roles: SUPER_ADMIN_ADMIN },
       { label: "Manajemen User", labelKey: "menu.user_management", href: "/admin/users", icon: Users, roles: SUPER_ADMIN_ADMIN },
       { label: "Multi-Bahasa", labelKey: "menu.multi_language", href: "/admin/multi-language", icon: Languages, roles: SUPER_ADMIN_ADMIN },
       { label: "Multi-Cabang", labelKey: "menu.multi_branch", href: "/admin/multi-branch", icon: GitBranch, roles: SUPER_ADMIN_ADMIN, featureId: "multi_branch" },
-      { label: "Tenant Sites", labelKey: "menu.tenant_sites", href: "/admin/tenant-sites", icon: Globe, roles: SUPER_ADMIN_ADMIN, featureId: "multi_branch" },
-      { label: "Upgrade Template", labelKey: "menu.template_upgrades", href: "/admin/template-upgrades", icon: ArrowUpCircle, roles: SUPER_ADMIN_ADMIN },
+      { label: "Situs Cabang", labelKey: "menu.tenant_sites", href: "/admin/tenant-sites", icon: Globe, roles: SUPER_ADMIN_ADMIN, featureId: "multi_branch" },
+      { label: "Pembaruan Templat", labelKey: "menu.template_upgrades", href: "/admin/template-upgrades", icon: ArrowUpCircle, roles: SUPER_ADMIN_ADMIN },
       { label: "Kesehatan Sistem", labelKey: "menu.system_health", href: "/admin/system-health", icon: Activity, roles: SUPER_ADMIN_ADMIN },
-      { label: "Audit Logs", labelKey: "menu.audit_logs", href: "/admin/audit-logs", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
-      { label: "Error Tracking", labelKey: "menu.error_tracking", href: "/admin/error-logs", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
-      { label: "Live REST Diagnostics", labelKey: "menu.rest_diag", href: "/admin/rest-diag", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
+      { label: "Log Audit", labelKey: "menu.audit_logs", href: "/admin/audit-logs", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
+      { label: "Pelacakan Kesalahan", labelKey: "menu.error_tracking", href: "/admin/error-logs", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
+      { label: "Diagnostik REST Langsung", labelKey: "menu.rest_diag", href: "/admin/rest-diag", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
       { label: "Slug Redirects (SEO)", labelKey: "menu.slug_redirects", href: "/admin/slug-redirects", icon: ShieldAlert, roles: SUPER_ADMIN_ADMIN },
       { label: "Pengaturan SEO", labelKey: "menu.seo_settings", href: "/admin/seo", icon: Search, roles: SUPER_ADMIN_ADMIN },
       { label: "Izin Menu per Role", labelKey: "menu.menu_permissions", href: "/admin/menu-permissions", icon: Layers, roles: FINANCE_OPERATIONAL },

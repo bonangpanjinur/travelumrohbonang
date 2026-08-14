@@ -110,7 +110,7 @@ const AdminSidebar = ({
     "/admin/payments": unreadPayments,
   };
 
-  const roleLabel = role ? role.replace(/_/g, " ") : null;
+  const roleLabel = role ? t(`nav.role.${role}`) : null;
   const userInitial = (user?.email ?? branding.company_name).charAt(0).toUpperCase();
 
   const query = search.trim().toLowerCase();
@@ -166,7 +166,7 @@ const AdminSidebar = ({
               <div className="hidden lg:block">
                 <span className="font-display text-xl font-bold text-primary-foreground">{branding.company_name}</span>
                 <span className="block text-[10px] text-primary-foreground/50 tracking-widest uppercase -mt-1">
-                  Dashboard
+                  {t("menu.dashboard")}
                 </span>
               </div>
             )}
@@ -174,7 +174,7 @@ const AdminSidebar = ({
               <div className="lg:hidden">
                 <span className="font-display text-xl font-bold text-primary-foreground">{branding.company_name}</span>
                 <span className="block text-[10px] text-primary-foreground/50 tracking-widest uppercase -mt-1">
-                  Dashboard
+                  {t("menu.dashboard")}
                 </span>
               </div>
             )}
