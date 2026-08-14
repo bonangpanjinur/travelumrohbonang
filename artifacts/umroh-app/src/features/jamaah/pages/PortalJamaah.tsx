@@ -23,7 +23,7 @@ export default function PortalJamaah() {
   const firstName = (user as any)?.firstName || (user as any)?.name?.split(" ")[0] || "Jemaah";
 
   return (
-    <main className="min-h-screen bg-[#f7faf8] pb-24">
+    <main className="min-h-screen bg-[#f7faf8] pb-[calc(8rem+env(safe-area-inset-bottom))]">
       <section className="bg-primary px-5 pb-7 pt-8 text-primary-foreground rounded-b-[2rem] shadow-lg">
         <div className="mx-auto max-w-5xl">
           <div className="flex items-start justify-between gap-4">

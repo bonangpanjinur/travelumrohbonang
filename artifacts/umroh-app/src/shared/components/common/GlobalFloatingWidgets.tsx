@@ -195,7 +195,7 @@ const ContactButtons = ({
         animate={{ scale: 1, x: 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.8 }}
         aria-label={label}
-        className={`fixed bottom-6 right-4 z-50 flex items-center gap-2.5 pl-4 pr-5 py-3 rounded-full text-white font-semibold text-sm shadow-xl active:scale-95 transition-all select-none ${color}`}
+        className={`fixed bottom-[calc(4rem+env(safe-area-inset-bottom)+0.75rem)] lg:bottom-6 right-4 z-30 flex items-center gap-2.5 pl-4 pr-5 py-3 rounded-full text-white font-semibold text-sm shadow-xl active:scale-95 transition-all select-none ${color}`}
       >
         <span className={`absolute inset-0 rounded-full animate-ping opacity-20 ${color}`} />
         <Icon className="w-5 h-5 shrink-0 relative z-10" />
@@ -213,7 +213,7 @@ const ContactButtons = ({
         animate={{ scale: 1, x: 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.8 }}
         aria-label="Chat dengan Admin"
-        className="fixed bottom-6 right-4 z-50 flex items-center gap-2.5 pl-4 pr-5 py-3 rounded-full text-white font-semibold text-sm shadow-xl active:scale-95 transition-all select-none bg-indigo-600 hover:bg-indigo-700"
+        className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom)+0.75rem)] lg:bottom-6 right-4 z-30 flex items-center gap-2.5 pl-4 pr-5 py-3 rounded-full text-white font-semibold text-sm shadow-xl active:scale-95 transition-all select-none bg-indigo-600 hover:bg-indigo-700"
       >
         <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-indigo-600" />
         <MessageCircle className="w-5 h-5 shrink-0 relative z-10" />
@@ -233,7 +233,7 @@ const ContactButtons = ({
   ];
 
   return (
-    <div className="fixed bottom-6 right-4 z-50 flex flex-col items-end gap-2.5">
+    <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom)+0.75rem)] lg:bottom-6 right-4 z-30 flex flex-col items-end gap-2.5">
       <AnimatePresence>
         {menuOpen &&
           allItems.map(({ type, btn, i }) => {
