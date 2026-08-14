@@ -50,6 +50,12 @@ function getTypeBadgeClass(type: AdminConversation["type"]): string {
   return "bg-purple-100 text-purple-700";
 }
 
+const QUICK_REPLIES = [
+  "Assalamu'alaikum, ada yang bisa kami bantu?",
+  "Baik, kami akan memeriksa data Anda terlebih dahulu.",
+  "Terima kasih. Tim kami akan segera menindaklanjuti.",
+];
+
 // ── Conversation list item ────────────────────────────────────────────────────
 
 function ConvItem({
@@ -460,7 +466,15 @@ function ChatPanel({
             </button>
           </p>
         ) : (
-          <div className="flex gap-2 items-end">
+          <div className="space-y-2">
+            <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+              {QUICK_REPLIES.map((reply) => (
+                <button key={reply} type="button" className="shrink-0 rounded-full border px-2.5 py-1 text-[11px] text-muted-foreground hover:bg-muted" onClick={() => setDraft(reply)}>
+                  {reply.length > 24 ? `${reply.slice(0, 24)}…` : reply}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 items-end">
             <Textarea
               ref={textareaRef}
               placeholder="Ketik balasan… (Enter kirim, Shift+Enter baris baru)"
@@ -478,6 +492,7 @@ function ChatPanel({
             >
               <Send className="w-4 h-4" />
             </Button>
+            </div>
           </div>
         )}
       </div>
@@ -489,7 +504,7 @@ function ChatPanel({
 
 export default function ChatInbox() {
   const { user } = useAuth();
-  const { conversations, loading, filter, setFilter, totalUnread, refetch, markConversationRead } = useAdminInbox();
+  const { conversations, total, hasMore, loadMore, loading, filter, setFilter, totalUnread, refetch, markConversationRead } = useAdminInbox();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -609,14 +624,21 @@ export default function ChatInbox() {
               <span className="text-xs">Percakapan dari tamu &amp; jemaah akan muncul di sini</span>
             </div>
           ) : (
-            conversations.map((conv) => (
-              <ConvItem
-                key={conv.id}
-                conv={conv}
-                selected={conv.id === selectedId}
-                onClick={() => setSelectedId(conv.id)}
-              />
-            ))
+            <>
+              {conversations.map((conv) => (
+                <ConvItem
+                  key={conv.id}
+                  conv={conv}
+                  selected={conv.id === selectedId}
+                  onClick={() => setSelectedId(conv.id)}
+                />
+              ))}
+              {hasMore && (
+                <button className="w-full py-3 text-xs text-primary hover:underline" onClick={loadMore}>
+                  Muat lebih banyak ({conversations.length} dari {total})
+                </button>
+              )}
+            </>
           )}
         </ScrollArea>
       </div>

@@ -87,6 +87,7 @@ function mapRealtimeConversation(raw: Record<string, unknown>): AdminConversatio
 
 export function useAdminInbox() {
   const [conversations, setConversations] = useState<AdminConversation[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<InboxFilter>({
     type: "all",
@@ -107,7 +108,7 @@ export function useAdminInbox() {
   // Track the last notification we showed so we don't re-notify on re-render
   const notifiedMsgIds = useRef<Set<string>>(new Set());
 
-  const fetchConversations = useCallback(async (f?: InboxFilter) => {
+  const fetchConversations = useCallback(async (f?: InboxFilter, append = false, offset = 0) => {
     const active = f ?? filter;
     try {
       const params = new URLSearchParams();
@@ -116,12 +117,14 @@ export function useAdminInbox() {
       if (active.unreadOnly) params.set("unread", "true");
       if (active.assignedToMe) params.set("assigned_to_me", "true");
       if (active.search) params.set("search", active.search);
-      params.set("limit", "100");
+      params.set("limit", "50");
+      params.set("offset", String(offset));
 
       const result = await apiFetch<{ data: AdminConversation[]; total: number }>(
         `/api/admin/conversations?${params.toString()}`,
       );
-      setConversations(result.data ?? []);
+      setTotal(Number(result.total ?? 0));
+      setConversations((prev) => append ? [...prev, ...(result.data ?? [])] : (result.data ?? []));
     } catch (err) {
       console.error("[useAdminInbox] fetchConversations:", err);
     } finally {
@@ -214,9 +217,13 @@ export function useAdminInbox() {
   }, []);
 
   const totalUnread = conversations.reduce((n, c) => n + (c.unread_admin ?? 0), 0);
+  const loadMore = useCallback(() => fetchConversations(filter, true, conversations.length), [fetchConversations, filter, conversations.length]);
 
   return {
     conversations,
+    total,
+    hasMore: conversations.length < total,
+    loadMore,
     loading,
     filter,
     setFilter,
