@@ -10,6 +10,7 @@ import {
   Upload, Ban, RotateCcw, CalendarDays,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
@@ -1286,137 +1287,85 @@ const BookingDetailPanel = ({
             </div>
           )}
 
-          {/* Form tambah pembayaran */}
-          {showAddPayment && (
-            <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-background">
-              <p className="text-xs font-semibold text-primary">Catat Pembayaran Manual</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Jenis</Label>
-                  <Select value={newPayment.type} onValueChange={(v) => setNewPayment((p) => ({ ...p, type: v }))}>
-                    <SelectTrigger className="h-7 text-xs mt-0.5"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(PAYMENT_TYPE_LABELS).map(([v, l]) => (
-                        <SelectItem key={v} value={v}>{l}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Jumlah (Rp) *</Label>
-                  <Input
-                    value={newPayment.amount}
-                    onChange={(e) => setNewPayment((p) => ({ ...p, amount: e.target.value }))}
-                    placeholder="0"
-                    className="h-7 text-xs mt-0.5"
-                    type="number"
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Tanggal Bayar *</Label>
-                  <Input
-                    value={newPayment.paidAt}
-                    onChange={(e) => setNewPayment((p) => ({ ...p, paidAt: e.target.value }))}
-                    className="h-7 text-xs mt-0.5"
-                    type="date"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Metode</Label>
-                  <Input
-                    value={newPayment.method}
-                    onChange={(e) => setNewPayment((p) => ({ ...p, method: e.target.value }))}
-                    placeholder="Transfer, Tunai…"
-                    className="h-7 text-xs mt-0.5"
-                  />
-                </div>
-              </div>
-              {pilgrims.length > 0 && (
-                <div className="space-y-1.5 rounded-md border border-border/60 p-2">
-                  <Label className="text-xs">Alokasi Pembayaran</Label>
-                  <div className="flex gap-1.5">
-                    <Button type="button" size="sm" variant={newPayment.allocationMode === "booking" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setNewPayment((p) => ({ ...p, allocationMode: "booking" }))}>
-                      Seluruh Booking
-                    </Button>
-                    <Button type="button" size="sm" variant={newPayment.allocationMode === "single" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setNewPayment((p) => ({ ...p, allocationMode: "single" }))}>
-                      Satu Jemaah
-                    </Button>
+          {/* Modal tambah pembayaran */}
+          <Dialog open={showAddPayment} onOpenChange={(open) => {
+            setShowAddPayment(open);
+            if (!open && !savingPayment) setNewPayment(emptyNewPayment());
+          }}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+              <DialogHeader>
+                <DialogTitle>Catat Pembayaran Manual</DialogTitle>
+                <DialogDescription>Catat pembayaran booking atau alokasikan langsung ke satu jemaah.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label className="text-xs">Jenis Pembayaran</Label>
+                    <Select value={newPayment.type} onValueChange={(v) => setNewPayment((p) => ({ ...p, type: v }))}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(PAYMENT_TYPE_LABELS).map(([v, l]) => (
+                          <SelectItem key={v} value={v}>{l}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  {newPayment.allocationMode === "single" && (
-                    <div className="pt-1">
+                  <div>
+                    <Label className="text-xs">Jumlah (Rp) *</Label>
+                    <Input value={newPayment.amount} onChange={(e) => setNewPayment((p) => ({ ...p, amount: e.target.value }))} placeholder="0" className="mt-1" type="number" min="0" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Tanggal Bayar *</Label>
+                    <Input value={newPayment.paidAt} onChange={(e) => setNewPayment((p) => ({ ...p, paidAt: e.target.value }))} className="mt-1" type="date" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Metode</Label>
+                    <Input value={newPayment.method} onChange={(e) => setNewPayment((p) => ({ ...p, method: e.target.value }))} placeholder="Transfer, Tunai…" className="mt-1" />
+                  </div>
+                </div>
+                {pilgrims.length > 0 && (
+                  <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+                    <Label className="text-xs">Alokasi Pembayaran</Label>
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" size="sm" variant={newPayment.allocationMode === "booking" ? "default" : "outline"} onClick={() => setNewPayment((p) => ({ ...p, allocationMode: "booking" }))}>Seluruh Booking</Button>
+                      <Button type="button" size="sm" variant={newPayment.allocationMode === "single" ? "default" : "outline"} onClick={() => setNewPayment((p) => ({ ...p, allocationMode: "single" }))}>Satu Jemaah</Button>
+                    </div>
+                    {newPayment.allocationMode === "single" && (
                       <Select value={newPayment.selectedPilgrimId} onValueChange={(value) => setNewPayment((p) => ({ ...p, selectedPilgrimId: value }))}>
-                        <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Pilih jemaah" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Pilih jemaah" /></SelectTrigger>
                         <SelectContent>
-                          {pilgrims.map((pilgrim) => (
-                            <SelectItem key={pilgrim.id} value={pilgrim.id}>{pilgrim.name}</SelectItem>
-                          ))}
+                          {pilgrims.map((pilgrim) => <SelectItem key={pilgrim.id} value={pilgrim.id}>{pilgrim.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
-                      <p className="mt-1 text-[11px] text-muted-foreground">Nominal pembayaran akan dicatat khusus untuk jemaah yang dipilih.</p>
-                    </div>
-                  )}
+                    )}
+                    <p className="text-xs text-muted-foreground">Mode satu jemaah mencatat nominal ini khusus untuk nama yang dipilih.</p>
+                  </div>
+                )}
+                <div>
+                  <Label className="text-xs">Catatan</Label>
+                  <Input value={newPayment.notes} onChange={(e) => setNewPayment((p) => ({ ...p, notes: e.target.value }))} placeholder="Opsional" className="mt-1" />
                 </div>
-              )}
-              <div>
-                <Label className="text-xs">Catatan</Label>
-                <Input
-                  value={newPayment.notes}
-                  onChange={(e) => setNewPayment((p) => ({ ...p, notes: e.target.value }))}
-                  placeholder="Opsional"
-                  className="h-7 text-xs mt-0.5"
-                />
-              </div>
-              {/* Bukti Pembayaran */}
-              <div>
-                <Label className="text-xs">Bukti Pembayaran</Label>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <input
-                    ref={proofInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,application/pdf"
-                    className="hidden"
-                    onChange={handleProofUpload}
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs gap-1"
-                    onClick={() => proofInputRef.current?.click()}
-                    disabled={uploadingProof || savingPayment}
-                  >
-                    {uploadingProof
-                      ? <Loader2 className="w-3 h-3 animate-spin" />
-                      : <Upload className="w-3 h-3" />}
-                    {uploadingProof ? "Mengupload…" : "Upload Bukti"}
-                  </Button>
-                  {newPayment.proofUrl && (
-                    <a
-                      href={(import.meta.env.BASE_URL ?? "").replace(/\/$/, "") + newPayment.proofUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary underline truncate max-w-[140px]"
-                    >
-                      Lihat bukti ↗
-                    </a>
-                  )}
-                  {!newPayment.proofUrl && (
-                    <span className="text-xs text-muted-foreground">JPG/PNG/PDF, maks 15MB</span>
-                  )}
+                <div>
+                  <Label className="text-xs">Bukti Pembayaran</Label>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <input ref={proofInputRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="hidden" onChange={handleProofUpload} />
+                    <Button type="button" size="sm" variant="outline" onClick={() => proofInputRef.current?.click()} disabled={uploadingProof || savingPayment}>
+                      {uploadingProof ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Upload className="mr-1 h-3 w-3" />}
+                      {uploadingProof ? "Mengupload…" : "Upload Bukti"}
+                    </Button>
+                    {newPayment.proofUrl ? <a href={(import.meta.env.BASE_URL ?? "").replace(/\/$/, "") + newPayment.proofUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">Lihat bukti ↗</a> : <span className="text-xs text-muted-foreground">JPG/PNG/PDF, maks. 15MB</span>}
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-1.5 justify-end pt-1">
-                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setShowAddPayment(false)} disabled={savingPayment}>
-                  <X className="w-3 h-3" /> Batal
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowAddPayment(false)} disabled={savingPayment}>Batal</Button>
+                <Button type="button" className="gradient-gold text-primary" onClick={handleAddPayment} disabled={savingPayment}>
+                  {savingPayment ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+                  Simpan Pembayaran
                 </Button>
-                <Button size="sm" className="h-7 text-xs gap-1 gradient-gold text-primary" onClick={handleAddPayment} disabled={savingPayment}>
-                  {savingPayment ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                  Simpan
-                </Button>
-              </div>
-            </div>
-          )}
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Tombol Refund */}
           <div className="flex justify-end">
