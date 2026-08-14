@@ -79,7 +79,8 @@ const AdminServices = lazy(() => import("./features/admin/pages/Services"));
 const AdminPlaceholder = lazy(() => import("./features/admin/pages/Placeholder"));
 const AdminAccounting = lazy(() => import("./features/admin/pages/Accounting"));
 const AdminCRM = lazy(() => import("./features/admin/pages/CRM"));
-const AdminDocuments = lazy(() => import("./features/admin/pages/Documents"));
+  const AdminDocuments = lazy(() => import("./features/admin/pages/Documents"));
+  const AdminCertificateGenerator = lazy(() => import("./features/admin/pages/CertificateGenerator"));
 // AdminDocumentTypes route now redirects to /admin/documents?tab=pengaturan
 const AdminPaymentGateway = lazy(() => import("./features/admin/pages/PaymentGateway"));
 const AdminAnalyticsAI = lazy(() => import("./features/admin/pages/AnalyticsAI"));
@@ -287,6 +288,7 @@ const AppContent = () => {
           <Route path="crm" element={<AdminCRM />} />
           <Route path="payment-gateway" element={<AdminPaymentGateway />} />
           <Route path="documents" element={<AdminDocuments />} />
+          <Route path="certificates" element={<AdminCertificateGenerator />} />
           <Route path="document-types" element={<Navigate to="/admin/documents?tab=pengaturan" replace />} />
           <Route path="analytics-ai" element={<AdminAnalyticsAI />} />
           <Route path="multi-language" element={<AdminPlaceholder title="Multi-Bahasa" />} />

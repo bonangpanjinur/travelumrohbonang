@@ -66,6 +66,7 @@ import adminAccountingExportRouter from "./accounting-export";
 import adminBudgetRouter from "./budget";
 import adminAgentMyStatsRouter from "./agent-my-stats";
 import adminPaymentPoliciesRouter from "./payment-policies";
+import adminCertificatesRouter from "./certificates";
 
 const router = Router();
 
@@ -183,6 +184,7 @@ router.use("/bank-reconciliation", requireFinance, adminBankReconciliationRouter
 
 // ── Konfigurasi Jenis Dokumen Jemaah ─────────────────────────────────────────
 router.use("/document-types", requireStaff, adminDocumentTypesRouter);
+router.use("/certificates", requireOperational, adminCertificatesRouter);
 
 // ── F-15: Export ke Software Akuntansi ───────────────────────────────────────
 router.use("/accounting-export", requireFinance, adminAccountingExportRouter);

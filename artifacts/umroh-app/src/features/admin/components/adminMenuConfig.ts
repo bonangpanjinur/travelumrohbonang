@@ -1,5 +1,6 @@
 import {
   Calculator,
+  Award,
   LayoutDashboard,
   BellRing,
   Package, 
@@ -133,6 +134,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Data Jemaah", labelKey: "menu.pilgrims", href: "/admin/pilgrims", icon: Users, roles: ALL_STAFF, featureId: "jamaah" },
       // ── 3. Dokumen & Visa ─────────────────────────────────────────────────────
       { label: "Dokumen Jemaah", labelKey: "menu.pilgrim_documents", href: "/admin/documents", icon: FileCheck, roles: OPERATIONAL, featureId: "documents" },
+      { label: "Sertifikat Umroh", labelKey: "menu.certificates", href: "/admin/certificates", icon: Award, roles: OPERATIONAL, featureId: "documents" },
       { label: "Pelacakan Visa", labelKey: "menu.visa_tracking", href: "/admin/visa-tracking", icon: IdCard, roles: OPERATIONAL },
       // ── 4. Perlengkapan ───────────────────────────────────────────────────────
       { label: "Materi Manasik", labelKey: "menu.manasik_kit", href: "/admin/manasik", icon: BookOpen, roles: SUPER_ADMIN_ADMIN, featureId: "equipment" },

@@ -25,3 +25,4 @@ export * from "./budgets";
 export * from "./paymentPolicies";
 export * from "./chat";
 export * from "./muthawif";
+export * from "./certificates";
