@@ -927,7 +927,7 @@ const BookingDetailPanel = ({
           {/* hidden CSV input */}
           <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={handleCsvImport} />
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h4 className="font-semibold flex items-center gap-2 text-sm">
               <Users className="w-4 h-4 text-primary" /> Daftar Jemaah ({pilgrims.length})
             </h4>
@@ -1235,7 +1235,7 @@ const BookingDetailPanel = ({
 
       {/* ── BKG-F01: Panel Pembayaran ─────────────────────────────────────────── */}
       <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h4 className="font-semibold flex items-center gap-2 text-sm">
               <CreditCard className="w-4 h-4 text-primary" /> Pembayaran
               {paymentSummary?.paymentStatus && (
@@ -1254,7 +1254,7 @@ const BookingDetailPanel = ({
 
           {paymentSummary ? (<>
           {/* Ringkasan */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div className="p-2.5 bg-background rounded-lg text-center border border-border/60">
               <p className="text-xs text-muted-foreground mb-0.5">Total Harga</p>
               <p className="font-semibold text-sm tabular-nums">Rp {paymentSummary.totalPrice.toLocaleString("id-ID")}</p>
@@ -1290,7 +1290,7 @@ const BookingDetailPanel = ({
           {showAddPayment && (
             <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-background">
               <p className="text-xs font-semibold text-primary">Catat Pembayaran Manual</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <Label className="text-xs">Jenis</Label>
                   <Select value={newPayment.type} onValueChange={(v) => setNewPayment((p) => ({ ...p, type: v }))}>
@@ -1442,7 +1442,7 @@ const BookingDetailPanel = ({
                       /* ── Inline edit form ── */
                       <div className="border border-primary/30 rounded-lg p-3 space-y-2 bg-background">
                         <p className="text-xs font-semibold text-primary">Edit Pembayaran</p>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div>
                             <Label className="text-xs">Jenis</Label>
                             <Select value={editPaymentForm.type} onValueChange={(v) => setEditPaymentForm((f) => ({ ...f, type: v }))}>
@@ -1732,7 +1732,7 @@ const BookingDetailPanel = ({
                   min="0"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <Label className="text-xs">Nama Bank</Label>
                   <Input
