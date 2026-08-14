@@ -1,6 +1,0 @@
-{
-  "outputDirectory": "artifacts/umroh-app/dist",
-  "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
-  ]
-}

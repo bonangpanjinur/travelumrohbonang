@@ -51,3 +51,7 @@ Thumbs.db
 attached_assets/Pasted-2026-07-30-*
 attached_assets/image_1785404*
 .local/
+
+# Local diagnostic assets and migration backups — not part of the deployable codebase
+attached_assets/
+.migration-backup/
