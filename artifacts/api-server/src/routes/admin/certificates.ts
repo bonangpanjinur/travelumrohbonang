@@ -194,11 +194,19 @@ router.post("/booking/:bookingId/pilgrim/:pilgrimId/issue", async (req, res) => 
     if (!pilgrim) return res.status(404).json({ error: "Jemaah tidak ditemukan" });
 
     const certificateType = req.body?.certificateType === "badal_umroh" ? "badal_umroh" : "umroh";
+    let templateId: string | null = null;
+    if (req.body?.templateId) {
+      const [template] = await db.select().from(certificateTemplates).where(eq(certificateTemplates.id, String(req.body.templateId))).limit(1);
+      if (!template || (scope.type !== "global" && template.branchId !== null && template.branchId !== scope.branchId)) {
+        return res.status(403).json({ error: scopeDeniedMessage(scope) });
+      }
+      templateId = template.id;
+    }
     const certificateNumber = `${certificateType === "badal_umroh" ? "BADAL" : "UMR"}-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     const [created] = await db.insert(certificates).values({
       id: crypto.randomUUID(),
       branchId: booking.branchId,
-      templateId: req.body?.templateId || null,
+      templateId,
       bookingId: booking.id,
       pilgrimId: pilgrim.id,
       certificateType,
@@ -206,7 +214,7 @@ router.post("/booking/:bookingId/pilgrim/:pilgrimId/issue", async (req, res) => 
       recipientName: pilgrim.name,
       performerName: certificateType === "badal_umroh" ? String(req.body?.performerName || "") || null : null,
       issuedAt: req.body?.issuedAt ? new Date(req.body.issuedAt) : new Date(),
-      payload: { bookingCode: booking.bookingCode, packageTitle: req.body?.packageTitle || null },
+      payload: { bookingCode: booking.bookingCode, packageTitle: req.body?.packageTitle || null, design: req.body?.design || null },
       createdBy: (req.user as any).id,
     }).returning();
     res.status(201).json({ data: created });

@@ -28,6 +28,7 @@ type PackageOption = { id: string; title: string };
 type DepartureOption = { id: string; departureDate: string; packageTitle: string | null };
 type BookingOption = { id: string; bookingCode: string; status: string | null; packageTitle: string | null; departureDate: string | null };
 type PilgrimOption = { id: string; name: string; gender: string | null; passportNumber: string | null };
+type SavedTemplate = { id: string; name: string; certificateType: CertificateType; design: Partial<Design> };
 
 const TEMPLATES: Record<string, Design> = {
   elegant: { layout: "elegant", accent: "#123f35", title: "SERTIFIKAT {TYPE}", subtitle: "Diberikan kepada", body: "Dengan ini menerangkan bahwa", recipientSize: 42, recipientColor: "#123f35", footer: "Semoga menjadi amal ibadah yang diterima Allah SWT.", showLogo: true, showAddress: true, additionalLogoUrl: "", showAdditionalLogo: false },
@@ -62,11 +63,24 @@ export default function CertificateGenerator() {
   const [address, setAddress] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
+  const [selectedSavedTemplateId, setSelectedSavedTemplateId] = useState("");
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
 
   const resolvedTitle = useMemo(
     () => design.title.replace("{TYPE}", certificateType === "badal_umroh" ? "BADAL UMROH" : "UMROH"),
     [design.title, certificateType],
   );
+
+  useEffect(() => {
+    let active = true;
+    setLoadingTemplates(true);
+    apiFetch<{ data: SavedTemplate[] }>(`/api/admin/certificates/templates?type=${certificateType}`)
+      .then((response) => { if (active) setSavedTemplates(response?.data || []); })
+      .catch(() => { if (active) setSavedTemplates([]); })
+      .finally(() => { if (active) setLoadingTemplates(false); });
+    return () => { active = false; };
+  }, [certificateType]);
 
   useEffect(() => {
     apiFetch("/api/admin/settings/key/branding").then((response: any) => {
@@ -149,20 +163,30 @@ export default function CertificateGenerator() {
   const applyTemplate = (key: string) => {
     const template = TEMPLATES[key];
     if (!template) return;
-    setDesign({ ...template });
+    setDesign({ ...template, additionalLogoUrl: design.additionalLogoUrl, showAdditionalLogo: design.showAdditionalLogo });
     setSelectedTemplateKey(key);
     const names: Record<string, string> = { elegant: "Elegan Hijau", classic: "Klasik Islami", modern: "Minimalis Modern", premium: "Premium Gold" };
     setTemplateName(`Sertifikat ${names[key] || key}`);
+    setSelectedSavedTemplateId("");
+  };
+
+  const applySavedTemplate = (template: SavedTemplate) => {
+    setDesign({ ...initialDesign, ...template.design });
+    setTemplateName(template.name);
+    setSelectedSavedTemplateId(template.id);
+    setSelectedTemplateKey("");
   };
 
   const saveTemplate = async () => {
     if (!templateName.trim()) { toast.error("Nama template wajib diisi"); return; }
     setSaving(true);
     try {
-      await apiFetch("/api/admin/certificates/templates", {
+      const response: any = await apiFetch("/api/admin/certificates/templates", {
         method: "POST",
         body: JSON.stringify({ name: templateName.trim(), certificateType, design: { ...design, logoUrl, companyName, address } }),
       });
+      const created = response?.data as SavedTemplate | undefined;
+      if (created) { setSavedTemplates((current) => [created, ...current.filter((item) => item.id !== created.id)]); setSelectedSavedTemplateId(created.id); }
       toast.success("Template sertifikat berhasil disimpan");
     } catch (error: any) {
       toast.error(error?.message || "Gagal menyimpan template");
@@ -178,9 +202,10 @@ export default function CertificateGenerator() {
   const issueCertificate = async () => {
     if (!bookingId.trim() || !pilgrimId.trim()) { toast.error("Booking ID dan Jemaah ID wajib diisi"); return; }
     try {
+      const selectedPackage = packageOptions.find((item) => item.id === packageId);
       const response: any = await apiFetch(`/api/admin/certificates/booking/${bookingId}/pilgrim/${pilgrimId}/issue`, {
         method: "POST",
-        body: JSON.stringify({ certificateType, performerName: certificateType === "badal_umroh" ? performerName : null }),
+        body: JSON.stringify({ certificateType, templateId: selectedSavedTemplateId || null, performerName: certificateType === "badal_umroh" ? performerName : null, packageTitle: selectedPackage?.title || null, design: { ...design, logoUrl, companyName, address } }),
       });
       toast.success(`Sertifikat ${response?.data?.certificateNumber || "berhasil diterbitkan"}`);
     } catch (error: any) { toast.error(error?.message || "Gagal menerbitkan sertifikat"); }
@@ -205,6 +230,7 @@ export default function CertificateGenerator() {
           <div className="space-y-4 rounded-3xl border bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2"><Palette className="h-5 w-5 text-[#b88a2a]" /><h2 className="font-semibold">Pengaturan Desain</h2></div>
             <div><Label>Gaya Template</Label><div className="mt-2 grid grid-cols-2 gap-2">{Object.entries(TEMPLATES).map(([key, template]) => <button key={key} type="button" onClick={() => applyTemplate(key)} className={`rounded-xl border p-3 text-left transition ${selectedTemplateKey === key ? "border-[#b88a2a] bg-amber-50 ring-2 ring-amber-200" : "border-slate-200 hover:border-slate-300"}`}><div className="mb-2 h-6 rounded-md" style={{ background: `linear-gradient(135deg, ${template.accent}, ${template.layout === "modern" ? "#e0f2fe" : "#fff7ed"})` }} /><p className="text-xs font-semibold">{key === "elegant" ? "Elegan Hijau" : key === "classic" ? "Klasik Islami" : key === "modern" ? "Minimalis Modern" : "Premium Gold"}</p><p className="mt-0.5 text-[10px] text-muted-foreground">{template.layout === "modern" ? "Clean & minimal" : template.layout === "classic" ? "Ornamen klasik" : template.layout === "premium" ? "Bingkai premium" : "Formal natural"}</p></button>)}</div></div>
+            <div className="rounded-xl bg-slate-50 p-3"><Label>Template Tersimpan</Label><select className="mt-2 flex h-10 w-full rounded-md border bg-background px-3 text-sm" value={selectedSavedTemplateId} disabled={loadingTemplates} onChange={(e) => { const selected = savedTemplates.find((item) => item.id === e.target.value); if (selected) applySavedTemplate(selected); }}><option value="">{loadingTemplates ? "Memuat template…" : savedTemplates.length ? "Pilih template tersimpan" : "Belum ada template tersimpan"}</option>{savedTemplates.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></div>
             <div className="space-y-4">
               <div><Label>Nama Template</Label><Input className="mt-1" value={templateName} onChange={(e) => setTemplateName(e.target.value)} /></div>
               <div><Label>Judul Sertifikat</Label><Input className="mt-1" value={design.title} onChange={(e) => updateDesign("title", e.target.value)} /><p className="mt-1 text-[11px] text-muted-foreground">Gunakan {"{TYPE}"} agar otomatis berubah sesuai jenis sertifikat.</p></div>
