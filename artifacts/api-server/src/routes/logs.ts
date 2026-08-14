@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db, requestLog, errorLogs, auditLogs } from "@workspace/db";
+import { requireAuth } from "../middlewares/auth";
 // NOTE: In a real app, you'd add rate limiting here. The requirement mentioned rate limiting.
 // artifacts/api-server/src/middlewares/rateLimiter.ts likely exists.
 
@@ -34,12 +35,13 @@ router.post("/error", async (req, res) => {
   }
 });
 
-router.post("/audit", async (req, res) => {
+router.post("/audit", requireAuth, async (req, res) => {
   try {
     const id = crypto.randomUUID();
     await db.insert(auditLogs).values({
       ...req.body,
       id,
+      userId: req.user?.id ?? null,
       createdAt: new Date(),
     });
     res.json({ success: true });

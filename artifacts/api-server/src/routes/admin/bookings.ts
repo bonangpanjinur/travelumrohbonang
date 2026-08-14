@@ -873,7 +873,15 @@ router.patch(
       };
 
       const [current] = await db
-        .select({ status: bookings.status, departureId: bookings.departureId, paxCount: bookings.paxCount })
+        .select({
+          status: bookings.status,
+          departureId: bookings.departureId,
+          paxCount: bookings.paxCount,
+          branchId: bookings.branchId,
+          agentId: bookings.agentId,
+          picType: bookings.picType,
+          picId: bookings.picId,
+        })
         .from(bookings)
         .where(eq(bookings.id, id))
         .limit(1);
@@ -883,11 +891,18 @@ router.patch(
         return;
       }
 
-      const allowed = VALID_TRANSITIONS[current.status] ?? [];
-      if (current.status !== newStatus && !allowed.includes(newStatus)) {
+      const scope = await resolveUserScope(req);
+      if (!isBookingInScope(current, scope)) {
+        res.status(403).json({ error: scopeDeniedMessage(scope) });
+        return;
+      }
+
+      const currentStatus = current.status ?? "draft";
+      const allowed = VALID_TRANSITIONS[currentStatus] ?? [];
+      if (currentStatus !== newStatus && !allowed.includes(newStatus)) {
         res.status(400).json({
           error: "Transisi status tidak valid",
-          detail: `Status '${current.status}' tidak bisa diubah ke '${newStatus}'. Transisi yang diizinkan: ${allowed.length ? allowed.join(", ") : "tidak ada (status final)"}`,
+          detail: `Status '${currentStatus}' tidak bisa diubah ke '${newStatus}'. Transisi yang diizinkan: ${allowed.length ? allowed.join(", ") : "tidak ada (status final)"}`,
         });
         return;
       }
@@ -917,9 +932,9 @@ router.patch(
         await tx.insert(bookingStatusLogs).values({
           id: crypto.randomUUID(),
           bookingId: id,
-          fromStatus: current.status,
+          fromStatus: currentStatus,
           toStatus: newStatus,
-          changedBy: (req as any).user?.id ?? "admin",
+          changedBy: req.user?.id ?? null,
           notes: notes ?? null,
         });
 

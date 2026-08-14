@@ -33,6 +33,7 @@ import {
   type AdminUpdatePaymentInput,
 } from "@workspace/api-zod";
 import { validate } from "../../middlewares/validate";
+import { requireFinance } from "../../middlewares/requireAdmin";
 import {
   computePaymentStatus,
   syncBookingStatus,
@@ -297,7 +298,7 @@ router.get("/recent-pending", async (req, res) => {
 });
 
 // ── POST /bulk-verify — batch approve multiple pending payments ───────────────
-router.post("/bulk-verify", async (req, res) => {
+router.post("/bulk-verify", requireFinance, async (req, res) => {
   try {
     const { ids } = req.body as { ids?: string[] };
     const adminId = (req as any).user?.id as string | undefined;
@@ -384,7 +385,7 @@ router.post("/bulk-verify", async (req, res) => {
 //   4. Record financial_transactions entry
 //   5. Send in-app notification to jamaah
 
-router.patch("/verify/:id", async (req, res) => {
+router.patch("/verify/:id", requireFinance, async (req, res) => {
   try {
     const id = req.params.id;
     const adminId = (req as any).user?.id as string | undefined;
@@ -451,7 +452,7 @@ router.patch("/verify/:id", async (req, res) => {
       await journalPaymentVerified({
         bookingId: String(payment["booking_id"]),
         amount: Number(payment["amount"]),
-        paymentId: id,
+        paymentId: String(id),
         adminId,
       }, tx);
 
@@ -502,7 +503,7 @@ router.patch("/verify/:id", async (req, res) => {
 // Admin rejects a manual payment proof (e.g. blurry image, wrong amount).
 // Booking status is NOT changed — jamaah should re-upload.
 
-router.patch("/reject/:id", async (req, res) => {
+router.patch("/reject/:id", requireFinance, async (req, res) => {
   try {
     const id = req.params.id;
     const adminId = (req as any).user?.id as string | undefined;
@@ -662,7 +663,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/", validate(AdminRecordPaymentRequest), async (req, res) => {
+router.post("/", requireFinance, validate(AdminRecordPaymentRequest), async (req, res) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
     const body = req.body as AdminRecordPaymentInput;
@@ -770,6 +771,7 @@ router.get("/:paymentId", async (req, res) => {
 
 router.patch(
   "/:paymentId",
+  requireFinance,
   validate(AdminUpdatePaymentRequest),
   async (req, res) => {
     try {
@@ -855,7 +857,7 @@ router.patch(
   },
 );
 
-router.delete("/:paymentId", async (req, res) => {
+router.delete("/:paymentId", requireFinance, async (req, res) => {
   try {
     const bookingId = (req.params as Record<string, string>).bookingId;
     const paymentId = req.params.paymentId as string;
