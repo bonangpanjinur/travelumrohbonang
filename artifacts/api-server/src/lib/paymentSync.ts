@@ -16,6 +16,7 @@ import {
   bookings,
   bookingPayments,
   financialTransactions,
+  accountingPeriods,
   notifications,
   eq,
   and,
@@ -24,6 +25,20 @@ import {
 import { emailNotifications } from "./notifications/emailNotifications";
 
 type DbRunner = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function assertOpenAccountingPeriod(date: Date, runner: DbRunner = db): Promise<void> {
+  const [period] = await runner
+    .select({ status: accountingPeriods.status })
+    .from(accountingPeriods)
+    .where(and(
+      eq(accountingPeriods.year, date.getFullYear()),
+      eq(accountingPeriods.month, date.getMonth() + 1),
+    ))
+    .limit(1);
+  if (period?.status === "closed") {
+    throw new Error(`Accounting period ${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")} is closed`);
+  }
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -154,6 +169,7 @@ export async function recordFinancialTransaction({
   runner?: DbRunner;
 }): Promise<void> {
   const dbRunner = runner ?? db;
+  await assertOpenAccountingPeriod(new Date(), dbRunner);
 
   if (referenceNumber) {
     const [existing] = await dbRunner

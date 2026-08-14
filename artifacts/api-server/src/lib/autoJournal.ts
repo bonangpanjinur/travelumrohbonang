@@ -23,7 +23,7 @@
  * savings_used            | 2-1103 (Hutang) | 4-1001 (Pendapatan Umroh)
  */
 
-import { db, financialTransactions, chartOfAccounts, eq } from "@workspace/db";
+import { db, financialTransactions, chartOfAccounts, accountingPeriods, eq, and } from "@workspace/db";
 import { recordFinancialTransaction } from "./paymentSync";
 
 // Tipe generik untuk transaksi Drizzle (dipakai di semua fungsi jurnal)
@@ -33,6 +33,20 @@ type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /** In-memory cache: CoA code → row id (populated lazily on first use) */
 const coaCache = new Map<string, string>();
+
+async function assertOpenAccountingPeriod(date: Date, runner: DbOrTx = db): Promise<void> {
+  const [period] = await runner
+    .select({ status: accountingPeriods.status })
+    .from(accountingPeriods)
+    .where(and(
+      eq(accountingPeriods.year, date.getFullYear()),
+      eq(accountingPeriods.month, date.getMonth() + 1),
+    ))
+    .limit(1);
+  if (period?.status === "closed") {
+    throw new Error(`Accounting period ${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")} is closed`);
+  }
+}
 
 /**
  * Look up a CoA account id by its code.
@@ -90,6 +104,7 @@ async function recordDoubleEntry(opts: {
 
   const now = new Date();
   const runner = tx ?? db;
+  await assertOpenAccountingPeriod(now, runner);
 
   await (runner as typeof db).insert(financialTransactions).values([
     {
@@ -294,6 +309,7 @@ export async function journalCommissionWithdrawal(opts: {
   ]);
 
   const now = new Date();
+  await assertOpenAccountingPeriod(now);
   await db.insert(financialTransactions).values([
     {
       id: crypto.randomUUID(),
@@ -349,6 +365,7 @@ export async function journalSavingsDeposit(opts: {
   ]);
 
   const now = new Date();
+  await assertOpenAccountingPeriod(now);
   await db.insert(financialTransactions).values([
     {
       id: crypto.randomUUID(),

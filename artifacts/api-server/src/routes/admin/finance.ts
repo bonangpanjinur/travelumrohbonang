@@ -1309,7 +1309,11 @@ async function fetchIncomeStatementData(from?: string, to?: string): Promise<Inc
       SUM(ft.amount::numeric)         AS total
     FROM financial_transactions ft
     LEFT JOIN chart_of_accounts coa ON coa.id = ft.account_id
-    WHERE ft.type IN ('income', 'expense')
+    WHERE (
+        (ft.type = 'income'  AND (ft.entry_type = 'credit' OR ft.entry_type IS NULL))
+        OR
+        (ft.type = 'expense' AND (ft.entry_type = 'debit' OR ft.entry_type IS NULL))
+      )
       ${from && dateRe.test(from) ? sql`AND ft.transaction_date >= ${fromDate(from)}` : sql``}
       ${to   && dateRe.test(to)   ? sql`AND ft.transaction_date <= ${toDate(to)}`   : sql``}
     GROUP BY ft.type, ft.category, coa.name, coa.code

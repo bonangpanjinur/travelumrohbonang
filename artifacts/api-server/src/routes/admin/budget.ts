@@ -96,7 +96,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
     const [updated] = await db
       .update(budgets)
       .set(patch)
-      .where(eq(budgets.id, req.params.id))
+      .where(eq(budgets.id, String(req.params.id)))
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Budget tidak ditemukan" });
@@ -111,7 +111,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
   try {
     const [deleted] = await db
       .delete(budgets)
-      .where(eq(budgets.id, req.params.id))
+      .where(eq(budgets.id, String(req.params.id)))
       .returning();
 
     if (!deleted) return res.status(404).json({ error: "Budget tidak ditemukan" });
@@ -175,6 +175,7 @@ router.get("/vs-actual", async (req: Request, res: Response) => {
           SUM(ft.amount::numeric) AS total
         FROM financial_transactions ft
         WHERE ft.type IN ('expense', 'cost')
+          AND (ft.entry_type = 'debit' OR ft.entry_type IS NULL)
           AND ft.transaction_date >= ${fromDate}::date
           AND ft.transaction_date < ${toDate}::date + INTERVAL '1 day'
         GROUP BY COALESCE(ft.category, 'lainnya')
@@ -186,10 +187,11 @@ router.get("/vs-actual", async (req: Request, res: Response) => {
       getRows(expenseResult).map((r: any) => [r.category as string, Number(r.total)])
     );
 
-    // 4. Untuk income: hanya assign ke kategori income PERTAMA; biarkan sisanya 0
-    //    Ini menghindari double-counting ketika ada >1 kategori income
+    // 4. Jika ada beberapa kategori income, jangan memberi atribusi palsu.
+    //    Tampilkan total sebagai unallocatedIncome sampai revenue memiliki dimensi kategori.
     const incomeRows = budgetRows.filter((b) => b.budgetType === "income");
-    const primaryIncomeCategoryId = incomeRows[0]?.id ?? null;
+    const primaryIncomeCategoryId = incomeRows.length === 1 ? incomeRows[0].id : null;
+    const unallocatedIncome = incomeRows.length > 1 ? totalIncome : 0;
 
     // 5. Gabungkan budget vs aktual per baris anggaran
     const comparison = budgetRows.map((b) => {
@@ -230,11 +232,12 @@ router.get("/vs-actual", async (req: Request, res: Response) => {
     res.json({
       period: { year: targetYear, month: targetMonth },
       comparison,
-      summary: {
+        summary: {
         totalBudget,
         totalActual,
         totalVariance: totalActual - totalBudget,
         realisasiPct: totalBudget > 0 ? Math.round((totalActual / totalBudget) * 1000) / 10 : 0,
+        unallocatedIncome,
       },
     });
   } catch (e) {
@@ -266,7 +269,11 @@ router.get("/cash-flow-projection", async (req: Request, res: Response) => {
       db.execute(sql`
         SELECT
           TO_CHAR(DATE_TRUNC('month', dep.departure_date), 'YYYY-MM') AS month,
-          SUM(b.total_price - COALESCE(paid.total_paid, 0)) AS outstanding
+          SUM(
+            b.total_price
+            - COALESCE(paid.total_paid, 0)
+            - COALESCE(scheduled_before_departure.scheduled_amount, 0)
+          ) AS outstanding
         FROM bookings b
         JOIN package_departures dep ON dep.id = b.departure_id
         LEFT JOIN (
@@ -274,6 +281,16 @@ router.get("/cash-flow-projection", async (req: Request, res: Response) => {
           FROM booking_payments WHERE is_voided = false
           GROUP BY booking_id
         ) paid ON paid.booking_id = b.id
+        LEFT JOIN (
+          SELECT iss.booking_id, SUM(iss.amount) AS scheduled_amount
+          FROM installment_schedules iss
+          JOIN bookings b2 ON b2.id = iss.booking_id
+          JOIN package_departures dep2 ON dep2.id = b2.departure_id
+          WHERE iss.status = 'pending'
+            AND iss.due_date >= NOW()
+            AND iss.due_date < dep2.departure_date
+          GROUP BY iss.booking_id
+        ) scheduled_before_departure ON scheduled_before_departure.booking_id = b.id
         WHERE b.status NOT IN ('cancelled', 'draft')
           AND COALESCE(paid.total_paid, 0) < b.total_price
           AND dep.departure_date >= NOW()
@@ -290,6 +307,7 @@ router.get("/cash-flow-projection", async (req: Request, res: Response) => {
             SUM(ft.amount::numeric) AS monthly_expense
           FROM financial_transactions ft
           WHERE ft.type IN ('expense', 'cost')
+            AND (ft.entry_type = 'debit' OR ft.entry_type IS NULL)
             AND ft.transaction_date >= NOW() - INTERVAL '3 months'
           GROUP BY DATE_TRUNC('month', ft.transaction_date)
         ) monthly

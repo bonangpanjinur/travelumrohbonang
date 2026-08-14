@@ -3,6 +3,7 @@ import {
   db,
   packageCosts,
   bookings,
+  bookingPayments,
   agentCommissions,
   packageCommissions,
   financialTransactions,
@@ -192,20 +193,30 @@ router.get("/profitability-overview", async (req, res) => {
     const ids = rawIds.split(",").filter(Boolean);
     if (ids.length === 0) return res.json([]);
 
-    // Fetch all paid bookings for these packages in one query
-    const allBookings = await db
+    // Determine paid bookings from active payment ledger. The payment flow uses
+    // `confirmed` for fully paid bookings, so status-only filtering is unsafe.
+    const candidateBookings = await db
       .select()
       .from(bookings)
       .where(
         and(
           inArray(bookings.packageId, ids),
-          eq(bookings.status, "paid"),
           ...(departureId && departureId !== "__all__"
             ? [eq(bookings.departureId, departureId)]
             : []),
         ),
       );
-
+    const candidateIds = candidateBookings.map((b: any) => b.id);
+    const paymentRows = candidateIds.length > 0
+      ? await db.select().from(bookingPayments).where(inArray(bookingPayments.bookingId, candidateIds))
+      : [];
+    const paidByBooking = new Map<string, number>();
+    for (const p of paymentRows as any[]) {
+      if (!p.isVoided) paidByBooking.set(p.bookingId, (paidByBooking.get(p.bookingId) ?? 0) + Number(p.amount || 0));
+    }
+    const allBookings = candidateBookings.filter((b: any) =>
+      b.status !== "cancelled" && (paidByBooking.get(b.id) ?? 0) >= Number(b.totalPrice || 0),
+    );
     const allBookingIds = allBookings.map((b: any) => b.id);
 
     // Fetch agent commissions for all bookings at once
@@ -226,8 +237,11 @@ router.get("/profitability-overview", async (req, res) => {
     );
     const marketingTotal = ftx.reduce((s: number, x: any) => s + Number(x.amount || 0), 0);
 
+    const totalPaidRevenue = allBookings.reduce((s: number, b: any) => s + Number(b.totalPrice || 0), 0);
     const results = ids.map((pid) => {
       const pkgBookings = allBookings.filter((b: any) => b.packageId === pid);
+      const packageRevenue = pkgBookings.reduce((s: number, b: any) => s + Number(b.totalPrice || 0), 0);
+      const allocatedMarketing = totalPaidRevenue > 0 ? marketingTotal * packageRevenue / totalPaidRevenue : 0;
       const pkgBookingIds = pkgBookings.map((b: any) => b.id);
       const agentComm = allAgentComm
         .filter((ac: any) => pkgBookingIds.includes(ac.bookingId))
@@ -240,7 +254,8 @@ router.get("/profitability-overview", async (req, res) => {
         paidBookings: pkgBookings,
         agentCommission: agentComm,
         picCommissionPerPax: picCommPerPax,
-        marketingTotal,
+        marketingTotal: Math.round(allocatedMarketing),
+        marketingAllocationMethod: "package_paid_revenue_share",
       };
     });
 
