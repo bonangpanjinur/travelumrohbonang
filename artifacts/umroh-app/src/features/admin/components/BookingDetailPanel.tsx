@@ -131,7 +131,8 @@ interface NewPaymentForm {
   method: string;
   notes: string;
   proofUrl?: string;
-  allocationMode: "booking" | "pilgrim";
+  allocationMode: "booking" | "single";
+  selectedPilgrimId: string;
   allocations: Record<string, string>;
 }
 
@@ -158,6 +159,7 @@ const emptyNewPayment = (): NewPaymentForm => ({
   notes: "",
   proofUrl: undefined,
   allocationMode: "booking",
+  selectedPilgrimId: "",
   allocations: {},
 });
 
@@ -513,13 +515,11 @@ const BookingDetailPanel = ({
   const handleAddPayment = async () => {
     const amount = parseInt(newPayment.amount.replace(/\D/g, ""));
     if (!amount || amount <= 0) { toast.error("Jumlah pembayaran wajib diisi"); return; }
-    const allocations = newPayment.allocationMode === "pilgrim"
-      ? Object.entries(newPayment.allocations)
-          .map(([pilgrimId, value]) => ({ pilgrimId, amount: parseInt(value.replace(/\D/g, "")) }))
-          .filter((item) => item.amount > 0)
+    const allocations = newPayment.allocationMode === "single"
+      ? (newPayment.selectedPilgrimId ? [{ pilgrimId: newPayment.selectedPilgrimId, amount }] : undefined)
       : undefined;
-    if (newPayment.allocationMode === "pilgrim" && (!allocations?.length || allocations.reduce((sum, item) => sum + item.amount, 0) !== amount)) {
-      toast.error("Jumlah alokasi jemaah harus sama dengan jumlah pembayaran");
+    if (newPayment.allocationMode === "single" && !allocations) {
+      toast.error("Pilih jemaah yang menerima pembayaran");
       return;
     }
     setSavingPayment(true);
@@ -575,6 +575,9 @@ const BookingDetailPanel = ({
       method: p.method ?? "",
       notes: p.notes ?? "",
       proofUrl: undefined,
+      allocationMode: "booking",
+      selectedPilgrimId: "",
+      allocations: {},
     });
   };
 
@@ -1336,26 +1339,21 @@ const BookingDetailPanel = ({
                     <Button type="button" size="sm" variant={newPayment.allocationMode === "booking" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setNewPayment((p) => ({ ...p, allocationMode: "booking" }))}>
                       Seluruh Booking
                     </Button>
-                    <Button type="button" size="sm" variant={newPayment.allocationMode === "pilgrim" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setNewPayment((p) => ({ ...p, allocationMode: "pilgrim" }))}>
-                      Per Jemaah
+                    <Button type="button" size="sm" variant={newPayment.allocationMode === "single" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setNewPayment((p) => ({ ...p, allocationMode: "single" }))}>
+                      Satu Jemaah
                     </Button>
                   </div>
-                  {newPayment.allocationMode === "pilgrim" && (
-                    <div className="space-y-1.5 pt-1">
-                      {pilgrims.map((pilgrim) => (
-                        <div key={pilgrim.id} className="flex items-center gap-2">
-                          <span className="min-w-0 flex-1 truncate text-xs">{pilgrim.name}</span>
-                          <Input
-                            type="number"
-                            min="0"
-                            placeholder="Rp 0"
-                            className="h-7 w-32 text-xs"
-                            value={newPayment.allocations[pilgrim.id] ?? ""}
-                            onChange={(e) => setNewPayment((p) => ({ ...p, allocations: { ...p.allocations, [pilgrim.id]: e.target.value } }))}
-                          />
-                        </div>
-                      ))}
-                      <p className="text-[11px] text-muted-foreground">Total alokasi harus sama dengan jumlah pembayaran.</p>
+                  {newPayment.allocationMode === "single" && (
+                    <div className="pt-1">
+                      <Select value={newPayment.selectedPilgrimId} onValueChange={(value) => setNewPayment((p) => ({ ...p, selectedPilgrimId: value }))}>
+                        <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Pilih jemaah" /></SelectTrigger>
+                        <SelectContent>
+                          {pilgrims.map((pilgrim) => (
+                            <SelectItem key={pilgrim.id} value={pilgrim.id}>{pilgrim.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="mt-1 text-[11px] text-muted-foreground">Nominal pembayaran akan dicatat khusus untuk jemaah yang dipilih.</p>
                     </div>
                   )}
                 </div>
