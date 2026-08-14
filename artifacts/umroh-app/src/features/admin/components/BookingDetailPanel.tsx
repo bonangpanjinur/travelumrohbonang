@@ -850,7 +850,7 @@ const BookingDetailPanel = ({
         <TabsContent value="overview" className="mt-3 space-y-4">
       {/* ── Pemesan info ─────────────────────────────────────────────────────── */}
       {(pemesanName || isGroupBooking) && (
-        <div className="p-3 border border-primary/20 bg-primary/5 rounded-lg">
+        <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-white to-white p-4 shadow-sm">
           <h4 className="font-semibold flex items-center gap-2 text-sm mb-2 text-primary">
             <UsersRound className="w-4 h-4" />
             {isGroupBooking ? "Booking Grup" : "Info Pemesan"}
@@ -880,9 +880,9 @@ const BookingDetailPanel = ({
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[0.85fr_1.35fr]">
         {/* ── Commission Info ───────────────────────────────────────────────── */}
-        <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+        <div className="rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50/80 via-white to-white p-5 shadow-sm space-y-3">
           <h4 className="font-semibold flex items-center gap-2 text-sm">
             <DollarSign className="w-4 h-4 text-primary" /> Info Komisi
           </h4>
@@ -1114,12 +1114,12 @@ const BookingDetailPanel = ({
               return <p className="text-xs text-muted-foreground text-center py-2">Tidak ditemukan</p>;
             }
             return (
-              <ul className="text-sm space-y-1.5">
+              <ul className="grid gap-1.5 text-sm sm:grid-cols-2">
                 {filtered.map((p, i) => {
                   const comp = getPilgrimCompleteness(p);
                   const compCfg = COMPLETENESS_CFG[comp];
                   return (
-                    <li key={p.id} className="flex items-center gap-2 group">
+                    <li key={p.id} className="group flex items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 transition-colors hover:border-primary/20 hover:bg-primary/5">
                       <UserCheck className="w-3 h-3 text-muted-foreground shrink-0" />
                       <button
                         onClick={() => setSelectedPilgrim(p)}
@@ -1169,7 +1169,7 @@ const BookingDetailPanel = ({
 
         {/* ── Equipment assignment ──────────────────────────────────────────── */}
         {bookingId && pilgrims.length > 0 && (
-          <div className="bg-muted/50 rounded-lg p-4">
+          <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-5 shadow-sm md:col-span-2">
             <PilgrimEquipmentPanel
               bookingId={bookingId}
               pilgrims={pilgrims.map((p) => ({ id: p.id, name: p.name }))}
@@ -1179,7 +1179,7 @@ const BookingDetailPanel = ({
       </div>
 
       {/* ── BKG-F03: Catatan / Notes ──────────────────────────────────────────── */}
-      <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm space-y-3 md:col-span-2">
         <div className="flex items-center justify-between">
           <h4 className="font-semibold flex items-center gap-2 text-sm">
             <FileText className="w-4 h-4 text-primary" /> Catatan
