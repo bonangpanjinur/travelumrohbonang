@@ -11,7 +11,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { useToast } from "@/shared/hooks/use-toast";
 import {
   ChevronDown, ChevronRight, Upload, CheckCircle2, Clock,
-  XCircle, FileText, ExternalLink, Loader2, Trash2,
+  XCircle, FileText, ExternalLink, Loader2, Trash2, Search,
 } from "lucide-react";
 
 // ── constants ─────────────────────────────────────────────────────────────────
@@ -185,9 +185,14 @@ function PilgrimDocAccordion({ pilgrim, bookingId }: { pilgrim: Pilgrim; booking
           {open ? <ChevronDown className="w-3.5 h-3.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
           <span className="font-medium truncate">{pilgrim.name}</span>
         </div>
-        <span className={`text-xs shrink-0 ml-2 ${verifiedCount === total ? "text-green-600" : hasAny ? "text-amber-500" : "text-muted-foreground"}`}>
-          {verifiedCount}/{total} terverifikasi
-        </span>
+        <div className="ml-3 flex min-w-[112px] items-center gap-2">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+            <div className={`h-full rounded-full ${verifiedCount === total ? "bg-green-500" : "bg-amber-400"}`} style={{ width: `${Math.round((verifiedCount / total) * 100)}%` }} />
+          </div>
+          <span className={`text-xs shrink-0 ${verifiedCount === total ? "text-green-600" : hasAny ? "text-amber-500" : "text-muted-foreground"}`}>
+            {verifiedCount}/{total}
+          </span>
+        </div>
       </button>
 
       {open && (
@@ -217,15 +222,38 @@ function PilgrimDocAccordion({ pilgrim, bookingId }: { pilgrim: Pilgrim; booking
 
 // ── main panel ────────────────────────────────────────────────────────────────
 export default function PilgrimDocumentPanel({ bookingId, pilgrims }: Props) {
+  const [search, setSearch] = useState("");
   if (pilgrims.length === 0) return null;
+  const visiblePilgrims = pilgrims.filter((pilgrim) => {
+    const matchesSearch = pilgrim.name.toLowerCase().includes(search.trim().toLowerCase());
+    return matchesSearch;
+  });
   return (
-    <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">
-        Klik nama jemaah untuk upload/lihat dokumen (paspor, visa, surat kesehatan, surat mahram).
-      </p>
-      {pilgrims.map((p) => (
-        <PilgrimDocAccordion key={p.id} pilgrim={p} bookingId={bookingId} />
-      ))}
+    <div className="space-y-3">
+      <div className="rounded-lg border bg-background p-3">
+        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold">Checklist Dokumen</p>
+            <p className="text-xs text-muted-foreground">Buka nama jemaah untuk upload, melihat, atau memverifikasi dokumen.</p>
+          </div>
+          <span className="text-xs text-muted-foreground">{visiblePilgrims.length} dari {pilgrims.length} jemaah</span>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama jemaah..." className="h-9 w-full rounded-md border bg-background pl-9 pr-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring" />
+          </div>
+        </div>
+      </div>
+      {visiblePilgrims.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-8 text-center">
+          <FileText className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+          <p className="text-sm font-medium">Jemaah tidak ditemukan</p>
+          <p className="mt-1 text-xs text-muted-foreground">Coba gunakan nama yang berbeda.</p>
+        </div>
+      ) : (
+        visiblePilgrims.map((p) => <PilgrimDocAccordion key={p.id} pilgrim={p} bookingId={bookingId} />)
+      )}
     </div>
   );
 }
