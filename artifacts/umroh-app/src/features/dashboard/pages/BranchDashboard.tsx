@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/sha
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
-import { Building2, ShoppingBag, Users, DollarSign, CreditCard, Calendar } from "lucide-react";
+import { Building2, ShoppingBag, Users, DollarSign, CreditCard, Calendar, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -78,7 +78,10 @@ const BranchDashboard = () => {
 
   const paidBookings = bookings.filter((b) => b.status === "paid");
   const totalRevenue = paidBookings.reduce((s, b) => s + (Number(b.total_price) || 0), 0);
-  const pendingCount = bookings.filter((b) => b.status === "pending" || b.status === "waiting_payment").length;
+  const pendingBookings = bookings.filter((b) => b.status === "pending" || b.status === "waiting_payment");
+  const pendingCount = pendingBookings.length;
+  const pendingValue = pendingBookings.reduce((s, b) => s + (Number(b.total_price) || 0), 0);
+  const paidRate = bookings.length ? Math.round((paidBookings.length / bookings.length) * 100) : 0;
   const thisMonthBookings = bookings.filter((b) => {
     const d = new Date(b.created_at);
     const now = new Date();
@@ -148,8 +151,14 @@ const BranchDashboard = () => {
               value={`Rp ${totalRevenue.toLocaleString("id-ID")}`}
               color="text-success"
             />
-          </div>
-
+                    </div>
+          {/* Branch control summary */}
+          <Card className={pendingCount > 0 ? "border-amber-200 bg-amber-50/50" : "border-emerald-200 bg-emerald-50/50"}>
+            <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
+              <div className="flex items-start gap-3"><div className={`rounded-lg p-2 ${pendingCount > 0 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}><AlertCircle className="w-5 h-5" /></div><div><p className="font-semibold">Kontrol Penagihan Cabang</p><p className="text-sm text-muted-foreground">{pendingCount > 0 ? `${pendingCount} booking menunggu pembayaran dengan nilai ${pendingValue.toLocaleString("id-ID")}.` : "Tidak ada booking menunggu pembayaran."}</p></div></div>
+              <div className="text-right"><p className="text-2xl font-bold">{paidRate}%</p><p className="text-xs text-muted-foreground">rasio booking lunas</p></div>
+            </CardContent>
+          </Card>
           {/* Agents */}
           <Card>
             <CardHeader className="pb-2">
