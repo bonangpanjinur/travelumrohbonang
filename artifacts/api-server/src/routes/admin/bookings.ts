@@ -1278,7 +1278,7 @@ router.get("/:id/invoice-data", async (req, res) => {
       await Promise.all([
         db.execute(sql`
           SELECT
-            b.id, b.booking_code, b.total_price, b.status, b.created_at,
+            b.id, b.booking_code, b.package_id, b.total_price, b.status, b.created_at,
             b.payment_policy_snapshot, b.payment_schedule_snapshot,
             b.branch_id, b.agent_id, b.pic_type, b.pic_id,
             pkg.title      AS package_title,
@@ -1371,6 +1371,13 @@ router.get("/:id/invoice-data", async (req, res) => {
         })(),
       ]);
 
+      let fallbackPolicySnapshot = sbBooking.payment_policy_snapshot ?? null;
+      let fallbackScheduleSnapshot = sbBooking.payment_schedule_snapshot ?? [];
+      if (!fallbackPolicySnapshot) {
+        const fallback = await buildBookingPaymentSnapshots(sbBooking.package_id ?? null, Number(sbBooking.total_price || 0), sbDep?.departure_date ?? null);
+        fallbackPolicySnapshot = fallback.paymentPolicySnapshot;
+        fallbackScheduleSnapshot = fallback.paymentScheduleSnapshot;
+      }
       const brandRows2 = (brandingResult as any).rows ?? brandingResult;
       const branding2: any = brandRows2[0]?.value ?? {};
       const createdAt = sbBooking.created_at;
@@ -1387,8 +1394,8 @@ router.get("/:id/invoice-data", async (req, res) => {
         totalPrice: Number(sbBooking.total_price || 0),
         createdAt,
         status: sbBooking.status,
-        paymentPolicySnapshot: sbBooking.payment_policy_snapshot ?? null,
-        paymentScheduleSnapshot: sbBooking.payment_schedule_snapshot ?? [],
+        paymentPolicySnapshot: fallbackPolicySnapshot,
+        paymentScheduleSnapshot: fallbackScheduleSnapshot,
         pilgrims: sbPilgrims.map((p: any) => ({ name: p.name, gender: p.gender })),
         rooms: (Array.isArray(sbRooms) ? sbRooms : []).map((r: any) => ({
           room_type: r.room_type,
@@ -1410,6 +1417,13 @@ router.get("/:id/invoice-data", async (req, res) => {
       });
     }
 
+    let paymentPolicySnapshot = booking.payment_policy_snapshot ?? null;
+    let paymentScheduleSnapshot = booking.payment_schedule_snapshot ?? [];
+    if (!paymentPolicySnapshot) {
+      const fallback = await buildBookingPaymentSnapshots(booking.package_id ?? null, Number(booking.total_price || 0), booking.departure_date ?? null);
+      paymentPolicySnapshot = fallback.paymentPolicySnapshot;
+      paymentScheduleSnapshot = fallback.paymentScheduleSnapshot;
+    }
     const payRows = (paymentsResult as any).rows ?? paymentsResult;
     const brandRows = (brandingResult as any).rows ?? brandingResult;
     const branding: any = brandRows[0]?.value ?? {};
@@ -1431,8 +1445,8 @@ router.get("/:id/invoice-data", async (req, res) => {
       totalPrice: Number(booking.total_price) || 0,
       createdAt: booking.created_at,
       status: booking.status,
-      paymentPolicySnapshot: booking.payment_policy_snapshot ?? null,
-      paymentScheduleSnapshot: booking.payment_schedule_snapshot ?? [],
+      paymentPolicySnapshot,
+      paymentScheduleSnapshot,
       pilgrims: (pilgrimsResult || []).map((p: any) => ({
         name: p.name,
         gender: p.gender,

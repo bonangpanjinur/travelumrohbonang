@@ -63,6 +63,7 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
     .filter((p) => p.status === "paid" || p.status === null)
     .reduce((sum, p) => sum + p.amount, 0);
   const remaining = data.totalPrice - totalPaid;
+  const policyRules = data.paymentPolicySnapshot?.rules ?? [];
 
   // Generate QR code for tracking
   const trackingUrl = `${window.location.origin}/track/${data.bookingCode}`;
@@ -169,15 +170,15 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
     </tbody>
   </table>` : ""}
 
-  ${data.paymentScheduleSnapshot.length > 0 ? `
-  <div class="section-title">Aturan & Jadwal Pembayaran</div>
-  <table>
-    <thead><tr><th>No</th><th>Tahap</th><th class="text-right">Nominal</th><th>Jatuh Tempo</th><th>Status</th></tr></thead>
+  ${data.paymentScheduleSnapshot.length > 0 || policyRules.length > 0 ? `
+  <div class="section-title">Aturan Pembayaran</div>
+  ${data.paymentScheduleSnapshot.length > 0 ? `<table>
+    <thead><tr><th>No</th><th>Tahap Pembayaran</th><th class="text-right">Nominal</th><th>Jatuh Tempo</th><th>Status</th></tr></thead>
     <tbody>
       ${data.paymentScheduleSnapshot.map((item) => `<tr><td>${item.sequence}</td><td>${item.label}</td><td class="text-right">${formatRp(item.amount)}${item.percentage !== null ? ` (${item.percentage}%)` : ""}</td><td>${formatDate(item.dueDate)}</td><td>${item.status === "pending" ? "Belum dibayar" : item.status}</td></tr>`).join("")}
     </tbody>
-  </table>
-  ${data.paymentPolicySnapshot?.rules?.length ? `<div style="font-size:12px;color:#666;margin-top:-12px;margin-bottom:18px"><strong>Ketentuan:</strong> ${data.paymentPolicySnapshot.rules.map((rule) => rule.displayText || rule.ruleCode).join("; ")}</div>` : ""}
+  </table>` : ""}
+  ${policyRules.length ? `<div style="font-size:12px;color:#666;margin-top:${data.paymentScheduleSnapshot.length > 0 ? "-12px" : "0"};margin-bottom:18px"><strong>Ketentuan:</strong><ul style="margin:6px 0 0 18px">${policyRules.map((rule) => `<li>${rule.displayText || rule.ruleCode}</li>`).join("")}</ul></div>` : ""}
   ` : ""}
 
   ${data.payments.length > 0 ? `
