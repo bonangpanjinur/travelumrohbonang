@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { db, agents, agentCommissions, bookings, eq, gte, lte, and } from "@workspace/db";
 import { generateCommissionsExcel } from "../../lib/excel/commissionsReport";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import { buildBookingScopeCondition } from "../../lib/scopeConditions";
 
 const router = Router();
 
@@ -24,8 +26,9 @@ function toEndOfDayWIB(dateStr: string): Date {
 router.get("/commissions.xlsx", async (req, res) => {
   try {
     const { from, to } = req.query as { from?: string; to?: string };
+    const scope = await resolveUserScope(req);
 
-    const conditions = [];
+    const conditions = [buildBookingScopeCondition(scope, "bookings")];
     if (from) conditions.push(gte(agentCommissions.createdAt, toStartOfDayWIB(from)));
     if (to)   conditions.push(lte(agentCommissions.createdAt, toEndOfDayWIB(to)));
 
