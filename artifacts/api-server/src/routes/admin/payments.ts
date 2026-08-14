@@ -6,7 +6,9 @@ import { objectStorageClient } from "../../lib/objectStorage";
 import {
   db,
   bookings,
+  bookingPilgrims,
   bookingPayments,
+  bookingPaymentAllocations,
   payments,
   financialTransactions,
   paymentProofAccessLogs,
@@ -16,6 +18,7 @@ import {
   sql,
   desc,
   sum,
+  inArray,
 } from "@workspace/db";
 import { sbGetBooking, sbGetPayments } from "../../lib/supabaseFallback";
 import { resolveUserScope } from "../../lib/scopeGuard";
@@ -145,6 +148,25 @@ function getLegacyProofPath(filename: string): string | null {
 }
 
 const router = Router({ mergeParams: true });
+
+async function validatePaymentAllocations(
+  bookingId: string,
+  allocations: Array<{ pilgrimId: string; amount: number }> | undefined,
+  paymentAmount: number,
+): Promise<string | null> {
+  if (!allocations) return null;
+  const unique = new Map(allocations.map((item) => [item.pilgrimId, item]));
+  if (unique.size !== allocations.length) return "Each pilgrim may appear only once in allocations";
+  const allocatedTotal = allocations.reduce((total, item) => total + item.amount, 0);
+  if (allocatedTotal !== paymentAmount) return "Allocation total must equal payment amount";
+  const ids = [...unique.keys()];
+  const pilgrims = await db
+    .select({ id: bookingPilgrims.id })
+    .from(bookingPilgrims)
+    .where(and(eq(bookingPilgrims.bookingId, bookingId), inArray(bookingPilgrims.id, ids)));
+  if (pilgrims.length !== ids.length) return "All allocated pilgrims must belong to this booking";
+  return null;
+}
 
 async function paymentBookingInScope(req: any, bookingId: string): Promise<boolean> {
   const scope = await resolveUserScope(req);
@@ -710,12 +732,37 @@ router.get("/", async (req, res) => {
       .where(eq(bookingPayments.bookingId, bookingId))
       .orderBy(sql`${bookingPayments.paidAt} asc`);
 
+        const paymentIds = paymentRows.map((payment) => payment.id);
+    const allocationRows = paymentIds.length
+      ? await db
+          .select({ paymentId: bookingPaymentAllocations.paymentId, pilgrimId: bookingPaymentAllocations.pilgrimId, amount: bookingPaymentAllocations.amount })
+          .from(bookingPaymentAllocations)
+          .where(inArray(bookingPaymentAllocations.paymentId, paymentIds))
+      : [];
+    const allocationsByPayment = new Map<string, Array<{ pilgrimId: string; amount: number }>>();
+    for (const allocation of allocationRows) {
+      const items = allocationsByPayment.get(allocation.paymentId) ?? [];
+      items.push({ pilgrimId: allocation.pilgrimId, amount: allocation.amount });
+      allocationsByPayment.set(allocation.paymentId, items);
+    }
+    const payments = paymentRows.flatMap((p) => {
+      try { return [BookingPaymentSchema.parse({ ...p, allocations: allocationsByPayment.get(p.id) })]; } catch { return []; }
+    });
+    const pilgrimRows = await db
+      .select({ id: bookingPilgrims.id, name: bookingPilgrims.name })
+      .from(bookingPilgrims)
+      .where(eq(bookingPilgrims.bookingId, bookingId));
+    const paidByPilgrim = new Map<string, number>();
+    for (const allocation of allocationRows) {
+      paidByPilgrim.set(allocation.pilgrimId, (paidByPilgrim.get(allocation.pilgrimId) ?? 0) + allocation.amount);
+    }
+    const perPilgrim = pilgrimRows.map((pilgrim) => ({
+      pilgrimId: pilgrim.id,
+      name: pilgrim.name,
+      allocatedPaid: paidByPilgrim.get(pilgrim.id) ?? 0,
+    }));
     const { totalPrice, totalPaid, remaining, paymentStatus } =
       await computePaymentStatus(bookingId);
-
-    const payments = paymentRows.flatMap((p) => {
-      try { return [BookingPaymentSchema.parse(p)]; } catch { return []; }
-    });
 
     res.json(
       BookingPaymentSummarySchema.parse({
@@ -724,6 +771,7 @@ router.get("/", async (req, res) => {
         remaining,
         paymentStatus,
         payments,
+        perPilgrim,
       }),
     );
   } catch (e) {
@@ -737,6 +785,12 @@ router.post("/", requireFinance, validate(AdminRecordPaymentRequest), async (req
     const bookingId = (req.params as Record<string, string>).bookingId;
     const body = req.body as AdminRecordPaymentInput;
     const adminId = req.user?.id;
+
+    const allocationError = await validatePaymentAllocations(bookingId, body.allocations, body.amount);
+    if (allocationError) {
+      res.status(400).json({ error: allocationError });
+      return;
+    }
 
     const paidAt = new Date(body.paidAt);
     if (Number.isNaN(paidAt.getTime())) {
@@ -787,6 +841,17 @@ router.post("/", requireFinance, validate(AdminRecordPaymentRequest), async (req
         })
         .returning();
 
+      if (body.allocations) {
+        await tx.insert(bookingPaymentAllocations).values(
+          body.allocations.map((allocation) => ({
+            id: crypto.randomUUID(),
+            paymentId: inserted.id,
+            pilgrimId: allocation.pilgrimId,
+            amount: allocation.amount,
+            createdAt: new Date(),
+          })),
+        );
+      }
       await journalPaymentVerified({
         bookingId,
         amount: body.amount,
@@ -849,7 +914,7 @@ router.patch(
       const updates = req.body as AdminUpdatePaymentInput;
 
       const [existingPayment] = await db
-        .select({ id: bookingPayments.id, isVoided: bookingPayments.isVoided })
+        .select({ id: bookingPayments.id, amount: bookingPayments.amount, isVoided: bookingPayments.isVoided })
         .from(bookingPayments)
         .where(and(eq(bookingPayments.id, paymentId), eq(bookingPayments.bookingId, bookingId)))
         .limit(1);
@@ -868,6 +933,17 @@ router.patch(
       if (updates.amount !== undefined && (!Number.isSafeInteger(updates.amount) || updates.amount <= 0)) {
         res.status(400).json({ error: "amount must be a positive integer" });
         return;
+      }
+      if (updates.allocations !== undefined) {
+        const allocationError = await validatePaymentAllocations(
+          bookingId,
+          updates.allocations,
+          updates.amount ?? existingPayment.amount,
+        );
+        if (allocationError) {
+          res.status(400).json({ error: allocationError });
+          return;
+        }
       }
       const parsedPaidAt = updates.paidAt !== undefined ? new Date(updates.paidAt) : undefined;
       if (parsedPaidAt && Number.isNaN(parsedPaidAt.getTime())) {
@@ -896,17 +972,33 @@ router.patch(
         setValues.referenceNumber = updates.referenceNumber;
       if (updates.notes !== undefined) setValues.notes = updates.notes;
 
-      const [updated] = await db
-        .update(bookingPayments)
-        .set(setValues)
-        .where(
-          and(
-            eq(bookingPayments.id, paymentId),
-            eq(bookingPayments.bookingId, bookingId),
-          ),
-        )
-        .returning();
-
+            const updated = await db.transaction(async (tx) => {
+        const [payment] = await tx
+          .update(bookingPayments)
+          .set(setValues)
+          .where(
+            and(
+              eq(bookingPayments.id, paymentId),
+              eq(bookingPayments.bookingId, bookingId),
+            ),
+          )
+          .returning();
+        if (updates.allocations !== undefined) {
+          await tx.delete(bookingPaymentAllocations).where(eq(bookingPaymentAllocations.paymentId, paymentId));
+          if (updates.allocations.length > 0) {
+            await tx.insert(bookingPaymentAllocations).values(
+              updates.allocations.map((allocation) => ({
+                id: crypto.randomUUID(),
+                paymentId,
+                pilgrimId: allocation.pilgrimId,
+                amount: allocation.amount,
+                createdAt: new Date(),
+              })),
+            );
+          }
+        }
+        return payment;
+      });
       if (!updated) {
         res.status(404).json({ error: "Payment not found" });
         return;

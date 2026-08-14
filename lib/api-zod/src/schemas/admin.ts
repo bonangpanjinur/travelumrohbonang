@@ -55,17 +55,25 @@ export const AdminCreateDeparturePriceRequest = z.object({
 
 export const AdminUpdateDeparturePriceRequest = AdminCreateDeparturePriceRequest.partial();
 
+const PaymentAllocationSchema = z.object({
+  pilgrimId: z.string().min(1),
+  amount: z.number().int().positive(),
+});
+
 const AdminRecordPaymentFields = z.object({
   // Finance/admin may record operational types beyond the standard schedule.
   // Keep it non-empty and bounded rather than restricting it to three enum values.
   type: z.string().trim().min(1).max(50),
   amount: z.number().int().positive(),
+  allocations: z.array(PaymentAllocationSchema).min(1).optional(),
   paidAt: z.string().min(1),
   method: z.string().nullable().optional(),
   referenceNumber: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   proofUrl: z.string().nullable().optional(),
 });
+
+export type PaymentAllocationInput = z.infer<typeof PaymentAllocationSchema>;
 
 /**
  * Accept the frontend payment naming while keeping `type` canonical in the API
@@ -104,6 +112,7 @@ export const BookingPaymentSchema = z.object({
   referenceNumber: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   proofUrl: z.string().nullable().optional(),
+  allocations: z.array(PaymentAllocationSchema).optional(),
   recordedBy: z.string().nullable().optional(),
   isVoided: z.boolean(),
   createdAt: z.union([z.string(), z.date()]).nullable().optional().transform((v) =>
@@ -117,6 +126,11 @@ export const BookingPaymentSummarySchema = z.object({
   remaining: z.number(),
   paymentStatus: z.enum(["unpaid", "partial", "paid"]),
   payments: z.array(BookingPaymentSchema),
+  perPilgrim: z.array(z.object({
+    pilgrimId: z.string(),
+    name: z.string(),
+    allocatedPaid: z.number(),
+  })).optional(),
 });
 
 export type AdminCreatePackageInput = z.infer<typeof AdminCreatePackageRequest>;

@@ -94,6 +94,7 @@ interface PaymentSummary {
   remaining: number;
   paymentStatus: string;
   payments: Payment[];
+  perPilgrim?: Array<{ pilgrimId: string; name: string; allocatedPaid: number }>;
 }
 
 interface NewJamaahForm {
@@ -130,6 +131,8 @@ interface NewPaymentForm {
   method: string;
   notes: string;
   proofUrl?: string;
+  allocationMode: "booking" | "pilgrim";
+  allocations: Record<string, string>;
 }
 
 const ROOM_LABELS: Record<string, string> = {
@@ -154,6 +157,8 @@ const emptyNewPayment = (): NewPaymentForm => ({
   method: "",
   notes: "",
   proofUrl: undefined,
+  allocationMode: "booking",
+  allocations: {},
 });
 
 const BookingDetailPanel = ({
@@ -508,6 +513,15 @@ const BookingDetailPanel = ({
   const handleAddPayment = async () => {
     const amount = parseInt(newPayment.amount.replace(/\D/g, ""));
     if (!amount || amount <= 0) { toast.error("Jumlah pembayaran wajib diisi"); return; }
+    const allocations = newPayment.allocationMode === "pilgrim"
+      ? Object.entries(newPayment.allocations)
+          .map(([pilgrimId, value]) => ({ pilgrimId, amount: parseInt(value.replace(/\D/g, "")) }))
+          .filter((item) => item.amount > 0)
+      : undefined;
+    if (newPayment.allocationMode === "pilgrim" && (!allocations?.length || allocations.reduce((sum, item) => sum + item.amount, 0) !== amount)) {
+      toast.error("Jumlah alokasi jemaah harus sama dengan jumlah pembayaran");
+      return;
+    }
     setSavingPayment(true);
     try {
       await apiFetch(`/api/admin/bookings/${bookingId}/payments`, {
@@ -519,6 +533,7 @@ const BookingDetailPanel = ({
           method:   newPayment.method || undefined,
           notes:    newPayment.notes  || undefined,
           proofUrl: newPayment.proofUrl || undefined,
+          allocations,
         }),
       });
       toast.success("Pembayaran berhasil dicatat");
@@ -1254,6 +1269,19 @@ const BookingDetailPanel = ({
               </p>
             </div>
           </div>
+          {paymentSummary.perPilgrim && paymentSummary.perPilgrim.length > 0 && (
+            <div className="rounded-lg border border-border/60 bg-background p-2.5">
+              <p className="mb-1.5 text-xs font-semibold">Pembayaran per Jemaah</p>
+              <div className="space-y-1">
+                {paymentSummary.perPilgrim.map((item) => (
+                  <div key={item.pilgrimId} className="flex justify-between gap-2 text-xs">
+                    <span className="truncate">{item.name}</span>
+                    <span className="font-medium tabular-nums">Rp {item.allocatedPaid.toLocaleString("id-ID")}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Form tambah pembayaran */}
           {showAddPayment && (
@@ -1301,6 +1329,37 @@ const BookingDetailPanel = ({
                   />
                 </div>
               </div>
+              {pilgrims.length > 0 && (
+                <div className="space-y-1.5 rounded-md border border-border/60 p-2">
+                  <Label className="text-xs">Alokasi Pembayaran</Label>
+                  <div className="flex gap-1.5">
+                    <Button type="button" size="sm" variant={newPayment.allocationMode === "booking" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setNewPayment((p) => ({ ...p, allocationMode: "booking" }))}>
+                      Seluruh Booking
+                    </Button>
+                    <Button type="button" size="sm" variant={newPayment.allocationMode === "pilgrim" ? "default" : "outline"} className="h-7 text-xs" onClick={() => setNewPayment((p) => ({ ...p, allocationMode: "pilgrim" }))}>
+                      Per Jemaah
+                    </Button>
+                  </div>
+                  {newPayment.allocationMode === "pilgrim" && (
+                    <div className="space-y-1.5 pt-1">
+                      {pilgrims.map((pilgrim) => (
+                        <div key={pilgrim.id} className="flex items-center gap-2">
+                          <span className="min-w-0 flex-1 truncate text-xs">{pilgrim.name}</span>
+                          <Input
+                            type="number"
+                            min="0"
+                            placeholder="Rp 0"
+                            className="h-7 w-32 text-xs"
+                            value={newPayment.allocations[pilgrim.id] ?? ""}
+                            onChange={(e) => setNewPayment((p) => ({ ...p, allocations: { ...p.allocations, [pilgrim.id]: e.target.value } }))}
+                          />
+                        </div>
+                      ))}
+                      <p className="text-[11px] text-muted-foreground">Total alokasi harus sama dengan jumlah pembayaran.</p>
+                    </div>
+                  )}
+                </div>
+              )}
               <div>
                 <Label className="text-xs">Catatan</Label>
                 <Input

@@ -145,3 +145,17 @@ export const bookingPayments = pgTable("booking_payments", {
 }, (t) => [
   index("idx_booking_payments_booking_id").on(t.bookingId),
 ]);
+
+// Per-jamaah allocation for a booking payment. A payment may remain booking-level
+// when no rows exist, or be split across multiple pilgrims when rows are present.
+export const bookingPaymentAllocations = pgTable("booking_payment_allocations", {
+  id: text("id").primaryKey(),
+  paymentId: text("payment_id").notNull().references(() => bookingPayments.id, { onDelete: "cascade" }),
+  pilgrimId: text("pilgrim_id").notNull().references(() => bookingPilgrims.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }),
+}, (t) => [
+  uniqueIndex("uq_payment_allocation_payment_pilgrim").on(t.paymentId, t.pilgrimId),
+  index("idx_payment_allocations_payment_id").on(t.paymentId),
+  index("idx_payment_allocations_pilgrim_id").on(t.pilgrimId),
+]);
