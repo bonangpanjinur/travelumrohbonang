@@ -83,12 +83,12 @@ export default function CertificateGenerator() {
   }, [certificateType]);
 
   useEffect(() => {
-    apiFetch("/api/admin/settings/key/branding").then((response: any) => {
+    apiFetch("/api/admin/settings/branding").then((response: any) => {
       const value = response?.data?.value ?? response?.value ?? {};
       if (value.company_name) setCompanyName(value.company_name);
       if (value.logo_url) setLogoUrl(value.logo_url);
     }).catch(() => undefined);
-    apiFetch("/api/admin/settings/key/contact").then((response: any) => {
+    apiFetch("/api/admin/settings/contact").then((response: any) => {
       const value = response?.data?.value ?? response?.value ?? {};
       if (value.address) setAddress(value.address);
     }).catch(() => undefined);
