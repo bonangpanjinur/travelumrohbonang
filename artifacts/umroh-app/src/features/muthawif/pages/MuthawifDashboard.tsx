@@ -130,6 +130,7 @@ const MuthawifDashboard = () => {
   const activeDepar = profile.assignedDepartures.filter(
     (d) => d.status === "active" || d.status === "upcoming",
   );
+  const attentionReports = reports.filter((report) => report.groupCondition === "butuh_perhatian");
 
   return (
     <>
@@ -163,6 +164,8 @@ const MuthawifDashboard = () => {
             <StatCard icon={Users} label="Jamaah Binaan" value={profile.stats.jamaahCount} color="text-primary" />
             <StatCard icon={FileText} label="Laporan Dibuat" value={reports.length} color="text-success" />
           </div>
+
+          {attentionReports.length > 0 && <Card className="border-red-200 bg-red-50/60"><CardContent className="flex items-center justify-between gap-3 py-4"><div><p className="font-semibold text-red-700">Perhatian diperlukan</p><p className="text-sm text-red-700/80">{attentionReports.length} laporan menyatakan kondisi rombongan perlu ditindaklanjuti.</p></div><Button variant="outline" size="sm" onClick={() => navigate("/muthawif/laporan-harian")} className="border-red-200 text-red-700">Lihat laporan</Button></CardContent></Card>}
 
           {/* Assigned Departures */}
           <Card>
