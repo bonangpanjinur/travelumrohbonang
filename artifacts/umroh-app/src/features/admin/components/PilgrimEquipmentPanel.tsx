@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
+import { Input } from "@/shared/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/shared/components/ui/select";
@@ -15,7 +16,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/shared/components/ui/table";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Trash2, Package, CheckCircle2, RotateCcw, Users } from "lucide-react";
+import { Plus, Trash2, Package, CheckCircle2, RotateCcw, Users, Search, ClipboardCheck } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Pilgrim {
@@ -69,6 +70,8 @@ const PilgrimEquipmentPanel = ({ bookingId, pilgrims }: PilgrimEquipmentPanelPro
   const [newPilgrimId, setNewPilgrimId] = useState("");
   const [newEquipmentId, setNewEquipmentId] = useState("");
   const [bulkEquipmentId, setBulkEquipmentId] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // Fetch all assignments for this booking
   const { data: assignData, isLoading } = useQuery({
@@ -146,13 +149,46 @@ const PilgrimEquipmentPanel = ({ bookingId, pilgrims }: PilgrimEquipmentPanelPro
   });
 
   const canAdd = newPilgrimId && newEquipmentId;
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredAssignments = assignments.filter((assignment) => {
+    const matchesSearch = !normalizedSearch || [assignment.pilgrimName, assignment.equipmentName, assignment.equipmentCategory]
+      .some((value) => value?.toLowerCase().includes(normalizedSearch));
+    return matchesSearch && (statusFilter === "all" || assignment.status === statusFilter);
+  });
+  const pendingCount = assignments.filter((a) => a.status === "pending").length;
+  const distributedCount = assignments.filter((a) => a.status === "distributed").length;
+  const returnedCount = assignments.filter((a) => a.status === "returned").length;
 
   return (
     <div className="mt-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Package className="w-4 h-4 text-primary" />
-        <h4 className="font-semibold text-sm">Perlengkapan Jemaah</h4>
-        <Badge variant="outline" className="text-xs">{assignments.length} item</Badge>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-primary/10 p-2"><Package className="h-4 w-4 text-primary" /></div>
+            <div>
+              <h4 className="font-semibold text-sm">Perlengkapan Jemaah</h4>
+              <p className="text-xs text-muted-foreground">Kelola penetapan dan serah-terima perlengkapan.</p>
+            </div>
+            <Badge variant="outline" className="text-xs">{assignments.length} item</Badge>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2 text-xs">
+          <ClipboardCheck className="h-4 w-4 text-primary" />
+          <span><strong>{distributedCount}</strong> diserahkan</span>
+          <span className="text-muted-foreground">/</span>
+          <span><strong>{pendingCount}</strong> menunggu</span>
+        </div>
+      </div>
+      <div className="mb-4 grid grid-cols-3 gap-2">
+        <button type="button" onClick={() => setStatusFilter("pending")} className={`rounded-lg border p-2 text-left transition ${statusFilter === "pending" ? "border-yellow-400 bg-yellow-50" : "bg-background hover:bg-muted/40"}`}>
+          <p className="text-[11px] text-muted-foreground">Menunggu</p><p className="text-lg font-semibold text-yellow-700">{pendingCount}</p>
+        </button>
+        <button type="button" onClick={() => setStatusFilter("distributed")} className={`rounded-lg border p-2 text-left transition ${statusFilter === "distributed" ? "border-green-400 bg-green-50" : "bg-background hover:bg-muted/40"}`}>
+          <p className="text-[11px] text-muted-foreground">Diserahkan</p><p className="text-lg font-semibold text-green-700">{distributedCount}</p>
+        </button>
+        <button type="button" onClick={() => setStatusFilter("returned")} className={`rounded-lg border p-2 text-left transition ${statusFilter === "returned" ? "border-blue-400 bg-blue-50" : "bg-background hover:bg-muted/40"}`}>
+          <p className="text-[11px] text-muted-foreground">Dikembalikan</p><p className="text-lg font-semibold text-blue-700">{returnedCount}</p>
+        </button>
       </div>
 
       {/* Add new assignment — per jemaah */}
@@ -222,12 +258,36 @@ const PilgrimEquipmentPanel = ({ bookingId, pilgrims }: PilgrimEquipmentPanelPro
         </div>
       )}
 
+      {/* Filter daftar perlengkapan */}
+      <div className="mb-3 flex flex-col gap-2 rounded-lg border bg-background p-2 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari jemaah atau perlengkapan..." className="h-9 pl-9 text-sm" />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-9 w-full text-sm sm:w-[170px]"><SelectValue placeholder="Semua status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua status</SelectItem>
+            <SelectItem value="pending">Menunggu</SelectItem>
+            <SelectItem value="distributed">Diserahkan</SelectItem>
+            <SelectItem value="returned">Dikembalikan</SelectItem>
+          </SelectContent>
+        </Select>
+        {(search || statusFilter !== "all") && <Button type="button" variant="ghost" size="sm" className="h-9" onClick={() => { setSearch(""); setStatusFilter("all"); }}>Reset</Button>}
+      </div>
+
       {/* Assignments table */}
       {isLoading ? (
         <div className="text-center py-4 text-sm text-muted-foreground">Memuat...</div>
       ) : assignments.length === 0 ? (
         <div className="text-center py-4 text-sm text-muted-foreground">
           Belum ada perlengkapan yang ditetapkan.
+        </div>
+      ) : filteredAssignments.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-8 text-center">
+          <Package className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
+          <p className="text-sm font-medium">Tidak ada perlengkapan yang cocok</p>
+          <p className="mt-1 text-xs text-muted-foreground">Coba ubah kata kunci atau filter status.</p>
         </div>
       ) : (
         <div className="rounded-lg border overflow-auto text-sm">
@@ -242,7 +302,7 @@ const PilgrimEquipmentPanel = ({ bookingId, pilgrims }: PilgrimEquipmentPanelPro
               </TableRow>
             </TableHeader>
             <TableBody>
-              {assignments.map((a) => (
+              {filteredAssignments.map((a) => (
                 <TableRow key={a.id}>
                   <TableCell className="font-medium">{a.pilgrimName ?? "-"}</TableCell>
                   <TableCell>{a.equipmentName ?? "-"}</TableCell>
