@@ -35,6 +35,7 @@ import {
 import { generateBookingConfirmationPdf } from "../lib/pdf/bookingConfirmation";
 import QRCode from "qrcode";
 import { branches } from "@workspace/db";
+import { buildBookingPaymentSnapshots } from "../lib/paymentPolicyBooking";
 import {
   BookingListResponse,
   BookingWithDetailsSchema,
@@ -421,7 +422,7 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
     // P3-10: Validasi kapasitas keberangkatan sebelum booking dibuat
     if (departureId) {
       const [dep] = await db
-        .select({ quota: packageDepartures.quota, status: packageDepartures.status })
+        .select({ quota: packageDepartures.quota, status: packageDepartures.status, departureDate: packageDepartures.departureDate })
         .from(packageDepartures)
         .where(eq(packageDepartures.id, departureId))
         .limit(1);
@@ -440,6 +441,10 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
 
     const bookingCode = generateBookingCode();
     const bookingId = crypto.randomUUID();
+    const departureForPolicy = departureId
+      ? (await db.select({ departureDate: packageDepartures.departureDate }).from(packageDepartures).where(eq(packageDepartures.id, departureId)).limit(1))[0]?.departureDate
+      : null;
+    const paymentSnapshots = await buildBookingPaymentSnapshots(packageId, totalPrice, departureForPolicy);
 
     const {
       isGroupBooking,
@@ -481,6 +486,8 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
           totalPrice: finalPrice,
           currency,
           paymentScheme: paymentScheme ?? null,
+          paymentPolicySnapshot: paymentSnapshots.paymentPolicySnapshot,
+          paymentScheduleSnapshot: paymentSnapshots.paymentScheduleSnapshot,
           notes: notes ?? null,
           status: "draft",
           picType: picType ?? null,

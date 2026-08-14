@@ -40,6 +40,7 @@ import { awardLoyaltyPointsForBooking } from "../../lib/loyalty";
 import { requireSuperAdmin, requireStaff } from "../../middlewares/requireAdmin";
 import { resolveUserScope } from "../../lib/scopeGuard";
 import { buildBookingScopeCondition, isBookingInScope, scopeDeniedMessage } from "../../lib/scopeConditions";
+import { buildBookingPaymentSnapshots } from "../../lib/paymentPolicyBooking";
 
 const router = Router();
 
@@ -554,6 +555,7 @@ router.post("/", async (req, res) => {
       if (currRow?.rateToIdr) exchangeRate = currRow.rateToIdr;
     }
 
+    const paymentSnapshots = await buildBookingPaymentSnapshots(packageId, calculatedPrice, depRow.departureDate);
     // Pemesan name: from explicit pemesanName field, else from customerName
     const resolvedPemesanName = (req.body.pemesanName || customerName || null) as string | null;
     const resolvedPemesanPhone = (req.body.pemesanPhone || null) as string | null;
@@ -575,6 +577,8 @@ router.post("/", async (req, res) => {
           currency: bookingCurrency,
           exchangeRate,
           paymentScheme: paymentScheme || "full",
+          paymentPolicySnapshot: paymentSnapshots.paymentPolicySnapshot,
+          paymentScheduleSnapshot: paymentSnapshots.paymentScheduleSnapshot,
           notes,
           branchId,
           agentId: effectiveAgentId,
@@ -747,6 +751,7 @@ router.post("/group", async (req, res) => {
     const hex = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
     const bookingCode = `BNG-${yymm}-${hex}`;
 
+    const groupPaymentSnapshots = await buildBookingPaymentSnapshots(packageId, calculatedGroupTotal, depRow.departureDate);
     // F-14: Snapshot exchange rate at booking time
     const groupCurrency = currency || "IDR";
     let groupExchangeRate = 1;
@@ -776,6 +781,8 @@ router.post("/group", async (req, res) => {
           currency: groupCurrency,
           exchangeRate: groupExchangeRate,
           paymentScheme: paymentScheme || "full",
+          paymentPolicySnapshot: groupPaymentSnapshots.paymentPolicySnapshot,
+          paymentScheduleSnapshot: groupPaymentSnapshots.paymentScheduleSnapshot,
           notes: notes || null,
           branchId: branchId || null,
           agentId: groupAgentId || null,
@@ -1272,6 +1279,7 @@ router.get("/:id/invoice-data", async (req, res) => {
         db.execute(sql`
           SELECT
             b.id, b.booking_code, b.total_price, b.status, b.created_at,
+            b.payment_policy_snapshot, b.payment_schedule_snapshot,
             b.branch_id, b.agent_id, b.pic_type, b.pic_id,
             pkg.title      AS package_title,
             dep.departure_date,
@@ -1379,6 +1387,8 @@ router.get("/:id/invoice-data", async (req, res) => {
         totalPrice: Number(sbBooking.total_price || 0),
         createdAt,
         status: sbBooking.status,
+        paymentPolicySnapshot: sbBooking.payment_policy_snapshot ?? null,
+        paymentScheduleSnapshot: sbBooking.payment_schedule_snapshot ?? [],
         pilgrims: sbPilgrims.map((p: any) => ({ name: p.name, gender: p.gender })),
         rooms: (Array.isArray(sbRooms) ? sbRooms : []).map((r: any) => ({
           room_type: r.room_type,
@@ -1421,6 +1431,8 @@ router.get("/:id/invoice-data", async (req, res) => {
       totalPrice: Number(booking.total_price) || 0,
       createdAt: booking.created_at,
       status: booking.status,
+      paymentPolicySnapshot: booking.payment_policy_snapshot ?? null,
+      paymentScheduleSnapshot: booking.payment_schedule_snapshot ?? [],
       pilgrims: (pilgrimsResult || []).map((p: any) => ({
         name: p.name,
         gender: p.gender,

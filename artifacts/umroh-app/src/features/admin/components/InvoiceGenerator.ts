@@ -12,6 +12,8 @@ export interface InvoiceData {
   totalPrice: number;
   createdAt: string;
   status: string;
+  paymentPolicySnapshot: { rules?: { ruleCode: string; displayText?: string | null; value?: unknown }[] } | null;
+  paymentScheduleSnapshot: { sequence: number; code: string; label: string; percentage: number | null; amount: number; dueDate: string | null; status: string }[];
   pilgrims: { name: string; gender: string | null }[];
   rooms: { room_type: string; quantity: number; price: number; subtotal: number }[];
   payments: { payment_type: string | null; amount: number; status: string | null; paid_at: string | null }[];
@@ -166,6 +168,17 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
       }).join("")}
     </tbody>
   </table>` : ""}
+
+  ${data.paymentScheduleSnapshot.length > 0 ? `
+  <div class="section-title">Aturan & Jadwal Pembayaran</div>
+  <table>
+    <thead><tr><th>No</th><th>Tahap</th><th class="text-right">Nominal</th><th>Jatuh Tempo</th><th>Status</th></tr></thead>
+    <tbody>
+      ${data.paymentScheduleSnapshot.map((item) => `<tr><td>${item.sequence}</td><td>${item.label}</td><td class="text-right">${formatRp(item.amount)}${item.percentage !== null ? ` (${item.percentage}%)` : ""}</td><td>${formatDate(item.dueDate)}</td><td>${item.status === "pending" ? "Belum dibayar" : item.status}</td></tr>`).join("")}
+    </tbody>
+  </table>
+  ${data.paymentPolicySnapshot?.rules?.length ? `<div style="font-size:12px;color:#666;margin-top:-12px;margin-bottom:18px"><strong>Ketentuan:</strong> ${data.paymentPolicySnapshot.rules.map((rule) => rule.displayText || rule.ruleCode).join("; ")}</div>` : ""}
+  ` : ""}
 
   ${data.payments.length > 0 ? `
   <div class="section-title">Riwayat Pembayaran</div>

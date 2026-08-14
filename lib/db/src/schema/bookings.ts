@@ -1,5 +1,5 @@
 import {
-  pgTable, text, integer, timestamp, numeric, boolean, doublePrecision,
+  pgTable, text, integer, timestamp, numeric, boolean, doublePrecision, jsonb,
   index, uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { packages, packageDepartures } from "./packages";
@@ -21,6 +21,9 @@ export const bookings = pgTable("bookings", {
   currency: text("currency").notNull(),
   exchangeRate: doublePrecision("exchange_rate").default(1), // rate_to_idr snapshot at booking time
   paymentScheme: text("payment_scheme"),
+  // Immutable snapshots captured when the booking is created.
+  paymentPolicySnapshot: jsonb("payment_policy_snapshot"),
+  paymentScheduleSnapshot: jsonb("payment_schedule_snapshot"),
   notes: text("notes"),
   // Group booking fields
   isGroupBooking: boolean("is_group_booking").notNull().default(false),
