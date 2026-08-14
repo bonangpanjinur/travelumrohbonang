@@ -158,6 +158,12 @@ export default function CertificateGenerator() {
     } finally { setSaving(false); }
   };
 
+  const printCertificate = () => {
+    document.body.classList.add("certificate-printing");
+    window.print();
+    window.setTimeout(() => document.body.classList.remove("certificate-printing"), 1200);
+  };
+
   const issueCertificate = async () => {
     if (!bookingId.trim() || !pilgrimId.trim()) { toast.error("Booking ID dan Jemaah ID wajib diisi"); return; }
     try {
@@ -204,9 +210,9 @@ export default function CertificateGenerator() {
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between"><div><p className="text-sm font-semibold">Preview Sertifikat</p><p className="text-xs text-muted-foreground">Perubahan desain terlihat secara langsung.</p></div><Button variant="outline" className="gap-2" onClick={() => window.print()}><Download className="h-4 w-4" /> Cetak / PDF</Button></div>
+            <div className="flex items-center justify-between"><div><p className="text-sm font-semibold">Preview Sertifikat</p><p className="text-xs text-muted-foreground">Perubahan desain terlihat secara langsung.</p></div><Button variant="outline" className="gap-2" onClick={printCertificate}><Download className="h-4 w-4" /> Cetak / PDF</Button></div>
             <div className="overflow-auto rounded-3xl border bg-slate-200/70 p-4 shadow-inner md:p-8">
-              <div className={`relative mx-auto aspect-[1.414/1] max-w-[1000px] overflow-hidden rounded-xl border-[12px] p-8 text-center shadow-2xl md:p-14 ${design.layout === "modern" ? "bg-white" : design.layout === "classic" ? "bg-[#fffaf0]" : design.layout === "premium" ? "bg-[#fff7ed]" : "bg-[#fffdf7]"}`} style={{ borderColor: design.accent }}>
+              <div className={`certificate-print-root relative mx-auto aspect-[1.414/1] max-w-[1000px] overflow-hidden rounded-xl border-[12px] p-8 text-center shadow-2xl md:p-14 ${design.layout === "modern" ? "bg-white" : design.layout === "classic" ? "bg-[#fffaf0]" : design.layout === "premium" ? "bg-[#fff7ed]" : "bg-[#fffdf7]"}`} style={{ borderColor: design.accent }}>
                 <div className="pointer-events-none absolute inset-4 rounded-lg border" style={{ borderColor: `${design.accent}66` }} />
                 {design.layout === "classic" && <div className="pointer-events-none absolute left-7 top-7 h-16 w-16 rounded-full border-2 opacity-40" style={{ borderColor: design.accent }} />}
                 {design.layout === "premium" && <div className="pointer-events-none absolute bottom-7 right-7 h-20 w-20 rotate-45 border-2 opacity-40" style={{ borderColor: design.accent }} />}

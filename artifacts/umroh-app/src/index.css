@@ -451,8 +451,38 @@
   }
 
   /* Elemen yang hanya muncul saat cetak */
-  .print\:block {
+  .print\\:block {
     display: block !important;
+  }
+
+  /* Sertifikat: cetak hanya kartu sertifikat, bukan seluruh halaman generator */
+  body.certificate-printing * {
+    visibility: hidden !important;
+  }
+
+  body.certificate-printing .certificate-print-root,
+  body.certificate-printing .certificate-print-root * {
+    visibility: visible !important;
+  }
+
+  body.certificate-printing .certificate-print-root {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: calc(100vh - 3cm) !important;
+    margin: 0 !important;
+    border-width: 10px !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+  }
+
+  body.certificate-printing .certificate-print-root img {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 
   .print\:grid-cols-4 {
