@@ -1,4 +1,4 @@
-const CACHE_NAME = "portal-jamaah-v1";
+const CACHE_NAME = "portal-jamaah-v2";
 const APP_SHELL = ["/", "/portal-jamaah", "/manifest.webmanifest", "/favicon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -23,6 +23,19 @@ self.addEventListener("fetch", (event) => {
       }
       return response;
     }).catch(() => caches.match(request)));
+    return;
+  }
+
+  // Dokumen navigasi harus selalu mencoba versi terbaru agar deployment baru
+  // tidak menyisakan blank screen karena index.html dan asset lama tidak cocok.
+  if (request.mode === "navigate") {
+    event.respondWith(fetch(request).then((response) => {
+      if (response.ok) {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+      }
+      return response;
+    }).catch(() => caches.match(request).then((cached) => cached || caches.match("/"))));
     return;
   }
 
