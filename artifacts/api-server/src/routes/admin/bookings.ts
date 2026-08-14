@@ -305,8 +305,11 @@ router.get("/stats", async (req, res) => {
             AND EXISTS (
               SELECT 1 FROM package_departures pd
               WHERE pd.id = b.departure_id
-                AND pd.departure_date BETWEEN CURRENT_DATE
-                AND CURRENT_DATE + INTERVAL '30 days'
+                AND CASE
+                  WHEN pd.departure_date ~ '^\\d{4}-\\d{2}-\\d{2}$'
+                    THEN pd.departure_date::date
+                  ELSE NULL
+                END BETWEEN CURRENT_DATE AND (CURRENT_DATE + 30)
             )))::int
           AS departing_soon
       FROM bookings b
