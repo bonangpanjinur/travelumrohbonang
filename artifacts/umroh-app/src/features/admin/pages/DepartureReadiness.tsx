@@ -278,6 +278,14 @@ export default function DepartureReadiness() {
   };
 
   const dLabel = daysLabel(dep?.daysUntil);
+  const readinessMetrics = data ? [
+    data.payment.total > 0 ? (data.payment.paid / data.payment.total) * 100 : 100,
+    data.documents.total > 0 ? (data.documents.complete / data.documents.total) * 100 : 100,
+    data.seats.total > 0 ? (data.seats.assigned / data.seats.total) * 100 : 100,
+    data.checkIn.total > 0 ? (data.checkIn.done / data.checkIn.total) * 100 : 100,
+  ] : [];
+  const readinessScore = readinessMetrics.length ? Math.round(readinessMetrics.reduce((sum, value) => sum + value, 0) / readinessMetrics.length) : 0;
+  const readinessStatus = readinessScore >= 90 ? { label: "Siap", color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200" } : readinessScore >= 70 ? { label: "Perlu perhatian", color: "text-amber-600", bg: "bg-amber-50 border-amber-200" } : { label: "Berisiko", color: "text-red-600", bg: "bg-red-50 border-red-200" };
 
   return (
     <div className="space-y-6">
@@ -362,6 +370,18 @@ export default function DepartureReadiness() {
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Overall readiness score */}
+          <Card className={`border ${readinessStatus.bg}`}>
+            <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Skor Kesiapan Keberangkatan</p>
+                <div className="mt-1 flex items-baseline gap-2"><span className={`text-4xl font-bold ${readinessStatus.color}`}>{readinessScore}%</span><Badge variant="outline" className={readinessStatus.color}>{readinessStatus.label}</Badge></div>
+                <p className="mt-1 text-xs text-muted-foreground">Rata-rata pembayaran, dokumen, kursi, dan check-in.</p>
+              </div>
+              {data.payment.unpaid + data.documents.incomplete + data.seats.unassigned > 0 && <div className="text-right text-xs text-muted-foreground"><p className="font-semibold text-foreground">Prioritas tindakan</p><p>{data.payment.unpaid + data.documents.incomplete + data.seats.unassigned} item perlu ditindaklanjuti</p></div>}
             </CardContent>
           </Card>
 
