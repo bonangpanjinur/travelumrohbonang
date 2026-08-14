@@ -10,6 +10,7 @@ import { toast } from "sonner";
 type CertificateType = "umroh" | "badal_umroh";
 
 type Design = {
+  layout: "elegant" | "classic" | "modern" | "premium";
   accent: string;
   title: string;
   subtitle: string;
@@ -26,21 +27,19 @@ type DepartureOption = { id: string; departureDate: string; packageTitle: string
 type BookingOption = { id: string; bookingCode: string; status: string | null; packageTitle: string | null; departureDate: string | null };
 type PilgrimOption = { id: string; name: string; gender: string | null; passportNumber: string | null };
 
-const initialDesign: Design = {
-  accent: "#b88a2a",
-  title: "SERTIFIKAT {TYPE}",
-  subtitle: "Diberikan kepada",
-  body: "Dengan ini menerangkan bahwa",
-  recipientSize: 38,
-  recipientColor: "#123f35",
-  footer: "Semoga menjadi amal ibadah yang diterima Allah SWT.",
-  showLogo: true,
-  showAddress: true,
+const TEMPLATES: Record<string, Design> = {
+  elegant: { layout: "elegant", accent: "#123f35", title: "SERTIFIKAT {TYPE}", subtitle: "Diberikan kepada", body: "Dengan ini menerangkan bahwa", recipientSize: 42, recipientColor: "#123f35", footer: "Semoga menjadi amal ibadah yang diterima Allah SWT.", showLogo: true, showAddress: true },
+  classic: { layout: "classic", accent: "#b88a2a", title: "PIAGAM PENGHARGAAN {TYPE}", subtitle: "Diberikan sebagai apresiasi kepada", body: "Telah menyelesaikan ibadah dengan khidmat", recipientSize: 38, recipientColor: "#1e293b", footer: "Barakallahu fiikum.", showLogo: true, showAddress: true },
+  modern: { layout: "modern", accent: "#0ea5e9", title: "CERTIFICATE OF {TYPE}", subtitle: "This is to certify that", body: "Has successfully completed the journey", recipientSize: 48, recipientColor: "#0f172a", footer: "May your journey be blessed.", showLogo: true, showAddress: false },
+  premium: { layout: "premium", accent: "#7c2d12", title: "SERTIFIKAT EKSKLUSIF {TYPE}", subtitle: "Penghargaan tertinggi untuk", body: "Atas dedikasi dan kesungguhan dalam beribadah", recipientSize: 40, recipientColor: "#431407", footer: "Vins Tour Travel - Melayani dengan Sepenuh Hati", showLogo: true, showAddress: true },
 };
+
+const initialDesign: Design = TEMPLATES.elegant;
 
 export default function CertificateGenerator() {
   const [certificateType, setCertificateType] = useState<CertificateType>("umroh");
   const [design, setDesign] = useState<Design>(initialDesign);
+  const [selectedTemplateKey, setSelectedTemplateKey] = useState("elegant");
   const [templateName, setTemplateName] = useState("Sertifikat Elegan Hijau");
   const [recipientName, setRecipientName] = useState("Nama Jemaah");
   const [performerName, setPerformerName] = useState("");
@@ -136,6 +135,15 @@ export default function CertificateGenerator() {
 
   const updateDesign = <K extends keyof Design>(key: K, value: Design[K]) => setDesign((current) => ({ ...current, [key]: value }));
 
+  const applyTemplate = (key: string) => {
+    const template = TEMPLATES[key];
+    if (!template) return;
+    setDesign({ ...template });
+    setSelectedTemplateKey(key);
+    const names: Record<string, string> = { elegant: "Elegan Hijau", classic: "Klasik Islami", modern: "Minimalis Modern", premium: "Premium Gold" };
+    setTemplateName(`Sertifikat ${names[key] || key}`);
+  };
+
   const saveTemplate = async () => {
     if (!templateName.trim()) { toast.error("Nama template wajib diisi"); return; }
     setSaving(true);
@@ -179,6 +187,7 @@ export default function CertificateGenerator() {
         <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
           <div className="space-y-4 rounded-3xl border bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2"><Palette className="h-5 w-5 text-[#b88a2a]" /><h2 className="font-semibold">Pengaturan Desain</h2></div>
+            <div><Label>Gaya Template</Label><div className="mt-2 grid grid-cols-2 gap-2">{Object.entries(TEMPLATES).map(([key, template]) => <button key={key} type="button" onClick={() => applyTemplate(key)} className={`rounded-xl border p-3 text-left transition ${selectedTemplateKey === key ? "border-[#b88a2a] bg-amber-50 ring-2 ring-amber-200" : "border-slate-200 hover:border-slate-300"}`}><div className="mb-2 h-6 rounded-md" style={{ background: `linear-gradient(135deg, ${template.accent}, ${template.layout === "modern" ? "#e0f2fe" : "#fff7ed"})` }} /><p className="text-xs font-semibold">{key === "elegant" ? "Elegan Hijau" : key === "classic" ? "Klasik Islami" : key === "modern" ? "Minimalis Modern" : "Premium Gold"}</p><p className="mt-0.5 text-[10px] text-muted-foreground">{template.layout === "modern" ? "Clean & minimal" : template.layout === "classic" ? "Ornamen klasik" : template.layout === "premium" ? "Bingkai premium" : "Formal natural"}</p></button>)}</div></div>
             <div className="space-y-4">
               <div><Label>Nama Template</Label><Input className="mt-1" value={templateName} onChange={(e) => setTemplateName(e.target.value)} /></div>
               <div><Label>Judul Sertifikat</Label><Input className="mt-1" value={design.title} onChange={(e) => updateDesign("title", e.target.value)} /><p className="mt-1 text-[11px] text-muted-foreground">Gunakan {"{TYPE}"} agar otomatis berubah sesuai jenis sertifikat.</p></div>
@@ -197,8 +206,11 @@ export default function CertificateGenerator() {
           <div className="space-y-4">
             <div className="flex items-center justify-between"><div><p className="text-sm font-semibold">Preview Sertifikat</p><p className="text-xs text-muted-foreground">Perubahan desain terlihat secara langsung.</p></div><Button variant="outline" className="gap-2" onClick={() => window.print()}><Download className="h-4 w-4" /> Cetak / PDF</Button></div>
             <div className="overflow-auto rounded-3xl border bg-slate-200/70 p-4 shadow-inner md:p-8">
-              <div className="relative mx-auto aspect-[1.414/1] max-w-[1000px] overflow-hidden rounded-xl border-[12px] bg-[#fffdf7] p-8 text-center shadow-2xl md:p-14" style={{ borderColor: design.accent }}>
+              <div className={`relative mx-auto aspect-[1.414/1] max-w-[1000px] overflow-hidden rounded-xl border-[12px] p-8 text-center shadow-2xl md:p-14 ${design.layout === "modern" ? "bg-white" : design.layout === "classic" ? "bg-[#fffaf0]" : design.layout === "premium" ? "bg-[#fff7ed]" : "bg-[#fffdf7]"}`} style={{ borderColor: design.accent }}>
                 <div className="pointer-events-none absolute inset-4 rounded-lg border" style={{ borderColor: `${design.accent}66` }} />
+                {design.layout === "classic" && <div className="pointer-events-none absolute left-7 top-7 h-16 w-16 rounded-full border-2 opacity-40" style={{ borderColor: design.accent }} />}
+                {design.layout === "premium" && <div className="pointer-events-none absolute bottom-7 right-7 h-20 w-20 rotate-45 border-2 opacity-40" style={{ borderColor: design.accent }} />}
+                {design.layout === "modern" && <div className="pointer-events-none absolute left-0 top-0 h-2 w-1/3" style={{ backgroundColor: design.accent }} />}
                 {design.showLogo && logoUrl ? <img src={logoUrl} alt="Logo" className="relative mx-auto mb-3 h-14 w-14 object-contain" /> : <div className="relative mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full" style={{ backgroundColor: `${design.accent}22`, color: design.accent }}><Award className="h-7 w-7" /></div>}
                 <p className="relative text-xs font-bold uppercase tracking-[0.3em]" style={{ color: design.accent }}>{companyName}</p>
                 <div className="relative mx-auto my-6 h-px w-2/3" style={{ backgroundColor: design.accent }} />
