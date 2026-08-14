@@ -26,20 +26,21 @@ export async function getExcelBranding(): Promise<ExcelBranding> {
 }
 
 export async function addBrandingHeader(workbook: any, worksheet: any, branding: ExcelBranding, columnCount: number) {
-  worksheet.mergeCells(1, 1, 1, Math.max(columnCount, 6));
-  worksheet.getCell(1, 1).value = branding.companyName;
-  worksheet.getCell(1, 1).font = { name: "Arial", size: 18, bold: true, color: { argb: "FFFFFFFF" } };
-  worksheet.getCell(1, 1).alignment = { vertical: "middle", horizontal: "left" };
-  worksheet.getRow(1).height = 30;
+  const lastColumn = Math.max(columnCount, 6);
+  worksheet.mergeCells(1, 3, 1, lastColumn);
+  worksheet.getCell(1, 3).value = branding.companyName;
+  worksheet.getCell(1, 3).font = { name: "Arial", size: 18, bold: true, color: { argb: "FFFFFFFF" } };
+  worksheet.getCell(1, 3).alignment = { vertical: "middle", horizontal: "left" };
+  worksheet.getRow(1).height = 56;
 
-  worksheet.mergeCells(2, 1, 2, Math.max(columnCount, 6));
-  worksheet.getCell(2, 1).value = [branding.tagline, branding.address].filter(Boolean).join(" • ");
-  worksheet.getCell(2, 1).font = { name: "Arial", size: 10, color: { argb: "FFE2E8F0" } };
-  worksheet.getCell(2, 1).alignment = { vertical: "middle", horizontal: "left" };
-  worksheet.getRow(2).height = 20;
+  worksheet.mergeCells(2, 3, 2, lastColumn);
+  worksheet.getCell(2, 3).value = [branding.tagline, branding.address].filter(Boolean).join(" • ");
+  worksheet.getCell(2, 3).font = { name: "Arial", size: 10, color: { argb: "FFE2E8F0" } };
+  worksheet.getCell(2, 3).alignment = { vertical: "middle", horizontal: "left" };
+  worksheet.getRow(2).height = 30;
 
   for (let row = 1; row <= 2; row++) {
-    for (let col = 1; col <= Math.max(columnCount, 6); col++) {
+    for (let col = 1; col <= lastColumn; col++) {
       worksheet.getCell(row, col).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF0F766E" } };
     }
   }
@@ -51,9 +52,7 @@ export async function addBrandingHeader(workbook: any, worksheet: any, branding:
         const contentType = response.headers.get("content-type") || "image/png";
         const extension = contentType.includes("jpeg") || contentType.includes("jpg") ? "jpeg" : contentType.includes("gif") ? "gif" : "png";
         const imageId = workbook.addImage({ buffer: Buffer.from(await response.arrayBuffer()), extension });
-        worksheet.addImage(imageId, { tl: { col: 0.15, row: 0.15 }, ext: { width: 48, height: 48 } });
-        worksheet.getCell(1, 1).alignment = { vertical: "middle", horizontal: "left", indent: 4 };
-        worksheet.getCell(2, 1).alignment = { vertical: "middle", horizontal: "left", indent: 4 };
+        worksheet.addImage(imageId, { tl: { col: 0.18, row: 0.12 }, ext: { width: 54, height: 54 } });
       }
     } catch (error) {
       console.warn("[excel] logo tidak dapat dimuat:", error instanceof Error ? error.message : error);
@@ -63,7 +62,7 @@ export async function addBrandingHeader(workbook: any, worksheet: any, branding:
 
 export function styleTableHeader(worksheet: any, rowNumber: number, columnCount: number) {
   const row = worksheet.getRow(rowNumber);
-  row.height = 24;
+  row.height = 38;
   row.font = { name: "Arial", size: 10, bold: true, color: { argb: "FFFFFFFF" } };
   row.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
   for (let col = 1; col <= columnCount; col++) {
@@ -76,6 +75,7 @@ export function styleTableBody(worksheet: any, firstRow: number, lastRow: number
   for (let rowNumber = firstRow; rowNumber <= lastRow; rowNumber++) {
     const row = worksheet.getRow(rowNumber);
     row.font = { name: "Arial", size: 10, color: { argb: "FF1E293B" } };
+    row.height = 22;
     row.alignment = { vertical: "middle", wrapText: true };
     if (rowNumber % 2 === 0) {
       for (let col = 1; col <= columnCount; col++) {

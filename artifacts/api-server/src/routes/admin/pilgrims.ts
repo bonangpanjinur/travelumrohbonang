@@ -194,7 +194,7 @@ async function buildBrandedManifestWorkbook(rows: any[][], title: string) {
   const worksheet = workbook.addWorksheet("MANIFEST", { views: [{ state: "frozen", ySplit: 7 }] });
   const branding = await getExcelBranding();
   const columns = MANIFEST_HEADERS;
-  worksheet.columns = columns.map((header, index) => ({ header, key: `c${index}`, width: [6, 30, 8, 18, 16, 8, 16, 16, 16, 18, 16, 14, 30][index] || 16 }));
+  worksheet.columns = columns.map((header, index) => ({ header, key: `c${index}`, width: [8, 30, 10, 18, 18, 8, 18, 18, 18, 18, 18, 14, 32][index] || 16 }));
   await addBrandingHeader(workbook, worksheet, branding, columns.length);
   worksheet.getCell("A4").value = "DOKUMEN";
   worksheet.getCell("B4").value = title;
@@ -205,7 +205,7 @@ async function buildBrandedManifestWorkbook(rows: any[][], title: string) {
   worksheet.getRow(4).font = { bold: true, color: { argb: "FF115E59" } };
   worksheet.getRow(5).font = { bold: true, color: { argb: "FF115E59" } };
   worksheet.getRow(6).font = { bold: true, color: { argb: "FF115E59" } };
-  worksheet.getRow(7).values = [null, ...columns];
+  worksheet.getRow(7).values = columns;
   styleTableHeader(worksheet, 7, columns.length);
   rows.forEach((values) => worksheet.addRow(values));
   if (rows.length > 0) styleTableBody(worksheet, 8, 7 + rows.length, columns.length);

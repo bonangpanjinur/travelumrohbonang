@@ -113,7 +113,7 @@ router.get("/export.xlsx", async (req, res) => {
     ws.columns = columns.map((key) => ({ header: key, key, width: Math.max(16, Math.min(28, key.length + 8)) }));
     await addBrandingHeader(wb, ws, branding, columns.length);
     const headerRow = 5;
-    ws.getRow(headerRow).values = [null, ...columns];
+    ws.getRow(headerRow).values = columns;
     styleTableHeader(ws, headerRow, columns.length);
     rows.forEach((r: any) => ws.addRow(r));
     if (rows.length > 0) styleTableBody(ws, headerRow + 1, headerRow + rows.length, columns.length);
