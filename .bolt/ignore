@@ -1,0 +1,71 @@
+# Dependencies
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# Build and deployment output
+dist/
+build/
+.next/
+.nuxt/
+.output/
+.vercel/
+.netlify/
+coverage/
+
+# Tooling caches and temporary files
+.cache/
+.parcel-cache/
+.turbo/
+.vite/
+.eslintcache
+*.tsbuildinfo
+.tmp/
+tmp/
+temp/
+
+# Version control and local editor metadata
+.git/
+.github/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.crt
+
+# Logs, reports, and runtime dumps
+*.log
+logs/
+reports/
+*.dump
+*.sql.gz
+
+# Generated screenshots, pasted diagnostics, and uploaded assets
+attached_assets/
+screenshots/
+
+# Migration and backup copies
+.migration-backup/
+*.bak
+*.backup
+
+# Package-manager and test artifacts
+.nyc_output/
+playwright-report/
+test-results/
+
+# Generated archives and media exports
+*.zip
+*.tar
+*.gz
+*.mp4
+*.mov
+*.webm
