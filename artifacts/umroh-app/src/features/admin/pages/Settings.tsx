@@ -554,6 +554,7 @@ const AdminSettings = () => {
                     onClick={() => setTemplate({
                       ...template,
                       active_template: t.id,
+                      active_layout: t.id === "modern" ? "conversion-home" : t.id === "luxury" ? "story-home" : "classic-home",
                       custom_primary_hex: "",
                       custom_accent_hex: "",
                     })}
@@ -599,7 +600,7 @@ const AdminSettings = () => {
             <div className="border rounded-xl p-5 space-y-4">
               <div>
                 <h3 className="font-semibold text-sm flex items-center gap-2"><Layout className="w-4 h-4 text-primary" /> Pilih Layout Halaman Depan</h3>
-                <p className="text-xs text-muted-foreground mt-1">Ini mengubah struktur dan susunan halaman depan, bukan hanya warna.</p>
+                <p className="text-xs text-muted-foreground mt-1">Tema mengubah layout utama, urutan section, komposisi hero, dan gaya presentasi. Layout manual di bawah dapat digunakan sebagai override.</p>
               </div>
               <div className="grid md:grid-cols-3 gap-4">
                 {[
