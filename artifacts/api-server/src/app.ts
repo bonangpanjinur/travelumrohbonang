@@ -24,7 +24,18 @@ app.set("trust proxy", 1);
 // Build a strict CORS allowlist from environment or fall back to same-origin.
 // ALLOWED_ORIGINS can be a comma-separated list, e.g.:
 //   https://umrohplus.vercel.app,https://www.umrohplus.com
-const rawOrigins = (process.env.ALLOWED_ORIGINS ?? "").split(",").map((o) => o.trim()).filter(Boolean);
+// Keep the canonical production domains in code so a missing Vercel env var
+// cannot break the live frontend. Additional origins may still be supplied via
+// ALLOWED_ORIGINS as a comma-separated list.
+const DEFAULT_PRODUCTION_ORIGINS = [
+  "https://vinstourtravel.com",
+  "https://www.vinstourtravel.com",
+];
+const configuredOrigins = (process.env.ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+const rawOrigins = Array.from(new Set([...DEFAULT_PRODUCTION_ORIGINS, ...configuredOrigins]));
 
 function corsOrigin(
   origin: string | undefined,
