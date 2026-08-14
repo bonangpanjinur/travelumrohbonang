@@ -30,12 +30,52 @@ const DEFAULT_DESIGN = {
   showAddress: true,
 };
 
+router.get("/selector/packages", async (req, res) => {
+  try {
+    const scope = await resolveUserScope(req);
+    const rows = await db.select({ id: packages.id, title: packages.title })
+      .from(bookings)
+      .leftJoin(packages, eq(bookings.packageId, packages.id))
+      .where(buildBookingScopeCondition(scope, "bookings"))
+      .orderBy(packages.title);
+    const unique = Array.from(new Map(rows.filter((row: typeof rows[number]) => row.id && row.title).map((row: typeof rows[number]) => [row.id, row])).values());
+    res.json({ data: unique });
+  } catch (error) {
+    console.error("[certificates] GET /selector/packages", error);
+    res.status(500).json({ error: "Gagal memuat daftar paket" });
+  }
+});
+
+router.get("/selector/departures", async (req, res) => {
+  try {
+    const scope = await resolveUserScope(req);
+    const packageId = typeof req.query.packageId === "string" ? req.query.packageId : "";
+    const month = typeof req.query.month === "string" ? req.query.month : "";
+    const rows = await db.select({ id: packageDepartures.id, departureDate: packageDepartures.departureDate, packageId: packageDepartures.packageId, packageTitle: packages.title })
+      .from(bookings)
+      .innerJoin(packageDepartures, eq(bookings.departureId, packageDepartures.id))
+      .leftJoin(packages, eq(packageDepartures.packageId, packages.id))
+      .where(buildBookingScopeCondition(scope, "bookings"))
+      .orderBy(packageDepartures.departureDate);
+    const filtered = rows.filter((row: typeof rows[number]) => (!packageId || row.packageId === packageId) && (!month || String(row.departureDate).slice(0, 7) === month));
+    const unique = Array.from(new Map(filtered.map((row: typeof rows[number]) => [row.id, row])).values());
+    res.json({ data: unique });
+  } catch (error) {
+    console.error("[certificates] GET /selector/departures", error);
+    res.status(500).json({ error: "Gagal memuat tanggal keberangkatan" });
+  }
+});
+
 router.get("/selector/bookings", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
     const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+    const packageId = typeof req.query.packageId === "string" ? req.query.packageId : "";
+    const departureId = typeof req.query.departureId === "string" ? req.query.departureId : "";
     const rows = await db.select({
       id: bookings.id,
+      departureId: bookings.departureId,
+      packageId: bookings.packageId,
       bookingCode: bookings.bookingCode,
       status: bookings.status,
       packageTitle: packages.title,
@@ -45,7 +85,7 @@ router.get("/selector/bookings", async (req, res) => {
       .leftJoin(packageDepartures, eq(bookings.departureId, packageDepartures.id))
       .where(buildBookingScopeCondition(scope, "bookings"))
       .orderBy(desc(bookings.createdAt));
-    const filtered = search ? rows.filter((row: typeof rows[number]) => `${row.bookingCode} ${row.packageTitle || ""}`.toLowerCase().includes(search.toLowerCase())) : rows;
+    const filtered = rows.filter((row: typeof rows[number]) => (!packageId || row.packageId === packageId) && (!departureId || row.departureId === departureId) && (!search || `${row.bookingCode} ${row.packageTitle || ""}`.toLowerCase().includes(search.toLowerCase())));
     res.json({ data: filtered.slice(0, 100) });
   } catch (error) {
     console.error("[certificates] GET /selector/bookings", error);

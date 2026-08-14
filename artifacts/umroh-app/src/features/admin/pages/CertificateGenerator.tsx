@@ -21,6 +21,8 @@ type Design = {
   showAddress: boolean;
 };
 
+type PackageOption = { id: string; title: string };
+type DepartureOption = { id: string; departureDate: string; packageTitle: string | null };
 type BookingOption = { id: string; bookingCode: string; status: string | null; packageTitle: string | null; departureDate: string | null };
 type PilgrimOption = { id: string; name: string; gender: string | null; passportNumber: string | null };
 
@@ -42,11 +44,18 @@ export default function CertificateGenerator() {
   const [templateName, setTemplateName] = useState("Sertifikat Elegan Hijau");
   const [recipientName, setRecipientName] = useState("Nama Jemaah");
   const [performerName, setPerformerName] = useState("");
+  const [packageId, setPackageId] = useState("");
+  const [month, setMonth] = useState("");
+  const [departureId, setDepartureId] = useState("");
   const [bookingId, setBookingId] = useState("");
   const [pilgrimId, setPilgrimId] = useState("");
+  const [packageOptions, setPackageOptions] = useState<PackageOption[]>([]);
+  const [departureOptions, setDepartureOptions] = useState<DepartureOption[]>([]);
   const [bookingOptions, setBookingOptions] = useState<BookingOption[]>([]);
   const [pilgrimOptions, setPilgrimOptions] = useState<PilgrimOption[]>([]);
-  const [loadingBookings, setLoadingBookings] = useState(true);
+  const [loadingPackages, setLoadingPackages] = useState(true);
+  const [loadingDepartures, setLoadingDepartures] = useState(false);
+  const [loadingBookings, setLoadingBookings] = useState(false);
   const [loadingPilgrims, setLoadingPilgrims] = useState(false);
   const [companyName, setCompanyName] = useState("Vins Tour Travel");
   const [address, setAddress] = useState("");
@@ -72,13 +81,42 @@ export default function CertificateGenerator() {
 
   useEffect(() => {
     let active = true;
+    setLoadingPackages(true);
+    apiFetch<{ data: PackageOption[] }>("/api/admin/certificates/selector/packages")
+      .then((response) => { if (active) setPackageOptions(response?.data || []); })
+      .catch(() => { if (active) toast.error("Daftar paket tidak dapat dimuat"); })
+      .finally(() => { if (active) setLoadingPackages(false); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    setDepartureId(""); setBookingId(""); setPilgrimId(""); setBookingOptions([]); setPilgrimOptions([]);
+    if (!packageId && !month) { setDepartureOptions([]); return; }
+    let active = true;
+    setLoadingDepartures(true);
+    const params = new URLSearchParams();
+    if (packageId) params.set("packageId", packageId);
+    if (month) params.set("month", month);
+    apiFetch<{ data: DepartureOption[] }>(`/api/admin/certificates/selector/departures?${params.toString()}`)
+      .then((response) => { if (active) setDepartureOptions(response?.data || []); })
+      .catch(() => { if (active) toast.error("Tanggal keberangkatan tidak dapat dimuat"); })
+      .finally(() => { if (active) setLoadingDepartures(false); });
+    return () => { active = false; };
+  }, [packageId, month]);
+
+  useEffect(() => {
+    setBookingId(""); setPilgrimId(""); setPilgrimOptions([]);
+    if (!departureId) { setBookingOptions([]); return; }
+    let active = true;
     setLoadingBookings(true);
-    apiFetch<{ data: BookingOption[] }>("/api/admin/certificates/selector/bookings")
+    const params = new URLSearchParams({ departureId });
+    if (packageId) params.set("packageId", packageId);
+    apiFetch<{ data: BookingOption[] }>(`/api/admin/certificates/selector/bookings?${params.toString()}`)
       .then((response) => { if (active) setBookingOptions(response?.data || []); })
       .catch(() => { if (active) toast.error("Daftar booking tidak dapat dimuat"); })
       .finally(() => { if (active) setLoadingBookings(false); });
     return () => { active = false; };
-  }, []);
+  }, [departureId, packageId]);
 
   useEffect(() => {
     if (!bookingId) { setPilgrimOptions([]); setPilgrimId(""); return; }
@@ -173,7 +211,7 @@ export default function CertificateGenerator() {
                 {design.showAddress && address && <p className="absolute bottom-5 left-0 right-0 text-[10px] text-slate-400">{address}</p>}
               </div>
             </div>
-            <div className="rounded-2xl border bg-white p-4 shadow-sm"><div className="mb-3 flex items-center gap-2"><Eye className="h-4 w-4 text-[#b88a2a]" /><div><p className="text-sm font-semibold">Pilih Jemaah untuk Sertifikat</p><p className="text-xs text-muted-foreground">Pilih booking terlebih dahulu, lalu pilih jemaah yang akan menerima sertifikat.</p></div></div><div className="grid gap-3 md:grid-cols-2"><div><Label>Booking</Label><select className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm" value={bookingId} disabled={loadingBookings} onChange={(e) => { setBookingId(e.target.value); setPilgrimId(""); setRecipientName("Nama Jemaah"); }}><option value="">{loadingBookings ? "Memuat booking…" : "Pilih booking"}</option>{bookingOptions.map((booking) => <option key={booking.id} value={booking.id}>{booking.bookingCode} — {booking.packageTitle || "Tanpa paket"}{booking.departureDate ? ` • ${booking.departureDate}` : ""}</option>)}</select></div><div><Label>Jemaah</Label><select className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm" value={pilgrimId} disabled={!bookingId || loadingPilgrims} onChange={(e) => setPilgrimId(e.target.value)}><option value="">{loadingPilgrims ? "Memuat jemaah…" : bookingId ? "Pilih jemaah" : "Pilih booking dahulu"}</option>{pilgrimOptions.map((pilgrim) => <option key={pilgrim.id} value={pilgrim.id}>{pilgrim.name}{pilgrim.gender ? ` • ${pilgrim.gender}` : ""}</option>)}</select></div></div><div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">{pilgrimId ? `Sertifikat akan diterbitkan untuk ${recipientName}.` : "Belum ada jemaah yang dipilih."}</div><Button className="mt-4 gap-2" onClick={issueCertificate} disabled={!bookingId || !pilgrimId}><Award className="h-4 w-4" /> Terbitkan Sertifikat</Button></div>
+            <div className="rounded-2xl border bg-white p-4 shadow-sm"><div className="mb-3 flex items-center gap-2"><Eye className="h-4 w-4 text-[#b88a2a]" /><div><p className="text-sm font-semibold">Pilih Jemaah untuk Sertifikat</p><p className="text-xs text-muted-foreground">Saring data secara bertahap agar tidak perlu mencari dari ribuan booking.</p></div></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><div><Label>Paket</Label><select className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm" value={packageId} disabled={loadingPackages} onChange={(e) => setPackageId(e.target.value)}><option value="">{loadingPackages ? "Memuat paket…" : "Semua paket"}</option>{packageOptions.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></div><div><Label>Bulan Keberangkatan</Label><Input className="mt-1" type="month" value={month} onChange={(e) => setMonth(e.target.value)} /></div><div><Label>Tanggal Keberangkatan</Label><select className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm" value={departureId} disabled={loadingDepartures || (!packageId && !month)} onChange={(e) => setDepartureId(e.target.value)}><option value="">{loadingDepartures ? "Memuat tanggal…" : packageId || month ? "Pilih tanggal" : "Pilih paket/bulan dahulu"}</option>{departureOptions.map((item) => <option key={item.id} value={item.id}>{new Date(item.departureDate).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })}</option>)}</select></div><div><Label>Booking</Label><select className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm" value={bookingId} disabled={loadingBookings || !departureId} onChange={(e) => { setBookingId(e.target.value); setPilgrimId(""); setRecipientName("Nama Jemaah"); }}><option value="">{loadingBookings ? "Memuat booking…" : departureId ? "Pilih booking" : "Pilih tanggal dahulu"}</option>{bookingOptions.map((booking) => <option key={booking.id} value={booking.id}>{booking.bookingCode}</option>)}</select></div><div><Label>Jemaah</Label><select className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm" value={pilgrimId} disabled={!bookingId || loadingPilgrims} onChange={(e) => setPilgrimId(e.target.value)}><option value="">{loadingPilgrims ? "Memuat jemaah…" : bookingId ? "Pilih jemaah" : "Pilih booking dahulu"}</option>{pilgrimOptions.map((pilgrim) => <option key={pilgrim.id} value={pilgrim.id}>{pilgrim.name}{pilgrim.gender ? ` • ${pilgrim.gender}` : ""}</option>)}</select></div></div><div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">{pilgrimId ? `Sertifikat akan diterbitkan untuk ${recipientName}.` : "Belum ada jemaah yang dipilih."}</div><Button className="mt-4 gap-2" onClick={issueCertificate} disabled={!bookingId || !pilgrimId}><Award className="h-4 w-4" /> Terbitkan Sertifikat</Button></div>
           </div>
         </div>
       </div>
