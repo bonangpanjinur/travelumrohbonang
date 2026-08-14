@@ -208,16 +208,22 @@ const TenantSitesAdmin = () => {
                 <Label>Tagline</Label>
                 <Input value={form.tagline || ""} onChange={e => updateField("tagline", e.target.value)} placeholder="Travel & Tours" />
               </div>
-              <div>
-                <Label>Template</Label>
-                <Select value={form.template || "classic"} onValueChange={v => updateField("template", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="classic">Classic</SelectItem>
-                    <SelectItem value="modern">Modern</SelectItem>
-                    <SelectItem value="premium">Premium ✨</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="md:col-span-2">
+                <Label className="text-base font-semibold">Pilih Tampilan Situs</Label>
+                <p className="mb-3 mt-1 text-xs text-muted-foreground">Pilih gaya tampilan frontend. Isi CMS, paket, dan data situs tetap sama; yang berubah adalah layout dan nuansa visualnya.</p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {[
+                    { id: "classic", name: "Klasik", description: "Hangat, tepercaya, dan cocok untuk travel keluarga.", preview: "bg-gradient-to-br from-amber-950 via-amber-900 to-amber-700", accent: "bg-amber-300" },
+                    { id: "modern", name: "Modern", description: "Bersih, ringan, dan fokus pada konversi paket.", preview: "bg-gradient-to-br from-slate-900 via-blue-900 to-sky-600", accent: "bg-sky-300" },
+                    { id: "premium", name: "Premium", description: "Elegan, eksklusif, dan menonjolkan pengalaman umrah.", preview: "bg-gradient-to-br from-indigo-950 via-violet-900 to-rose-700", accent: "bg-rose-300" },
+                  ].map((template) => {
+                    const selected = (form.template || "classic") === template.id;
+                    return <button key={template.id} type="button" onClick={() => updateField("template", template.id)} className={`overflow-hidden rounded-xl border-2 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${selected ? "border-primary ring-2 ring-primary/20" : "border-border"}`}>
+                      <div className={`relative h-20 ${template.preview}`}><div className={`absolute bottom-3 left-3 h-2 w-16 rounded-full ${template.accent}`} /><div className="absolute bottom-3 right-3 h-6 w-10 rounded-md bg-white/20" /></div>
+                      <div className="p-3"><div className="flex items-center justify-between gap-2"><span className="font-semibold">{template.name}</span>{selected && <Badge className="text-[10px]">Aktif dipilih</Badge>}</div><p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{template.description}</p></div>
+                    </button>;
+                  })}
+                </div>
               </div>
 
               {/* Custom Domain Section */}
