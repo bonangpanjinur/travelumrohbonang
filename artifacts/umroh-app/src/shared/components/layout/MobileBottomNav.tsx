@@ -43,10 +43,10 @@ const MobileBottomNav = () => {
       match: (p: string) => p.startsWith("/my-bookings") || p.startsWith("/booking"),
     },
     {
-      to: user ? "/dashboard" : "/auth",
-      label: t("nav.bottom.profile"),
+      to: user ? "/portal-jamaah" : "/auth",
+      label: "Portal",
       icon: UserCircle,
-      match: (p: string) => p.startsWith("/dashboard") || p.startsWith("/profile"),
+      match: (p: string) => p.startsWith("/portal-jamaah") || p.startsWith("/dashboard") || p.startsWith("/profile"),
     },
   ];
 

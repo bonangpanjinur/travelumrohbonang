@@ -1,0 +1,23 @@
+{
+  "name": "Portal Jemaah Vins Tour Travel",
+  "short_name": "Portal Jemaah",
+  "description": "Aplikasi portal jemaah untuk mengelola perjalanan umrah, pembayaran, dokumen, jadwal, dan bantuan perjalanan.",
+  "lang": "id-ID",
+  "dir": "ltr",
+  "start_url": "/portal-jamaah",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
+  "theme_color": "#0f766e",
+  "background_color": "#f7faf8",
+  "categories": ["travel", "lifestyle", "business"],
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Pemesanan Saya", "short_name": "Pemesanan", "url": "/my-bookings", "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "Bantuan Perjalanan", "short_name": "Bantuan", "url": "/chat", "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }] }
+  ]
+}

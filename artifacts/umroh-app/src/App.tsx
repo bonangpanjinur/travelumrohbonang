@@ -4,6 +4,7 @@ import { installGlobalErrorHandlers } from "@/shared/lib/errorLogger";
 import ErrorBoundary from "@/shared/components/common/ErrorBoundary";
 import MobileBottomNav from "@/shared/components/layout/MobileBottomNav";
 import GlobalFloatingWidgets from "@/shared/components/common/GlobalFloatingWidgets";
+import PWAInstallPrompt from "@/shared/components/pwa/PWAInstallPrompt";
 import { Toaster as Sonner } from "@/shared/components/ui/sonner";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -23,6 +24,7 @@ import Booking from "./features/booking/pages/Booking";
 import Payment from "./features/booking/pages/Payment";
 import MyBookings from "./features/booking/pages/MyBookings";
 import Profile from "./features/jamaah/pages/Profile";
+import PortalJamaah from "./features/jamaah/pages/PortalJamaah";
 import Dashboard from "./features/dashboard/pages/Dashboard";
 import Gallery from "./features/cms/pages/Gallery";
 import Blog from "./features/cms/pages/Blog";
@@ -197,6 +199,7 @@ const AppContent = () => {
       <ImpersonationBanner />
       <MobileBottomNav />
       <GlobalFloatingWidgets />
+      <PWAInstallPrompt />
       <Suspense fallback={<div className="flex min-h-[240px] items-center justify-center p-8">
               <p className="text-sm text-muted-foreground">Memuat halaman admin...</p>
             </div>}>
@@ -216,6 +219,7 @@ const AppContent = () => {
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/loyalty" element={<Loyalty />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/portal-jamaah" element={<PortalJamaah />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/my-upgrades" element={<MyUpgrades />} />
         <Route path="/my-documents" element={<MyDocuments />} />
