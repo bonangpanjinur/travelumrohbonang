@@ -55,7 +55,7 @@ export const AdminCreateDeparturePriceRequest = z.object({
 
 export const AdminUpdateDeparturePriceRequest = AdminCreateDeparturePriceRequest.partial();
 
-export const AdminRecordPaymentRequest = z.object({
+const AdminRecordPaymentFields = z.object({
   type: z.enum(["dp", "installment", "settlement"]),
   amount: z.number().int().positive(),
   paidAt: z.string().min(1),
@@ -65,7 +65,30 @@ export const AdminRecordPaymentRequest = z.object({
   proofUrl: z.string().nullable().optional(),
 });
 
-export const AdminUpdatePaymentRequest = AdminRecordPaymentRequest.partial();
+/**
+ * Accept the frontend payment naming while keeping `type` canonical in the API
+ * and database. Older clients send paymentType and may use full/balance labels.
+ */
+function normalizeAdminPaymentPayload(input: unknown): unknown {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return input;
+  const value = input as Record<string, unknown>;
+  const rawType = value.type ?? value.paymentType;
+  const normalizedType = rawType === "full" || rawType === "balance" ? "settlement" : rawType;
+  return {
+    ...value,
+    ...(normalizedType !== undefined ? { type: normalizedType } : {}),
+  };
+}
+
+export const AdminRecordPaymentRequest = z.preprocess(
+  normalizeAdminPaymentPayload,
+  AdminRecordPaymentFields,
+);
+
+export const AdminUpdatePaymentRequest = z.preprocess(
+  normalizeAdminPaymentPayload,
+  AdminRecordPaymentFields.partial(),
+);
 
 export const BookingPaymentSchema = z.object({
   id: z.string(),
