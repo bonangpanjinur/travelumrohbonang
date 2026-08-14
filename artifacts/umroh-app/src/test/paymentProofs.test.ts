@@ -1,16 +1,21 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const createSignedUrl = vi.fn();
-const insert = vi.fn();
-const getUser = vi.fn();
+const { apiFetch, getCurrentAuthUser } = vi.hoisted(() => ({
+  apiFetch: vi.fn(),
+  getCurrentAuthUser: vi.fn(),
+}));
 
 vi.mock("@/shared/integrations/supabase/client", () => ({
   supabase: {
     storage: { from: () => ({ createSignedUrl }) },
-    from: () => ({ insert }),
-    auth: { getUser: () => getUser() },
+    from: () => ({}),
+    auth: { getUser: () => ({ data: { user: null } }) },
   },
 }));
+
+vi.mock("@/shared/lib/apiClient", () => ({ apiFetch }));
+vi.mock("@/shared/lib/currentUser", () => ({ getCurrentAuthUser }));
 
 import { getProofSignedUrl, clearProofUrlCache } from "@/features/booking/lib/paymentProofs";
 
@@ -18,8 +23,8 @@ describe("getProofSignedUrl", () => {
   beforeEach(() => {
     clearProofUrlCache();
     createSignedUrl.mockReset();
-    insert.mockReset().mockResolvedValue({ error: null });
-    getUser.mockReset().mockResolvedValue({ data: { user: { id: "u1" } } });
+    apiFetch.mockReset().mockResolvedValue({ success: true });
+    getCurrentAuthUser.mockReset().mockResolvedValue({ id: "u1", email: null });
   });
 
   it("returns null for empty input", async () => {
@@ -65,6 +70,9 @@ describe("getProofSignedUrl", () => {
     // log is fire-and-forget; flush microtasks
     await Promise.resolve();
     await Promise.resolve();
-    expect(insert).toHaveBeenCalled();
+    expect(apiFetch).toHaveBeenCalledWith(
+      "/api/bookings/payments/proof-access-log",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 });

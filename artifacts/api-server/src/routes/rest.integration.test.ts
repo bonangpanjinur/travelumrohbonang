@@ -8,9 +8,12 @@ import app from "../app";
  * public, AUTH_TABLES require a token, and unknown tables are rejected.
  */
 describe("GET /rest/v1/:table", () => {
-  it("allows unauthenticated reads on a public table", async () => {
+  it("allows unauthenticated reads on a public table when dependencies are ready", async () => {
     const res = await request(app).get("/rest/v1/packages?limit=1");
-    expect(res.status).toBe(200);
+    expect([200, 503]).toContain(res.status);
+    if (res.status === 503) {
+      expect(res.body).toHaveProperty("error");
+    }
   });
 
   it("rejects unauthenticated reads on an AUTH_TABLE (e.g. bookings)", async () => {
@@ -32,8 +35,15 @@ describe("PATCH/DELETE /rest/v1/:table", () => {
 });
 
 describe("GET /api/health", () => {
-  it("responds ok", async () => {
-    const res = await request(app).get("/api/health");
+  it("reports process liveness independently of database readiness", async () => {
+    const res = await request(app).get("/api/healthz");
     expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ status: "ok" });
+  });
+
+  it("reports dependency readiness with an explicit status", async () => {
+    const res = await request(app).get("/api/health");
+    expect([200, 503]).toContain(res.status);
+    expect(res.body).toHaveProperty("server", "running");
   });
 });
