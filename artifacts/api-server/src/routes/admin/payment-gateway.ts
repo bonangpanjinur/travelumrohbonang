@@ -113,7 +113,19 @@ router.post("/transactions", async (req, res) => {
     orderId?: string;
   };
 
+  if (gateway !== "midtrans" && gateway !== "xendit") {
+    return res.status(400).json({ error: "Unsupported gateway" });
+  }
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    return res.status(400).json({ error: "amount must be a positive integer" });
+  }
+  if (bookingId !== undefined && (typeof bookingId !== "string" || bookingId.length > 100)) {
+    return res.status(400).json({ error: "Invalid bookingId" });
+  }
   const finalOrderId = orderId ?? `TRX-${Date.now()}`;
+  if (!/^[A-Za-z0-9._:-]{1,100}$/.test(finalOrderId)) {
+    return res.status(400).json({ error: "Invalid orderId" });
+  }
 
   try {
     let vaNumber: string | undefined;
@@ -151,7 +163,7 @@ router.post("/transactions", async (req, res) => {
       rawResponse = JSON.stringify(data);
 
       if (!resp.ok || (data["status_code"] && Number(data["status_code"]) >= 400)) {
-        return res.status(502).json({ error: (data["status_message"] as string) ?? "Midtrans error" });
+        return res.status(502).json({ error: "Payment provider rejected the request" });
       }
 
       gatewayTransactionId = data["transaction_id"] as string | undefined;
@@ -182,7 +194,7 @@ router.post("/transactions", async (req, res) => {
       rawResponse = JSON.stringify(data);
 
       if (!resp.ok) {
-        return res.status(502).json({ error: (data["message"] as string) ?? "Xendit error" });
+        return res.status(502).json({ error: "Payment provider rejected the request" });
       }
 
       gatewayTransactionId = data["id"] as string | undefined;
@@ -222,7 +234,7 @@ router.post("/transactions", async (req, res) => {
     res.json(saved);
   } catch (err: any) {
     console.error("[payment-gateway] create:", err);
-    res.status(500).json({ error: err?.message ?? "Internal error" });
+    res.status(500).json({ error: "Internal error" });
   }
 });
 
@@ -293,7 +305,7 @@ router.post("/transactions/:id/check", async (req, res) => {
     res.json(updated);
   } catch (err: any) {
     console.error("[payment-gateway] check:", err);
-    res.status(500).json({ error: err?.message ?? "Internal error" });
+    res.status(500).json({ error: "Internal error" });
   }
 });
 

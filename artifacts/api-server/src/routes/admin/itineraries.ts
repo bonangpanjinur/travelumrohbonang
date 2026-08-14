@@ -78,7 +78,7 @@ router.get("/", async (_req, res) => {
     res.json(result);
   } catch (err: any) {
     console.error("[admin/itineraries] GET /", err.message);
-    res.status(500).json({ error: "Gagal memuat itinerary", detail: err.message });
+    res.status(500).json({ error: "Gagal memuat itinerary" });
   }
 });
 
@@ -103,7 +103,7 @@ router.post("/", async (req, res) => {
     res.status(201).json(row);
   } catch (err: any) {
     console.error("[admin/itineraries] POST /", err.message);
-    res.status(500).json({ error: "Gagal membuat itinerary", detail: err.message });
+    res.status(500).json({ error: "Gagal membuat itinerary" });
   }
 });
 
@@ -140,7 +140,7 @@ router.patch("/:id", async (req, res) => {
     });
   } catch (err: any) {
     console.error("[admin/itineraries] PATCH /:id", err.message);
-    res.status(500).json({ error: "Gagal mengupdate itinerary", detail: err.message });
+    res.status(500).json({ error: "Gagal mengupdate itinerary" });
   }
 });
 
@@ -165,7 +165,7 @@ router.patch("/:id/reorder-days", async (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     console.error("[admin/itineraries] PATCH /:id/reorder-days", err.message);
-    res.status(500).json({ error: "Gagal menyimpan urutan hari", detail: err.message });
+    res.status(500).json({ error: "Gagal menyimpan urutan hari" });
   }
 });
 
@@ -182,7 +182,7 @@ router.delete("/:id", async (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     console.error("[admin/itineraries] DELETE /:id", err.message);
-    res.status(500).json({ error: "Gagal menghapus itinerary", detail: err.message });
+    res.status(500).json({ error: "Gagal menghapus itinerary" });
   }
 });
 
@@ -217,7 +217,7 @@ router.post("/days", async (req, res) => {
     });
   } catch (err: any) {
     console.error("[admin/itineraries] POST /days", err.message);
-    res.status(500).json({ error: "Gagal menambah hari", detail: err.message });
+    res.status(500).json({ error: "Gagal menambah hari" });
   }
 });
 
@@ -255,7 +255,7 @@ router.patch("/days/:id", async (req, res) => {
     });
   } catch (err: any) {
     console.error("[admin/itineraries] PATCH /days/:id", err.message);
-    res.status(500).json({ error: "Gagal mengupdate hari", detail: err.message });
+    res.status(500).json({ error: "Gagal mengupdate hari" });
   }
 });
 
@@ -271,7 +271,7 @@ router.delete("/days/:id", async (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     console.error("[admin/itineraries] DELETE /days/:id", err.message);
-    res.status(500).json({ error: "Gagal menghapus hari", detail: err.message });
+    res.status(500).json({ error: "Gagal menghapus hari" });
   }
 });
 
@@ -331,7 +331,7 @@ router.post("/:id/copy-to-departure", async (req, res) => {
     });
   } catch (err: any) {
     console.error("[admin/itineraries] POST /:id/copy-to-departure", err.message);
-    res.status(500).json({ error: "Gagal menyalin itinerary", detail: err.message });
+    res.status(500).json({ error: "Gagal menyalin itinerary" });
   }
 });
 

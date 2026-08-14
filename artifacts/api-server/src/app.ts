@@ -131,12 +131,6 @@ app.use((err: any, req: import("express").Request, res: import("express").Respon
     name:    err?.name,
     message: err?.message,
     stack:   err?.stack,
-    ...err, // captures extra fields some libs attach (code, status, cause, etc.)
-  });
-  console.error("[TEMP DIAG] error handler", { // TEMP DIAG
-    name: err?.name,
-    message: err?.message,
-    stack: err?.stack,
   });
 
   if (isProduction) {

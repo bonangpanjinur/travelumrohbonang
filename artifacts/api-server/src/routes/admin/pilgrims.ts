@@ -198,7 +198,7 @@ router.get("/template-excel", (_req, res) => {
     res.setHeader("Content-Disposition", 'attachment; filename="template-import-jemaah.xlsx"');
     res.send(buf);
   } catch (err: any) {
-    res.status(500).json({ error: "Gagal buat template", detail: err.message });
+    res.status(500).json({ error: "Gagal buat template" });
   }
 });
 
@@ -287,7 +287,7 @@ router.post("/import-excel", excelUpload.single("file"), async (req: any, res) =
     res.status(201).json({ inserted: inserted.length, pilgrims: inserted });
   } catch (err: any) {
     console.error("[pilgrims] POST /import-excel", err.message);
-    res.status(500).json({ error: "Gagal import Excel", detail: err.message });
+    res.status(500).json({ error: "Gagal import Excel" });
   }
 });
 
@@ -357,7 +357,7 @@ router.get("/export-excel", async (req: any, res) => {
     res.send(buf);
   } catch (err: any) {
     console.error("[pilgrims] GET /export-excel", err.message);
-    res.status(500).json({ error: "Gagal export Excel", detail: err.message });
+    res.status(500).json({ error: "Gagal export Excel" });
   }
 });
 
@@ -398,7 +398,7 @@ router.post("/bulk", async (req: any, res) => {
     res.status(201).json({ inserted: inserted.length, pilgrims: inserted });
   } catch (err: any) {
     console.error("[pilgrims] POST /bulk", err.message);
-    res.status(500).json({ error: "Gagal import massal", detail: err.message });
+    res.status(500).json({ error: "Gagal import massal" });
   }
 });
 
