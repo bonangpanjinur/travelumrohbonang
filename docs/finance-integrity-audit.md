@@ -4,10 +4,10 @@ Dokumen ini menjelaskan pemeriksaan integritas data keuangan yang bersifat **rea
 
 ## Cara Menjalankan
 
-Jalankan file `scripts/finance-integrity-audit.sql` melalui Supabase SQL Editor atau PostgreSQL client:
+Jalankan file `supabase/migrations/20260814000005_finance_integrity_audit.sql` melalui Supabase SQL Editor atau PostgreSQL client:
 
 ```bash
-psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/finance-integrity-audit.sql
+psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/20260814000005_finance_integrity_audit.sql
 ```
 
 Script memulai transaksi `READ ONLY`, menjalankan seluruh query pemeriksaan, menampilkan detail baris bermasalah, menampilkan ringkasan pass/fail, lalu melakukan `COMMIT` terhadap transaksi read-only.

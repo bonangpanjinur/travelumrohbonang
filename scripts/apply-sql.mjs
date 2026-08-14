@@ -3,7 +3,7 @@
  * Apply a single ad-hoc SQL file to the Supabase database.
  *
  * Usage:
- *   node scripts/apply-sql.mjs docs/sql/20260801_chat_rls_realtime.sql
+ *   node scripts/apply-sql.mjs supabase/migrations/20260801000002_chat_rls_realtime.sql
  *
  * Requires SUPABASE_DATABASE_URL (pooler port 6543 is switched to direct 5432).
  * The SQL file must be idempotent — this script does not track history.

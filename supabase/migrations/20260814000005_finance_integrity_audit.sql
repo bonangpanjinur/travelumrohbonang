@@ -1,7 +1,7 @@
 -- Sprint 0 — Finance Integrity Audit
 -- READ-ONLY: this file only runs SELECT statements and does not modify data.
 -- Run in Supabase SQL Editor or with:
---   psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f scripts/finance-integrity-audit.sql
+--   psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f supabase/migrations/20260814000005_finance_integrity_audit.sql
 
 BEGIN;
 SET TRANSACTION READ ONLY;
