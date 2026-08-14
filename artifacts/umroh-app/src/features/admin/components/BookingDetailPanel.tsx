@@ -739,9 +739,20 @@ const BookingDetailPanel = ({
   };
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="min-h-full bg-slate-50/70 p-3 sm:p-5 space-y-5">
       {/* ── Top actions bar — hidden in standalone (page) mode ────────────── */}
-      {!standalone && (<div className="flex items-center justify-between gap-4 flex-wrap">
+      {!standalone && (<div className="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Workspace Booking</p>
+            <h2 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">Kelola perjalanan jemaah</h2>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="rounded-full bg-slate-100 px-2.5 py-1">{pilgrims.length} jemaah</span>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1">{packageTitle}</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           <Building2 className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-medium">Cabang:</span>
@@ -827,13 +838,14 @@ const BookingDetailPanel = ({
             </Button>
           )}
         </div>
+        </div>
       </div>)}
 
       <Tabs value={detailTab} onValueChange={setDetailTab} className="w-full">
-        <TabsList className="sticky top-0 z-10 grid h-auto w-full grid-cols-3 gap-1 rounded-xl border bg-background/95 p-1 shadow-sm backdrop-blur">
-          <TabsTrigger value="overview" className="h-9 text-xs sm:text-sm">Ringkasan</TabsTrigger>
-          <TabsTrigger value="finance" className="h-9 text-xs sm:text-sm">Keuangan</TabsTrigger>
-          <TabsTrigger value="documents" className="h-9 text-xs sm:text-sm">Dokumen & Aktivitas</TabsTrigger>
+        <TabsList className="sticky top-0 z-10 grid h-auto w-full grid-cols-3 gap-1 rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-sm backdrop-blur">
+          <TabsTrigger value="overview" className="h-10 rounded-xl text-xs font-semibold sm:text-sm">Ringkasan</TabsTrigger>
+          <TabsTrigger value="finance" className="h-10 rounded-xl text-xs font-semibold sm:text-sm">Keuangan</TabsTrigger>
+          <TabsTrigger value="documents" className="h-10 rounded-xl text-xs font-semibold sm:text-sm">Dokumen & Aktivitas</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="mt-3 space-y-4">
       {/* ── Pemesan info ─────────────────────────────────────────────────────── */}
