@@ -150,6 +150,7 @@ const EquipmentDistribution = lazy(() => import("./features/admin/pages/Equipmen
 const BankReconciliation = lazy(() => import("./features/admin/pages/BankReconciliation"));
 const AccountingExport = lazy(() => import("./features/admin/pages/AccountingExport"));
 const BudgetCashFlow = lazy(() => import("./features/admin/pages/BudgetCashFlow"));
+const PaymentPolicies = lazy(() => import("./features/admin/pages/PaymentPolicies"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -336,6 +337,7 @@ const AppContent = () => {
           <Route path="accounting-export" element={<AccountingExport />} />
           {/* F-12: Budget & Proyeksi Cash Flow */}
           <Route path="budget-cashflow" element={<BudgetCashFlow />} />
+          <Route path="payment-policies" element={<PaymentPolicies />} />
           {/* O-8: Equipment Distribution */}
           <Route path="equipment-distribution" element={<EquipmentDistribution />} />
           {/* O-9: Visa Tracking */}

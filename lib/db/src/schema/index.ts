@@ -22,5 +22,6 @@ export * from "./visa";
 export * from "./checklists";
 export * from "./documents";
 export * from "./budgets";
+export * from "./paymentPolicies";
 export * from "./chat";
 export * from "./muthawif";

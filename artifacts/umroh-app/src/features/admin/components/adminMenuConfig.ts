@@ -175,6 +175,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Laporan Keuangan",         labelKey: "menu.financial_reports",    href: "/admin/financial-reports",  icon: FileText, roles: FINANCE, featureId: "reports" },
       { label: "Rekonsiliasi Bank",        labelKey: "menu.bank_reconciliation",  href: "/admin/bank-reconciliation", icon: CreditCard, roles: FINANCE, featureId: "reports" },
       { label: "Budget & Cash Flow",       labelKey: "menu.budget_cashflow",      href: "/admin/budget-cashflow",     icon: BarChart2, roles: FINANCE, featureId: "reports" },
+      { label: "Aturan Pembayaran",         labelKey: "menu.payment_policies",      href: "/admin/payment-policies",     icon: Settings, roles: FINANCE, featureId: "payments" },
       { label: "Export Akuntansi",         labelKey: "menu.accounting_export",    href: "/admin/accounting-export",   icon: FileText, roles: SUPER_ADMIN_ADMIN, featureId: "reports" },
       // ── Existing ──────────────────────────────────────────────────────────────
       { label: "Dashboard Analitik",       labelKey: "menu.analytics_dashboard",  href: "/admin/analytics",          icon: LineChart, roles: FINANCE, featureId: "reports" },

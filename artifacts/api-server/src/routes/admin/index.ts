@@ -65,6 +65,7 @@ import adminDocumentTypesRouter from "./document-types";
 import adminAccountingExportRouter from "./accounting-export";
 import adminBudgetRouter from "./budget";
 import adminAgentMyStatsRouter from "./agent-my-stats";
+import adminPaymentPoliciesRouter from "./payment-policies";
 
 const router = Router();
 
@@ -87,6 +88,7 @@ router.use("/analytics/my-stats", requireOperational, adminAgentMyStatsRouter);
 router.use("/analytics", requireFinance, adminAnalyticsRouter);
 router.use("/reports", requireFinance, adminReportsRouter);
 router.use("/accounting", requireFinance, adminAccountingRouter);
+router.use("/payment-policies", requireFinance, adminPaymentPoliciesRouter);
 
 // ── Full admin routes (super_admin + admin only) ────────────────────────────
 router.use("/users", requireAdmin, adminUsersRouter);
