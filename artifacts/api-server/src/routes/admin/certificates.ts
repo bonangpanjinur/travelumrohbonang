@@ -5,13 +5,15 @@ import {
   certificates,
   bookings,
   bookingPilgrims,
+  packages,
+  packageDepartures,
   eq,
   and,
   desc,
 } from "@workspace/db";
 import { requireOperational } from "../../middlewares/requireAdmin";
 import { resolveUserScope } from "../../lib/scopeGuard";
-import { isBookingInScope, scopeDeniedMessage } from "../../lib/scopeConditions";
+import { buildBookingScopeCondition, isBookingInScope, scopeDeniedMessage } from "../../lib/scopeConditions";
 
 const router = Router();
 
@@ -27,6 +29,43 @@ const DEFAULT_DESIGN = {
   showLogo: true,
   showAddress: true,
 };
+
+router.get("/selector/bookings", async (req, res) => {
+  try {
+    const scope = await resolveUserScope(req);
+    const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+    const rows = await db.select({
+      id: bookings.id,
+      bookingCode: bookings.bookingCode,
+      status: bookings.status,
+      packageTitle: packages.title,
+      departureDate: packageDepartures.departureDate,
+    }).from(bookings)
+      .leftJoin(packages, eq(bookings.packageId, packages.id))
+      .leftJoin(packageDepartures, eq(bookings.departureId, packageDepartures.id))
+      .where(buildBookingScopeCondition(scope, "bookings"))
+      .orderBy(desc(bookings.createdAt));
+    const filtered = search ? rows.filter((row: typeof rows[number]) => `${row.bookingCode} ${row.packageTitle || ""}`.toLowerCase().includes(search.toLowerCase())) : rows;
+    res.json({ data: filtered.slice(0, 100) });
+  } catch (error) {
+    console.error("[certificates] GET /selector/bookings", error);
+    res.status(500).json({ error: "Gagal memuat daftar booking" });
+  }
+});
+
+router.get("/selector/bookings/:bookingId/pilgrims", async (req, res) => {
+  try {
+    const scope = await resolveUserScope(req);
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, req.params.bookingId)).limit(1);
+    if (!booking || !isBookingInScope(booking, scope)) return res.status(403).json({ error: scopeDeniedMessage(scope) });
+    const rows = await db.select({ id: bookingPilgrims.id, name: bookingPilgrims.name, gender: bookingPilgrims.gender, passportNumber: bookingPilgrims.passportNumber })
+      .from(bookingPilgrims).where(eq(bookingPilgrims.bookingId, booking.id)).orderBy(bookingPilgrims.name);
+    res.json({ data: rows });
+  } catch (error) {
+    console.error("[certificates] GET /selector/bookings/:bookingId/pilgrims", error);
+    res.status(500).json({ error: "Gagal memuat daftar jemaah" });
+  }
+});
 
 router.get("/templates", async (req, res) => {
   try {

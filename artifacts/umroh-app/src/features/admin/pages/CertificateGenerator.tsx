@@ -21,6 +21,9 @@ type Design = {
   showAddress: boolean;
 };
 
+type BookingOption = { id: string; bookingCode: string; status: string | null; packageTitle: string | null; departureDate: string | null };
+type PilgrimOption = { id: string; name: string; gender: string | null; passportNumber: string | null };
+
 const initialDesign: Design = {
   accent: "#b88a2a",
   title: "SERTIFIKAT {TYPE}",
@@ -41,6 +44,10 @@ export default function CertificateGenerator() {
   const [performerName, setPerformerName] = useState("");
   const [bookingId, setBookingId] = useState("");
   const [pilgrimId, setPilgrimId] = useState("");
+  const [bookingOptions, setBookingOptions] = useState<BookingOption[]>([]);
+  const [pilgrimOptions, setPilgrimOptions] = useState<PilgrimOption[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(true);
+  const [loadingPilgrims, setLoadingPilgrims] = useState(false);
   const [companyName, setCompanyName] = useState("Vins Tour Travel");
   const [address, setAddress] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
@@ -62,6 +69,32 @@ export default function CertificateGenerator() {
       if (value.address) setAddress(value.address);
     }).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    setLoadingBookings(true);
+    apiFetch<{ data: BookingOption[] }>("/api/admin/certificates/selector/bookings")
+      .then((response) => { if (active) setBookingOptions(response?.data || []); })
+      .catch(() => { if (active) toast.error("Daftar booking tidak dapat dimuat"); })
+      .finally(() => { if (active) setLoadingBookings(false); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!bookingId) { setPilgrimOptions([]); setPilgrimId(""); return; }
+    let active = true;
+    setLoadingPilgrims(true);
+    apiFetch<{ data: PilgrimOption[] }>(`/api/admin/certificates/selector/bookings/${bookingId}/pilgrims`)
+      .then((response) => { if (active) setPilgrimOptions(response?.data || []); })
+      .catch(() => { if (active) toast.error("Daftar jemaah tidak dapat dimuat"); })
+      .finally(() => { if (active) setLoadingPilgrims(false); });
+    return () => { active = false; };
+  }, [bookingId]);
+
+  useEffect(() => {
+    const selected = pilgrimOptions.find((pilgrim) => pilgrim.id === pilgrimId);
+    if (selected) setRecipientName(selected.name);
+  }, [pilgrimId, pilgrimOptions]);
 
   const updateDesign = <K extends keyof Design>(key: K, value: Design[K]) => setDesign((current) => ({ ...current, [key]: value }));
 
@@ -140,7 +173,7 @@ export default function CertificateGenerator() {
                 {design.showAddress && address && <p className="absolute bottom-5 left-0 right-0 text-[10px] text-slate-400">{address}</p>}
               </div>
             </div>
-            <div className="rounded-2xl border bg-white p-4 shadow-sm"><div className="mb-3 flex items-center gap-2"><Eye className="h-4 w-4 text-[#b88a2a]" /><p className="text-sm font-semibold">Terbitkan ke Jemaah</p></div><div className="grid gap-3 md:grid-cols-3"><div><Label>Booking ID</Label><Input className="mt-1" placeholder="UUID booking" value={bookingId} onChange={(e) => setBookingId(e.target.value)} /></div><div><Label>Jemaah ID</Label><Input className="mt-1" placeholder="UUID jemaah" value={pilgrimId} onChange={(e) => setPilgrimId(e.target.value)} /></div><div><Label>Nama Jemaah Preview</Label><Input className="mt-1" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} /></div></div><Button className="mt-4 gap-2" onClick={issueCertificate}><Award className="h-4 w-4" /> Terbitkan Sertifikat</Button></div>
+            <div className="rounded-2xl border bg-white p-4 shadow-sm"><div className="mb-3 flex items-center gap-2"><Eye className="h-4 w-4 text-[#b88a2a]" /><div><p className="text-sm font-semibold">Pilih Jemaah untuk Sertifikat</p><p className="text-xs text-muted-foreground">Pilih booking terlebih dahulu, lalu pilih jemaah yang akan menerima sertifikat.</p></div></div><div className="grid gap-3 md:grid-cols-2"><div><Label>Booking</Label><select className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm" value={bookingId} disabled={loadingBookings} onChange={(e) => { setBookingId(e.target.value); setPilgrimId(""); setRecipientName("Nama Jemaah"); }}><option value="">{loadingBookings ? "Memuat booking…" : "Pilih booking"}</option>{bookingOptions.map((booking) => <option key={booking.id} value={booking.id}>{booking.bookingCode} — {booking.packageTitle || "Tanpa paket"}{booking.departureDate ? ` • ${booking.departureDate}` : ""}</option>)}</select></div><div><Label>Jemaah</Label><select className="mt-1 flex h-10 w-full rounded-md border bg-background px-3 text-sm" value={pilgrimId} disabled={!bookingId || loadingPilgrims} onChange={(e) => setPilgrimId(e.target.value)}><option value="">{loadingPilgrims ? "Memuat jemaah…" : bookingId ? "Pilih jemaah" : "Pilih booking dahulu"}</option>{pilgrimOptions.map((pilgrim) => <option key={pilgrim.id} value={pilgrim.id}>{pilgrim.name}{pilgrim.gender ? ` • ${pilgrim.gender}` : ""}</option>)}</select></div></div><div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">{pilgrimId ? `Sertifikat akan diterbitkan untuk ${recipientName}.` : "Belum ada jemaah yang dipilih."}</div><Button className="mt-4 gap-2" onClick={issueCertificate} disabled={!bookingId || !pilgrimId}><Award className="h-4 w-4" /> Terbitkan Sertifikat</Button></div>
           </div>
         </div>
       </div>
