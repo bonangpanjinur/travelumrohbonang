@@ -11,6 +11,7 @@ import GallerySection from "@/features/cms/components/GallerySection";
 import BlogSection from "@/features/cms/components/BlogSection";
 import FAQSection from "@/features/cms/components/FAQSection";
 import CTASection from "@/features/cms/components/CTASection";
+import FrontendThemeHome from "@/features/cms/components/FrontendThemeHome";
 import Footer from "@/shared/components/layout/Footer";
 import SEO from "@/shared/components/seo/SEO";
 import LocalBusinessJsonLd from "@/shared/components/seo/LocalBusinessJsonLd";
@@ -50,18 +51,7 @@ const Index = () => {
       <LocalBusinessJsonLd />
       <BackendStatusBanner />
       <Navbar />
-      <main>
-        <HeroSection />
-        <ServicesSection />
-        <PackagesPreview />
-        <AboutSection />
-        <GuideSection />
-        <TestimonialsSection />
-        <GallerySection />
-        <BlogSection />
-        <FAQSection />
-        <CTASection />
-      </main>
+      <FrontendThemeHome />
       <Footer />
     </div>
   );
