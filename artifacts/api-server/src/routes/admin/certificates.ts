@@ -118,8 +118,9 @@ router.get("/templates", async (req, res) => {
       .orderBy(desc(certificateTemplates.createdAt));
     const visible = rows.filter((row: typeof rows[number]) => scope.type === "global" || row.branchId === null || row.branchId === scope.branchId);
     res.json({ data: visible });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[certificates] GET /templates", error);
+    if (error?.code === "42P01") return res.status(500).json({ error: "Tabel sertifikat belum tersedia. Silakan jalankan migration database." });
     res.status(500).json({ error: "Gagal memuat template sertifikat" });
   }
 });
@@ -142,8 +143,9 @@ router.post("/templates", async (req, res) => {
       updatedAt: new Date(),
     }).returning();
     res.status(201).json({ data: created });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[certificates] POST /templates", error);
+    if (error?.code === "42P01") return res.status(500).json({ error: "Tabel sertifikat belum tersedia. Silakan jalankan migration database." });
     res.status(500).json({ error: "Gagal menyimpan template sertifikat" });
   }
 });
@@ -162,8 +164,9 @@ router.patch("/templates/:id", async (req, res) => {
       updatedAt: new Date(),
     }).where(eq(certificateTemplates.id, existing.id)).returning();
     res.json({ data: updated });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[certificates] PATCH /templates/:id", error);
+    if (error?.code === "42P01") return res.status(500).json({ error: "Tabel sertifikat belum tersedia. Silakan jalankan migration database." });
     res.status(500).json({ error: "Gagal memperbarui template sertifikat" });
   }
 });
@@ -175,8 +178,9 @@ router.get("/booking/:bookingId", async (req, res) => {
     if (!booking || !isBookingInScope(booking, scope)) return res.status(403).json({ error: scopeDeniedMessage(scope) });
     const rows = await db.select().from(certificates).where(eq(certificates.bookingId, booking.id)).orderBy(desc(certificates.createdAt));
     res.json({ data: rows });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[certificates] GET /booking/:bookingId", error);
+    if (error?.code === "42P01") return res.status(500).json({ error: "Tabel sertifikat belum tersedia. Silakan jalankan migration database." });
     res.status(500).json({ error: "Gagal memuat sertifikat booking" });
   }
 });
@@ -206,8 +210,9 @@ router.post("/booking/:bookingId/pilgrim/:pilgrimId/issue", async (req, res) => 
       createdBy: (req.user as any).id,
     }).returning();
     res.status(201).json({ data: created });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[certificates] POST /issue", error);
+    if (error?.code === "42P01") return res.status(500).json({ error: "Tabel sertifikat belum tersedia. Silakan jalankan migration database." });
     res.status(500).json({ error: "Gagal menerbitkan sertifikat" });
   }
 });
