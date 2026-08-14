@@ -56,7 +56,9 @@ export const AdminCreateDeparturePriceRequest = z.object({
 export const AdminUpdateDeparturePriceRequest = AdminCreateDeparturePriceRequest.partial();
 
 const AdminRecordPaymentFields = z.object({
-  type: z.enum(["dp", "installment", "settlement"]),
+  // Finance/admin may record operational types beyond the standard schedule.
+  // Keep it non-empty and bounded rather than restricting it to three enum values.
+  type: z.string().trim().min(1).max(50),
   amount: z.number().int().positive(),
   paidAt: z.string().min(1),
   method: z.string().nullable().optional(),
