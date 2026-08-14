@@ -35,13 +35,13 @@ import { useAuth } from "@/shared/hooks/useAuth";
 function getDisplayName(conv: AdminConversation): string {
   if (conv.type === "guest") return conv.guest_name ?? "Tamu";
   if (conv.type === "member") return conv.member_name ?? "Jemaah";
-  return `Booking #${conv.booking_id?.slice(0, 8) ?? ""}`;
+  return `Pemesanan #${conv.booking_id?.slice(0, 8) ?? ""}`;
 }
 
 function getTypeLabel(type: AdminConversation["type"]): string {
   if (type === "guest") return "Tamu";
-  if (type === "member") return "Member";
-  return "Booking";
+  if (type === "member") return "Jemaah";
+  return "Pemesanan";
 }
 
 function getTypeBadgeClass(type: AdminConversation["type"]): string {
@@ -404,10 +404,10 @@ function ChatPanel({
             className="text-xs h-7 px-2"
             disabled={assigning}
             onClick={handleAssign}
-            title="Assign ke saya"
+            title="Tugaskan kepada saya"
           >
             <UserCheck className="w-3.5 h-3.5 mr-1" />
-            Assign
+            Tugaskan
           </Button>
           <Button
             size="sm"
@@ -544,7 +544,7 @@ export default function ChatInbox() {
         {/* Header */}
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="font-semibold text-base">Chat Inbox</h1>
+            <h1 className="font-semibold text-base">Kotak Masuk Percakapan</h1>
             {totalUnread > 0 && (
               <Badge variant="destructive" className="text-xs px-1.5">
                 {totalUnread}
@@ -556,7 +556,7 @@ export default function ChatInbox() {
             variant="ghost"
             className="h-7 w-7"
             onClick={() => refetch(filter)}
-            title="Refresh"
+            title="Muat ulang"
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </Button>
@@ -568,7 +568,7 @@ export default function ChatInbox() {
             <TabsList className="w-full h-8 text-xs">
               <TabsTrigger value="all" className="flex-1 text-xs px-1">Semua</TabsTrigger>
               <TabsTrigger value="guest" className="flex-1 text-xs px-1">Tamu</TabsTrigger>
-              <TabsTrigger value="member" className="flex-1 text-xs px-1">Member</TabsTrigger>
+              <TabsTrigger value="member" className="flex-1 text-xs px-1">Jemaah</TabsTrigger>
               <TabsTrigger value="mine" className="flex-1 text-xs px-1">Saya</TabsTrigger>
               <TabsTrigger value="unread" className="flex-1 text-xs px-1">Belum Baca</TabsTrigger>
             </TabsList>
@@ -580,7 +580,7 @@ export default function ChatInbox() {
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
-              placeholder="Cari nama, HP, pesan..."
+              placeholder="Cari nama, nomor HP, pesan..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="pl-8 h-8 text-xs"

@@ -62,6 +62,27 @@ export interface InboxFilter {
   search: string;
 }
 
+function mapRealtimeConversation(raw: Record<string, unknown>): AdminConversation {
+  return {
+    id: raw.id as string,
+    type: raw.type as AdminConversation["type"],
+    status: raw.status as AdminConversation["status"],
+    user_id: (raw.user_id ?? null) as string | null,
+    guest_name: (raw.guest_name ?? null) as string | null,
+    guest_phone: (raw.guest_phone ?? null) as string | null,
+    guest_email: (raw.guest_email ?? null) as string | null,
+    guest_token: null,
+    booking_id: (raw.booking_id ?? null) as string | null,
+    assigned_admin_id: (raw.assigned_admin_id ?? null) as string | null,
+    last_message_at: (raw.last_message_at ?? null) as string | null,
+    last_message_preview: (raw.last_message_preview ?? null) as string | null,
+    unread_admin: Number(raw.unread_admin ?? 0),
+    unread_user: Number(raw.unread_user ?? 0),
+    created_at: raw.created_at as string,
+    member_name: null,
+  };
+}
+
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useAdminInbox() {
@@ -118,6 +139,7 @@ export function useAdminInbox() {
   // ── Polling fallback — 15 s interval (covers dev + realtime outages) ────────
   useEffect(() => {
     const interval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
       fetchConversations(filter);
     }, 15_000);
     return () => clearInterval(interval);
@@ -132,7 +154,7 @@ export function useAdminInbox() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "conversations" },
         (payload) => {
-          const conv = payload.new as AdminConversation;
+          const conv = mapRealtimeConversation(payload.new as Record<string, unknown>);
           setConversations((prev) => {
             if (prev.find((c) => c.id === conv.id)) return prev;
             return [conv, ...prev];

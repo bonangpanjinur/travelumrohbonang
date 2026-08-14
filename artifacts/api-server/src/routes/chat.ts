@@ -99,8 +99,14 @@ router.post("/start", writeLimiter, async (req, res) => {
         email?: string;
       };
 
-      if (!name?.trim() || !phone?.trim()) {
+      const normalizedName = name?.trim() ?? "";
+      const normalizedPhone = phone?.trim() ?? "";
+      const normalizedEmail = email?.trim() ?? "";
+      if (!normalizedName || !normalizedPhone) {
         return res.status(400).json({ error: "name dan phone wajib diisi" });
+      }
+      if (normalizedName.length > 120 || normalizedPhone.length > 40 || normalizedEmail.length > 160) {
+        return res.status(400).json({ error: "Data kontak terlalu panjang" });
       }
 
       // Create new guest conversation
@@ -109,9 +115,9 @@ router.post("/start", writeLimiter, async (req, res) => {
       await db.insert(conversations).values({
         id: newId,
         type: "guest",
-        guestName: name.trim(),
-        guestPhone: phone.trim(),
-        guestEmail: email?.trim() ?? null,
+        guestName: normalizedName,
+        guestPhone: normalizedPhone,
+        guestEmail: normalizedEmail || null,
         guestToken: newGuestToken,
         status: "open",
       });
@@ -217,8 +223,12 @@ router.post("/conversations/:id/messages", writeLimiter, chatAuth, async (req, r
     const { id } = req.params;
     const { message } = req.body as { message?: string };
 
-    if (!message?.trim()) {
+    const normalizedMessage = message?.trim() ?? "";
+    if (!normalizedMessage) {
       return res.status(400).json({ error: "Pesan tidak boleh kosong" });
+    }
+    if (normalizedMessage.length > 5000) {
+      return res.status(400).json({ error: "Pesan maksimal 5000 karakter" });
     }
 
     // Access control
@@ -250,7 +260,7 @@ router.post("/conversations/:id/messages", writeLimiter, chatAuth, async (req, r
         senderType,
         senderId: req.chatUserId ?? null,
         senderName,
-        message: message.trim(),
+        message: normalizedMessage,
       })
       .returning();
 
@@ -261,7 +271,7 @@ router.post("/conversations/:id/messages", writeLimiter, chatAuth, async (req, r
       notifyAdmins({
         conversationId: id,
         senderName,
-        preview: message.trim().slice(0, 80),
+        preview: normalizedMessage.slice(0, 80),
       }).catch((err) => console.error("[chat] notifyAdmins failed:", err));
     }
 

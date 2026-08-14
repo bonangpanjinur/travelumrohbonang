@@ -51,9 +51,11 @@ router.get("/", requireAuth, async (req, res) => {
       unread,
       assigned_to_me,
       search,
-      limit = "50",
+          limit = "50",
       offset = "0",
     } = req.query as Record<string, string>;
+    const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 50, 1), 100);
+    const safeOffset = Math.max(Number.parseInt(offset, 10) || 0, 0);
 
     const conditions: ReturnType<typeof sql>[] = [];
 
@@ -91,7 +93,6 @@ router.get("/", requireAuth, async (req, res) => {
           c.guest_name,
           c.guest_phone,
           c.guest_email,
-          c.guest_token,
           c.booking_id,
           c.assigned_admin_id,
           c.last_message_at,
@@ -106,8 +107,9 @@ router.get("/", requireAuth, async (req, res) => {
         ORDER BY
           c.unread_admin DESC,
           c.last_message_at DESC NULLS LAST
-        LIMIT ${parseInt(limit, 10)}
-        OFFSET ${parseInt(offset, 10)}
+                  LIMIT ${safeLimit}
+          OFFSET ${safeOffset}
+
       `,
     );
 
@@ -160,14 +162,16 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { limit = "100", offset = "0" } = req.query as Record<string, string>;
+    const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 100, 1), 200);
+    const safeOffset = Math.max(Number.parseInt(offset, 10) || 0, 0);
 
     const messages = await db
       .select()
       .from(conversationMessages)
       .where(eq(conversationMessages.conversationId, id))
       .orderBy(asc(conversationMessages.createdAt))
-      .limit(parseInt(limit, 10))
-      .offset(parseInt(offset, 10));
+      .limit(safeLimit)
+      .offset(safeOffset);
 
     return res.json({ data: messages });
   } catch (err) {
@@ -180,10 +184,14 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
 router.post("/:id/messages", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { message } = req.body as { message: string };
+    const { message } = req.body as { message?: string };
+    const normalizedMessage = message?.trim() ?? "";
 
-    if (!message?.trim()) {
+    if (!normalizedMessage) {
       return res.status(400).json({ error: "Pesan tidak boleh kosong" });
+    }
+    if (normalizedMessage.length > 5000) {
+      return res.status(400).json({ error: "Pesan maksimal 5000 karakter" });
     }
 
     const adminUser = (req as any).user;
@@ -205,33 +213,25 @@ router.post("/:id/messages", requireAuth, async (req, res) => {
         senderType: "admin",
         senderId: adminId,
         senderName: adminName,
-        message: message.trim(),
+        message: normalizedMessage,
       })
       .returning();
 
-    // Build update: preview + counters + auto-assign on first reply
-    const convUpdate: Record<string, unknown> = {
-      lastMessageAt: new Date(),
-      lastMessagePreview: message.trim().slice(0, 100),
-      unreadAdmin: 0,
-      unreadUser: sql`unread_user + 1`,
-    };
-    // Auto-assign: if no admin has claimed this conversation yet, claim it now
+    // Preview and unread counters are maintained by the database trigger.
+    // Only claim an unassigned conversation here to avoid duplicate counters.
     if (!conv.assignedAdminId && adminId !== "unknown") {
-      convUpdate.assignedAdminId = adminId;
+      await db
+        .update(conversations)
+        .set({ assignedAdminId: adminId })
+        .where(eq(conversations.id, id));
     }
-
-    await db
-      .update(conversations)
-      .set(convUpdate as any)
-      .where(eq(conversations.id, id));
 
     // Notify the member via in-app bell if this is a member conversation
     if (conv.userId) {
       notifyUser({
         userId: conv.userId,
         adminName,
-        preview: message.trim(),
+        preview: normalizedMessage,
       }).catch(() => {});
     }
 

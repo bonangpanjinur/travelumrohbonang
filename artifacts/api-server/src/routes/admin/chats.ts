@@ -29,14 +29,28 @@ router.get("/:bookingId", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
+    const { bookingId, senderId, senderRole, message } = req.body as {
+      bookingId?: string;
+      senderId?: string;
+      senderRole?: string;
+      message?: string;
+    };
+    const normalizedMessage = message?.trim() ?? "";
+    if (!bookingId || !normalizedMessage) return res.status(400).json({ error: "bookingId dan message wajib diisi" });
+    if (normalizedMessage.length > 5000) return res.status(400).json({ error: "Pesan maksimal 5000 karakter" });
+    if (!senderRole || !["admin", "buyer", "member"].includes(senderRole)) return res.status(400).json({ error: "senderRole tidak valid" });
     const [item] = await db.insert(chatMessages).values({
       id: crypto.randomUUID(),
-      ...req.body,
+      bookingId,
+      senderId: senderId ?? null,
+      senderRole,
+      message: normalizedMessage,
       createdAt: new Date(),
     }).returning();
     res.status(201).json({ data: item });
   } catch (err) {
-    res.status(500).json({ error: "Failed to send message" });
+    console.error("[admin/chats POST]", err);
+    res.status(500).json({ error: "Gagal mengirim pesan" });
   }
 });
 

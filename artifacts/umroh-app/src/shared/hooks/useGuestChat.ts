@@ -196,6 +196,22 @@ export function useGuestChat() {
           }
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "conversation_messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const raw = payload.new as { id?: string; is_read?: boolean; isRead?: boolean };
+          if (!raw.id) return;
+          setMessages((prev) => prev.map((item) => item.id === raw.id
+            ? { ...item, isRead: Boolean(raw.is_read ?? raw.isRead) }
+            : item));
+        },
+      )
       .subscribe();
 
     return () => {
