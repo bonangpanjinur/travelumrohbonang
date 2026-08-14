@@ -51,8 +51,22 @@ export function validatePaymentRules(rules: PaymentRuleInput[]) {
     seen.add(code);
     if (!allowedTypes.has(rule.ruleType)) errors.push(`Tipe rule tidak valid: ${code}`);
     if (rule.value === undefined || rule.value === null) errors.push(`Value wajib diisi: ${code}`);
-    if (rule.ruleType === "percentage" && typeof rule.value === "number" && (rule.value < 0 || rule.value > 100)) {
+    const valueObject = rule.value && typeof rule.value === "object" && !Array.isArray(rule.value) ? rule.value as Record<string, unknown> : null;
+    const percentageValue = typeof rule.value === "number" ? rule.value : valueObject?.percentage;
+    const fixedValue = valueObject?.amount;
+    if (rule.ruleType === "percentage" && typeof percentageValue === "number" && (percentageValue < 0 || percentageValue > 100)) {
       errors.push(`Persentase harus 0 sampai 100: ${code}`);
+    }
+    if (rule.ruleType === "fixed_amount" && typeof fixedValue === "number" && fixedValue < 0) {
+      errors.push(`Nominal tidak boleh negatif: ${code}`);
+    }
+    if (rule.ruleType === "tiered") {
+      if (!Array.isArray(rule.value) || rule.value.length === 0) errors.push(`Rule bertingkat harus memiliki minimal satu tingkat: ${code}`);
+      for (const tier of (Array.isArray(rule.value) ? rule.value : [])) {
+        const tierValue = tier && typeof tier === "object" ? (tier as Record<string, unknown>).value : null;
+        const tierMode = tier && typeof tier === "object" ? (tier as Record<string, unknown>).mode : null;
+        if (typeof tierValue !== "number" || tierValue < 0 || (tierMode === "percentage" && tierValue > 100)) errors.push(`Nilai tier tidak valid: ${code}`);
+      }
     }
     if (rule.displayOrder !== undefined && (!Number.isInteger(rule.displayOrder) || rule.displayOrder < 0)) {
       errors.push(`displayOrder tidak valid: ${code}`);
