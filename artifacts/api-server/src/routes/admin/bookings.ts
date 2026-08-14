@@ -1373,7 +1373,7 @@ router.get("/:id/invoice-data", async (req, res) => {
 
       let fallbackPolicySnapshot = sbBooking.payment_policy_snapshot ?? null;
       let fallbackScheduleSnapshot = sbBooking.payment_schedule_snapshot ?? [];
-      if (!fallbackPolicySnapshot) {
+      if (!fallbackPolicySnapshot || !Array.isArray(fallbackPolicySnapshot.rules) || fallbackPolicySnapshot.rules.length === 0) {
         const fallback = await buildBookingPaymentSnapshots(sbBooking.package_id ?? null, Number(sbBooking.total_price || 0), sbDep?.departure_date ?? null);
         fallbackPolicySnapshot = fallback.paymentPolicySnapshot;
         fallbackScheduleSnapshot = fallback.paymentScheduleSnapshot;
@@ -1419,7 +1419,7 @@ router.get("/:id/invoice-data", async (req, res) => {
 
     let paymentPolicySnapshot = booking.payment_policy_snapshot ?? null;
     let paymentScheduleSnapshot = booking.payment_schedule_snapshot ?? [];
-    if (!paymentPolicySnapshot) {
+    if (!paymentPolicySnapshot || !Array.isArray(paymentPolicySnapshot.rules) || paymentPolicySnapshot.rules.length === 0) {
       const fallback = await buildBookingPaymentSnapshots(booking.package_id ?? null, Number(booking.total_price || 0), booking.departure_date ?? null);
       paymentPolicySnapshot = fallback.paymentPolicySnapshot;
       paymentScheduleSnapshot = fallback.paymentScheduleSnapshot;
