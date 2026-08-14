@@ -10,6 +10,7 @@ import {
   Upload, Ban, RotateCcw, CalendarDays,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -223,6 +224,7 @@ const BookingDetailPanel = ({
 
   // Payment form
   const [showAddPayment, setShowAddPayment] = useState(false);
+  const [detailTab, setDetailTab] = useState("overview");
   const [savingPayment, setSavingPayment] = useState(false);
   const [newPayment, setNewPayment] = useState<NewPaymentForm>(emptyNewPayment());
   const [uploadingProof, setUploadingProof] = useState(false);
@@ -827,6 +829,13 @@ const BookingDetailPanel = ({
         </div>
       </div>)}
 
+      <Tabs value={detailTab} onValueChange={setDetailTab} className="w-full">
+        <TabsList className="sticky top-0 z-10 grid h-auto w-full grid-cols-3 gap-1 rounded-xl border bg-background/95 p-1 shadow-sm backdrop-blur">
+          <TabsTrigger value="overview" className="h-9 text-xs sm:text-sm">Ringkasan</TabsTrigger>
+          <TabsTrigger value="finance" className="h-9 text-xs sm:text-sm">Keuangan</TabsTrigger>
+          <TabsTrigger value="documents" className="h-9 text-xs sm:text-sm">Dokumen & Aktivitas</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="mt-3 space-y-4">
       {/* ── Pemesan info ─────────────────────────────────────────────────────── */}
       {(pemesanName || isGroupBooking) && (
         <div className="p-3 border border-primary/20 bg-primary/5 rounded-lg">
@@ -1197,6 +1206,8 @@ const BookingDetailPanel = ({
         )}
       </div>
 
+        </TabsContent>
+        <TabsContent value="finance" className="mt-3 space-y-4">
       {/* ── BKG-F02: Rincian Kamar & Total Harga ─────────────────────────────── */}
       {rooms.length > 0 && (
         <div className="bg-muted/50 rounded-lg p-4 space-y-3">
@@ -1569,6 +1580,8 @@ const BookingDetailPanel = ({
         );
       })()}
 
+        </TabsContent>
+        <TabsContent value="documents" className="mt-3 space-y-4">
       {/* ── Feature 6: Dokumen Jemaah ─────────────────────────────────────── */}
       {pilgrims.length > 0 && (
         <div className="bg-muted/50 rounded-lg p-4 space-y-3">
@@ -1615,6 +1628,8 @@ const BookingDetailPanel = ({
         </div>
       )}
 
+        </TabsContent>
+      </Tabs>
       {/* ── Drawers & Modals ──────────────────────────────────────────────── */}
       <PilgrimDetailDrawer
         pilgrim={selectedPilgrim}
