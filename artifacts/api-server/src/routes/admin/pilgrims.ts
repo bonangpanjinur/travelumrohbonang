@@ -196,15 +196,23 @@ async function buildBrandedManifestWorkbook(rows: any[][], title: string) {
   const columns = MANIFEST_HEADERS;
   worksheet.columns = columns.map((_header, index) => ({ key: `c${index}`, width: [8, 30, 10, 18, 18, 8, 18, 18, 18, 18, 18, 14, 32][index] || 16 }));
   await addBrandingHeader(workbook, worksheet, branding, columns.length);
-  worksheet.getCell("A4").value = "DOKUMEN";
-  worksheet.getCell("B4").value = title;
-  worksheet.getCell("A5").value = "TANGGAL";
-  worksheet.getCell("B5").value = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-  worksheet.getCell("A6").value = "PROGRAM";
-  worksheet.getCell("B6").value = "UMROH";
-  worksheet.getRow(4).font = { bold: true, color: { argb: "FF115E59" } };
-  worksheet.getRow(5).font = { bold: true, color: { argb: "FF115E59" } };
-  worksheet.getRow(6).font = { bold: true, color: { argb: "FF115E59" } };
+  const metadata = [
+    ["DOKUMEN", title],
+    ["TANGGAL", new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })],
+    ["PROGRAM", "UMROH"],
+  ];
+  metadata.forEach(([label, value], index) => {
+    const rowNumber = 4 + index;
+    worksheet.mergeCells(rowNumber, 1, rowNumber, 3);
+    worksheet.mergeCells(rowNumber, 4, rowNumber, Math.min(columns.length, 9));
+    worksheet.getCell(rowNumber, 1).value = label;
+    worksheet.getCell(rowNumber, 4).value = value;
+    worksheet.getCell(rowNumber, 1).font = { name: "Arial", size: 10, bold: true, color: { argb: "FF115E59" } };
+    worksheet.getCell(rowNumber, 4).font = { name: "Arial", size: 10, bold: true, color: { argb: "FF334155" } };
+    worksheet.getCell(rowNumber, 1).alignment = { vertical: "middle", horizontal: "center" };
+    worksheet.getCell(rowNumber, 4).alignment = { vertical: "middle", horizontal: "center" };
+    worksheet.getRow(rowNumber).height = 22;
+  });
   worksheet.getRow(7).values = columns;
   styleTableHeader(worksheet, 7, columns.length);
   rows.forEach((values) => worksheet.addRow(values));

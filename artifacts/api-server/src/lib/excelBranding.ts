@@ -27,16 +27,16 @@ export async function getExcelBranding(): Promise<ExcelBranding> {
 
 export async function addBrandingHeader(workbook: any, worksheet: any, branding: ExcelBranding, columnCount: number) {
   const lastColumn = Math.max(columnCount, 6);
-  worksheet.mergeCells(1, 3, 1, lastColumn);
-  worksheet.getCell(1, 3).value = branding.companyName;
-  worksheet.getCell(1, 3).font = { name: "Arial", size: 18, bold: true, color: { argb: "FFFFFFFF" } };
-  worksheet.getCell(1, 3).alignment = { vertical: "middle", horizontal: "left" };
+  worksheet.mergeCells(1, 2, 1, lastColumn);
+  worksheet.getCell(1, 2).value = branding.companyName;
+  worksheet.getCell(1, 2).font = { name: "Arial", size: 18, bold: true, color: { argb: "FFFFFFFF" } };
+  worksheet.getCell(1, 2).alignment = { vertical: "middle", horizontal: "center" };
   worksheet.getRow(1).height = 56;
 
-  worksheet.mergeCells(2, 3, 2, lastColumn);
-  worksheet.getCell(2, 3).value = [branding.tagline, branding.address].filter(Boolean).join(" • ");
-  worksheet.getCell(2, 3).font = { name: "Arial", size: 10, color: { argb: "FFE2E8F0" } };
-  worksheet.getCell(2, 3).alignment = { vertical: "middle", horizontal: "left" };
+  worksheet.mergeCells(2, 2, 2, lastColumn);
+  worksheet.getCell(2, 2).value = [branding.tagline, branding.address].filter(Boolean).join(" • ");
+  worksheet.getCell(2, 2).font = { name: "Arial", size: 10, color: { argb: "FFE2E8F0" } };
+  worksheet.getCell(2, 2).alignment = { vertical: "middle", horizontal: "center", wrapText: true };
   worksheet.getRow(2).height = 30;
 
   for (let row = 1; row <= 2; row++) {
