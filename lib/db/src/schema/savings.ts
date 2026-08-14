@@ -41,6 +41,7 @@ export const savingsTransactions = pgTable("savings_transactions", {
   proofUrl: text("proof_url"),
   notes: text("notes"),
   rejectionReason: text("rejection_reason"),
+  idempotencyKey: text("idempotency_key"),
   bookingId: text("booking_id"),                          // set when type = booking_payment
   recordedBy: text("recorded_by"),                        // admin id yang verifikasi
   verifiedAt: timestamp("verified_at", { withTimezone: true }),
@@ -49,4 +50,5 @@ export const savingsTransactions = pgTable("savings_transactions", {
   index("idx_savings_tx_account_id").on(t.accountId),
   index("idx_savings_tx_status").on(t.status),
   index("idx_savings_tx_type").on(t.type),
+  index("idx_savings_tx_idempotency").on(t.accountId, t.idempotencyKey),
 ]);

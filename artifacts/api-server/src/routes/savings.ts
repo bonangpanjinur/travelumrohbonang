@@ -156,8 +156,10 @@ router.post("/:id/deposit", async (req, res) => {
       proofUrl?: string;
       notes?: string;
     };
+    const idempotencyKey = String(req.header("Idempotency-Key") ?? "").trim();
+    if (!idempotencyKey || idempotencyKey.length > 128) return res.status(400).json({ error: "Idempotency-Key wajib diisi (maksimal 128 karakter)" });
 
-    if (!amount || amount <= 0) return res.status(400).json({ error: "amount harus > 0" });
+    if (!Number.isSafeInteger(amount) || amount <= 0) return res.status(400).json({ error: "amount harus berupa bilangan bulat positif" });
 
     const [account] = await db
       .select()
@@ -166,6 +168,11 @@ router.post("/:id/deposit", async (req, res) => {
       .limit(1);
     if (!account) return res.status(404).json({ error: "Account not found" });
     if (account.status !== "active") return res.status(409).json({ error: "Rekening tidak aktif" });
+
+    const [existingTx] = await db.select().from(savingsTransactions)
+      .where(and(eq(savingsTransactions.accountId, account.id), eq(savingsTransactions.idempotencyKey, idempotencyKey)))
+      .limit(1);
+    if (existingTx) return res.status(200).json({ transaction: existingTx, idempotent: true });
 
     const txId = crypto.randomUUID();
     const [tx] = await db.insert(savingsTransactions).values({
@@ -176,6 +183,7 @@ router.post("/:id/deposit", async (req, res) => {
       status: "pending",
       proofUrl: proofUrl ?? null,
       notes: notes ?? null,
+      idempotencyKey,
       createdAt: new Date(),
     }).returning();
 
@@ -282,8 +290,15 @@ router.post("/:id/close", async (req, res) => {
     if (!account) return res.status(404).json({ error: "Account not found" });
     if (account.status !== "active") return res.status(409).json({ error: "Rekening sudah ditutup" });
 
-    // If there is balance, create a pending withdrawal request
+    // Saldo harus menunggu approval admin. Rekening tidak boleh langsung closed.
+    const now = new Date();
+    let updated;
     if (account.currentBalance > 0) {
+      const pendingWithdrawal = await db.select({ id: savingsTransactions.id })
+        .from(savingsTransactions)
+        .where(and(eq(savingsTransactions.accountId, account.id), eq(savingsTransactions.type, "withdrawal"), eq(savingsTransactions.status, "pending")))
+        .limit(1);
+      if (pendingWithdrawal.length > 0) return res.status(409).json({ error: "Permintaan pencairan sudah menunggu persetujuan" });
       await db.insert(savingsTransactions).values({
         id: crypto.randomUUID(),
         accountId: account.id,
@@ -291,15 +306,12 @@ router.post("/:id/close", async (req, res) => {
         type: "withdrawal",
         status: "pending",
         notes: notes ?? "Permintaan penutupan rekening dan pencairan saldo",
-        createdAt: new Date(),
+        createdAt: now,
       });
+      [updated] = await db.update(savingsAccounts).set({ status: "withdrawal_pending", updatedAt: now }).where(eq(savingsAccounts.id, account.id)).returning();
+    } else {
+      [updated] = await db.update(savingsAccounts).set({ status: "closed", updatedAt: now }).where(eq(savingsAccounts.id, account.id)).returning();
     }
-
-    const [updated] = await db
-      .update(savingsAccounts)
-      .set({ status: "closed", updatedAt: new Date() })
-      .where(eq(savingsAccounts.id, account.id))
-      .returning();
 
     res.json({ account: updated });
   } catch (e) {

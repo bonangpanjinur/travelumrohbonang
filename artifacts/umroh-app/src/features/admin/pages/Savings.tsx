@@ -36,6 +36,7 @@ type SavingsAccount = {
   current_balance: number;
   status: string;
   pending_deposits: number;
+  pending_withdrawals: number;
   created_at: string;
 };
 
@@ -57,6 +58,7 @@ type Stats = {
   totalBalance: number;
   activeAccounts: number;
   pendingDeposits: number;
+  pendingWithdrawals: number;
 };
 
 export default function AdminSavings() {
@@ -124,6 +126,24 @@ export default function AdminSavings() {
       fetchAccounts();
     } catch (e: any) {
       toast({ title: "Gagal verifikasi", description: e.message, variant: "destructive" });
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const processWithdrawalDecision = async (accountId: string, txId: string, approve: boolean) => {
+    setActing(true);
+    try {
+      await apiFetch(`/api/admin/savings/${accountId}/${approve ? "approve-withdrawal" : "reject-withdrawal"}/${txId}`, {
+        method: "POST",
+        body: approve ? undefined : JSON.stringify({ reason: "Permintaan pencairan ditolak setelah pemeriksaan admin" }),
+      });
+      toast({ title: approve ? "Pencairan disetujui" : "Pencairan ditolak" });
+      fetchStats();
+      fetchAccounts();
+      if (detail) openDetail(accountId);
+    } catch (e: any) {
+      toast({ title: "Gagal memproses pencairan", description: e.message, variant: "destructive" });
     } finally {
       setActing(false);
     }
@@ -212,6 +232,7 @@ export default function AdminSavings() {
     const { account: acc, transactions: txs } = detail;
     const progress = acc.target_amount > 0 ? Math.min(100, (acc.current_balance / acc.target_amount) * 100) : 0;
     const pendingTxs = txs.filter(t => t.status === "pending" && t.type === "deposit");
+    const pendingWithdrawals = txs.filter(t => t.status === "pending" && t.type === "withdrawal");
 
     return (
       <div className="p-4 md:p-6 space-y-4">
@@ -288,6 +309,20 @@ export default function AdminSavings() {
           </Card>
         )}
 
+        {pendingWithdrawals.length > 0 && (
+          <Card className="border-blue-300">
+            <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Clock className="w-4 h-4 text-blue-600" />{pendingWithdrawals.length} Pencairan Menunggu Persetujuan</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {pendingWithdrawals.map(tx => (
+                <div key={tx.id} className="flex items-center justify-between p-2 rounded-md bg-blue-50 border border-blue-200 gap-2 flex-wrap">
+                  <div><div className="font-medium">{fmtIDR(Math.abs(tx.amount))}</div><div className="text-xs text-muted-foreground">{fmtDate(tx.created_at)} · {tx.notes ?? "Permintaan pencairan"}</div></div>
+                  <div className="flex gap-2"><Button size="sm" onClick={() => processWithdrawalDecision(acc.id, tx.id, true)} disabled={acting}><CheckCircle2 className="w-3 h-3 mr-1" /> Setujui</Button><Button size="sm" variant="outline" onClick={() => processWithdrawalDecision(acc.id, tx.id, false)} disabled={acting}><XCircle className="w-3 h-3 mr-1" /> Tolak</Button></div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Refund button */}
         {acc.status === "active" && acc.current_balance > 0 && (
           <div className="flex justify-end">
@@ -349,6 +384,7 @@ export default function AdminSavings() {
           { icon: <Wallet className="w-4 h-4" />, label: "Total Saldo", value: stats ? fmtIDR(stats.totalBalance) : "-", highlight: true },
           { icon: <PiggyBank className="w-4 h-4" />, label: "Rekening Aktif", value: stats?.activeAccounts ?? "-" },
           { icon: <Clock className="w-4 h-4" />, label: "Setoran Pending", value: stats?.pendingDeposits ?? "-", warn: (stats?.pendingDeposits ?? 0) > 0 },
+          { icon: <Wallet className="w-4 h-4" />, label: "Pencairan Pending", value: stats?.pendingWithdrawals ?? "-", warn: (stats?.pendingWithdrawals ?? 0) > 0 },
         ].map(c => (
           <Card key={c.label} className={c.highlight ? "border-primary" : c.warn ? "border-amber-300" : ""}>
             <CardContent className="p-4">
