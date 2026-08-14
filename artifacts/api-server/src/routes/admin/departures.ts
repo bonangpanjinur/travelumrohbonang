@@ -17,6 +17,7 @@ import {
   checkIns,
   pilgrimDocuments,
   profiles,
+  siteSettings,
   eq,
   and,
   asc,
@@ -376,6 +377,11 @@ router.get("/:id/manifest.pdf", async (req, res) => {
       return;
     }
 
+    const [brandingRow] = await db.select().from(siteSettings).where(eq(siteSettings.key, "branding")).limit(1);
+    const [contactRow] = await db.select().from(siteSettings).where(eq(siteSettings.key, "contact")).limit(1);
+    const branding = (brandingRow?.value ?? {}) as Record<string, unknown>;
+    const contact = (contactRow?.value ?? {}) as Record<string, unknown>;
+
     const departureBookings = await db
       .select({ id: bookings.id, bookingCode: bookings.bookingCode })
       .from(bookings)
@@ -423,6 +429,9 @@ router.get("/:id/manifest.pdf", async (req, res) => {
       returnDate: departure.returnDate,
       quota: departure.quota,
       remainingQuota: departure.remainingQuota,
+      tenantName: typeof branding.company_name === "string" ? branding.company_name : "Vins Tour Travel",
+      tenantLogoUrl: typeof branding.logo_url === "string" ? branding.logo_url : null,
+      tenantAddress: typeof contact.address === "string" ? contact.address : null,
       pilgrims: pilgrims.map((p) => ({
         id: p.id,
         bookingCode: bookingCodeById.get(p.bookingId) ?? "-",

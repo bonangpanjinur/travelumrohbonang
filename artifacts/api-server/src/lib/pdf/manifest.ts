@@ -17,38 +17,45 @@ import {
 import QRCode from "qrcode";
 
 const styles = StyleSheet.create({
-  page: { padding: 32, fontSize: 9, fontFamily: "Helvetica", color: "#1a1a1a" },
+  page: { padding: 24, fontSize: 8, fontFamily: "Helvetica", color: "#1a1a1a", backgroundColor: "#ffffff" },
   header: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
     borderBottomWidth: 2,
-    borderBottomColor: "#7a1f2b",
-    paddingBottom: 10,
-    marginBottom: 14,
+    borderBottomColor: "#123f35",
+    paddingBottom: 8,
+    marginBottom: 10,
   },
-  brand: { fontSize: 16, fontWeight: 700, color: "#7a1f2b" },
-  tagline: { fontSize: 8, color: "#666", marginTop: 2 },
-  docTitle: { fontSize: 8, color: "#666", textAlign: "right" },
-  docCode: { fontSize: 11, fontWeight: 700, textAlign: "right", marginTop: 2 },
-  title: { fontSize: 12, fontWeight: 700, textAlign: "center", marginBottom: 4, textTransform: "uppercase" },
-  subtitle: { fontSize: 9, color: "#666", textAlign: "center", marginBottom: 14 },
-  metaRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
-  metaBox: { fontSize: 8, color: "#555" },
+  brandBlock: { flexDirection: "row", alignItems: "center", flex: 1 },
+  logo: { width: 42, height: 42, objectFit: "contain", marginRight: 10 },
+  brandText: { flex: 1, alignItems: "center" },
+  brand: { fontSize: 15, fontWeight: 700, color: "#123f35", textAlign: "center" },
+  tagline: { fontSize: 7, color: "#666", marginTop: 2, textAlign: "center" },
+  address: { fontSize: 6.5, color: "#777", marginTop: 2, textAlign: "center" },
+  docBlock: { width: 110, alignItems: "flex-end" },
+  docTitle: { fontSize: 7, color: "#666", textAlign: "right" },
+  docCode: { fontSize: 9, fontWeight: 700, color: "#123f35", textAlign: "right", marginTop: 2 },
+  title: { fontSize: 12, fontWeight: 700, color: "#123f35", textAlign: "center", marginBottom: 3, textTransform: "uppercase" },
+  subtitle: { fontSize: 8, color: "#666", textAlign: "center", marginBottom: 9 },
+  metaRow: { flexDirection: "row", justifyContent: "space-between", backgroundColor: "#f3f7f5", borderWidth: 1, borderColor: "#d8e5df", paddingVertical: 6, paddingHorizontal: 8, marginBottom: 8 },
+  metaBox: { fontSize: 7.5, color: "#555" },
   metaValue: { fontWeight: 700, color: "#1a1a1a" },
   table: { marginTop: 4 },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#f3e6c8",
+    backgroundColor: "#123f35",
     paddingVertical: 5,
     paddingHorizontal: 4,
     alignItems: "center",
   },
+  tableHeaderText: { color: "#ffffff", fontSize: 7, fontWeight: 700 },
   tableRow: {
     flexDirection: "row",
     paddingVertical: 5,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: "#e6ece9",
     alignItems: "center",
     minHeight: 40,
   },
@@ -80,7 +87,7 @@ const styles = StyleSheet.create({
     borderTopColor: "#eee",
     paddingTop: 8,
   },
-  legend: { fontSize: 7, color: "#999", marginTop: 10 },
+  legend: { fontSize: 6.5, color: "#777", marginTop: 7 },
 });
 
 function formatDate(d: string | Date | null | undefined): string {
@@ -109,6 +116,8 @@ export interface ManifestData {
   remainingQuota: number;
   pilgrims: ManifestPilgrimRow[];
   tenantName?: string;
+  tenantLogoUrl?: string | null;
+  tenantAddress?: string | null;
 }
 
 /** Fetches a photo URL and returns a data URI, or null if unreachable. */
@@ -128,6 +137,7 @@ async function tryFetchImageDataUri(url: string | null): Promise<string | null> 
 
 export async function generateManifestPdf(data: ManifestData): Promise<Buffer> {
   // Pre-generate QR codes + resolve photos (best-effort) for every pilgrim in parallel.
+  const tenantLogoDataUri = await tryFetchImageDataUri(data.tenantLogoUrl ?? null);
   const rowsWithAssets = await Promise.all(
     data.pilgrims.map(async (p) => {
       const qrDataUrl = await QRCode.toDataURL(
@@ -144,23 +154,29 @@ export async function generateManifestPdf(data: ManifestData): Promise<Buffer> {
     { title: `Manifest ${data.packageTitle ?? ""}` },
     React.createElement(
       Page,
-      { size: "A4", style: styles.page },
+      { size: "A4", orientation: "landscape", style: styles.page },
       React.createElement(
-        View,
-        { style: styles.header },
-        React.createElement(
           View,
-          null,
-          React.createElement(Text, { style: styles.brand }, data.tenantName ?? "UmrohPlus"),
-          React.createElement(Text, { style: styles.tagline }, "Layanan Umrah & Haji Terpercaya"),
+          { style: styles.header },
+          React.createElement(
+            View,
+            { style: styles.brandBlock },
+            tenantLogoDataUri ? React.createElement(Image, { style: styles.logo, src: tenantLogoDataUri }) : null,
+            React.createElement(
+              View,
+              { style: styles.brandText },
+              React.createElement(Text, { style: styles.brand }, data.tenantName ?? "Vins Tour Travel"),
+              React.createElement(Text, { style: styles.tagline }, "Layanan Umrah & Haji Terpercaya"),
+              data.tenantAddress ? React.createElement(Text, { style: styles.address }, data.tenantAddress) : null,
+            ),
+          ),
+          React.createElement(
+            View,
+            { style: styles.docBlock },
+            React.createElement(Text, { style: styles.docTitle }, "MANIFEST JEMAAH"),
+            React.createElement(Text, { style: styles.docCode }, formatDate(data.departureDate)),
+          ),
         ),
-        React.createElement(
-          View,
-          null,
-          React.createElement(Text, { style: styles.docTitle }, "MANIFEST JEMAAH"),
-          React.createElement(Text, { style: styles.docCode }, formatDate(data.departureDate)),
-        ),
-      ),
       React.createElement(Text, { style: styles.title }, "Manifest Jemaah Keberangkatan"),
       React.createElement(Text, { style: styles.subtitle }, data.packageTitle ?? "-"),
       React.createElement(
@@ -197,14 +213,14 @@ export async function generateManifestPdf(data: ManifestData): Promise<Buffer> {
         React.createElement(
           View,
           { style: styles.tableHeader },
-          React.createElement(Text, { style: styles.colNo }, "No"),
-          React.createElement(Text, { style: styles.colPhoto }, "Foto"),
-          React.createElement(Text, { style: styles.colName }, "Nama"),
-          React.createElement(Text, { style: styles.colGender }, "Gender"),
-          React.createElement(Text, { style: styles.colNik }, "NIK"),
-          React.createElement(Text, { style: styles.colPassport }, "Paspor"),
-          React.createElement(Text, { style: styles.colRoom }, "Kamar"),
-          React.createElement(Text, { style: styles.colQr }, "QR"),
+React.createElement(Text, { style: [styles.colNo, styles.tableHeaderText] }, "No"),
+          React.createElement(Text, { style: [styles.colPhoto, styles.tableHeaderText] }, "Foto"),
+          React.createElement(Text, { style: [styles.colName, styles.tableHeaderText] }, "Nama"),
+          React.createElement(Text, { style: [styles.colGender, styles.tableHeaderText] }, "Gender"),
+          React.createElement(Text, { style: [styles.colNik, styles.tableHeaderText] }, "NIK"),
+          React.createElement(Text, { style: [styles.colPassport, styles.tableHeaderText] }, "Paspor"),
+          React.createElement(Text, { style: [styles.colRoom, styles.tableHeaderText] }, "Kamar"),
+          React.createElement(Text, { style: [styles.colQr, styles.tableHeaderText] }, "QR"),
         ),
         ...rowsWithAssets.map((p, i) =>
           React.createElement(
