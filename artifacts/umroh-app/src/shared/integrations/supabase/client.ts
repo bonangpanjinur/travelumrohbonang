@@ -6,9 +6,9 @@ import { supabaseAuth } from './auth-client';
 // hit the local Replit database instead of the real Supabase project.
 // In production, VITE_SUPABASE_URL is the real Supabase project URL.
 const RAW_URL = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
-const SUPABASE_URL = import.meta.env.DEV
-  ? window.location.origin   // same-origin → Vite proxies /rest/v1 to local API
-  : RAW_URL;
+// Realtime membutuhkan URL Supabase asli agar koneksi WebSocket menuju
+// endpoint realtime/v1, bukan ke origin aplikasi yang hanya mem-proxy REST.
+const SUPABASE_URL = RAW_URL;
 
 // Placeholder prevents createClient from throwing when env vars are absent.
 // All /rest/v1 requests will simply return errors rather than crashing at init.
@@ -46,9 +46,5 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
   },
 });
 
-// Di development (Replit), matikan Supabase Realtime agar tidak ada
-// WebSocket retry loop ke supabase.co yang menyebabkan noise di console
-// dan overhead jaringan. Semua data di dev sudah lewat REST proxy lokal.
-if (import.meta.env.DEV) {
-  supabase.realtime.disconnect();
-}
+// Realtime sengaja aktif di semua environment. Hook chat memiliki fallback
+// polling adaptif apabila koneksi WebSocket gagal atau sedang reconnect.
