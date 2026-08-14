@@ -20,6 +20,8 @@ type Design = {
   footer: string;
   showLogo: boolean;
   showAddress: boolean;
+  additionalLogoUrl: string;
+  showAdditionalLogo: boolean;
 };
 
 type PackageOption = { id: string; title: string };
@@ -28,10 +30,10 @@ type BookingOption = { id: string; bookingCode: string; status: string | null; p
 type PilgrimOption = { id: string; name: string; gender: string | null; passportNumber: string | null };
 
 const TEMPLATES: Record<string, Design> = {
-  elegant: { layout: "elegant", accent: "#123f35", title: "SERTIFIKAT {TYPE}", subtitle: "Diberikan kepada", body: "Dengan ini menerangkan bahwa", recipientSize: 42, recipientColor: "#123f35", footer: "Semoga menjadi amal ibadah yang diterima Allah SWT.", showLogo: true, showAddress: true },
-  classic: { layout: "classic", accent: "#b88a2a", title: "PIAGAM PENGHARGAAN {TYPE}", subtitle: "Diberikan sebagai apresiasi kepada", body: "Telah menyelesaikan ibadah dengan khidmat", recipientSize: 38, recipientColor: "#1e293b", footer: "Barakallahu fiikum.", showLogo: true, showAddress: true },
-  modern: { layout: "modern", accent: "#0ea5e9", title: "CERTIFICATE OF {TYPE}", subtitle: "This is to certify that", body: "Has successfully completed the journey", recipientSize: 48, recipientColor: "#0f172a", footer: "May your journey be blessed.", showLogo: true, showAddress: false },
-  premium: { layout: "premium", accent: "#7c2d12", title: "SERTIFIKAT EKSKLUSIF {TYPE}", subtitle: "Penghargaan tertinggi untuk", body: "Atas dedikasi dan kesungguhan dalam beribadah", recipientSize: 40, recipientColor: "#431407", footer: "Vins Tour Travel - Melayani dengan Sepenuh Hati", showLogo: true, showAddress: true },
+  elegant: { layout: "elegant", accent: "#123f35", title: "SERTIFIKAT {TYPE}", subtitle: "Diberikan kepada", body: "Dengan ini menerangkan bahwa", recipientSize: 42, recipientColor: "#123f35", footer: "Semoga menjadi amal ibadah yang diterima Allah SWT.", showLogo: true, showAddress: true, additionalLogoUrl: "", showAdditionalLogo: false },
+  classic: { layout: "classic", accent: "#b88a2a", title: "PIAGAM PENGHARGAAN {TYPE}", subtitle: "Diberikan sebagai apresiasi kepada", body: "Telah menyelesaikan ibadah dengan khidmat", recipientSize: 38, recipientColor: "#1e293b", footer: "Barakallahu fiikum.", showLogo: true, showAddress: true, additionalLogoUrl: "", showAdditionalLogo: false },
+  modern: { layout: "modern", accent: "#0ea5e9", title: "CERTIFICATE OF {TYPE}", subtitle: "This is to certify that", body: "Has successfully completed the journey", recipientSize: 48, recipientColor: "#0f172a", footer: "May your journey be blessed.", showLogo: true, showAddress: false, additionalLogoUrl: "", showAdditionalLogo: false },
+  premium: { layout: "premium", accent: "#7c2d12", title: "SERTIFIKAT EKSKLUSIF {TYPE}", subtitle: "Penghargaan tertinggi untuk", body: "Atas dedikasi dan kesungguhan dalam beribadah", recipientSize: 40, recipientColor: "#431407", footer: "Vins Tour Travel - Melayani dengan Sepenuh Hati", showLogo: true, showAddress: true, additionalLogoUrl: "", showAdditionalLogo: false },
 };
 
 const initialDesign: Design = TEMPLATES.elegant;
@@ -135,6 +137,15 @@ export default function CertificateGenerator() {
 
   const updateDesign = <K extends keyof Design>(key: K, value: Design[K]) => setDesign((current) => ({ ...current, [key]: value }));
 
+  const handleAdditionalLogoUpload = (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Logo tambahan harus berupa file gambar"); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error("Ukuran logo maksimal 2 MB"); return; }
+    const reader = new FileReader();
+    reader.onload = () => updateDesign("additionalLogoUrl", String(reader.result || ""));
+    reader.readAsDataURL(file);
+  };
+
   const applyTemplate = (key: string) => {
     const template = TEMPLATES[key];
     if (!template) return;
@@ -203,7 +214,8 @@ export default function CertificateGenerator() {
               <div className="grid grid-cols-2 gap-3"><div><Label>Warna Aksen</Label><Input className="mt-1 h-10 p-1" type="color" value={design.accent} onChange={(e) => updateDesign("accent", e.target.value)} /></div><div><Label>Warna Nama</Label><Input className="mt-1 h-10 p-1" type="color" value={design.recipientColor} onChange={(e) => updateDesign("recipientColor", e.target.value)} /></div></div>
               <div><Label>Ukuran Nama: {design.recipientSize}px</Label><input className="mt-3 w-full accent-[#b88a2a]" type="range" min="24" max="58" value={design.recipientSize} onChange={(e) => updateDesign("recipientSize", Number(e.target.value))} /></div>
               <div><Label>Kalimat Penutup</Label><Textarea className="mt-1" rows={3} value={design.footer} onChange={(e) => updateDesign("footer", e.target.value)} /></div>
-              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={design.showLogo} onChange={(e) => updateDesign("showLogo", e.target.checked)} /> Tampilkan logo perusahaan</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={design.showLogo} onChange={(e) => updateDesign("showLogo", e.target.checked)} /> Tampilkan logo utama travel</label>
+              <div className="rounded-xl border border-dashed border-slate-300 p-3"><Label>Logo Tambahan</Label><p className="mt-1 text-[11px] text-muted-foreground">Upload logo partner, sponsor, atau masukkan URL logo.</p><Input className="mt-2" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={(e) => handleAdditionalLogoUpload(e.target.files?.[0])} /><Input className="mt-2" placeholder="https://contoh.com/logo.png" value={design.additionalLogoUrl.startsWith("data:") ? "" : design.additionalLogoUrl} onChange={(e) => updateDesign("additionalLogoUrl", e.target.value)} /><label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={design.showAdditionalLogo} disabled={!design.additionalLogoUrl} onChange={(e) => updateDesign("showAdditionalLogo", e.target.checked)} /> Tampilkan logo tambahan</label>{design.additionalLogoUrl && <button type="button" className="mt-2 text-xs font-medium text-red-600" onClick={() => { updateDesign("additionalLogoUrl", ""); updateDesign("showAdditionalLogo", false); }}>Hapus logo tambahan</button>}</div>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={design.showAddress} onChange={(e) => updateDesign("showAddress", e.target.checked)} /> Tampilkan alamat perusahaan</label>
             </div>
             <Button className="w-full gap-2 bg-[#123f35] hover:bg-[#0d2f28]" onClick={saveTemplate} disabled={saving}><Save className="h-4 w-4" /> {saving ? "Menyimpan…" : "Simpan Template"}</Button>
@@ -217,7 +229,8 @@ export default function CertificateGenerator() {
                 {design.layout === "classic" && <div className="pointer-events-none absolute left-7 top-7 h-16 w-16 rounded-full border-2 opacity-40" style={{ borderColor: design.accent }} />}
                 {design.layout === "premium" && <div className="pointer-events-none absolute bottom-7 right-7 h-20 w-20 rotate-45 border-2 opacity-40" style={{ borderColor: design.accent }} />}
                 {design.layout === "modern" && <div className="pointer-events-none absolute left-0 top-0 h-2 w-1/3" style={{ backgroundColor: design.accent }} />}
-                {design.showLogo && logoUrl ? <img src={logoUrl} alt="Logo" className="relative mx-auto mb-3 h-14 w-14 object-contain" /> : <div className="relative mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full" style={{ backgroundColor: `${design.accent}22`, color: design.accent }}><Award className="h-7 w-7" /></div>}
+                {design.showAdditionalLogo && design.additionalLogoUrl && <img src={design.additionalLogoUrl} alt="Logo tambahan" className="absolute right-8 top-8 h-16 w-16 object-contain md:right-14 md:top-14" />}
+                {design.showLogo && logoUrl ? <img src={logoUrl} alt="Logo travel" className="relative mx-auto mb-3 h-14 w-14 object-contain" /> : <div className="relative mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full" style={{ backgroundColor: `${design.accent}22`, color: design.accent }}><Award className="h-7 w-7" /></div>}
                 <p className="relative text-xs font-bold uppercase tracking-[0.3em]" style={{ color: design.accent }}>{companyName}</p>
                 <div className="relative mx-auto my-6 h-px w-2/3" style={{ backgroundColor: design.accent }} />
                 <h2 className="relative text-xl font-bold tracking-[0.14em] md:text-3xl" style={{ color: design.accent }}>{resolvedTitle}</h2>
