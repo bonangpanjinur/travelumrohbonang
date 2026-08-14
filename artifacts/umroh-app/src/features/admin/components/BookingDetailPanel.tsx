@@ -842,8 +842,9 @@ const BookingDetailPanel = ({
       </div>)}
 
       <Tabs value={detailTab} onValueChange={setDetailTab} className="w-full">
-        <TabsList className="sticky top-0 z-10 grid h-auto w-full grid-cols-3 gap-1 rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-sm backdrop-blur">
+        <TabsList className="sticky top-0 z-10 grid h-auto w-full grid-cols-2 gap-1 rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-sm backdrop-blur sm:grid-cols-4">
           <TabsTrigger value="overview" className="h-10 rounded-xl text-xs font-semibold sm:text-sm">Ringkasan</TabsTrigger>
+          <TabsTrigger value="equipment" className="h-10 rounded-xl text-xs font-semibold sm:text-sm">Perlengkapan</TabsTrigger>
           <TabsTrigger value="finance" className="h-10 rounded-xl text-xs font-semibold sm:text-sm">Keuangan</TabsTrigger>
           <TabsTrigger value="documents" className="h-10 rounded-xl text-xs font-semibold sm:text-sm">Dokumen & Aktivitas</TabsTrigger>
         </TabsList>
@@ -1167,15 +1168,7 @@ const BookingDetailPanel = ({
           })()}
         </div>
 
-        {/* ── Equipment assignment ──────────────────────────────────────────── */}
-        {bookingId && pilgrims.length > 0 && (
-          <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-5 shadow-sm md:col-span-2">
-            <PilgrimEquipmentPanel
-              bookingId={bookingId}
-              pilgrims={pilgrims.map((p) => ({ id: p.id, name: p.name }))}
-            />
-          </div>
-        )}
+
       </div>
 
       {/* ── BKG-F03: Catatan / Notes ──────────────────────────────────────────── */}
@@ -1219,6 +1212,26 @@ const BookingDetailPanel = ({
       </div>
 
         </TabsContent>
+
+        <TabsContent value="equipment" className="mt-3 space-y-4">
+          {bookingId && pilgrims.length > 0 ? (
+            <div className="rounded-2xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-5 shadow-sm">
+              <PilgrimEquipmentPanel
+                bookingId={bookingId}
+                pilgrims={pilgrims.map((p) => ({ id: p.id, name: p.name }))}
+              />
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-5 py-12 text-center">
+              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm">
+                <Users className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-semibold text-slate-700">Belum ada jemaah</p>
+              <p className="mt-1 text-xs text-muted-foreground">Tambahkan data jemaah terlebih dahulu untuk mengatur perlengkapan.</p>
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="finance" className="mt-3 space-y-4">
       {/* ── BKG-F02: Rincian Kamar & Total Harga ─────────────────────────────── */}
       {rooms.length > 0 && (
