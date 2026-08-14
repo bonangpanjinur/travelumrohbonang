@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Runtime title, favicon, and SEO metadata are loaded from site_settings. -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <title>Memuat situs</title>
+    <title>Vins Tour Travel</title>
     <script>
       (async () => {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 2500);
         try {
           const response = await fetch("/api/cms/site-settings", {
             headers: { Accept: "application/json" },
+            signal: controller.signal,
           });
           if (!response.ok) return;
 
@@ -39,7 +42,9 @@
             document.head.appendChild(favicon);
           }
         } catch {
-          // React SEO applies the same database settings after the app mounts.
+          // Keep the stable fallback title when CMS settings are unavailable or slow.
+        } finally {
+          window.clearTimeout(timeoutId);
         }
       })();
     </script>
