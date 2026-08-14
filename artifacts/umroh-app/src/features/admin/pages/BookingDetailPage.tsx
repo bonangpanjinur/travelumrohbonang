@@ -305,6 +305,7 @@ const BookingDetailPage = () => {
   const transitions = VALID_TRANSITIONS[booking.status] ?? [];
   const payStat = payStatusConfig[booking.paymentStatus] ?? payStatusConfig.unpaid;
   const isPusat = !booking.picType || booking.picType === "pusat";
+  const heroActionClass = "border-white/25 bg-white/10 text-white shadow-sm hover:border-white/40 hover:bg-white hover:text-slate-900 focus-visible:ring-white/70";
 
   return (
     <div className="space-y-6 pb-10">
@@ -335,7 +336,7 @@ const BookingDetailPage = () => {
           <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={() => navigate(-1)}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="rounded-lg p-1.5 text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               title="Kembali"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -356,7 +357,7 @@ const BookingDetailPage = () => {
                   variant={transitions[0].variant}
                   onClick={() => handleStatusChange(transitions[0].status)}
                   disabled={changingStatus}
-                  className={transitions[0].variant === "default" ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                  className={transitions[0].variant === "default" ? "bg-green-600 text-white shadow-sm hover:bg-green-500" : heroActionClass}
                 >
                   {changingStatus ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : transitions[0].icon}
                   <span className="ml-1.5">{transitions[0].label}</span>
@@ -364,7 +365,7 @@ const BookingDetailPage = () => {
               ) : (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" disabled={changingStatus}>
+                    <Button size="sm" variant="outline" className={heroActionClass} disabled={changingStatus}>
                       {changingStatus ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
                       Ubah Status <ChevronDown className="w-3 h-3 ml-1" />
                     </Button>
@@ -383,18 +384,18 @@ const BookingDetailPage = () => {
                 </DropdownMenu>
               )
             )}
-            <Button size="sm" variant="outline" onClick={() => setShowChangeRoom(true)}>
+            <Button size="sm" variant="outline" className={heroActionClass} onClick={() => setShowChangeRoom(true)}>
               <Bed className="w-3.5 h-3.5 mr-1.5" /> Ubah Kamar
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setShowChangeDeparture(true)}>
+            <Button size="sm" variant="outline" className={heroActionClass} onClick={() => setShowChangeDeparture(true)}>
               <Calendar className="w-3.5 h-3.5 mr-1.5" /> Ubah Keberangkatan
             </Button>
-            <Button size="sm" variant="outline" onClick={handleDownloadInvoice} disabled={printingInvoice}>
+            <Button size="sm" variant="outline" className={heroActionClass} onClick={handleDownloadInvoice} disabled={printingInvoice}>
               {printingInvoice ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5 mr-1.5" />}
               Cetak Invoice
             </Button>
             <Button
-              size="sm" variant="outline"
+              size="sm" variant="outline" className={heroActionClass}
               onClick={async () => {
                 try {
                   const data = await fetchPassportRecommendationData(booking.id);
@@ -409,7 +410,7 @@ const BookingDetailPage = () => {
               <FileDown className="w-3.5 h-3.5 mr-1.5" /> Surat Rekomendasi Paspor
             </Button>
             {booking.departureId && (
-              <Button size="sm" variant="outline" onClick={() => navigate(`/admin/manifest?departureId=${booking.departureId}`)}>
+              <Button size="sm" variant="outline" className={heroActionClass} onClick={() => navigate(`/admin/manifest?departureId=${booking.departureId}`)}>
                 <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Lihat Manifest
               </Button>
             )}
