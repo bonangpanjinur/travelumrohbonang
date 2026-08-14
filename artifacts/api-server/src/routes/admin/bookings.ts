@@ -41,6 +41,7 @@ import { requireSuperAdmin, requireStaff } from "../../middlewares/requireAdmin"
 import { resolveUserScope } from "../../lib/scopeGuard";
 import { buildBookingScopeCondition, isBookingInScope, scopeDeniedMessage } from "../../lib/scopeConditions";
 import { buildBookingPaymentSnapshots } from "../../lib/paymentPolicyBooking";
+import { addBrandingHeader, getExcelBranding, styleTableBody, styleTableHeader } from "../../lib/excelBranding";
 
 const router = Router();
 
@@ -106,12 +107,17 @@ router.get("/export.xlsx", async (req, res) => {
     const ExcelJSMod = await import("exceljs");
     const ExcelJSCtor = (ExcelJSMod as any).default ?? ExcelJSMod;
     const wb = new ExcelJSCtor.Workbook();
-    const ws = wb.addWorksheet("Booking");
-    if (rows.length > 0) {
-      ws.columns = Object.keys(rows[0]).map((k) => ({ header: k, key: k, width: 22 }));
-      ws.getRow(1).font = { bold: true };
-      rows.forEach((r: any) => ws.addRow(r));
-    }
+    const ws = wb.addWorksheet("Booking", { views: [{ state: "frozen", ySplit: 5 }] });
+    const branding = await getExcelBranding();
+    const columns = rows.length > 0 ? Object.keys(rows[0]) : ["Kode Booking", "Nama Jamaah", "Email", "Telepon", "Paket", "Tgl Berangkat", "Cabang", "Status", "Total Harga", "Skema", "Dibuat"];
+    ws.columns = columns.map((key) => ({ header: key, key, width: Math.max(16, Math.min(28, key.length + 8)) }));
+    await addBrandingHeader(wb, ws, branding, columns.length);
+    const headerRow = 5;
+    ws.getRow(headerRow).values = [null, ...columns];
+    styleTableHeader(ws, headerRow, columns.length);
+    rows.forEach((r: any) => ws.addRow(r));
+    if (rows.length > 0) styleTableBody(ws, headerRow + 1, headerRow + rows.length, columns.length);
+    ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: headerRow + Math.max(rows.length, 1), column: columns.length } };
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", `attachment; filename="bookings-export.xlsx"`);
     await wb.xlsx.write(res);

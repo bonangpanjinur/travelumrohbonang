@@ -17,6 +17,7 @@ import {
 import { requireSuperAdmin } from "../../middlewares/requireAdmin";
 import multer from "multer";
 import * as XLSX from "xlsx";
+import { addBrandingHeader, getExcelBranding, styleTableBody, styleTableHeader } from "../../lib/excelBranding";
 
 const router = Router();
 
@@ -186,14 +187,38 @@ function buildManifestSheet(rows: any[][], title = "MANIFEST JAMAAH UMRAH, VINS 
   return ws;
 }
 
+async function buildBrandedManifestWorkbook(rows: any[][], title: string) {
+  const ExcelJSMod = await import("exceljs");
+  const ExcelJSCtor = (ExcelJSMod as any).default ?? ExcelJSMod;
+  const workbook = new ExcelJSCtor.Workbook();
+  const worksheet = workbook.addWorksheet("MANIFEST", { views: [{ state: "frozen", ySplit: 7 }] });
+  const branding = await getExcelBranding();
+  const columns = MANIFEST_HEADERS;
+  worksheet.columns = columns.map((header, index) => ({ header, key: `c${index}`, width: [6, 30, 8, 18, 16, 8, 16, 16, 16, 18, 16, 14, 30][index] || 16 }));
+  await addBrandingHeader(workbook, worksheet, branding, columns.length);
+  worksheet.getCell("A4").value = "DOKUMEN";
+  worksheet.getCell("B4").value = title;
+  worksheet.getCell("A5").value = "TANGGAL";
+  worksheet.getCell("B5").value = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+  worksheet.getCell("A6").value = "PROGRAM";
+  worksheet.getCell("B6").value = "UMROH";
+  worksheet.getRow(4).font = { bold: true, color: { argb: "FF115E59" } };
+  worksheet.getRow(5).font = { bold: true, color: { argb: "FF115E59" } };
+  worksheet.getRow(6).font = { bold: true, color: { argb: "FF115E59" } };
+  worksheet.getRow(7).values = [null, ...columns];
+  styleTableHeader(worksheet, 7, columns.length);
+  rows.forEach((values) => worksheet.addRow(values));
+  if (rows.length > 0) styleTableBody(worksheet, 8, 7 + rows.length, columns.length);
+  worksheet.autoFilter = { from: { row: 7, column: 1 }, to: { row: 7 + Math.max(rows.length, 1), column: columns.length } };
+  return workbook;
+}
+
 // ── GET /template-excel — download blank manifest Excel template ──────────────
-router.get("/template-excel", (_req, res) => {
+router.get("/template-excel", async (_req, res) => {
   try {
     const exampleRow = ["1","NAMA LENGKAP JEMAAH","M","JAKARTA","1980-05-15","44","A1234567","2019-01-01","2029-01-01","JAKARTA","SINGLE","QUAD","KETERANGAN"];
-    const ws = buildManifestSheet([exampleRow], "MANIFEST JAMAAH UMRAH, VINS TOUR TRAVEL");
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "MANIFEST");
-    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    const wb = await buildBrandedManifestWorkbook([exampleRow], "MANIFEST JAMAAH UMRAH");
+    const buf = await wb.xlsx.writeBuffer();
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", 'attachment; filename="template-import-jemaah.xlsx"');
     res.send(buf);
@@ -346,10 +371,8 @@ router.get("/export-excel", async (req: any, res) => {
       ];
     });
 
-    const ws = buildManifestSheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "MANIFEST");
-    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    const wb = await buildBrandedManifestWorkbook(rows, "MANIFEST JAMAAH UMRAH");
+    const buf = await wb.xlsx.writeBuffer();
 
     const dateTag = new Date().toISOString().split("T")[0];
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
