@@ -14,8 +14,40 @@ import {
   eq, and, asc, sql,
 } from "@workspace/db";
 import { sendAdminError } from "../../lib/adminApiError";
+import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
+
+async function departureScopeCondition(req: any, departureColumn = "departure_checklists.departure_id") {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return sql`TRUE`;
+  if (scope.type === "branch" && scope.branchId) {
+    return sql`EXISTS (SELECT 1 FROM bookings b WHERE b.departure_id = ${sql.raw(departureColumn)} AND b.branch_id = ${scope.branchId})`;
+  }
+  if (scope.type === "agent" && scope.agentId) {
+    return sql`EXISTS (SELECT 1 FROM bookings b WHERE b.departure_id = ${sql.raw(departureColumn)} AND (b.agent_id = ${scope.agentId} OR (b.pic_type = 'agen' AND b.pic_id = ${scope.agentId})))`;
+  }
+  return sql`FALSE`;
+}
+
+async function canAccessDeparture(req: any, departureId: string) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  const rows = await db.execute(sql`
+    SELECT 1 FROM bookings b WHERE b.departure_id = ${departureId}
+    AND ${scope.type === "branch"
+      ? sql`b.branch_id = ${scope.branchId ?? ""}`
+      : sql`b.agent_id = ${scope.agentId ?? ""} OR (b.pic_type = 'agen' AND b.pic_id = ${scope.agentId ?? ""})`}
+    LIMIT 1
+  `);
+  return ((rows as any).rows ?? rows).length > 0;
+}
+
+async function canAccessChecklist(req: any, checklistId: string) {
+  const rows = await db.select({ departureId: departureChecklists.departureId })
+    .from(departureChecklists).where(eq(departureChecklists.id, checklistId)).limit(1);
+  return rows[0] ? canAccessDeparture(req, rows[0].departureId) : false;
+}
 
 // ── Default checklist template ────────────────────────────────────────────────
 
@@ -65,10 +97,13 @@ router.get("/", async (req, res) => {
       })
       .from(departureChecklists)
       .leftJoin(profiles, eq(profiles.id, departureChecklists.doneBy))
-      .where(eq(departureChecklists.departureId, departureId))
+      .where(and(
+        eq(departureChecklists.departureId, departureId),
+        await departureScopeCondition(req),
+      ))
       .orderBy(asc(departureChecklists.hMinus), asc(departureChecklists.category));
 
-    const doneCount = rows.filter((r) => r.isDone).length;
+    const doneCount = rows.filter((r: { isDone: boolean | null }) => r.isDone).length;
     res.json({
       data: rows,
       stats: { total: rows.length, done: doneCount, remaining: rows.length - doneCount },
@@ -91,6 +126,7 @@ router.post("/generate/:departureId", async (req, res) => {
       .where(eq(packageDepartures.id, departureId));
 
     if (!dep) return res.status(404).json({ error: "Departure not found" });
+    if (!(await canAccessDeparture(req, departureId))) return res.status(403).json({ error: "Akses keberangkatan ditolak" });
 
     // Insert template items (skip if already exists for this departure)
     let inserted = 0;
@@ -100,13 +136,12 @@ router.post("/generate/:departureId", async (req, res) => {
       const existing = await db
         .select({ id: departureChecklists.id })
         .from(departureChecklists)
-        .where(
-          and(
-            eq(departureChecklists.departureId, departureId),
-            eq(departureChecklists.hMinus, tmpl.hMinus),
-            eq(departureChecklists.item, tmpl.item),
-          ),
-        );
+        .where(and(
+          eq(departureChecklists.departureId, departureId),
+          eq(departureChecklists.hMinus, tmpl.hMinus),
+          eq(departureChecklists.item, tmpl.item),
+          await departureScopeCondition(req),
+        ));
 
       if (existing.length > 0) { skipped++; continue; }
 
@@ -137,6 +172,7 @@ router.post("/", async (req, res) => {
     if (!departureId || !item) {
       return res.status(400).json({ error: "departureId and item required" });
     }
+    if (!(await canAccessDeparture(req, departureId))) return res.status(403).json({ error: "Akses keberangkatan ditolak" });
 
     const [created] = await db
       .insert(departureChecklists)
@@ -163,6 +199,7 @@ router.post("/", async (req, res) => {
 router.patch("/:id", async (req, res) => {
   try {
     const adminId = (req as any).user?.id as string | undefined;
+    if (!(await canAccessChecklist(req, req.params.id))) return res.status(403).json({ error: "Akses checklist ditolak" });
     const { isDone, notes, item, hMinus, category } = req.body;
 
     const patch: Record<string, unknown> = {};
@@ -195,6 +232,7 @@ router.patch("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
+    if (!(await canAccessChecklist(req, req.params.id))) return res.status(403).json({ error: "Akses checklist ditolak" });
     const [deleted] = await db
       .delete(departureChecklists)
       .where(eq(departureChecklists.id, req.params.id))
