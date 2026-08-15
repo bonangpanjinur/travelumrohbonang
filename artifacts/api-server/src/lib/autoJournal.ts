@@ -23,7 +23,7 @@
  * savings_used            | 2-1103 (Hutang) | 4-1001 (Pendapatan Umroh)
  */
 
-import { db, financialTransactions, chartOfAccounts, accountingPeriods, eq, and } from "@workspace/db";
+import { db, financialTransactions, chartOfAccounts, accountingPeriods, bookings, agents, savingsTransactions, savingsAccounts, eq, and } from "@workspace/db";
 import { recordFinancialTransaction } from "./paymentSync";
 
 // Tipe generik untuk transaksi Drizzle (dipakai di semua fungsi jurnal)
@@ -87,6 +87,7 @@ async function getCoaId(code: string, runner: DbOrTx = db): Promise<string | nul
  */
 async function recordDoubleEntry(opts: {
   bookingId?: string | null;
+  branchId?: string | null;
   amount: number;
   debitCode: string;   // e.g. '1-1101'
   creditCode: string;  // e.g. '4-1001'
@@ -106,10 +107,24 @@ async function recordDoubleEntry(opts: {
   const runner = tx ?? db;
   await assertOpenAccountingPeriod(now, runner);
 
+  let branchId = opts.branchId ?? null;
+  if (!branchId && opts.bookingId) {
+    const [booking] = await runner
+      .select({ branchId: bookings.branchId })
+      .from(bookings)
+      .where(eq(bookings.id, opts.bookingId))
+      .limit(1);
+    branchId = booking?.branchId ?? null;
+  }
+  if (!branchId) {
+    throw new Error(`Auto-journal tenant tidak dapat ditentukan untuk ${opts.referenceNumber}`);
+  }
+
   await (runner as typeof db).insert(financialTransactions).values([
     {
       id: crypto.randomUUID(),
       bookingId: opts.bookingId ?? null,
+      branchId,
       amount: String(opts.amount),
       type: opts.debitType,
       category: opts.category,
@@ -124,6 +139,7 @@ async function recordDoubleEntry(opts: {
     {
       id: crypto.randomUUID(),
       bookingId: opts.bookingId ?? null,
+      branchId,
       amount: String(opts.amount),
       type: opts.creditType,
       category: opts.category,
@@ -303,6 +319,13 @@ export async function journalCommissionWithdrawal(opts: {
   const ref = `auto:commission_withdrawal:${opts.withdrawalId}`;
   if (await alreadyJournaled(ref)) return;
 
+  const [agent] = await db
+    .select({ branchId: agents.branchId })
+    .from(agents)
+    .where(eq(agents.id, opts.agentId))
+    .limit(1);
+  if (!agent?.branchId) throw new Error(`Auto-journal komisi tanpa tenant: agent ${opts.agentId}`);
+
   const [debitAccountId, creditAccountId] = await Promise.all([
     getCoaId("5-2004"),
     getCoaId("1-1101"),
@@ -314,6 +337,7 @@ export async function journalCommissionWithdrawal(opts: {
     {
       id: crypto.randomUUID(),
       bookingId: null,
+      branchId: agent.branchId,
       amount: String(opts.amount),
       type: "expense",
       category: "commission_withdrawal",
@@ -328,6 +352,7 @@ export async function journalCommissionWithdrawal(opts: {
     {
       id: crypto.randomUUID(),
       bookingId: null,
+      branchId: agent.branchId,
       amount: String(opts.amount),
       type: "expense",
       category: "commission_withdrawal",
@@ -359,6 +384,22 @@ export async function journalSavingsDeposit(opts: {
   const ref = `auto:savings_deposit:${opts.transactionId}`;
   if (await alreadyJournaled(ref)) return;
 
+  const [savingTx] = await db
+    .select({ branchId: savingsTransactions.branchId, accountId: savingsTransactions.accountId })
+    .from(savingsTransactions)
+    .where(eq(savingsTransactions.id, opts.transactionId))
+    .limit(1);
+  let branchId = savingTx?.branchId ?? null;
+  if (!branchId && savingTx?.accountId) {
+    const [account] = await db
+      .select({ branchId: savingsAccounts.branchId })
+      .from(savingsAccounts)
+      .where(eq(savingsAccounts.id, savingTx.accountId))
+      .limit(1);
+    branchId = account?.branchId ?? null;
+  }
+  if (!branchId) throw new Error(`Auto-journal tabungan tanpa tenant: transaksi ${opts.transactionId}`);
+
   const [debitAccountId, creditAccountId] = await Promise.all([
     getCoaId("1-1101"),
     getCoaId("2-1103"),
@@ -370,6 +411,7 @@ export async function journalSavingsDeposit(opts: {
     {
       id: crypto.randomUUID(),
       bookingId: null,
+      branchId,
       amount: String(opts.amount),
       type: "income",
       category: "savings_deposit",
@@ -384,6 +426,7 @@ export async function journalSavingsDeposit(opts: {
     {
       id: crypto.randomUUID(),
       bookingId: null,
+      branchId,
       amount: String(opts.amount),
       type: "income",
       category: "savings_deposit",
