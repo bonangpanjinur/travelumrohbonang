@@ -9,7 +9,10 @@ import {
   equipment,
   eq,
   asc,
+  and,
+  sql,
 } from "@workspace/db";
+import { resolveUserScope } from "../../lib/scopeGuard";
 
 /** Map a caught DB/unknown error to an appropriate HTTP response. */
 function dbError(res: any, entityLabel: string, action: "create" | "update" | "delete", err: unknown) {
@@ -28,6 +31,19 @@ function dbError(res: any, entityLabel: string, action: "create" | "update" | "d
 }
 
 const router = Router();
+
+async function equipmentScopeCondition(req: any) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return undefined;
+  if (scope.type === "branch" && scope.branchId) return eq(equipment.branchId, scope.branchId);
+  return eq(equipment.branchId, "__no_agent_branch_scope__");
+}
+
+async function canUseEquipmentBranch(req: any, branchId?: string | null) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  return scope.type === "branch" && !!scope.branchId && (branchId ?? scope.branchId) === scope.branchId;
+}
 
 // Hotels
 router.get("/hotels", async (_req, res) => {
@@ -295,9 +311,11 @@ router.delete("/categories/:id", async (req, res) => {
 });
 
 // Equipment (Perlengkapan)
-router.get("/equipment", async (_req, res) => {
+router.get("/equipment", async (req, res) => {
   try {
-    const data = await db.select().from(equipment).orderBy(asc(equipment.sortOrder), asc(equipment.name));
+    const scopeCondition = await equipmentScopeCondition(req);
+    const query = db.select().from(equipment);
+    const data = await query.where(scopeCondition).orderBy(asc(equipment.sortOrder), asc(equipment.name));
     res.json({ data, total: data.length });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch equipment" });
@@ -310,11 +328,18 @@ router.post("/equipment", async (req, res) => {
     return;
   }
   try {
+    const scope = await resolveUserScope(req);
+    const requestedBranchId = req.body?.branchId ?? req.body?.branch_id ?? null;
+    if (!(await canUseEquipmentBranch(req, requestedBranchId))) {
+      res.status(403).json({ error: "Equipment berada di luar scope branch Anda" });
+      return;
+    }
     const [created] = await db
       .insert(equipment)
       .values({
         id: crypto.randomUUID(),
         ...req.body,
+        branchId: scope.type === "branch" ? scope.branchId : requestedBranchId,
       })
       .returning();
     res.status(201).json(created);
@@ -325,10 +350,11 @@ router.post("/equipment", async (req, res) => {
 
 router.patch("/equipment/:id", async (req, res) => {
   try {
+    const scopeCondition = await equipmentScopeCondition(req);
     const [updated] = await db
       .update(equipment)
       .set(req.body)
-      .where(eq(equipment.id, req.params.id))
+      .where(scopeCondition ? and(eq(equipment.id, req.params.id), scopeCondition) : eq(equipment.id, req.params.id))
       .returning();
     if (!updated) return res.status(404).json({ error: "Equipment not found" });
     res.json(updated);
@@ -339,7 +365,8 @@ router.patch("/equipment/:id", async (req, res) => {
 
 router.delete("/equipment/:id", async (req, res) => {
   try {
-    const [deleted] = await db.delete(equipment).where(eq(equipment.id, req.params.id)).returning();
+    const scopeCondition = await equipmentScopeCondition(req);
+    const [deleted] = await db.delete(equipment).where(scopeCondition ? and(eq(equipment.id, req.params.id), scopeCondition) : eq(equipment.id, req.params.id)).returning();
     if (!deleted) return res.status(404).json({ error: "Equipment not found" });
     res.json({ message: "Equipment deleted" });
   } catch (err) {

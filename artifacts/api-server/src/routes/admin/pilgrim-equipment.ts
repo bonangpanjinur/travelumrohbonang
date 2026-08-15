@@ -30,6 +30,20 @@ async function canAccessBooking(req: any, bookingId: string) {
   return ((rows as any).rows ?? rows).length > 0;
 }
 
+async function equipmentScopeCondition(req: any) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return sql`TRUE`;
+  if (scope.type === "branch" && scope.branchId) return sql`equipment.branch_id = ${scope.branchId}`;
+  return sql`FALSE`;
+}
+
+async function canAccessEquipment(req: any, equipmentId: string) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  const rows = await db.execute(sql`SELECT 1 FROM equipment WHERE id = ${equipmentId} AND ${scope.type === "branch" ? sql`branch_id = ${scope.branchId ?? ""}` : sql`FALSE`} LIMIT 1`);
+  return ((rows as any).rows ?? rows).length > 0;
+}
+
 async function canAccessDeparture(req: any, departureId: string) {
   const scope = await resolveUserScope(req);
   if (scope.type === "global") return true;
@@ -144,6 +158,10 @@ router.post("/", async (req, res) => {
     res.status(403).json({ error: "Booking berada di luar scope Anda" });
     return;
   }
+  if (!(await canAccessEquipment(req, equipmentId))) {
+    res.status(403).json({ error: "Equipment berada di luar scope Anda" });
+    return;
+  }
   try {
     const [row] = await db
       .insert(pilgrimEquipment)
@@ -206,7 +224,7 @@ router.patch("/bulk-status", async (req, res) => {
       await db
         .update(equipment)
         .set({ totalStock: sql`GREATEST(0, ${equipment.totalStock} + ${delta})` })
-        .where(eq(equipment.id, equipmentId));
+        .where(and(eq(equipment.id, equipmentId), await equipmentScopeCondition(req)));
     }
 
     res.json({ ok: true, updated: ids.length });
@@ -328,7 +346,7 @@ router.get("/by-departure/:departureId", async (req, res) => {
     const equipmentList = await db
       .select()
       .from(equipment)
-      .where(eq(equipment.isActive, true));
+      .where(and(eq(equipment.isActive, true), await equipmentScopeCondition(req)));
 
     // Merge: each pilgrim with their assignments
     const pilgrimsWithAssignments = pilgrims.map((p: any) => ({
@@ -383,6 +401,10 @@ router.post("/bulk-assign", async (req, res) => {
         errors.push(`Missing required fields for assignment`);
         continue;
       }
+      if (!(await canAccessBooking(req, a.bookingId)) || !(await canAccessEquipment(req, a.equipmentId))) {
+        errors.push(`Assignment berada di luar scope tenant`);
+        continue;
+      }
       try {
         await db.insert(pilgrimEquipment).values({
           id: crypto.randomUUID(),
@@ -421,7 +443,7 @@ router.post("/update-stock", async (req, res) => {
     const [updated] = await db
       .update(equipment)
       .set({ totalStock: sql`GREATEST(0, ${equipment.totalStock} + ${delta})` })
-      .where(eq(equipment.id, equipmentId))
+      .where(and(eq(equipment.id, equipmentId), await equipmentScopeCondition(req)))
       .returning({ id: equipment.id, totalStock: equipment.totalStock });
 
     if (!updated) return res.status(404).json({ error: "Equipment not found" });

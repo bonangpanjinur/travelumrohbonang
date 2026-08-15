@@ -16,16 +16,40 @@ import {
   eq, and, gte, lte, desc, asc, sql, isNull,
 } from "@workspace/db";
 import { sendAdminError } from "../../lib/adminApiError";
+import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
 
+async function coaScopeCondition(req: any) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return undefined;
+  if (scope.type === "branch" && scope.branchId) return eq(chartOfAccounts.branchId, scope.branchId);
+  return eq(chartOfAccounts.branchId, "__no_agent_branch_scope__");
+}
+
+async function canUseCoaBranch(req: any, branchId?: string | null) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  return scope.type === "branch" && !!scope.branchId && (branchId ?? scope.branchId) === scope.branchId;
+}
+
+async function requireGlobal(req: any, res: any) {
+  if ((await resolveUserScope(req)).type !== "global") {
+    res.status(403).json({ error: "Laporan ledger hanya dapat diakses admin global sampai transaksi memiliki scope tenant penuh" });
+    return false;
+  }
+  return true;
+}
+
 // ── GET / — list all CoA ─────────────────────────────────────────────────────
 
-router.get("/", async (_req, res) => {
+router.get("/", async (req, res) => {
   try {
+    const scopeCondition = await coaScopeCondition(req);
     const rows = await db
       .select()
       .from(chartOfAccounts)
+      .where(scopeCondition)
       .orderBy(asc(chartOfAccounts.code));
     res.json(rows);
   } catch (err) {
@@ -37,15 +61,17 @@ router.get("/", async (_req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    const { code, name, type, category, normalBalance, description, sortOrder } = req.body as {
+    const scope = await resolveUserScope(req);
+    const { code, name, type, category, normalBalance, description, sortOrder, branchId } = req.body as {
       code: string; name: string; type: string; category?: string;
-      normalBalance?: string; description?: string; sortOrder?: number;
+      normalBalance?: string; description?: string; sortOrder?: number; branchId?: string | null;
     };
 
     if (!code || !name || !type) {
       return res.status(400).json({ error: "code, name, type are required" });
     }
 
+    if (!(await canUseCoaBranch(req, branchId))) return res.status(403).json({ error: "Akun berada di luar scope branch Anda" });
     const nb = normalBalance ?? (["asset", "expense"].includes(type) ? "debit" : "credit");
 
     const [created] = await db
@@ -56,6 +82,7 @@ router.post("/", async (req, res) => {
         normalBalance: nb,
         description: description ?? null,
         sortOrder: sortOrder ?? 0,
+        branchId: scope.type === "branch" ? scope.branchId : branchId ?? null,
         createdAt: new Date(),
       })
       .returning();
@@ -71,6 +98,7 @@ router.post("/", async (req, res) => {
 
 router.patch("/:id", async (req, res) => {
   try {
+    const scopeCondition = await coaScopeCondition(req);
     const { name, category, description, isActive, sortOrder } = req.body;
     const patch: Record<string, unknown> = {};
     if (name !== undefined) patch.name = name;
@@ -84,7 +112,7 @@ router.patch("/:id", async (req, res) => {
     const [updated] = await db
       .update(chartOfAccounts)
       .set(patch)
-      .where(eq(chartOfAccounts.id, req.params.id))
+      .where(scopeCondition ? and(eq(chartOfAccounts.id, req.params.id), scopeCondition) : eq(chartOfAccounts.id, req.params.id))
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Account not found" });
@@ -98,6 +126,7 @@ router.patch("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
+    const scopeCondition = await coaScopeCondition(req);
     const { id } = req.params;
     // Check if account is used in any transaction
     const [usage] = await db
@@ -111,7 +140,7 @@ router.delete("/:id", async (req, res) => {
 
     const [deleted] = await db
       .delete(chartOfAccounts)
-      .where(eq(chartOfAccounts.id, id))
+      .where(scopeCondition ? and(eq(chartOfAccounts.id, id), scopeCondition) : eq(chartOfAccounts.id, id))
       .returning({ id: chartOfAccounts.id });
 
     if (!deleted) return res.status(404).json({ error: "Account not found" });
@@ -123,8 +152,10 @@ router.delete("/:id", async (req, res) => {
 
 // ── POST /seed — seed akun standar ───────────────────────────────────────────
 
-router.post("/seed", async (_req, res) => {
+router.post("/seed", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    if (scope.type === "agent") return res.status(403).json({ error: "Agent belum memiliki tenant branch untuk seed CoA" });
     const SEED_ACCOUNTS = [
       // ASSET
       { code: "1-1101", name: "Kas", type: "asset", category: "kas-bank", normalBalance: "debit" },
@@ -175,6 +206,7 @@ router.post("/seed", async (_req, res) => {
           ...acct,
           description: null,
           category: acct.category ?? null,
+          branchId: scope.type === "branch" ? scope.branchId : null,
         });
         inserted++;
       } catch (e: any) {
@@ -193,6 +225,7 @@ router.post("/seed", async (_req, res) => {
 
 router.get("/ledger", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const { accountId, from, to } = req.query as {
       accountId?: string; from?: string; to?: string;
     };
@@ -226,7 +259,7 @@ router.get("/ledger", async (req, res) => {
     // For debit-normal accounts (asset, expense):   debit increases, credit decreases.
     // For credit-normal accounts (liability, equity, revenue): credit increases, debit decreases.
     let runningBalance = 0;
-    const withBalance = rows.map((r) => {
+    const withBalance = rows.map((r: any) => {
       const amt = parseFloat(String(r.amount));
       const isDebit = r.entryType === "debit";
       if (normalBalance === "debit") {
@@ -247,6 +280,7 @@ router.get("/ledger", async (req, res) => {
 
 router.get("/trial-balance", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const { from, to } = req.query as { from?: string; to?: string };
 
     const conditions: Parameters<typeof and>[0][] = [];
@@ -274,9 +308,9 @@ router.get("/trial-balance", async (req, res) => {
       .where(eq(chartOfAccounts.isActive, true))
       .orderBy(asc(chartOfAccounts.code));
 
-    const aggMap = new Map(txAgg.map((r) => [r.accountId, r]));
+    const aggMap = new Map<string | null, { totalDebit: string; totalCredit: string }>(txAgg.map((r: any) => [r.accountId, r]));
 
-    const rows = accounts.map((acct) => {
+    const rows = accounts.map((acct: any) => {
       const agg = aggMap.get(acct.id);
       const debit = parseFloat(agg?.totalDebit ?? "0");
       const credit = parseFloat(agg?.totalCredit ?? "0");
@@ -294,8 +328,8 @@ router.get("/trial-balance", async (req, res) => {
       };
     });
 
-    const totalDebit = rows.reduce((s, r) => s + r.totalDebit, 0);
-    const totalCredit = rows.reduce((s, r) => s + r.totalCredit, 0);
+    const totalDebit = rows.reduce((s: number, r: { totalDebit: number }) => s + r.totalDebit, 0);
+    const totalCredit = rows.reduce((s: number, r: { totalCredit: number }) => s + r.totalCredit, 0);
 
     res.json({ rows, totalDebit, totalCredit });
   } catch (err) {

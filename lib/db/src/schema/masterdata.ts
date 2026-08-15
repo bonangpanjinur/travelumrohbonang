@@ -94,8 +94,11 @@ export const equipment = pgTable("equipment", {
   totalStock: integer("total_stock").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
   sortOrder: integer("sort_order"),
+  branchId: text("branch_id"), // NULL = equipment global; terisi untuk branch tenant
   createdAt: timestamp("created_at", { withTimezone: true }),
-});
+}, (t) => [
+  index("idx_equipment_branch_id").on(t.branchId),
+]);
 
 export const currencies = pgTable("currencies", {
   id: text("id").primaryKey(),

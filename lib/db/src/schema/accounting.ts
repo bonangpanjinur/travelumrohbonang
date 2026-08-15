@@ -23,10 +23,12 @@ export const chartOfAccounts = pgTable("chart_of_accounts", {
   isActive: boolean("is_active").notNull().default(true),
   description: text("description"),
   sortOrder: integer("sort_order").notNull().default(0),
+  branchId: text("branch_id"), // NULL = akun global; terisi untuk branch tenant
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_coa_code").on(t.code),
   index("idx_coa_type").on(t.type),
+  index("idx_coa_branch_id").on(t.branchId),
 ]);
 
 // ── Bank Mutations ────────────────────────────────────────────────────────────
