@@ -333,6 +333,8 @@ router.post("/:id/copy-to-departure", async (req, res) => {
     const { id } = req.params;
     const { departure_id } = req.body ?? {};
     if (!departure_id) return res.status(400).json({ error: "departure_id wajib diisi" });
+    if (!(await canAccessItinerary(req, id))) return res.status(403).json({ error: "Itinerary sumber berada di luar scope Anda" });
+    if (!(await canAccessDeparture(req, departure_id))) return res.status(403).json({ error: "Keberangkatan tujuan berada di luar scope Anda" });
 
     // Load sumber itinerary + days
     const [source] = await db.select().from(itineraries).where(eq(itineraries.id, id)).limit(1);
@@ -345,7 +347,7 @@ router.post("/:id/copy-to-departure", async (req, res) => {
       .orderBy(asc(itineraryDays.dayNumber));
 
     // Buat itinerary baru + copy semua hari dalam satu transaksi
-    const newItinerary = await db.transaction(async (tx) => {
+    const newItinerary = await db.transaction(async (tx: any) => {
       const newId = crypto.randomUUID();
       const [created] = await tx
         .insert(itineraries)
@@ -361,7 +363,7 @@ router.post("/:id/copy-to-departure", async (req, res) => {
 
       if (sourceDays.length > 0) {
         await tx.insert(itineraryDays).values(
-          sourceDays.map((d) => ({
+          sourceDays.map((d: any) => ({
             id: crypto.randomUUID(),
             itineraryId: newId,
             dayNumber: d.dayNumber,
