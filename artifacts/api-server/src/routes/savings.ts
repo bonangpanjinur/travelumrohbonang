@@ -207,7 +207,7 @@ router.post("/:id/use", async (req, res) => {
 
     // F1-02: Seluruh operasi dalam satu transaksi DB dengan SELECT FOR UPDATE
     // untuk mencegah race condition (double spending) saat dua request bersamaan.
-    const { updatedAccount, txId } = await db.transaction(async (tx) => {
+    const { updatedAccount, txId } = await db.transaction(async (tx: any) => {
       // Kunci baris rekening tabungan (FOR UPDATE) — request bersamaan akan antre
       const locked = await tx.execute(
         sql`SELECT * FROM savings_accounts WHERE id = ${accountId} AND user_id = ${userId} FOR UPDATE`,

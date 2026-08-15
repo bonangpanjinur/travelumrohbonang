@@ -292,18 +292,28 @@ router.post("/:id/reject-withdrawal/:txId", async (req, res) => {
     if (!(await assertSavingsAccountScope(req, id))) return res.status(403).json({ error: "Akses rekening tabungan ditolak untuk scope Anda" });
     const adminId = (req as any).user?.id as string | undefined;
     const reason = String((req.body as any)?.reason ?? "").trim() || null;
-    const [txRow] = await db.select().from(savingsTransactions).where(and(eq(savingsTransactions.id, txId), eq(savingsTransactions.accountId, id))).limit(1);
-    if (!txRow) return res.status(404).json({ error: "Transaction not found" });
-    if (txRow.type !== "withdrawal" || txRow.status !== "pending") return res.status(409).json({ error: "Withdrawal sudah diproses atau tidak valid" });
-    await db.transaction(async (txDb: any) => {
-      await txDb.update(savingsTransactions).set({ status: "rejected", rejectionReason: reason, recordedBy: adminId ?? null, verifiedAt: new Date() }).where(and(eq(savingsTransactions.id, txId), eq(savingsTransactions.status, "pending")));
-      await txDb.update(savingsAccounts).set({ status: "active", updatedAt: new Date() }).where(eq(savingsAccounts.id, id));
+    const result = await db.transaction(async (txDb: any) => {
+      const [account] = await txDb.select().from(savingsAccounts).where(eq(savingsAccounts.id, id)).for("update").limit(1);
+      if (!account) throw Object.assign(new Error("Account not found"), { status: 404 });
+      const [txRow] = await txDb.select().from(savingsTransactions)
+        .where(and(eq(savingsTransactions.id, txId), eq(savingsTransactions.accountId, id))).for("update").limit(1);
+      if (!txRow) throw Object.assign(new Error("Transaction not found"), { status: 404 });
+      if (txRow.type !== "withdrawal" || txRow.status !== "pending") throw Object.assign(new Error("Withdrawal sudah diproses atau tidak valid"), { status: 409 });
+      const [updatedTx] = await txDb.update(savingsTransactions)
+        .set({ status: "rejected", rejectionReason: reason, recordedBy: adminId ?? null, verifiedAt: new Date() })
+        .where(and(eq(savingsTransactions.id, txId), eq(savingsTransactions.status, "pending")))
+        .returning();
+      if (!updatedTx) throw Object.assign(new Error("Withdrawal sudah diproses oleh admin lain"), { status: 409 });
+      const [updatedAccount] = await txDb.update(savingsAccounts)
+        .set({ status: "active", updatedAt: new Date() })
+        .where(eq(savingsAccounts.id, id)).returning();
+      return { account: updatedAccount ?? account };
     });
-    const [account] = await db.select().from(savingsAccounts).where(eq(savingsAccounts.id, id)).limit(1);
-    if (account) await createNotification({ userId: account.userId, title: "Pencairan Tabungan Ditolak", message: reason ? `Permintaan pencairan ditolak: ${reason}` : "Permintaan pencairan tabungan ditolak." });
-    res.json({ ok: true });
-  } catch (e) {
+    await createNotification({ userId: result.account.userId, title: "Pencairan Tabungan Ditolak", message: reason ? `Permintaan pencairan ditolak: ${reason}` : "Permintaan pencairan tabungan ditolak." });
+    res.json({ ok: true, account: result.account });
+  } catch (e: any) {
     console.error("[admin/savings] reject withdrawal error:", e);
+    if (e?.status) return res.status(e.status).json({ error: e.message });
     res.status(500).json({ error: "Failed to reject withdrawal" });
   }
 });
@@ -317,44 +327,43 @@ router.post("/:id/refund", async (req, res) => {
     const { amount, notes } = req.body as { amount: number; notes?: string };
     if (!Number.isSafeInteger(amount) || amount <= 0) return res.status(400).json({ error: "amount harus berupa bilangan bulat positif" });
 
-    const [account] = await db.select().from(savingsAccounts).where(eq(savingsAccounts.id, id)).limit(1);
-    if (!account) return res.status(404).json({ error: "Account not found" });
-    if (account.currentBalance < amount) return res.status(400).json({ error: "Saldo tidak mencukupi" });
-
-    const now = new Date();
-    const txId = crypto.randomUUID();
-
-    await db.insert(savingsTransactions).values({
-      id: txId,
-      accountId: id,
-      amount: -Math.abs(amount),
-      type: "refund",
-      status: "verified",
-      notes: notes ?? "Pencairan tabungan oleh admin",
-      recordedBy: adminId ?? null,
-      verifiedAt: now,
-      createdAt: now,
+    const result = await db.transaction(async (txDb: any) => {
+      const [account] = await txDb.select().from(savingsAccounts).where(eq(savingsAccounts.id, id)).for("update").limit(1);
+      if (!account) throw Object.assign(new Error("Account not found"), { status: 404 });
+      if (account.currentBalance < amount) throw Object.assign(new Error("Saldo tidak mencukupi"), { status: 400 });
+      const now = new Date();
+      const txId = crypto.randomUUID();
+      await txDb.insert(savingsTransactions).values({
+        id: txId,
+        accountId: id,
+        amount: -Math.abs(amount),
+        type: "refund",
+        status: "verified",
+        notes: notes ?? "Pencairan tabungan oleh admin",
+        recordedBy: adminId ?? null,
+        verifiedAt: now,
+        createdAt: now,
+      });
+      const [updated] = await txDb.update(savingsAccounts)
+        .set({
+          currentBalance: sql`current_balance - ${Math.abs(amount)}`,
+          status: account.currentBalance - Math.abs(amount) <= 0 ? "withdrawn" : account.status,
+          updatedAt: now,
+        })
+        .where(eq(savingsAccounts.id, id)).returning();
+      return { account, updated };
     });
-
-    const [updated] = await db
-      .update(savingsAccounts)
-      .set({
-        currentBalance: sql`current_balance - ${Math.abs(amount)}`,
-        status: account.currentBalance - Math.abs(amount) <= 0 ? "withdrawn" : account.status,
-        updatedAt: now,
-      })
-      .where(eq(savingsAccounts.id, id))
-      .returning();
 
     await createNotification({
-      userId: account.userId,
+      userId: result.account.userId,
       title: "Tabungan Dicairkan",
-      message: `Penarikan sebesar Rp${Math.abs(amount).toLocaleString("id-ID")} telah diproses. Sisa saldo: Rp${updated.currentBalance.toLocaleString("id-ID")}.`,
+      message: `Penarikan sebesar Rp${Math.abs(amount).toLocaleString("id-ID")} telah diproses. Sisa saldo: Rp${result.updated.currentBalance.toLocaleString("id-ID")}.`,
     });
 
-    res.json({ account: updated });
-  } catch (e) {
+    res.json({ account: result.updated });
+  } catch (e: any) {
     console.error("[admin/savings] refund error:", e);
+    if (e?.status) return res.status(e.status).json({ error: e.message });
     res.status(500).json({ error: "Failed to process refund" });
   }
 });
