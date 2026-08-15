@@ -12,6 +12,7 @@
 import { Router } from "express";
 import {
   db,
+  auditLogs,
   savingsAccounts,
   savingsTransactions,
   eq,
@@ -274,6 +275,15 @@ router.post("/:id/approve-withdrawal/:txId", async (req, res) => {
       const now = new Date();
       await txDb.update(savingsTransactions).set({ status: "verified", recordedBy: adminId ?? null, verifiedAt: now }).where(eq(savingsTransactions.id, txId));
       const [updated] = await txDb.update(savingsAccounts).set({ currentBalance: sql`current_balance - ${amount}`, status: "withdrawn", updatedAt: now }).where(eq(savingsAccounts.id, id)).returning();
+      await txDb.insert(auditLogs).values({
+        id: crypto.randomUUID(),
+        userId: adminId ?? null,
+        action: "savings.withdrawal.approved",
+        entityType: "savings_transaction",
+        entityId: txId,
+        metadata: { accountId: id, amount },
+        createdAt: now,
+      });
       return { updated, amount };
     });
     await createNotification({ userId: result.updated.userId, title: "Pencairan Tabungan Disetujui", message: `Pencairan Rp${result.amount.toLocaleString("id-ID")} telah disetujui.` });
@@ -307,6 +317,15 @@ router.post("/:id/reject-withdrawal/:txId", async (req, res) => {
       const [updatedAccount] = await txDb.update(savingsAccounts)
         .set({ status: "active", updatedAt: new Date() })
         .where(eq(savingsAccounts.id, id)).returning();
+      await txDb.insert(auditLogs).values({
+        id: crypto.randomUUID(),
+        userId: adminId ?? null,
+        action: "savings.withdrawal.rejected",
+        entityType: "savings_transaction",
+        entityId: txId,
+        metadata: { accountId: id, reason },
+        createdAt: new Date(),
+      });
       return { account: updatedAccount ?? account };
     });
     await createNotification({ userId: result.account.userId, title: "Pencairan Tabungan Ditolak", message: reason ? `Permintaan pencairan ditolak: ${reason}` : "Permintaan pencairan tabungan ditolak." });
@@ -351,6 +370,15 @@ router.post("/:id/refund", async (req, res) => {
           updatedAt: now,
         })
         .where(eq(savingsAccounts.id, id)).returning();
+      await txDb.insert(auditLogs).values({
+        id: crypto.randomUUID(),
+        userId: adminId ?? null,
+        action: "savings.refund.processed",
+        entityType: "savings_account",
+        entityId: id,
+        metadata: { amount: Math.abs(amount), transactionId: txId },
+        createdAt: now,
+      });
       return { account, updated };
     });
 
