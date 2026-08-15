@@ -5,6 +5,7 @@ import { packageDepartures } from "./packages";
 export const manifests = pgTable("manifests", {
   id: text("id").primaryKey(),
   departureId: text("departure_id").references(() => packageDepartures.id, { onDelete: "cascade" }),
+  branchId: text("branch_id"), // NULL = legacy/ambiguous snapshot; global-admin only
   printedAt: timestamp("printed_at", { withTimezone: true }).defaultNow(),
   printedBy: text("printed_by"), // admin user id
   totalPilgrims: integer("total_pilgrims").notNull().default(0),
@@ -12,4 +13,5 @@ export const manifests = pgTable("manifests", {
   snapshotJson: text("snapshot_json"), // summary JSON (not full data)
 }, (t) => [
   index("idx_manifests_departure_id").on(t.departureId),
+  index("idx_manifests_branch_id").on(t.branchId),
 ]);

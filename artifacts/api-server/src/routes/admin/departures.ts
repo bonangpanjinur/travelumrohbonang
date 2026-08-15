@@ -37,6 +37,20 @@ import { STAFF_ROLES } from "../../lib/roleConstants";
 // mergeParams: true so req.params.packageId from parent router is accessible here
 const router = Router({ mergeParams: true });
 
+async function canAccessDeparture(req: any, departureId: string) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  const scopeCond = buildBookingScopeCondition(scope);
+  const accessCheck = await db.execute(sql`
+    SELECT 1 FROM bookings b
+    WHERE b.departure_id = ${departureId}
+      AND ${scopeCond}
+    LIMIT 1
+  `);
+  const rows = (accessCheck as any).rows ?? accessCheck;
+  return rows.length > 0;
+}
+
 // Agents have read-only access — block writes at the router level
 router.use((req, res, next) => {
   if (req.method === "GET") return next();
@@ -204,19 +218,8 @@ router.get("/:id/manifest-data", async (req, res) => {
     const searchTerm = search?.trim() || "";
 
     // D-2: scope check — verifikasi akses ke keberangkatan ini
-    const scope = await resolveUserScope(req);
-    if (scope.type !== "global") {
-      const scopeCond = buildBookingScopeCondition(scope);
-      const accessCheck = await db.execute(sql`
-        SELECT 1 FROM bookings b
-        WHERE b.departure_id = ${departureId}
-          AND ${scopeCond}
-        LIMIT 1
-      `);
-      const rows = (accessCheck as any).rows ?? accessCheck;
-      if (rows.length === 0) {
-        return res.status(403).json({ error: "Anda tidak memiliki akses ke manifest keberangkatan ini." });
-      }
+    if (!(await canAccessDeparture(req, departureId))) {
+      return res.status(403).json({ error: "Anda tidak memiliki akses ke manifest keberangkatan ini." });
     }
 
     const [departure] = await db
@@ -241,6 +244,7 @@ router.get("/:id/manifest-data", async (req, res) => {
     }
 
     // Use raw SQL join so we can filter + paginate in one query
+    const manifestScope = buildBookingScopeCondition(await resolveUserScope(req));
     const searchFilter = searchTerm
       ? sql`AND (
           bp.name ILIKE ${"%" + searchTerm + "%"}
@@ -276,6 +280,7 @@ router.get("/:id/manifest-data", async (req, res) => {
         JOIN bookings b ON b.id = bp.booking_id
         LEFT JOIN check_ins ci ON ci.pilgrim_id = bp.id AND ci.departure_id = ${departureId}
         WHERE b.departure_id = ${departureId}
+          AND ${manifestScope}
           AND b.status IN ('paid','confirmed','processing','completed')
           ${searchFilter}
         ORDER BY bp.name
@@ -286,6 +291,7 @@ router.get("/:id/manifest-data", async (req, res) => {
         FROM booking_pilgrims bp
         JOIN bookings b ON b.id = bp.booking_id
         WHERE b.departure_id = ${departureId}
+          AND ${manifestScope}
           AND b.status IN ('paid','confirmed','processing','completed')
           ${searchFilter}
       `),
@@ -357,6 +363,9 @@ router.get("/:id/manifest-data", async (req, res) => {
 router.get("/:id/manifest.pdf", async (req, res) => {
   try {
     const departureId = req.params.id as string;
+    if (!(await canAccessDeparture(req, departureId))) {
+      return res.status(403).json({ error: "Anda tidak memiliki akses ke manifest keberangkatan ini." });
+    }
 
     const [departure] = await db
       .select({
@@ -383,12 +392,14 @@ router.get("/:id/manifest.pdf", async (req, res) => {
     const contact = (contactRow?.value ?? {}) as Record<string, unknown>;
 
     const departureBookings = await db
-      .select({ id: bookings.id, bookingCode: bookings.bookingCode })
+      .select({ id: bookings.id, bookingCode: bookings.bookingCode, branchId: bookings.branchId })
       .from(bookings)
-      .where(eq(bookings.departureId, departureId));
+      .where(sql`${bookings.departureId} = ${departureId} AND ${buildBookingScopeCondition(await resolveUserScope(req), "bookings")}`);
 
-    const bookingIds = departureBookings.map((b) => b.id);
-    const bookingCodeById = new Map(departureBookings.map((b) => [b.id, b.bookingCode]));
+    const bookingIds = departureBookings.map((b: any) => b.id);
+    const bookingCodeById = new Map(departureBookings.map((b: any) => [b.id, b.bookingCode]));
+    const departureBranches = new Set(departureBookings.map((b: any) => b.branchId).filter(Boolean));
+    const manifestBranchId = departureBranches.size === 1 ? [...departureBranches][0] : null;
 
     // Explicit column select — avoids enumerating columns that may not yet exist in DB
     const pilgrims = bookingIds.length
@@ -455,6 +466,7 @@ router.get("/:id/manifest.pdf", async (req, res) => {
     db.insert(manifests).values({
       id: crypto.randomUUID(),
       departureId,
+      branchId: manifestBranchId,
       printedBy: (req as any).user?.id ?? "admin",
       totalPilgrims: pilgrims.length,
       format: "pdf",
@@ -1141,6 +1153,9 @@ router.post("/:id/blast", async (req, res) => {
 router.get("/:id/manifest-summary", async (req, res) => {
   try {
     const departureId = req.params.id as string;
+    if (!(await canAccessDeparture(req, departureId))) {
+      return res.status(403).json({ error: "Anda tidak memiliki akses ke manifest keberangkatan ini." });
+    }
 
     const [confirmedResult] = await db
       .select({ total: count(bookingPilgrims.id) })
@@ -1149,6 +1164,7 @@ router.get("/:id/manifest-summary", async (req, res) => {
       .where(
         and(
           eq(bookings.departureId, departureId),
+          sql`${buildBookingScopeCondition(await resolveUserScope(req), "bookings")}`,
           inArray(bookings.status, ["paid", "confirmed", "processing", "completed"]),
         ),
       );
@@ -1159,6 +1175,7 @@ router.get("/:id/manifest-summary", async (req, res) => {
       FROM booking_pilgrims bp
       JOIN bookings b ON b.id = bp.booking_id
       WHERE b.departure_id = ${departureId}
+        AND ${buildBookingScopeCondition(await resolveUserScope(req))}
         AND b.status IN ('paid','confirmed','processing','completed')
         AND (
           SELECT COUNT(*) FROM pilgrim_documents pd
@@ -1187,6 +1204,9 @@ router.get("/:id/manifest-summary", async (req, res) => {
 router.get("/:id/manifest-history", async (req, res) => {
   try {
     const departureId = req.params.id as string;
+    if (!(await canAccessDeparture(req, departureId))) {
+      return res.status(403).json({ error: "Anda tidak memiliki akses ke riwayat manifest ini." });
+    }
     const history = await db
       .select({
         id: manifests.id,
@@ -1226,7 +1246,10 @@ router.get("/:id/manifest-history", async (req, res) => {
  */
 router.get("/:id/manifest-history/:snapshotId", async (req, res) => {
   try {
-    const { snapshotId } = req.params;
+    const { snapshotId, id: departureId } = req.params;
+    if (!(await canAccessDeparture(req, departureId))) {
+      return res.status(403).json({ error: "Anda tidak memiliki akses ke riwayat manifest ini." });
+    }
     const [row] = await db
       .select({
         id: manifests.id,
@@ -1236,7 +1259,7 @@ router.get("/:id/manifest-history/:snapshotId", async (req, res) => {
         snapshotJson: manifests.snapshotJson,
       })
       .from(manifests)
-      .where(eq(manifests.id, snapshotId))
+      .where(and(eq(manifests.id, snapshotId), eq(manifests.departureId, departureId)))
       .limit(1);
 
     if (!row) {
