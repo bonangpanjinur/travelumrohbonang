@@ -19,7 +19,7 @@ import {
 export const savingsAccounts = pgTable("savings_accounts", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),                      // → profiles.id
-  branchId: text("branch_id"),                            // NULL = legacy/global-admin only
+  branchId: text("branch_id").notNull(),                  // branch tenant atau HQ
   targetPackageId: text("target_package_id"),             // → packages.id (optional)
   targetPackageName: text("target_package_name"),         // denormalized label
   targetAmount: integer("target_amount").notNull().default(0),
@@ -37,7 +37,7 @@ export const savingsAccounts = pgTable("savings_accounts", {
 export const savingsTransactions = pgTable("savings_transactions", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),                // → savingsAccounts.id
-  branchId: text("branch_id"),                            // NULL = legacy/global-admin only
+  branchId: text("branch_id").notNull(),                  // branch tenant atau HQ
   amount: integer("amount").notNull(),                    // positive = kredit, negative = debit
   type: text("type").notNull(),                           // deposit | withdrawal | booking_payment | refund
   status: text("status").notNull().default("pending"),    // pending | verified | rejected

@@ -48,7 +48,7 @@ export const agentCommissions = pgTable("agent_commissions", {
   id: text("id").primaryKey(),
   bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
   agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
-  branchId: text("branch_id"), // NULL = legacy/global-admin only
+  branchId: text("branch_id").notNull(), // branch tenant atau HQ
   amount: integer("amount").notNull(),
   // F3-04: enum type — migration 20260730000001 harus dijalankan sebelum push schema
   status: commissionStatus("status").notNull().default("pending"),
@@ -62,7 +62,7 @@ export const agentCommissions = pgTable("agent_commissions", {
 export const agentWithdrawals = pgTable("agent_withdrawals", {
   id: text("id").primaryKey(),
   agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
-  branchId: text("branch_id"), // NULL = legacy/global-admin only
+  branchId: text("branch_id").notNull(), // branch tenant atau HQ
   amount: integer("amount").notNull(),
   // F3-04: enum type — migration 20260730000001 harus dijalankan sebelum push schema
   status: withdrawalStatus("status").notNull().default("requested"), // requested | approved | rejected | paid

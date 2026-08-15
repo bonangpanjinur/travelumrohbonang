@@ -431,6 +431,7 @@ router.post("/bulk-verify", requireFinance, async (req, res) => {
           await db.insert(bookingPayments).values({
             id: crypto.randomUUID(),
             bookingId: payment.bookingId,
+            branchId: (payment.branchId as string | null) ?? "hq",
             type: payment.paymentType ?? "manual",
             amount: payment.amount,
             paidAt: payment.paidAt ?? now,
@@ -527,7 +528,7 @@ router.patch("/verify/:id", requireFinance, async (req, res) => {
         await tx.insert(bookingPayments).values({
           id: crypto.randomUUID(),
           bookingId: String(payment["booking_id"]),
-          branchId: (payment["branch_id"] as string | null) ?? null,
+          branchId: (payment["branch_id"] as string | null) ?? "hq",
           type: (payment["payment_type"] as string | null) ?? "manual",
           amount: Number(payment["amount"]),
           paidAt: now,
@@ -829,7 +830,7 @@ router.post("/", requireFinance, validate(AdminRecordPaymentRequest), async (req
         .values({
           id: crypto.randomUUID(),
           bookingId,
-          branchId: booking.branchId ?? null,
+          branchId: booking.branchId ?? "hq",
           type: body.type,
           amount: body.amount,
           paidAt,

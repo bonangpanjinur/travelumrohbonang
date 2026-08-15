@@ -59,7 +59,7 @@ async function canAccessBooking(req: any, bookingId?: string | null) {
   return ((rows as any).rows ?? rows).length > 0;
 }
 
-async function resolveManualTenant(req: any, bookingId?: string | null, requestedBranchId?: string | null, globalReason?: string | null) {
+async function resolveManualTenant(req: any, bookingId?: string | null, requestedBranchId?: string | null) {
   const scope = await resolveUserScope(req);
   if (bookingId) {
     const rows = await db.execute(sql`SELECT branch_id FROM bookings WHERE id = ${bookingId} LIMIT 1`);
@@ -77,9 +77,7 @@ async function resolveManualTenant(req: any, bookingId?: string | null, requeste
     if (((rows as any).rows ?? rows).length === 0) throw Object.assign(new Error("branchId tidak ditemukan"), { status: 422 });
     return { branchId: requestedBranchId, descriptionPrefix: "" };
   }
-  const reason = String(globalReason ?? "").trim();
-  if (reason.length < 10) throw Object.assign(new Error("Transaksi global tanpa branchId wajib memiliki globalReason minimal 10 karakter"), { status: 422 });
-  return { branchId: null, descriptionPrefix: `[GLOBAL-AUDIT: ${reason}] ` };
+  return { branchId: "hq", descriptionPrefix: "[HQ] " };
 }
 
 async function requireGlobal(req: any, res: any) {
@@ -154,14 +152,13 @@ router.post("/journal", async (req, res) => {
       }>;
       bookingId?: string;
       branchId?: string;
-      globalReason?: string;
     };
 
     if (!Array.isArray(entries) || entries.length < 2) {
       return res.status(400).json({ error: "entries harus berisi minimal 2 baris (debit + kredit)" });
     }
 
-    const bodyTenant = await resolveManualTenant(req, (req.body as { bookingId?: string }).bookingId, (req.body as { branchId?: string }).branchId, (req.body as { globalReason?: string }).globalReason);
+    const bodyTenant = await resolveManualTenant(req, (req.body as { bookingId?: string }).bookingId, (req.body as { branchId?: string }).branchId);
 
     // Validasi setiap entry
     let totalDebit = 0;
@@ -238,13 +235,12 @@ router.post("/", async (req, res) => {
       entryType?: string;
       bookingId?: string;
       branchId?: string;
-      globalReason?: string;
     };
 
     if (!body.type || !body.category || !body.amount) {
       return res.status(400).json({ error: "type, category, and amount are required" });
     }
-    const bodyTenant = await resolveManualTenant(req, body.bookingId, body.branchId, body.globalReason);
+    const bodyTenant = await resolveManualTenant(req, body.bookingId, body.branchId);
 
     const amount = parseFloat(String(body.amount));
     if (!isFinite(amount) || amount <= 0) {

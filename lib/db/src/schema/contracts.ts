@@ -45,7 +45,7 @@ export const refundRequests = pgTable("refund_requests", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),        // references auth.users — no local FK
   bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
-  branchId: text("branch_id"),              // NULL = legacy/global-admin only
+  branchId: text("branch_id").notNull(),    // branch tenant atau HQ
   reason: text("reason"),
   amount: integer("amount"),
   bankName: text("bank_name"),

@@ -204,7 +204,7 @@ router.patch("/:id", async (req, res) => {
         await db.insert(bookingPayments).values({
           id: crypto.randomUUID(),
           bookingId,
-          branchId: scopedBooking.branchId ?? null,
+          branchId: scopedBooking.branchId ?? "hq",
           type: "installment",
           amount,
           paidAt: paidAtDate,

@@ -15,6 +15,7 @@ import {
   db,
   bookings,
   bookingPayments,
+  branches,
   financialTransactions,
   accountingPeriods,
   notifications,
@@ -180,6 +181,15 @@ export async function recordFinancialTransaction({
       .limit(1);
     branchId = booking?.branchId ?? null;
   }
+  if (!branchId) {
+    const [hq] = await dbRunner
+      .select({ id: branches.id })
+      .from(branches)
+      .where(eq(branches.id, "hq"))
+      .limit(1);
+    if (!hq?.id) throw new Error("Branch HQ belum tersedia; jalankan migration 20260815000006 terlebih dahulu");
+    branchId = hq.id;
+  }
 
   if (referenceNumber) {
     const [existing] = await dbRunner
@@ -302,7 +312,7 @@ export async function syncFromGatewayTransaction({
     await tx.insert(bookingPayments).values({
       id: crypto.randomUUID(),
       bookingId,
-      branchId: booking.branchId ?? null,
+      branchId: booking.branchId ?? "hq",
       type: "gateway",
       amount,
       paidAt: new Date(),

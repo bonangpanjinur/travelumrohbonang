@@ -208,14 +208,14 @@ router.post("/transactions", async (req, res) => {
     }
 
     // Persist transaction
-    let branchId: string | null = null;
+    let branchId: string = "hq";
     if (bookingId) {
       const [booking] = await db
         .select({ branchId: bookings.branchId })
         .from(bookings)
         .where(eq(bookings.id, bookingId))
         .limit(1);
-      branchId = booking?.branchId ?? null;
+      branchId = booking?.branchId ?? "hq";
     }
     const id = crypto.randomUUID();
     const [saved] = await db

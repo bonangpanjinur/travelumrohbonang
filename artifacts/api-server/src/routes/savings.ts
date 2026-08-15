@@ -109,7 +109,7 @@ router.post("/", async (req, res) => {
     const [account] = await db.insert(savingsAccounts).values({
       id,
       userId,
-      branchId: profile?.branchId ?? null,
+      branchId: profile?.branchId ?? "hq",
       targetPackageId: targetPackageId ?? null,
       targetPackageName,
       targetAmount: resolvedTarget,
@@ -181,7 +181,7 @@ router.post("/:id/deposit", async (req, res) => {
     const [tx] = await db.insert(savingsTransactions).values({
       id: txId,
       accountId: account.id,
-      branchId: account.branchId ?? null,
+      branchId: account.branchId ?? "hq",
       amount,
       type: "deposit",
       status: "pending",
@@ -239,7 +239,7 @@ router.post("/:id/use", async (req, res) => {
       await tx.insert(savingsTransactions).values({
         id: newTxId,
         accountId: String(account["id"]),
-        branchId: (account["branch_id"] as string | null) ?? null,
+        branchId: (account["branch_id"] as string | null) ?? "hq",
         amount: -Math.abs(amount),
         type: "booking_payment",
         status: "verified",
@@ -307,7 +307,7 @@ router.post("/:id/close", async (req, res) => {
       await db.insert(savingsTransactions).values({
         id: crypto.randomUUID(),
         accountId: account.id,
-        branchId: account.branchId ?? null,
+        branchId: account.branchId ?? "hq",
         amount: -account.currentBalance,
         type: "withdrawal",
         status: "pending",

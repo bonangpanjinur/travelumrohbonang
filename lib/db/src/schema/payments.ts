@@ -11,7 +11,7 @@ import { bookings } from "./bookings";
 export const installmentSchedules = pgTable("installment_schedules", {
   id: text("id").primaryKey(),
   bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
-  branchId: text("branch_id"), // NULL = legacy/global-admin only
+  branchId: text("branch_id").notNull(), // branch tenant atau HQ
   installmentNumber: integer("installment_number").notNull(), // 0=DP, 1..n=cicilan ke-n
   dueDate: timestamp("due_date", { withTimezone: true }).notNull(),
   amount: integer("amount").notNull(),
@@ -33,7 +33,7 @@ export const installmentSchedules = pgTable("installment_schedules", {
 export const paymentGatewayTransactions = pgTable("payment_gateway_transactions", {
   id: text("id").primaryKey(),
   bookingId: text("booking_id").references(() => bookings.id, { onDelete: "set null" }),
-  branchId: text("branch_id"), // NULL = legacy/global-admin only
+  branchId: text("branch_id").notNull(), // branch tenant atau HQ
   gateway: text("gateway").notNull(),                  // midtrans | xendit
   orderId: text("order_id").notNull(),
   gatewayTransactionId: text("gateway_transaction_id"),
@@ -61,7 +61,7 @@ export const paymentGatewayTransactions = pgTable("payment_gateway_transactions"
 export const payments = pgTable("payments", {
   id: text("id").primaryKey(),
   bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
-  branchId: text("branch_id"), // NULL = legacy/global-admin only
+  branchId: text("branch_id").notNull(), // branch tenant atau HQ
   paymentMethod: text("payment_method"),
   amount: integer("amount").notNull(),
   status: text("status").notNull().default("pending"),
@@ -95,7 +95,7 @@ export const paymentProofAccessLogs = pgTable("payment_proof_access_logs", {
 export const financialTransactions = pgTable("financial_transactions", {
   id: text("id").primaryKey(),
   bookingId: text("booking_id").references(() => bookings.id, { onDelete: "set null" }),
-  branchId: text("branch_id"), // NULL = legacy/global-admin only
+  branchId: text("branch_id").notNull(), // branch tenant atau HQ
   category: text("category").notNull(),
   type: text("type").notNull(),
   amount: numeric("amount").notNull(),

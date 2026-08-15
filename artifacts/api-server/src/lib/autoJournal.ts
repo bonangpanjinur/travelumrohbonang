@@ -23,7 +23,7 @@
  * savings_used            | 2-1103 (Hutang) | 4-1001 (Pendapatan Umroh)
  */
 
-import { db, financialTransactions, chartOfAccounts, accountingPeriods, bookings, agents, savingsTransactions, savingsAccounts, eq, and } from "@workspace/db";
+import { db, financialTransactions, chartOfAccounts, accountingPeriods, bookings, branches, agents, savingsTransactions, savingsAccounts, eq, and } from "@workspace/db";
 import { recordFinancialTransaction } from "./paymentSync";
 
 // Tipe generik untuk transaksi Drizzle (dipakai di semua fungsi jurnal)
@@ -74,6 +74,13 @@ async function getCoaId(code: string, runner: DbOrTx = db): Promise<string | nul
   return null;
 }
 
+async function resolveTenantBranchId(candidate: string | null | undefined, runner: DbOrTx = db): Promise<string> {
+  if (candidate) return candidate;
+  const [hq] = await runner.select({ id: branches.id }).from(branches).where(eq(branches.id, "hq")).limit(1);
+  if (!hq?.id) throw new Error("Branch HQ belum tersedia; jalankan migration 20260815000006 terlebih dahulu");
+  return hq.id;
+}
+
 // ── B1: Double-Entry Helper ───────────────────────────────────────────────────
 
 /**
@@ -116,9 +123,7 @@ async function recordDoubleEntry(opts: {
       .limit(1);
     branchId = booking?.branchId ?? null;
   }
-  if (!branchId) {
-    throw new Error(`Auto-journal tenant tidak dapat ditentukan untuk ${opts.referenceNumber}`);
-  }
+  branchId = await resolveTenantBranchId(branchId, runner);
 
   await (runner as typeof db).insert(financialTransactions).values([
     {
@@ -324,7 +329,8 @@ export async function journalCommissionWithdrawal(opts: {
     .from(agents)
     .where(eq(agents.id, opts.agentId))
     .limit(1);
-  if (!agent?.branchId) throw new Error(`Auto-journal komisi tanpa tenant: agent ${opts.agentId}`);
+  if (!agent) throw new Error(`Agent ${opts.agentId} tidak ditemukan untuk auto-journal komisi`);
+  const branchId = await resolveTenantBranchId(agent.branchId);
 
   const [debitAccountId, creditAccountId] = await Promise.all([
     getCoaId("5-2004"),
@@ -337,7 +343,7 @@ export async function journalCommissionWithdrawal(opts: {
     {
       id: crypto.randomUUID(),
       bookingId: null,
-      branchId: agent.branchId,
+      branchId,
       amount: String(opts.amount),
       type: "expense",
       category: "commission_withdrawal",
@@ -352,7 +358,7 @@ export async function journalCommissionWithdrawal(opts: {
     {
       id: crypto.randomUUID(),
       bookingId: null,
-      branchId: agent.branchId,
+      branchId,
       amount: String(opts.amount),
       type: "expense",
       category: "commission_withdrawal",
@@ -398,7 +404,7 @@ export async function journalSavingsDeposit(opts: {
       .limit(1);
     branchId = account?.branchId ?? null;
   }
-  if (!branchId) throw new Error(`Auto-journal tabungan tanpa tenant: transaksi ${opts.transactionId}`);
+  branchId = await resolveTenantBranchId(branchId);
 
   const [debitAccountId, creditAccountId] = await Promise.all([
     getCoaId("1-1101"),
