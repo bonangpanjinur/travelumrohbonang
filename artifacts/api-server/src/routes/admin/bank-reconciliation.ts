@@ -14,8 +14,58 @@ import {
   eq, and, or, gte, lte, isNull, sql, desc, asc, ne,
 } from "@workspace/db";
 import { sendAdminError } from "../../lib/adminApiError";
+import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
+
+async function bankMutationScopeCondition(req: any) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return sql`TRUE`;
+  if (scope.type === "branch" && scope.branchId) {
+    return sql`EXISTS (
+      SELECT 1 FROM booking_payments bp
+      JOIN bookings b ON b.id = bp.booking_id
+      WHERE bp.id = bank_mutations.matched_to AND b.branch_id = ${scope.branchId}
+    )`;
+  }
+  if (scope.type === "agent" && scope.agentId) {
+    return sql`EXISTS (
+      SELECT 1 FROM booking_payments bp
+      JOIN bookings b ON b.id = bp.booking_id
+      WHERE bp.id = bank_mutations.matched_to
+        AND (b.agent_id = ${scope.agentId}
+          OR (b.pic_type = 'agen' AND b.pic_id = ${scope.agentId}))
+    )`;
+  }
+  return sql`FALSE`;
+}
+
+async function canAccessBankMutation(req: any, mutationId: string) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  const condition = await bankMutationScopeCondition(req);
+  const rows = await db.execute(sql`
+    SELECT 1 FROM bank_mutations
+    WHERE id = ${mutationId} AND ${condition}
+    LIMIT 1
+  `);
+  return ((rows as any).rows ?? rows).length > 0;
+}
+
+async function canAccessPayment(req: any, paymentId: string) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  const rows = await db.execute(sql`
+    SELECT 1 FROM booking_payments bp
+    JOIN bookings b ON b.id = bp.booking_id
+    WHERE bp.id = ${paymentId}
+      AND ${scope.type === "branch"
+        ? sql`b.branch_id = ${scope.branchId ?? ""}`
+        : sql`b.agent_id = ${scope.agentId ?? ""} OR (b.pic_type = 'agen' AND b.pic_id = ${scope.agentId ?? ""})`}
+    LIMIT 1
+  `);
+  return ((rows as any).rows ?? rows).length > 0;
+}
 
 // ── GET / — list mutasi bank ──────────────────────────────────────────────────
 
@@ -28,7 +78,7 @@ router.get("/", async (req, res) => {
       to?: string;
     };
 
-    const conditions: Parameters<typeof and>[0][] = [];
+    const conditions: Parameters<typeof and>[0][] = [await bankMutationScopeCondition(req)];
     if (bankAccount) conditions.push(eq(bankMutations.bankAccount, bankAccount));
     if (matched === "true") conditions.push(eq(bankMutations.isMatched, true));
     if (matched === "false") conditions.push(eq(bankMutations.isMatched, false));
@@ -41,16 +91,17 @@ router.get("/", async (req, res) => {
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(bankMutations.mutationDate));
 
-    const totalKredit = rows.filter((r) => r.amount > 0).reduce((s, r) => s + r.amount, 0);
-    const totalDebit = rows.filter((r) => r.amount < 0).reduce((s, r) => s + Math.abs(r.amount), 0);
-    const matched_count = rows.filter((r) => r.isMatched).length;
+    const typedRows = rows as Array<{ amount: number; isMatched: boolean }>;
+    const totalKredit = typedRows.filter((r) => r.amount > 0).reduce((s: number, r) => s + r.amount, 0);
+    const totalDebit = typedRows.filter((r) => r.amount < 0).reduce((s: number, r) => s + Math.abs(r.amount), 0);
+    const matched_count = typedRows.filter((r) => r.isMatched).length;
 
     res.json({
       data: rows,
       stats: {
-        total: rows.length,
+        total: typedRows.length,
         matched: matched_count,
-        unmatched: rows.length - matched_count,
+        unmatched: typedRows.length - matched_count,
         totalKredit,
         totalDebit,
       },
@@ -78,6 +129,10 @@ router.post("/import", async (req, res) => {
 
     if (!Array.isArray(rows) || rows.length === 0) {
       return res.status(400).json({ error: "rows array required" });
+    }
+    const scope = await resolveUserScope(req);
+    if (scope.type !== "global") {
+      return res.status(403).json({ error: "Import mutasi bank hanya dapat dilakukan oleh admin global" });
     }
     if (!bankAccount) return res.status(400).json({ error: "bankAccount required" });
 
@@ -125,6 +180,12 @@ router.post("/import", async (req, res) => {
 router.patch("/:id", async (req, res) => {
   try {
     const { matchedTo, notes, isMatched } = req.body;
+    if (!(await canAccessBankMutation(req, req.params.id))) {
+      return res.status(403).json({ error: "Mutasi bank berada di luar scope Anda" });
+    }
+    if (matchedTo && !(await canAccessPayment(req, matchedTo))) {
+      return res.status(403).json({ error: "Pembayaran tujuan berada di luar scope Anda" });
+    }
 
     const patch: Record<string, unknown> = {};
     if (matchedTo !== undefined) {
@@ -153,6 +214,9 @@ router.patch("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
+    if (!(await canAccessBankMutation(req, req.params.id))) {
+      return res.status(403).json({ error: "Mutasi bank berada di luar scope Anda" });
+    }
     const [deleted] = await db
       .delete(bankMutations)
       .where(eq(bankMutations.id, req.params.id))
@@ -169,6 +233,10 @@ router.delete("/:id", async (req, res) => {
 
 router.post("/auto-match", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    if (scope.type !== "global") {
+      return res.status(403).json({ error: "Auto-match mutasi bank hanya dapat dilakukan oleh admin global" });
+    }
     // Fetch semua mutasi belum di-match yang berjumlah positif (kredit = uang masuk)
     const unmatched = await db
       .select()
