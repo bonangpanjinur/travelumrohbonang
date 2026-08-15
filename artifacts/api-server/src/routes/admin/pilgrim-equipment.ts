@@ -11,8 +11,31 @@ import {
   db, pilgrimEquipment, equipment, bookingPilgrims, bookings,
   eq, and, sql, inArray,
 } from "@workspace/db";
+import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
+
+async function bookingScopeCondition(req: any) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return sql`TRUE`;
+  if (scope.type === "branch" && scope.branchId) return sql`EXISTS (SELECT 1 FROM bookings b WHERE b.id = pilgrim_equipment.booking_id AND b.branch_id = ${scope.branchId})`;
+  if (scope.type === "agent" && scope.agentId) return sql`EXISTS (SELECT 1 FROM bookings b WHERE b.id = pilgrim_equipment.booking_id AND (b.agent_id = ${scope.agentId} OR (b.pic_type = 'agen' AND b.pic_id = ${scope.agentId})))`;
+  return sql`FALSE`;
+}
+
+async function canAccessBooking(req: any, bookingId: string) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  const rows = await db.execute(sql`SELECT 1 FROM bookings b WHERE b.id = ${bookingId} AND ${scope.type === "branch" ? sql`b.branch_id = ${scope.branchId ?? ""}` : sql`(b.agent_id = ${scope.agentId ?? ""} OR (b.pic_type = 'agen' AND b.pic_id = ${scope.agentId ?? ""}))`} LIMIT 1`);
+  return ((rows as any).rows ?? rows).length > 0;
+}
+
+async function canAccessDeparture(req: any, departureId: string) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  const rows = await db.execute(sql`SELECT 1 FROM bookings b WHERE b.departure_id = ${departureId} AND ${scope.type === "branch" ? sql`b.branch_id = ${scope.branchId ?? ""}` : sql`(b.agent_id = ${scope.agentId ?? ""} OR (b.pic_type = 'agen' AND b.pic_id = ${scope.agentId ?? ""}))`} LIMIT 1`);
+  return ((rows as any).rows ?? rows).length > 0;
+}
 
 // GET /api/admin/pilgrim-equipment?bookingId=X
 // GET /api/admin/pilgrim-equipment?masterPilgrimId=X  ← JM-DB02: by master pilgrim
@@ -42,7 +65,7 @@ router.get("/", async (req, res) => {
         return;
       }
 
-      const bpIds = bpRows.map((r) => r.id);
+      const bpIds = bpRows.map((r: { id: string }) => r.id);
       const rows = await db
         .select({
           id: pilgrimEquipment.id,
@@ -67,7 +90,7 @@ router.get("/", async (req, res) => {
         .leftJoin(equipment, eq(pilgrimEquipment.equipmentId, equipment.id))
         .leftJoin(bookingPilgrims, eq(pilgrimEquipment.pilgrimId, bookingPilgrims.id))
         .leftJoin(bookings, eq(pilgrimEquipment.bookingId, bookings.id))
-        .where(inArray(pilgrimEquipment.pilgrimId, bpIds));
+        .where(and(inArray(pilgrimEquipment.pilgrimId, bpIds), await bookingScopeCondition(req)));
 
       res.json({ data: rows });
       return;
@@ -96,7 +119,7 @@ router.get("/", async (req, res) => {
       .from(pilgrimEquipment)
       .leftJoin(equipment, eq(pilgrimEquipment.equipmentId, equipment.id))
       .leftJoin(bookingPilgrims, eq(pilgrimEquipment.pilgrimId, bookingPilgrims.id))
-      .where(eq(pilgrimEquipment.bookingId, bookingId!));
+      .where(and(eq(pilgrimEquipment.bookingId, bookingId!), await bookingScopeCondition(req)));
 
     res.json({ data: rows });
   } catch (e: any) {
@@ -115,6 +138,10 @@ router.post("/", async (req, res) => {
   const { pilgrimId, equipmentId, bookingId, notes } = req.body ?? {};
   if (!pilgrimId || !equipmentId || !bookingId) {
     res.status(400).json({ error: "pilgrimId, equipmentId, bookingId required" });
+    return;
+  }
+  if (!(await canAccessBooking(req, bookingId))) {
+    res.status(403).json({ error: "Booking berada di luar scope Anda" });
     return;
   }
   try {
@@ -153,15 +180,15 @@ router.patch("/bulk-status", async (req, res) => {
 
     // Fetch existing rows to compute stock deltas
     const existingRows = await db
-      .select({ id: pilgrimEquipment.id, status: pilgrimEquipment.status, equipmentId: pilgrimEquipment.equipmentId, quantity: pilgrimEquipment.quantity })
+      .select({ id: pilgrimEquipment.id, status: pilgrimEquipment.status, equipmentId: pilgrimEquipment.equipmentId, quantity: pilgrimEquipment.quantity, bookingId: pilgrimEquipment.bookingId })
       .from(pilgrimEquipment)
-      .where(inArray(pilgrimEquipment.id, ids));
+      .where(and(inArray(pilgrimEquipment.id, ids), await bookingScopeCondition(req)));
 
     const patch: Record<string, any> = { status };
     if (status === "distributed") patch.distributedAt = new Date();
     if (status === "returned") patch.returnedAt = new Date();
 
-    await db.update(pilgrimEquipment).set(patch).where(inArray(pilgrimEquipment.id, ids));
+    await db.update(pilgrimEquipment).set(patch).where(and(inArray(pilgrimEquipment.id, ids), await bookingScopeCondition(req)));
 
     // Aggregate stock deltas per equipment
     const stockDeltas = new Map<string, number>();
@@ -195,9 +222,9 @@ router.patch("/:id", async (req, res) => {
   try {
     // Fetch old status to calculate stock delta
     const [existing] = await db
-      .select({ status: pilgrimEquipment.status, equipmentId: pilgrimEquipment.equipmentId, quantity: pilgrimEquipment.quantity })
+      .select({ status: pilgrimEquipment.status, equipmentId: pilgrimEquipment.equipmentId, quantity: pilgrimEquipment.quantity, bookingId: pilgrimEquipment.bookingId })
       .from(pilgrimEquipment)
-      .where(eq(pilgrimEquipment.id, req.params.id));
+      .where(and(eq(pilgrimEquipment.id, req.params.id), await bookingScopeCondition(req)));
     if (!existing) { res.status(404).json({ error: "Not found" }); return; }
 
     const patch: Record<string, any> = {};
@@ -215,7 +242,7 @@ router.patch("/:id", async (req, res) => {
     const [updated] = await db
       .update(pilgrimEquipment)
       .set(patch)
-      .where(eq(pilgrimEquipment.id, req.params.id))
+      .where(and(eq(pilgrimEquipment.id, req.params.id), await bookingScopeCondition(req)))
       .returning();
 
     if (!updated) { res.status(404).json({ error: "Not found" }); return; }
@@ -244,7 +271,7 @@ router.patch("/:id", async (req, res) => {
 // DELETE /api/admin/pilgrim-equipment/:id
 router.delete("/:id", async (req, res) => {
   try {
-    await db.delete(pilgrimEquipment).where(eq(pilgrimEquipment.id, req.params.id));
+    await db.delete(pilgrimEquipment).where(and(eq(pilgrimEquipment.id, req.params.id), await bookingScopeCondition(req)));
     res.status(204).end();
   } catch (e) {
     console.error("[pilgrim-equipment DELETE /:id]", e);
@@ -257,6 +284,9 @@ router.delete("/:id", async (req, res) => {
 router.get("/by-departure/:departureId", async (req, res) => {
   try {
     const { departureId } = req.params;
+    if (!(await canAccessDeparture(req, departureId))) {
+      return res.status(403).json({ error: "Keberangkatan berada di luar scope Anda" });
+    }
 
     // Get all pilgrims for this departure
     const pilgrims = await db
@@ -272,7 +302,7 @@ router.get("/by-departure/:departureId", async (req, res) => {
       .where(eq(bookings.departureId, departureId));
 
     // Get equipment assignments for those pilgrims
-    const pilgrimIds = pilgrims.map((p) => p.id);
+    const pilgrimIds = pilgrims.map((p: { id: string }) => p.id);
     const assignments = pilgrimIds.length > 0
       ? await db
           .select({
@@ -301,13 +331,13 @@ router.get("/by-departure/:departureId", async (req, res) => {
       .where(eq(equipment.isActive, true));
 
     // Merge: each pilgrim with their assignments
-    const pilgrimsWithAssignments = pilgrims.map((p) => ({
+    const pilgrimsWithAssignments = pilgrims.map((p: any) => ({
       ...p,
-      assignments: assignments.filter((a) => a.pilgrimId === p.id),
+      assignments: assignments.filter((a: any) => a.pilgrimId === p.id),
     }));
 
-    const distributedCount = assignments.filter((a) => a.status === "distributed").length;
-    const returnedCount = assignments.filter((a) => a.status === "returned").length;
+    const distributedCount = assignments.filter((a: any) => a.status === "distributed").length;
+    const returnedCount = assignments.filter((a: any) => a.status === "returned").length;
 
     res.json({
       pilgrims: pilgrimsWithAssignments,
