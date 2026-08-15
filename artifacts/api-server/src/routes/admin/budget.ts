@@ -24,9 +24,22 @@ function getRows(r: any): any[] {
   return (r as any).rows ?? r;
 }
 
+async function budgetScopeCondition(req: Request) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return undefined;
+  if (scope.type === "branch" && scope.branchId) return eq(budgets.branchId, scope.branchId);
+  return eq(budgets.branchId, "__no_agent_branch_scope__");
+}
+
+async function canUseBudgetBranch(req: Request, branchId?: string | null) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  return scope.type === "branch" && !!scope.branchId && (branchId ?? scope.branchId) === scope.branchId;
+}
+
 async function requireGlobal(req: Request, res: Response) {
   if ((await resolveUserScope(req)).type !== "global") {
-    res.status(403).json({ error: "Modul budget hanya dapat diakses admin global sampai tenant key tersedia" });
+    res.status(403).json({ error: "Analitik budget hanya dapat diakses admin global" });
     return false;
   }
   return true;
@@ -35,10 +48,10 @@ async function requireGlobal(req: Request, res: Response) {
 // ── GET / — list budgets ──────────────────────────────────────────────────────
 router.get("/", async (req: Request, res: Response) => {
   try {
-    if (!(await requireGlobal(req, res))) return;
+    const scopeCondition = await budgetScopeCondition(req);
     const { year, month } = req.query as { year?: string; month?: string };
 
-    const filters = [];
+    const filters = scopeCondition ? [scopeCondition] : [];
     if (year) filters.push(eq(budgets.periodYear, Number(year)));
     if (month) filters.push(eq(budgets.periodMonth, Number(month)));
 
@@ -57,8 +70,8 @@ router.get("/", async (req: Request, res: Response) => {
 // ── POST / — create budget ────────────────────────────────────────────────────
 router.post("/", async (req: Request, res: Response) => {
   try {
-    if (!(await requireGlobal(req, res))) return;
-    const { periodYear, periodMonth, category, categoryLabel, budgetType, amount, notes, createdBy } = req.body as {
+    const scope = await resolveUserScope(req);
+    const { periodYear, periodMonth, category, categoryLabel, budgetType, amount, notes, createdBy, branchId } = req.body as {
       periodYear: number;
       periodMonth?: number | null;
       category: string;
@@ -67,12 +80,14 @@ router.post("/", async (req: Request, res: Response) => {
       amount: number;
       notes?: string;
       createdBy?: string;
+      branchId?: string | null;
     };
 
     if (!periodYear || !category || amount === undefined) {
       return res.status(400).json({ error: "periodYear, category, amount wajib diisi" });
     }
 
+    if (!(await canUseBudgetBranch(req, branchId))) return res.status(403).json({ error: "Anggaran berada di luar scope branch Anda" });
     const [created] = await db.insert(budgets).values({
       id: crypto.randomUUID(),
       periodYear,
@@ -85,6 +100,7 @@ router.post("/", async (req: Request, res: Response) => {
       createdBy: createdBy ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
+      branchId: scope.type === "branch" ? scope.branchId : branchId ?? null,
     }).returning();
 
     res.status(201).json(created);
@@ -96,7 +112,7 @@ router.post("/", async (req: Request, res: Response) => {
 // ── PATCH /:id — update budget ────────────────────────────────────────────────
 router.patch("/:id", async (req: Request, res: Response) => {
   try {
-    if (!(await requireGlobal(req, res))) return;
+    const scopeCondition = await budgetScopeCondition(req);
     const { amount, categoryLabel, notes, budgetType, periodMonth } = req.body;
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     if (amount !== undefined) patch.amount = Math.round(amount);
@@ -108,7 +124,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
     const [updated] = await db
       .update(budgets)
       .set(patch)
-      .where(eq(budgets.id, String(req.params.id)))
+      .where(scopeCondition ? and(eq(budgets.id, String(req.params.id)), scopeCondition) : eq(budgets.id, String(req.params.id)))
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Budget tidak ditemukan" });
@@ -121,10 +137,10 @@ router.patch("/:id", async (req: Request, res: Response) => {
 // ── DELETE /:id — delete budget ───────────────────────────────────────────────
 router.delete("/:id", async (req: Request, res: Response) => {
   try {
-    if (!(await requireGlobal(req, res))) return;
+    const scopeCondition = await budgetScopeCondition(req);
     const [deleted] = await db
       .delete(budgets)
-      .where(eq(budgets.id, String(req.params.id)))
+      .where(scopeCondition ? and(eq(budgets.id, String(req.params.id)), scopeCondition) : eq(budgets.id, String(req.params.id)))
       .returning();
 
     if (!deleted) return res.status(404).json({ error: "Budget tidak ditemukan" });

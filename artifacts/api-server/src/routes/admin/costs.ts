@@ -18,9 +18,22 @@ import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
 
+async function costScopeCondition(req: any) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return undefined;
+  if (scope.type === "branch" && scope.branchId) return eq(packageCosts.branchId, scope.branchId);
+  return eq(packageCosts.branchId, "__no_agent_branch_scope__");
+}
+
+async function canUseBranchCost(req: any, branchId?: string | null) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  return scope.type === "branch" && !!scope.branchId && (branchId ?? scope.branchId) === scope.branchId;
+}
+
 async function requireGlobal(req: any, res: any) {
   if ((await resolveUserScope(req)).type !== "global") {
-    res.status(403).json({ error: "Modul biaya paket hanya dapat diakses admin global sampai tenant key tersedia" });
+    res.status(403).json({ error: "Endpoint profitability hanya dapat diakses admin global" });
     return false;
   }
   return true;
@@ -28,8 +41,8 @@ async function requireGlobal(req: any, res: any) {
 
 router.get("/all", async (req, res) => {
   try {
-    if (!(await requireGlobal(req, res))) return;
-    const data = await db.select().from(packageCosts);
+    const scopeCondition = await costScopeCondition(req);
+    const data = await db.select().from(packageCosts).where(scopeCondition);
     res.json({ data });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch all costs" });
@@ -38,7 +51,7 @@ router.get("/all", async (req, res) => {
 
 router.get("/package/:packageId", async (req, res) => {
   try {
-    if (!(await requireGlobal(req, res))) return;
+    const scopeCondition = await costScopeCondition(req);
     const { departureId } = req.query;
 
     // When a specific departure is selected: show costs for that departure OR
@@ -55,11 +68,12 @@ router.get("/package/:packageId", async (req, res) => {
             ),
           )
         : eq(packageCosts.packageId, req.params.packageId);
+    const scopedWhereClause = scopeCondition ? and(whereClause, scopeCondition) : whereClause;
 
     const data = await db
       .select()
       .from(packageCosts)
-      .where(whereClause)
+      .where(scopedWhereClause)
       .orderBy(asc(packageCosts.sortOrder), asc(packageCosts.createdAt));
 
     res.json({ data });
@@ -70,12 +84,15 @@ router.get("/package/:packageId", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
-    if (!(await requireGlobal(req, res))) return;
+    const scope = await resolveUserScope(req);
+    const requestedBranchId = req.body?.branchId ?? req.body?.branch_id ?? null;
+    if (!(await canUseBranchCost(req, requestedBranchId))) return res.status(403).json({ error: "Biaya berada di luar scope branch Anda" });
     const [created] = await db
       .insert(packageCosts)
       .values({
         id: crypto.randomUUID(),
         ...req.body,
+        branchId: scope.type === "branch" ? scope.branchId : requestedBranchId,
       })
       .returning();
     res.status(201).json(created);
@@ -86,11 +103,11 @@ router.post("/", async (req, res) => {
 
 router.patch("/:id", async (req, res) => {
   try {
-    if (!(await requireGlobal(req, res))) return;
+    const scopeCondition = await costScopeCondition(req);
     const [updated] = await db
       .update(packageCosts)
       .set(req.body)
-      .where(eq(packageCosts.id, req.params.id))
+      .where(scopeCondition ? and(eq(packageCosts.id, req.params.id), scopeCondition) : eq(packageCosts.id, req.params.id))
       .returning();
     if (!updated) return res.status(404).json({ error: "Cost component not found" });
     return res.json(updated);
@@ -101,8 +118,8 @@ router.patch("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
-    if (!(await requireGlobal(req, res))) return;
-    const [deleted] = await db.delete(packageCosts).where(eq(packageCosts.id, req.params.id)).returning();
+    const scopeCondition = await costScopeCondition(req);
+    const [deleted] = await db.delete(packageCosts).where(scopeCondition ? and(eq(packageCosts.id, req.params.id), scopeCondition) : eq(packageCosts.id, req.params.id)).returning();
     if (!deleted) return res.status(404).json({ error: "Cost component not found" });
     return res.json({ message: "Cost component deleted" });
   } catch (err) {
@@ -112,8 +129,11 @@ router.delete("/:id", async (req, res) => {
 
 router.post("/bulk-copy", async (req, res) => {
   try {
-    if (!(await requireGlobal(req, res))) return;
+    const scope = await resolveUserScope(req);
+    if (scope.type === "agent") return res.status(403).json({ error: "Agent belum memiliki branch tenant untuk menyalin biaya" });
     const { sourceCosts, targetPackageIds, targetDepartureIds, mode, overwrite, sourcePackageId } = req.body ?? {};
+    const targetBranchId = scope.type === "branch" ? scope.branchId : req.body?.branchId ?? req.body?.branch_id ?? null;
+    const scopeCondition = await costScopeCondition(req);
 
     if (mode !== "packages" && mode !== "departures") {
       return res.status(400).json({ error: "mode must be 'packages' or 'departures'" });
@@ -136,11 +156,11 @@ router.post("/bulk-copy", async (req, res) => {
     if (overwrite) {
       if (mode === "packages") {
         for (const pid of targetPackageIds) {
-          await db.delete(packageCosts).where(and(eq(packageCosts.packageId, pid), isNull(packageCosts.departureId)));
+          await db.delete(packageCosts).where(scopeCondition ? and(eq(packageCosts.packageId, pid), isNull(packageCosts.departureId), scopeCondition) : and(eq(packageCosts.packageId, pid), isNull(packageCosts.departureId)));
         }
       } else {
         for (const did of targetDepartureIds) {
-          await db.delete(packageCosts).where(eq(packageCosts.departureId, did));
+          await db.delete(packageCosts).where(scopeCondition ? and(eq(packageCosts.departureId, did), scopeCondition) : eq(packageCosts.departureId, did));
         }
       }
     }
@@ -153,6 +173,7 @@ router.post("/bulk-copy", async (req, res) => {
             id: crypto.randomUUID(),
             packageId: pid,
             departureId: null,
+            branchId: targetBranchId,
             category: c.category,
             itemName: c.item_name,
             qty: c.qty,
@@ -172,6 +193,7 @@ router.post("/bulk-copy", async (req, res) => {
             id: crypto.randomUUID(),
             packageId: sourcePackageId,
             departureId: did,
+            branchId: targetBranchId,
             category: c.category,
             itemName: c.item_name,
             qty: c.qty,

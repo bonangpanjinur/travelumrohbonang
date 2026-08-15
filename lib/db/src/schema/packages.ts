@@ -121,6 +121,7 @@ export const packageCosts = pgTable("package_costs", {
   id: text("id").primaryKey(),
   packageId: text("package_id").notNull().references(() => packages.id, { onDelete: "cascade" }),
   departureId: text("departure_id").references(() => packageDepartures.id, { onDelete: "set null" }),
+  branchId: text("branch_id"), // NULL = biaya global; terisi untuk branch tenant
   category: text("category"),
   itemName: text("item_name").notNull(),
   qty: numeric("qty"),
@@ -139,6 +140,7 @@ export const packageCosts = pgTable("package_costs", {
 }, (t) => [
   index("idx_package_costs_package_id").on(t.packageId),
   index("idx_package_costs_departure_id").on(t.departureId),
+  index("idx_package_costs_branch_id").on(t.branchId),
 ]);
 
 export const packageCommissions = pgTable("package_commissions", {

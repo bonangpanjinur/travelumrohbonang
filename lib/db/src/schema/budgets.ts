@@ -36,8 +36,10 @@ export const budgets = pgTable("budgets", {
   createdBy: text("created_by"),
   createdAt: timestamp("created_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }),
+  branchId: text("branch_id"), // NULL = anggaran global; terisi untuk branch tenant
 }, (t) => [
   index("idx_budgets_year").on(t.periodYear),
   index("idx_budgets_year_month").on(t.periodYear, t.periodMonth),
   index("idx_budgets_category").on(t.category),
+  index("idx_budgets_branch_id").on(t.branchId),
 ]);
