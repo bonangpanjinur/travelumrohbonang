@@ -14,11 +14,21 @@ import {
   isNull,
   asc,
 } from "@workspace/db";
+import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
 
-router.get("/all", async (_req, res) => {
+async function requireGlobal(req: any, res: any) {
+  if ((await resolveUserScope(req)).type !== "global") {
+    res.status(403).json({ error: "Modul biaya paket hanya dapat diakses admin global sampai tenant key tersedia" });
+    return false;
+  }
+  return true;
+}
+
+router.get("/all", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const data = await db.select().from(packageCosts);
     res.json({ data });
   } catch (err) {
@@ -28,6 +38,7 @@ router.get("/all", async (_req, res) => {
 
 router.get("/package/:packageId", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const { departureId } = req.query;
 
     // When a specific departure is selected: show costs for that departure OR
@@ -59,6 +70,7 @@ router.get("/package/:packageId", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const [created] = await db
       .insert(packageCosts)
       .values({
@@ -74,6 +86,7 @@ router.post("/", async (req, res) => {
 
 router.patch("/:id", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const [updated] = await db
       .update(packageCosts)
       .set(req.body)
@@ -88,6 +101,7 @@ router.patch("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const [deleted] = await db.delete(packageCosts).where(eq(packageCosts.id, req.params.id)).returning();
     if (!deleted) return res.status(404).json({ error: "Cost component not found" });
     return res.json({ message: "Cost component deleted" });
@@ -98,6 +112,7 @@ router.delete("/:id", async (req, res) => {
 
 router.post("/bulk-copy", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const { sourceCosts, targetPackageIds, targetDepartureIds, mode, overwrite, sourcePackageId } = req.body ?? {};
 
     if (mode !== "packages" && mode !== "departures") {
@@ -187,6 +202,7 @@ router.post("/bulk-copy", async (req, res) => {
 // Returns an array of { packageId, paidBookings, agentCommission, picCommissionPerPax, marketingTotal }
 router.get("/profitability-overview", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const { packageIds: rawIds, departureId } = req.query as { packageIds?: string; departureId?: string };
     if (!rawIds) return res.json([]);
 
@@ -270,6 +286,7 @@ router.get("/profitability-overview", async (req, res) => {
 // ── GET /summary?packageId=X — budgeted vs actual vs variance per category
 router.get("/summary", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const { packageId, departureId } = req.query as { packageId?: string; departureId?: string };
     if (!packageId) return res.status(400).json({ error: "packageId required" });
 
@@ -310,6 +327,7 @@ router.get("/summary", async (req, res) => {
 // Profitability helper endpoint
 router.get("/profitability/:packageId", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const { packageId } = req.params;
     const { departureId } = req.query;
 
