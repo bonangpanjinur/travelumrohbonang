@@ -59,6 +59,29 @@ async function canAccessBooking(req: any, bookingId?: string | null) {
   return ((rows as any).rows ?? rows).length > 0;
 }
 
+async function resolveManualTenant(req: any, bookingId?: string | null, requestedBranchId?: string | null, globalReason?: string | null) {
+  const scope = await resolveUserScope(req);
+  if (bookingId) {
+    const rows = await db.execute(sql`SELECT branch_id FROM bookings WHERE id = ${bookingId} LIMIT 1`);
+    const booking = ((rows as any).rows ?? rows)[0] as { branch_id?: string | null } | undefined;
+    if (!booking?.branch_id) throw Object.assign(new Error("Booking tidak memiliki branch_id tenant"), { status: 422 });
+    if (!(await canAccessBooking(req, bookingId))) throw Object.assign(new Error("Booking berada di luar scope tenant Anda"), { status: 403 });
+    if (requestedBranchId && requestedBranchId !== booking.branch_id) throw Object.assign(new Error("branchId tidak cocok dengan branch booking"), { status: 422 });
+    return { branchId: booking.branch_id, descriptionPrefix: "" };
+  }
+  if (scope.type !== "global") {
+    throw Object.assign(new Error("Transaksi accounting untuk branch/agent wajib terkait booking tenant"), { status: 422 });
+  }
+  if (requestedBranchId) {
+    const rows = await db.execute(sql`SELECT id FROM branches WHERE id = ${requestedBranchId} LIMIT 1`);
+    if (((rows as any).rows ?? rows).length === 0) throw Object.assign(new Error("branchId tidak ditemukan"), { status: 422 });
+    return { branchId: requestedBranchId, descriptionPrefix: "" };
+  }
+  const reason = String(globalReason ?? "").trim();
+  if (reason.length < 10) throw Object.assign(new Error("Transaksi global tanpa branchId wajib memiliki globalReason minimal 10 karakter"), { status: 422 });
+  return { branchId: null, descriptionPrefix: `[GLOBAL-AUDIT: ${reason}] ` };
+}
+
 async function requireGlobal(req: any, res: any) {
   if ((await resolveUserScope(req)).type !== "global") {
     res.status(403).json({ error: "Pengaturan accounting ini hanya dapat diubah admin global" });
@@ -130,15 +153,15 @@ router.post("/journal", async (req, res) => {
         transactionDate?: string;
       }>;
       bookingId?: string;
+      branchId?: string;
+      globalReason?: string;
     };
 
     if (!Array.isArray(entries) || entries.length < 2) {
       return res.status(400).json({ error: "entries harus berisi minimal 2 baris (debit + kredit)" });
     }
 
-    if (!(await canAccessBooking(req, (req.body as { bookingId?: string }).bookingId))) {
-      return res.status(403).json({ error: "Jurnal harus terkait booking dalam scope tenant Anda" });
-    }
+    const bodyTenant = await resolveManualTenant(req, (req.body as { bookingId?: string }).bookingId, (req.body as { branchId?: string }).branchId, (req.body as { globalReason?: string }).globalReason);
 
     // Validasi setiap entry
     let totalDebit = 0;
@@ -181,7 +204,7 @@ router.post("/journal", async (req, res) => {
       id: crypto.randomUUID(),
       type: entry.type,
       category: entry.category,
-      description: entry.description ?? null,
+      description: `${bodyTenant.descriptionPrefix}${entry.description ?? ""}`.trim() || null,
       amount: String(parseFloat(String(entry.amount))),
       transactionDate: entry.transactionDate ? new Date(entry.transactionDate) : now,
       referenceNumber: entry.referenceNumber ?? null,
@@ -189,6 +212,7 @@ router.post("/journal", async (req, res) => {
       accountId: entry.accountId ?? null,
       entryType: entry.entryType,
       bookingId: (req.body as { bookingId?: string }).bookingId ?? null,
+      branchId: bodyTenant.branchId,
       createdAt: now,
     }));
 
@@ -213,14 +237,14 @@ router.post("/", async (req, res) => {
       referenceNumber?: string;
       entryType?: string;
       bookingId?: string;
+      branchId?: string;
+      globalReason?: string;
     };
 
     if (!body.type || !body.category || !body.amount) {
       return res.status(400).json({ error: "type, category, and amount are required" });
     }
-    if (!(await canAccessBooking(req, body.bookingId))) {
-      return res.status(403).json({ error: "Transaksi harus terkait booking dalam scope tenant Anda" });
-    }
+    const bodyTenant = await resolveManualTenant(req, body.bookingId, body.branchId, body.globalReason);
 
     const amount = parseFloat(String(body.amount));
     if (!isFinite(amount) || amount <= 0) {
@@ -246,13 +270,14 @@ router.post("/", async (req, res) => {
         id: crypto.randomUUID(),
         type: body.type,
         category: body.category,
-        description: body.description ?? null,
+        description: `${bodyTenant.descriptionPrefix}${body.description ?? ""}`.trim() || null,
         amount: String(amount),
         transactionDate: txDate,
         referenceNumber: body.referenceNumber ?? null,
         recordedBy: adminId ?? null,
         entryType: body.entryType ?? null,
         bookingId: body.bookingId ?? null,
+        branchId: bodyTenant.branchId,
         createdAt: new Date(),
       })
       .returning();
