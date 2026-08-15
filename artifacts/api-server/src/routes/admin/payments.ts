@@ -527,6 +527,7 @@ router.patch("/verify/:id", requireFinance, async (req, res) => {
         await tx.insert(bookingPayments).values({
           id: crypto.randomUUID(),
           bookingId: String(payment["booking_id"]),
+          branchId: (payment["branch_id"] as string | null) ?? null,
           type: (payment["payment_type"] as string | null) ?? "manual",
           amount: Number(payment["amount"]),
           paidAt: now,
@@ -799,7 +800,7 @@ router.post("/", requireFinance, validate(AdminRecordPaymentRequest), async (req
     }
 
     const [booking] = await db
-      .select({ id: bookings.id, totalPrice: bookings.totalPrice })
+      .select({ id: bookings.id, totalPrice: bookings.totalPrice, branchId: bookings.branchId })
       .from(bookings)
       .where(eq(bookings.id, bookingId))
       .limit(1);
@@ -828,6 +829,7 @@ router.post("/", requireFinance, validate(AdminRecordPaymentRequest), async (req
         .values({
           id: crypto.randomUUID(),
           bookingId,
+          branchId: booking.branchId ?? null,
           type: body.type,
           amount: body.amount,
           paidAt,

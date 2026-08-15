@@ -159,6 +159,17 @@ router.patch("/:id", async (req, res) => {
       return res.status(404).json({ error: "Installment not found" });
     }
 
+    const scope = await resolveUserScope(req);
+    const scopeCondition = buildBookingScopeCondition(scope, "bookings");
+    const [scopedBooking] = await db
+      .select({ id: bookings.id, branchId: bookings.branchId })
+      .from(bookings)
+      .where(and(eq(bookings.id, existing.bookingId), scopeCondition))
+      .limit(1);
+    if (!scopedBooking) {
+      return res.status(403).json({ error: "Installment berada di luar scope tenant Anda" });
+    }
+
     const [updated] = await db
       .update(installmentSchedules)
       .set({
@@ -193,6 +204,7 @@ router.patch("/:id", async (req, res) => {
         await db.insert(bookingPayments).values({
           id: crypto.randomUUID(),
           bookingId,
+          branchId: scopedBooking.branchId ?? null,
           type: "installment",
           amount,
           paidAt: paidAtDate,

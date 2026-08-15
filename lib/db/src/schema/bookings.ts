@@ -132,6 +132,7 @@ export const bookingStatusLogs = pgTable("booking_status_logs", {
 export const bookingPayments = pgTable("booking_payments", {
   id: text("id").primaryKey(),
   bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
+  branchId: text("branch_id"), // NULL = legacy/global-admin only
   type: text("type").notNull(),
   amount: integer("amount").notNull(),
   paidAt: timestamp("paid_at", { withTimezone: true }).notNull(),
@@ -144,6 +145,7 @@ export const bookingPayments = pgTable("booking_payments", {
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_booking_payments_booking_id").on(t.bookingId),
+  index("idx_booking_payments_branch_id").on(t.branchId),
 ]);
 
 // Per-jamaah allocation for a booking payment. A payment may remain booking-level

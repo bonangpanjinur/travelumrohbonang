@@ -171,6 +171,16 @@ export async function recordFinancialTransaction({
   const dbRunner = runner ?? db;
   await assertOpenAccountingPeriod(new Date(), dbRunner);
 
+  let branchId: string | null = null;
+  if (bookingId) {
+    const [booking] = await dbRunner
+      .select({ branchId: bookings.branchId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+    branchId = booking?.branchId ?? null;
+  }
+
   if (referenceNumber) {
     const [existing] = await dbRunner
       .select({ id: financialTransactions.id })
@@ -183,6 +193,7 @@ export async function recordFinancialTransaction({
   await dbRunner.insert(financialTransactions).values({
     id: crypto.randomUUID(),
     bookingId: bookingId ?? null,
+    branchId,
     amount: String(amount),
     type,
     category,
@@ -244,8 +255,8 @@ export async function syncFromGatewayTransaction({
   if (newStatus !== "paid") return;
 
   // Fetch booking to get userId and current state.
-  const [booking] = await db
-    .select({ id: bookings.id, userId: bookings.userId, totalPrice: bookings.totalPrice })
+    const [booking] = await db
+    .select({ id: bookings.id, userId: bookings.userId, totalPrice: bookings.totalPrice, branchId: bookings.branchId })
     .from(bookings)
     .where(eq(bookings.id, bookingId))
     .limit(1);
@@ -291,6 +302,7 @@ export async function syncFromGatewayTransaction({
     await tx.insert(bookingPayments).values({
       id: crypto.randomUUID(),
       bookingId,
+      branchId: booking.branchId ?? null,
       type: "gateway",
       amount,
       paidAt: new Date(),

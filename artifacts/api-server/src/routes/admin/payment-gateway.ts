@@ -208,12 +208,22 @@ router.post("/transactions", async (req, res) => {
     }
 
     // Persist transaction
+    let branchId: string | null = null;
+    if (bookingId) {
+      const [booking] = await db
+        .select({ branchId: bookings.branchId })
+        .from(bookings)
+        .where(eq(bookings.id, bookingId))
+        .limit(1);
+      branchId = booking?.branchId ?? null;
+    }
     const id = crypto.randomUUID();
     const [saved] = await db
       .insert(paymentGatewayTransactions)
       .values({
         id,
         bookingId: bookingId ?? null,
+        branchId,
         gateway,
         orderId: finalOrderId,
         gatewayTransactionId: gatewayTransactionId ?? null,
