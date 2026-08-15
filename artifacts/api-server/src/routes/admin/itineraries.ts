@@ -9,13 +9,49 @@ import {
   inArray,
   desc,
   asc,
+  sql,
 } from "@workspace/db";
+import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
 
+async function itineraryScopeCondition(req: any) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return sql`TRUE`;
+  if (scope.type === "branch" && scope.branchId) {
+    return sql`EXISTS (SELECT 1 FROM package_departures pd JOIN bookings b ON b.departure_id = pd.id
+      WHERE pd.id = itineraries.departure_id AND b.branch_id = ${scope.branchId})`;
+  }
+  if (scope.type === "agent" && scope.agentId) {
+    return sql`EXISTS (SELECT 1 FROM package_departures pd JOIN bookings b ON b.departure_id = pd.id
+      WHERE pd.id = itineraries.departure_id AND (b.agent_id = ${scope.agentId}
+        OR (b.pic_type = 'agen' AND b.pic_id = ${scope.agentId})))`;
+  }
+  return sql`FALSE`;
+}
+
+async function canAccessDeparture(req: any, departureId: string) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  const rows = await db.execute(sql`
+    SELECT 1 FROM bookings b WHERE b.departure_id = ${departureId}
+      AND ${scope.type === "branch"
+        ? sql`b.branch_id = ${scope.branchId ?? ""}`
+        : sql`b.agent_id = ${scope.agentId ?? ""} OR (b.pic_type = 'agen' AND b.pic_id = ${scope.agentId ?? ""})`}
+    LIMIT 1
+  `);
+  return ((rows as any).rows ?? rows).length > 0;
+}
+
+async function canAccessItinerary(req: any, itineraryId: string) {
+  const rows = await db.select({ departureId: itineraries.departureId })
+    .from(itineraries).where(eq(itineraries.id, itineraryId)).limit(1);
+  return rows[0] ? canAccessDeparture(req, rows[0].departureId) : false;
+}
+
 // ── GET /api/admin/itineraries ───────────────────────────────────────────────
 // List all itineraries with nested departure + days
-router.get("/", async (_req, res) => {
+router.get("/", async (req, res) => {
   try {
     const rows = await db
       .select({
@@ -31,10 +67,11 @@ router.get("/", async (_req, res) => {
       .from(itineraries)
       .leftJoin(packageDepartures, eq(itineraries.departureId, packageDepartures.id))
       .leftJoin(packages, eq(packageDepartures.packageId, packages.id))
+      .where(await itineraryScopeCondition(req))
       .orderBy(desc(itineraries.createdAt));
 
     // Fetch days for all itineraries in one query
-    const itineraryIds = rows.map((r) => r.id);
+    const itineraryIds = rows.map((r: { id: string }) => r.id);
     let daysMap: Record<string, any[]> = {};
     if (itineraryIds.length > 0) {
       const allDays = await db
@@ -52,7 +89,7 @@ router.get("/", async (_req, res) => {
       }
     }
 
-    const result = rows.map((r) => ({
+    const result = rows.map((r: any) => ({
       id: r.id,
       departure_id: r.departureId,
       title: r.title,
@@ -89,6 +126,9 @@ router.post("/", async (req, res) => {
     if (!departure_id) {
       return res.status(400).json({ error: "departure_id wajib diisi" });
     }
+    if (!(await canAccessDeparture(req, departure_id))) {
+      return res.status(403).json({ error: "Keberangkatan berada di luar scope Anda" });
+    }
     const [row] = await db
       .insert(itineraries)
       .values({
@@ -111,7 +151,11 @@ router.post("/", async (req, res) => {
 router.patch("/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    if (!(await canAccessItinerary(req, id))) return res.status(403).json({ error: "Itinerary berada di luar scope Anda" });
     const { departure_id, title, notes, is_active } = req.body ?? {};
+    if (departure_id !== undefined && !(await canAccessDeparture(req, departure_id))) {
+      return res.status(403).json({ error: "Keberangkatan tujuan berada di luar scope Anda" });
+    }
     const updates: Record<string, unknown> = {};
     if (departure_id !== undefined) updates.departureId = departure_id;
     if (title !== undefined) updates.title = title || null;
@@ -148,6 +192,8 @@ router.patch("/:id", async (req, res) => {
 // Body: { days: [{ id: string, day_number: number }] }
 router.patch("/:id/reorder-days", async (req, res) => {
   try {
+    const { id } = req.params;
+    if (!(await canAccessItinerary(req, id))) return res.status(403).json({ error: "Itinerary berada di luar scope Anda" });
     const { days } = req.body ?? {};
     if (!Array.isArray(days) || days.length === 0) {
       return res.status(400).json({ error: "days harus berupa array" });
@@ -174,6 +220,7 @@ router.patch("/:id/reorder-days", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    if (!(await canAccessItinerary(req, id))) return res.status(403).json({ error: "Itinerary berada di luar scope Anda" });
     const [deleted] = await db
       .delete(itineraries)
       .where(eq(itineraries.id, id))
@@ -190,6 +237,7 @@ router.delete("/:id", async (req, res) => {
 router.post("/days", async (req, res) => {
   try {
     const { itinerary_id, day_number, title, description, image_url } = req.body ?? {};
+    if (!(await canAccessItinerary(req, itinerary_id))) return res.status(403).json({ error: "Itinerary berada di luar scope Anda" });
     if (!itinerary_id) return res.status(400).json({ error: "itinerary_id wajib diisi" });
     if (!day_number) return res.status(400).json({ error: "day_number wajib diisi" });
 
@@ -225,6 +273,8 @@ router.post("/days", async (req, res) => {
 router.patch("/days/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const dayOwner = await db.select({ itineraryId: itineraryDays.itineraryId }).from(itineraryDays).where(eq(itineraryDays.id, id)).limit(1);
+    if (!dayOwner[0] || !(await canAccessItinerary(req, dayOwner[0].itineraryId))) return res.status(403).json({ error: "Hari itinerary berada di luar scope Anda" });
     const { day_number, title, description, image_url } = req.body ?? {};
     const updates: Record<string, unknown> = {};
     if (day_number !== undefined) updates.dayNumber = Number(day_number);
@@ -263,6 +313,8 @@ router.patch("/days/:id", async (req, res) => {
 router.delete("/days/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const dayOwner = await db.select({ itineraryId: itineraryDays.itineraryId }).from(itineraryDays).where(eq(itineraryDays.id, id)).limit(1);
+    if (!dayOwner[0] || !(await canAccessItinerary(req, dayOwner[0].itineraryId))) return res.status(403).json({ error: "Hari itinerary berada di luar scope Anda" });
     const [deleted] = await db
       .delete(itineraryDays)
       .where(eq(itineraryDays.id, id))
