@@ -24,8 +24,48 @@ import {
   sql,
 } from "@workspace/db";
 import { sendAdminError } from "../../lib/adminApiError";
+import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
+
+async function financialScopeCondition(req: any) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return sql`TRUE`;
+  if (scope.type === "branch" && scope.branchId) {
+    return sql`(financial_transactions.recorded_by = ${req.user?.id ?? ""} OR EXISTS (
+      SELECT 1 FROM bookings b WHERE b.id = financial_transactions.booking_id AND b.branch_id = ${scope.branchId}
+    ))`;
+  }
+  if (scope.type === "agent" && scope.agentId) {
+    return sql`(financial_transactions.recorded_by = ${req.user?.id ?? ""} OR EXISTS (
+      SELECT 1 FROM bookings b WHERE b.id = financial_transactions.booking_id
+        AND (b.agent_id = ${scope.agentId} OR (b.pic_type = 'agen' AND b.pic_id = ${scope.agentId}))
+    ))`;
+  }
+  return sql`FALSE`;
+}
+
+async function canAccessBooking(req: any, bookingId?: string | null) {
+  const scope = await resolveUserScope(req);
+  if (scope.type === "global") return true;
+  if (!bookingId) return false;
+  const rows = await db.execute(sql`
+    SELECT 1 FROM bookings b WHERE b.id = ${bookingId}
+      AND ${scope.type === "branch"
+        ? sql`b.branch_id = ${scope.branchId ?? ""}`
+        : sql`b.agent_id = ${scope.agentId ?? ""} OR (b.pic_type = 'agen' AND b.pic_id = ${scope.agentId ?? ""})`}
+    LIMIT 1
+  `);
+  return ((rows as any).rows ?? rows).length > 0;
+}
+
+async function requireGlobal(req: any, res: any) {
+  if ((await resolveUserScope(req)).type !== "global") {
+    res.status(403).json({ error: "Pengaturan accounting ini hanya dapat diubah admin global" });
+    return false;
+  }
+  return true;
+}
 
 // ── Helper: cek apakah tanggal jatuh di periode yang sudah ditutup ────────────
 
@@ -54,7 +94,7 @@ router.get("/", async (req, res) => {
       to?: string;
     };
 
-    const conditions: Parameters<typeof and>[0][] = [];
+    const conditions: Parameters<typeof and>[0][] = [await financialScopeCondition(req)];
     if (type && type !== "all") conditions.push(eq(financialTransactions.type, type));
     if (from) conditions.push(gte(financialTransactions.transactionDate, new Date(from)));
     if (to)   conditions.push(lte(financialTransactions.transactionDate, new Date(to)));
@@ -89,10 +129,15 @@ router.post("/journal", async (req, res) => {
         referenceNumber?: string;
         transactionDate?: string;
       }>;
+      bookingId?: string;
     };
 
     if (!Array.isArray(entries) || entries.length < 2) {
       return res.status(400).json({ error: "entries harus berisi minimal 2 baris (debit + kredit)" });
+    }
+
+    if (!(await canAccessBooking(req, (req.body as { bookingId?: string }).bookingId))) {
+      return res.status(403).json({ error: "Jurnal harus terkait booking dalam scope tenant Anda" });
     }
 
     // Validasi setiap entry
@@ -143,6 +188,7 @@ router.post("/journal", async (req, res) => {
       recordedBy: adminId ?? null,
       accountId: entry.accountId ?? null,
       entryType: entry.entryType,
+      bookingId: (req.body as { bookingId?: string }).bookingId ?? null,
       createdAt: now,
     }));
 
@@ -166,10 +212,14 @@ router.post("/", async (req, res) => {
       transactionDate: string;
       referenceNumber?: string;
       entryType?: string;
+      bookingId?: string;
     };
 
     if (!body.type || !body.category || !body.amount) {
       return res.status(400).json({ error: "type, category, and amount are required" });
+    }
+    if (!(await canAccessBooking(req, body.bookingId))) {
+      return res.status(403).json({ error: "Transaksi harus terkait booking dalam scope tenant Anda" });
     }
 
     const amount = parseFloat(String(body.amount));
@@ -202,6 +252,7 @@ router.post("/", async (req, res) => {
         referenceNumber: body.referenceNumber ?? null,
         recordedBy: adminId ?? null,
         entryType: body.entryType ?? null,
+        bookingId: body.bookingId ?? null,
         createdAt: new Date(),
       })
       .returning();
@@ -259,7 +310,7 @@ router.patch("/:id", async (req, res) => {
     const [updated] = await db
       .update(financialTransactions)
       .set(setValues)
-      .where(eq(financialTransactions.id, id))
+      .where(and(eq(financialTransactions.id, id), await financialScopeCondition(req)))
       .returning();
 
     if (!updated) {
@@ -282,7 +333,7 @@ router.delete("/:id", async (req, res) => {
     const [existing] = await db
       .select({ transactionDate: financialTransactions.transactionDate })
       .from(financialTransactions)
-      .where(eq(financialTransactions.id, id))
+      .where(and(eq(financialTransactions.id, id), await financialScopeCondition(req)))
       .limit(1);
 
     if (existing?.transactionDate && await isInClosedPeriod(existing.transactionDate)) {
@@ -291,7 +342,7 @@ router.delete("/:id", async (req, res) => {
 
     const [deleted] = await db
       .delete(financialTransactions)
-      .where(eq(financialTransactions.id, id))
+      .where(and(eq(financialTransactions.id, id), await financialScopeCondition(req)))
       .returning({ id: financialTransactions.id });
 
     if (!deleted) {
@@ -308,6 +359,7 @@ router.delete("/:id", async (req, res) => {
 
 router.get("/periods", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const rows = await db
       .select()
       .from(accountingPeriods)
@@ -322,6 +374,7 @@ router.get("/periods", async (req, res) => {
 
 router.post("/periods", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const adminId = (req as any).user?.id as string | undefined;
     const { year, month, notes } = req.body as { year: number; month: number; notes?: string };
 
@@ -359,6 +412,7 @@ router.post("/periods", async (req, res) => {
 
 router.patch("/periods/:id", async (req, res) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const adminId = (req as any).user?.id as string | undefined;
     const { status, notes } = req.body as { status: "open" | "closed"; notes?: string };
 
