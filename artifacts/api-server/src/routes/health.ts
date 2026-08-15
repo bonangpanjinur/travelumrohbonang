@@ -365,18 +365,31 @@ const DRIZZLE_TABLES = [
   "airlines",
   "airports",
   "audit_logs",
+  "bank_mutations",
   "blog_posts",
+  "booking_payment_allocations",
   "booking_payments",
   "booking_pilgrims",
   "booking_rooms",
+  "booking_status_logs",
   "bookings",
+  "budgets",
+  "certificate_templates",
+  "certificates",
+  "chart_of_accounts",
+  "check_ins",
   "branches",
   "chat_messages",
   "contracts",
   "coupons",
   "currencies",
+  "departure_checklists",
+  "departure_flight_segments",
   "departure_gallery",
+  "departure_hotels",
   "departure_prices",
+  "document_types",
+  "equipment",
   "error_logs",
   "faqs",
   "financial_transactions",
@@ -384,6 +397,8 @@ const DRIZZLE_TABLES = [
   "gallery",
   "guide_steps",
   "hotels",
+  "incident_reports",
+  "installment_schedules",
   "integration_secrets",
   "itineraries",
   "itinerary_days",
@@ -399,20 +414,27 @@ const DRIZZLE_TABLES = [
   "package_commissions",
   "package_costs",
   "package_departures",
+  "package_gallery",
   "package_hotels",
   "package_reviews",
   "packages",
   "pages",
   "payment_gateway_transactions",
+  "payment_policies",
+  "payment_policy_rules",
   "payment_proof_access_logs",
   "payments",
   "pilgrim_doc_access_logs",
   "pilgrim_documents",
+  "pilgrim_equipment",
   "pilgrim_testimonials",
+  "pilgrims",
   "profiles",
   "refund_requests",
   "request_log",
   "role_menu_permissions",
+  "savings_accounts",
+  "savings_transactions",
   "seo_overrides",
   "services",
   "site_settings",
@@ -422,6 +444,8 @@ const DRIZZLE_TABLES = [
   "tenant_sites",
   "testimonials",
   "user_roles",
+  "users",
+  "visa_applications",
   "wishlists",
 ] as const;
 
@@ -597,5 +621,19 @@ router.get("/health/schema", (req, res, next) => {
   if (process.env["NODE_ENV"] === "production") return res.status(404).json({ error: "Not found" });
   return next();
 }, healthSchema);
+
+// Public-safe readiness probe for deployment/load balancers. It intentionally
+// exposes only aggregate status so production callers can detect a missing
+// migration without receiving table names, environment variables, or SQL.
+router.get("/health/ready", async (_req, res) => {
+  const result = await checkSchemaHealth();
+  const ready = result.status === "ok";
+  res.status(ready ? 200 : 503).json({
+    status: ready ? "ready" : "not_ready",
+    database: result.status === "error" ? "error" : "connected",
+    schema: result.summary.migration_needed ? "migration_needed" : "ready",
+    timestamp: new Date().toISOString(),
+  });
+});
 
 export default router;
