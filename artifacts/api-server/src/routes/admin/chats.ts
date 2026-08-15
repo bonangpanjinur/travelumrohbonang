@@ -1,13 +1,25 @@
 import { Router } from "express";
-import { db, chatMessages, eq, asc } from "@workspace/db";
+import { db, chatMessages, bookings, eq, asc } from "@workspace/db";
 import { isWhatsAppConfigured } from "@workspace/whatsapp";
 import { waNotifications } from "../../lib/notifications/waNotifications";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import { buildBookingScopeCondition } from "../../lib/scopeConditions";
+import { canAccessBooking, canAccessDeparture } from "../../lib/conversationScope";
 
 const router = Router();
 
 router.get("/", async (req, res) => {
   try {
-    const data = await db.select().from(chatMessages).orderBy(asc(chatMessages.createdAt));
+    const scope = await resolveUserScope(req);
+    const data = scope.type === "global"
+      ? await db.select().from(chatMessages).orderBy(asc(chatMessages.createdAt))
+      : await db
+          .select({ chat: chatMessages })
+          .from(chatMessages)
+          .innerJoin(bookings, eq(bookings.id, chatMessages.bookingId))
+          .where(buildBookingScopeCondition(scope, "bookings"))
+          .orderBy(asc(chatMessages.createdAt))
+          .then((rows) => rows.map((row) => row.chat));
     res.json({ data });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch chats" });
@@ -16,6 +28,9 @@ router.get("/", async (req, res) => {
 
 router.get("/:bookingId", async (req, res) => {
   try {
+    if (!(await canAccessBooking(req, req.params.bookingId))) {
+      return res.status(404).json({ error: "Chat tidak ditemukan" });
+    }
     const data = await db
       .select()
       .from(chatMessages)
@@ -39,6 +54,9 @@ router.post("/", async (req, res) => {
     if (!bookingId || !normalizedMessage) return res.status(400).json({ error: "bookingId dan message wajib diisi" });
     if (normalizedMessage.length > 5000) return res.status(400).json({ error: "Pesan maksimal 5000 karakter" });
     if (!senderRole || !["admin", "buyer", "member"].includes(senderRole)) return res.status(400).json({ error: "senderRole tidak valid" });
+    if (!(await canAccessBooking(req, bookingId))) {
+      return res.status(404).json({ error: "Booking tidak ditemukan" });
+    }
     const [item] = await db.insert(chatMessages).values({
       id: crypto.randomUUID(),
       bookingId,
@@ -74,6 +92,9 @@ router.post("/blast/:departureId", async (req, res) => {
   }
 
   try {
+    if (!(await canAccessDeparture(req, departureId))) {
+      return res.status(404).json({ error: "Keberangkatan tidak ditemukan" });
+    }
     const { sent, skipped } = await waNotifications.blast(departureId, message.trim());
     res.json({
       ok: true,

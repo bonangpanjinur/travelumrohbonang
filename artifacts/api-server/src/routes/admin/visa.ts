@@ -11,10 +11,12 @@
 
 import { Router } from "express";
 import {
-  db, visaApplications, bookingPilgrims, bookings, packageDepartures,
-  eq, and, inArray, sql, desc, asc,
+  db, visaApplications, bookingPilgrims, bookings,
+  eq, and, inArray, sql, desc,
 } from "@workspace/db";
 import { sendAdminError } from "../../lib/adminApiError";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import { canAccessBooking, canAccessDeparture } from "../../lib/conversationScope";
 
 const router = Router();
 
@@ -52,6 +54,14 @@ router.get("/", async (req, res) => {
       .leftJoin(bookings, eq(visaApplications.bookingId, bookings.id));
 
     const conditions: Parameters<typeof and>[0][] = [];
+    const scope = await resolveUserScope(req);
+    if (scope.type === "branch" && scope.branchId) {
+      conditions.push(eq(bookings.branchId, scope.branchId));
+    } else if (scope.type === "agent" && scope.agentId) {
+      conditions.push(sql`(${bookings.agentId} = ${scope.agentId} OR (${bookings.picType} = 'agen' AND ${bookings.picId} = ${scope.agentId}))`);
+    } else if (scope.type !== "global") {
+      conditions.push(sql`FALSE`);
+    }
     if (departureId) conditions.push(eq(bookings.departureId, departureId));
     if (status && status !== "all") conditions.push(eq(visaApplications.status, status));
     if (conditions.length) query = query.where(and(...conditions)) as typeof query;
@@ -73,6 +83,11 @@ router.post("/", async (req, res) => {
     if (!bookingId || !pilgrimId) {
       return res.status(400).json({ error: "bookingId and pilgrimId required" });
     }
+    if (!(await canAccessBooking(req, bookingId))) {
+      return res.status(404).json({ error: "Booking tidak ditemukan" });
+    }
+    const [pilgrim] = await db.select({ id: bookingPilgrims.id }).from(bookingPilgrims).where(and(eq(bookingPilgrims.id, pilgrimId), eq(bookingPilgrims.bookingId, bookingId))).limit(1);
+    if (!pilgrim) return res.status(404).json({ error: "Jemaah tidak ditemukan pada booking tersebut" });
 
     const [created] = await db
       .insert(visaApplications)
@@ -108,6 +123,10 @@ router.patch("/:id", async (req, res) => {
       rejectionReason, submittedAt, approvedAt,
     } = req.body;
 
+    const [existing] = await db.select({ bookingId: visaApplications.bookingId }).from(visaApplications).where(eq(visaApplications.id, req.params.id)).limit(1);
+    if (!existing || !(await canAccessBooking(req, existing.bookingId))) {
+      return res.status(404).json({ error: "Visa application not found" });
+    }
     const patch: Record<string, unknown> = { updatedAt: new Date(), updatedBy: adminId ?? null };
     if (status !== undefined) patch.status = status;
     if (notes !== undefined) patch.notes = notes;
@@ -138,6 +157,10 @@ router.patch("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
+    const [existing] = await db.select({ bookingId: visaApplications.bookingId }).from(visaApplications).where(eq(visaApplications.id, req.params.id)).limit(1);
+    if (!existing || !(await canAccessBooking(req, existing.bookingId))) {
+      return res.status(404).json({ error: "Visa application not found" });
+    }
     const [deleted] = await db
       .delete(visaApplications)
       .where(eq(visaApplications.id, req.params.id))
@@ -155,6 +178,9 @@ router.delete("/:id", async (req, res) => {
 router.get("/stats/:departureId", async (req, res) => {
   try {
     const { departureId } = req.params;
+    if (!(await canAccessDeparture(req, departureId))) {
+      return res.status(404).json({ error: "Keberangkatan tidak ditemukan" });
+    }
 
     const rows = await db
       .select({
@@ -186,6 +212,9 @@ router.post("/bulk", async (req, res) => {
     const { departureId, status } = req.body as { departureId: string; status?: string };
 
     if (!departureId) return res.status(400).json({ error: "departureId required" });
+    if (!(await canAccessDeparture(req, departureId))) {
+      return res.status(404).json({ error: "Keberangkatan tidak ditemukan" });
+    }
 
     // Get all booking_pilgrims for this departure
     const pilgrims = await db
@@ -239,6 +268,13 @@ router.post("/bulk-update", async (req, res) => {
       return res.status(400).json({ error: "ids array required" });
     }
     if (!status) return res.status(400).json({ error: "status required" });
+
+    const existingRows = await db.select({ bookingId: visaApplications.bookingId }).from(visaApplications).where(inArray(visaApplications.id, ids));
+    for (const row of existingRows) {
+      if (!(await canAccessBooking(req, row.bookingId))) {
+        return res.status(404).json({ error: "Visa application not found" });
+      }
+    }
 
     const patch: Record<string, unknown> = {
       status,

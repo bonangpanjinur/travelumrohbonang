@@ -12,6 +12,8 @@ import { Router } from "express";
 import { db, conversations, conversationMessages, profiles, notifications } from "@workspace/db";
 import { eq, desc, and, sql, asc } from "drizzle-orm";
 import { requireAuth } from "../../middlewares/auth";
+import { resolveUserScope } from "../../lib/scopeGuard";
+import { canAccessConversation } from "../../lib/conversationScope";
 
 // ── Helper: insert in-app notification for the user when admin replies ─────────
 async function notifyUser({
@@ -78,6 +80,15 @@ router.get("/", requireAuth, async (req, res) => {
       );
     }
 
+    const scope = await resolveUserScope(req);
+    if (scope.type === "branch" && scope.branchId) {
+      conditions.push(sql`EXISTS (SELECT 1 FROM bookings b_scope WHERE b_scope.id = c.booking_id AND b_scope.branch_id = ${scope.branchId})`);
+    } else if (scope.type === "agent" && scope.agentId) {
+      conditions.push(sql`EXISTS (SELECT 1 FROM bookings b_scope WHERE b_scope.id = c.booking_id AND (b_scope.agent_id = ${scope.agentId} OR (b_scope.pic_type = 'agen' AND b_scope.pic_id = ${scope.agentId})))`);
+    } else if (scope.type !== "global") {
+      conditions.push(sql`FALSE`);
+    }
+
     const whereClause =
       conditions.length > 0
         ? sql`WHERE ${sql.join(conditions, sql` AND `)}`
@@ -136,6 +147,9 @@ router.get("/", requireAuth, async (req, res) => {
 router.get("/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    if (!(await canAccessConversation(req, id))) {
+      return res.status(404).json({ error: "Percakapan tidak ditemukan" });
+    }
     const conv = await db.query.conversations.findFirst({
       where: eq(conversations.id, id),
     });
@@ -161,6 +175,9 @@ router.get("/:id", requireAuth, async (req, res) => {
 router.get("/:id/messages", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    if (!(await canAccessConversation(req, id))) {
+      return res.status(404).json({ error: "Percakapan tidak ditemukan" });
+    }
     const { limit = "100", offset = "0" } = req.query as Record<string, string>;
     const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 100, 1), 200);
     const safeOffset = Math.max(Number.parseInt(offset, 10) || 0, 0);
@@ -184,6 +201,9 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
 router.post("/:id/messages", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    if (!(await canAccessConversation(req, id))) {
+      return res.status(404).json({ error: "Percakapan tidak ditemukan" });
+    }
     const { message } = req.body as { message?: string };
     const normalizedMessage = message?.trim() ?? "";
 
@@ -247,6 +267,9 @@ router.post("/:id/messages", requireAuth, async (req, res) => {
 router.patch("/:id", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    if (!(await canAccessConversation(req, id))) {
+      return res.status(404).json({ error: "Percakapan tidak ditemukan" });
+    }
     const { status, assignedAdminId } = req.body as {
       status?: "open" | "closed";
       assignedAdminId?: string | null;
@@ -280,6 +303,9 @@ router.patch("/:id", requireAuth, async (req, res) => {
 router.patch("/:id/read", requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    if (!(await canAccessConversation(req, id))) {
+      return res.status(404).json({ error: "Percakapan tidak ditemukan" });
+    }
     await db
       .update(conversations)
       .set({ unreadAdmin: 0 })
