@@ -45,6 +45,7 @@ export const refundRequests = pgTable("refund_requests", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),        // references auth.users — no local FK
   bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
+  branchId: text("branch_id"),              // NULL = legacy/global-admin only
   reason: text("reason"),
   amount: integer("amount"),
   bankName: text("bank_name"),
@@ -59,5 +60,6 @@ export const refundRequests = pgTable("refund_requests", {
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_refund_requests_booking_id").on(t.bookingId),
+  index("idx_refund_requests_branch_id").on(t.branchId),
   index("idx_refund_requests_user_id").on(t.userId),
 ]);

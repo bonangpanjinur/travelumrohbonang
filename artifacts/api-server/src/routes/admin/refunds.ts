@@ -88,6 +88,7 @@ router.post("/", async (req, res) => {
     const [refund] = await db.insert(refundRequests).values({
       id: crypto.randomUUID(),
       bookingId,
+      branchId: booking.branchId ?? null,
       userId: booking.userId ?? null,
       reason,
       amount: parsedAmount,
@@ -204,6 +205,7 @@ router.patch("/:id", async (req, res) => {
       const [result] = await tx
         .update(refundRequests)
         .set({
+          branchId: before.branchId ?? null,
           status,
           adminNotes,
           processedBy,

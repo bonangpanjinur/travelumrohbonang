@@ -48,6 +48,7 @@ export const agentCommissions = pgTable("agent_commissions", {
   id: text("id").primaryKey(),
   bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
   agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  branchId: text("branch_id"), // NULL = legacy/global-admin only
   amount: integer("amount").notNull(),
   // F3-04: enum type — migration 20260730000001 harus dijalankan sebelum push schema
   status: commissionStatus("status").notNull().default("pending"),
@@ -55,11 +56,13 @@ export const agentCommissions = pgTable("agent_commissions", {
 }, (t) => [
   index("idx_agent_commissions_booking_id").on(t.bookingId),
   index("idx_agent_commissions_agent_id").on(t.agentId),
+  index("idx_agent_commissions_branch_id").on(t.branchId),
 ]);
 
 export const agentWithdrawals = pgTable("agent_withdrawals", {
   id: text("id").primaryKey(),
   agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  branchId: text("branch_id"), // NULL = legacy/global-admin only
   amount: integer("amount").notNull(),
   // F3-04: enum type — migration 20260730000001 harus dijalankan sebelum push schema
   status: withdrawalStatus("status").notNull().default("requested"), // requested | approved | rejected | paid
@@ -75,6 +78,7 @@ export const agentWithdrawals = pgTable("agent_withdrawals", {
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   index("idx_agent_withdrawals_agent_id").on(t.agentId),
+  index("idx_agent_withdrawals_branch_id").on(t.branchId),
 ]);
 
 export const affiliateClicks = pgTable("affiliate_clicks", {

@@ -18,6 +18,7 @@ import {
   savingsTransactions,
   packages,
   bookings,
+  profiles,
   eq,
   and,
   desc,
@@ -102,11 +103,13 @@ router.post("/", async (req, res) => {
       }
     }
 
+    const [profile] = await db.select({ branchId: profiles.branchId }).from(profiles).where(eq(profiles.id, userId)).limit(1);
     const now = new Date();
     const id = crypto.randomUUID();
     const [account] = await db.insert(savingsAccounts).values({
       id,
       userId,
+      branchId: profile?.branchId ?? null,
       targetPackageId: targetPackageId ?? null,
       targetPackageName,
       targetAmount: resolvedTarget,
@@ -178,6 +181,7 @@ router.post("/:id/deposit", async (req, res) => {
     const [tx] = await db.insert(savingsTransactions).values({
       id: txId,
       accountId: account.id,
+      branchId: account.branchId ?? null,
       amount,
       type: "deposit",
       status: "pending",
@@ -235,6 +239,7 @@ router.post("/:id/use", async (req, res) => {
       await tx.insert(savingsTransactions).values({
         id: newTxId,
         accountId: String(account["id"]),
+        branchId: (account["branch_id"] as string | null) ?? null,
         amount: -Math.abs(amount),
         type: "booking_payment",
         status: "verified",
@@ -302,6 +307,7 @@ router.post("/:id/close", async (req, res) => {
       await db.insert(savingsTransactions).values({
         id: crypto.randomUUID(),
         accountId: account.id,
+        branchId: account.branchId ?? null,
         amount: -account.currentBalance,
         type: "withdrawal",
         status: "pending",

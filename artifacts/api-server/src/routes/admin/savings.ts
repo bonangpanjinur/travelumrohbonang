@@ -187,6 +187,7 @@ router.post("/:id/verify/:txId", async (req, res) => {
 
       const now = new Date();
       await txDb.update(savingsTransactions).set({
+        branchId: account.branch_id ?? account.branchId ?? null,
         status: "verified",
         recordedBy: adminId ?? null,
         verifiedAt: now,
@@ -355,6 +356,7 @@ router.post("/:id/refund", async (req, res) => {
       await txDb.insert(savingsTransactions).values({
         id: txId,
         accountId: id,
+        branchId: account.branch_id ?? account.branchId ?? null,
         amount: -Math.abs(amount),
         type: "refund",
         status: "verified",

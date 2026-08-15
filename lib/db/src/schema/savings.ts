@@ -19,6 +19,7 @@ import {
 export const savingsAccounts = pgTable("savings_accounts", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),                      // → profiles.id
+  branchId: text("branch_id"),                            // NULL = legacy/global-admin only
   targetPackageId: text("target_package_id"),             // → packages.id (optional)
   targetPackageName: text("target_package_name"),         // denormalized label
   targetAmount: integer("target_amount").notNull().default(0),
@@ -29,12 +30,14 @@ export const savingsAccounts = pgTable("savings_accounts", {
   updatedAt: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
   index("idx_savings_accounts_user_id").on(t.userId),
+  index("idx_savings_accounts_branch_id").on(t.branchId),
   index("idx_savings_accounts_status").on(t.status),
 ]);
 
 export const savingsTransactions = pgTable("savings_transactions", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),                // → savingsAccounts.id
+  branchId: text("branch_id"),                            // NULL = legacy/global-admin only
   amount: integer("amount").notNull(),                    // positive = kredit, negative = debit
   type: text("type").notNull(),                           // deposit | withdrawal | booking_payment | refund
   status: text("status").notNull().default("pending"),    // pending | verified | rejected
@@ -48,6 +51,7 @@ export const savingsTransactions = pgTable("savings_transactions", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (t) => [
   index("idx_savings_tx_account_id").on(t.accountId),
+  index("idx_savings_tx_branch_id").on(t.branchId),
   index("idx_savings_tx_status").on(t.status),
   index("idx_savings_tx_type").on(t.type),
   index("idx_savings_tx_idempotency").on(t.accountId, t.idempotencyKey),
