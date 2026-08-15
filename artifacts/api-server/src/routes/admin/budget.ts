@@ -11,6 +11,7 @@
 
 import { Router, Request, Response } from "express";
 import { db, sql, budgets, eq, and } from "@workspace/db";
+import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
 
@@ -23,9 +24,18 @@ function getRows(r: any): any[] {
   return (r as any).rows ?? r;
 }
 
+async function requireGlobal(req: Request, res: Response) {
+  if ((await resolveUserScope(req)).type !== "global") {
+    res.status(403).json({ error: "Modul budget hanya dapat diakses admin global sampai tenant key tersedia" });
+    return false;
+  }
+  return true;
+}
+
 // ── GET / — list budgets ──────────────────────────────────────────────────────
 router.get("/", async (req: Request, res: Response) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const { year, month } = req.query as { year?: string; month?: string };
 
     const filters = [];
@@ -47,6 +57,7 @@ router.get("/", async (req: Request, res: Response) => {
 // ── POST / — create budget ────────────────────────────────────────────────────
 router.post("/", async (req: Request, res: Response) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const { periodYear, periodMonth, category, categoryLabel, budgetType, amount, notes, createdBy } = req.body as {
       periodYear: number;
       periodMonth?: number | null;
@@ -85,6 +96,7 @@ router.post("/", async (req: Request, res: Response) => {
 // ── PATCH /:id — update budget ────────────────────────────────────────────────
 router.patch("/:id", async (req: Request, res: Response) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const { amount, categoryLabel, notes, budgetType, periodMonth } = req.body;
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     if (amount !== undefined) patch.amount = Math.round(amount);
@@ -109,6 +121,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
 // ── DELETE /:id — delete budget ───────────────────────────────────────────────
 router.delete("/:id", async (req: Request, res: Response) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const [deleted] = await db
       .delete(budgets)
       .where(eq(budgets.id, String(req.params.id)))
@@ -127,6 +140,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
 // - expense: dari financial_transactions per category
 router.get("/vs-actual", async (req: Request, res: Response) => {
   try {
+    if (!(await requireGlobal(req, res))) return;
     const { year, month } = req.query as { year?: string; month?: string };
     const targetYear = year ? Number(year) : new Date().getFullYear();
     const targetMonth = month ? Number(month) : null;
@@ -189,12 +203,12 @@ router.get("/vs-actual", async (req: Request, res: Response) => {
 
     // 4. Jika ada beberapa kategori income, jangan memberi atribusi palsu.
     //    Tampilkan total sebagai unallocatedIncome sampai revenue memiliki dimensi kategori.
-    const incomeRows = budgetRows.filter((b) => b.budgetType === "income");
+    const incomeRows = budgetRows.filter((b: { budgetType: string }) => b.budgetType === "income");
     const primaryIncomeCategoryId = incomeRows.length === 1 ? incomeRows[0].id : null;
     const unallocatedIncome = incomeRows.length > 1 ? totalIncome : 0;
 
     // 5. Gabungkan budget vs aktual per baris anggaran
-    const comparison = budgetRows.map((b) => {
+    const comparison = budgetRows.map((b: { id: string; budgetType: string; category: string; categoryLabel: string | null; periodYear: number; periodMonth: number | null; amount: number }) => {
       let actual = 0;
       if (b.budgetType === "income") {
         // Hanya kategori income pertama yang mendapat angka aktual booking_payments
@@ -226,8 +240,8 @@ router.get("/vs-actual", async (req: Request, res: Response) => {
       };
     });
 
-    const totalBudget = comparison.reduce((s, c) => s + c.budget, 0);
-    const totalActual = comparison.reduce((s, c) => s + c.actual, 0);
+    const totalBudget = comparison.reduce((s: number, c: { budget: number }) => s + c.budget, 0);
+    const totalActual = comparison.reduce((s: number, c: { actual: number }) => s + c.actual, 0);
 
     res.json({
       period: { year: targetYear, month: targetMonth },
@@ -248,7 +262,8 @@ router.get("/vs-actual", async (req: Request, res: Response) => {
 // ── GET /cash-flow-projection — proyeksi cash flow N bulan ke depan ───────────
 router.get("/cash-flow-projection", async (req: Request, res: Response) => {
   try {
-    // Validate months param strictly
+    if (!(await requireGlobal(req, res))) return;
+    // Jumlah bulan proyeksi dibatasi 1–12 untuk menjaga beban query.
     const rawMonths = Number(req.query.months ?? 6);
     const months = Number.isInteger(rawMonths) && rawMonths >= 1 && rawMonths <= 12 ? rawMonths : 6;
 
