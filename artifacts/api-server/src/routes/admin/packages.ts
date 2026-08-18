@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, sql, packages, packageDepartures, departurePrices, departureHotels, packageCommissions, hotels, airlines, eq, asc, inArray } from "@workspace/db";
+import { db, sql, packages, packageDepartures, departurePrices, departureHotels, packageCommissions, hotels, airlines, eq, asc, inArray, and } from "@workspace/db";
 import { sendAdminError } from "../../lib/adminApiError";
 import {
   PackageSchema,
@@ -370,9 +370,7 @@ router.put("/:id/commissions", async (req, res) => {
         const [existing] = await tx
           .select({ id: packageCommissions.id })
           .from(packageCommissions)
-          .where(eq(packageCommissions.packageId, packageId))
-          // label column stores the pic type key
-          .where(eq(packageCommissions.label, picType))
+          .where(and(eq(packageCommissions.packageId, packageId), eq(packageCommissions.label, picType)))
           .limit(1);
 
         if (existing) {

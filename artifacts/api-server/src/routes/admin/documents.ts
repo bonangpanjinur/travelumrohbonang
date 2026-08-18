@@ -195,6 +195,7 @@ router.put(
       const isSubmitted = body.status === "submitted" || isVerified;
 
       const values = {
+        branchId: booking.branchId ?? "hq",
         pilgrimId,
         bookingId,
         documentType,

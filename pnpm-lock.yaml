@@ -185,6 +185,9 @@ importers:
       react:
         specifier: 19.1.0
         version: 19.1.0
+      resend:
+        specifier: ^4.8.0
+        version: 4.8.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       xlsx:
         specifier: ^0.18.5
         version: 0.18.5

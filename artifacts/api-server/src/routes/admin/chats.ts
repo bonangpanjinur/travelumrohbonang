@@ -28,13 +28,14 @@ router.get("/", async (req, res) => {
 
 router.get("/:bookingId", async (req, res) => {
   try {
-    if (!(await canAccessBooking(req, req.params.bookingId))) {
+    const bookingId = String(req.params.bookingId);
+    if (!(await canAccessBooking(req, bookingId))) {
       return res.status(404).json({ error: "Chat tidak ditemukan" });
     }
     const data = await db
       .select()
       .from(chatMessages)
-      .where(eq(chatMessages.bookingId, req.params.bookingId))
+      .where(eq(chatMessages.bookingId, bookingId))
       .orderBy(asc(chatMessages.createdAt));
     res.json({ data });
   } catch (err) {
@@ -77,7 +78,7 @@ router.post("/", async (req, res) => {
  * POST /api/admin/chats/blast/:departureId  { message: string }
  */
 router.post("/blast/:departureId", async (req, res) => {
-  const { departureId } = req.params;
+  const departureId = String(req.params.departureId);
   const { message } = req.body as { message?: string };
 
   if (!message || typeof message !== "string" || message.trim().length === 0) {

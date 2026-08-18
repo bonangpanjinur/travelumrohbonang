@@ -146,7 +146,7 @@ router.get("/", requireAuth, async (req, res) => {
 // ── GET /conversations/:id ────────────────────────────────────────────────────
 router.get("/:id", requireAuth, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     if (!(await canAccessConversation(req, id))) {
       return res.status(404).json({ error: "Percakapan tidak ditemukan" });
     }
@@ -174,7 +174,7 @@ router.get("/:id", requireAuth, async (req, res) => {
 // ── GET /conversations/:id/messages ──────────────────────────────────────────
 router.get("/:id/messages", requireAuth, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     if (!(await canAccessConversation(req, id))) {
       return res.status(404).json({ error: "Percakapan tidak ditemukan" });
     }
@@ -200,7 +200,7 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
 // ── POST /conversations/:id/messages ─────────────────────────────────────────
 router.post("/:id/messages", requireAuth, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     if (!(await canAccessConversation(req, id))) {
       return res.status(404).json({ error: "Percakapan tidak ditemukan" });
     }
@@ -266,7 +266,7 @@ router.post("/:id/messages", requireAuth, async (req, res) => {
 // Body: { status?: 'open' | 'closed', assignedAdminId?: string | null }
 router.patch("/:id", requireAuth, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     if (!(await canAccessConversation(req, id))) {
       return res.status(404).json({ error: "Percakapan tidak ditemukan" });
     }
@@ -302,7 +302,7 @@ router.patch("/:id", requireAuth, async (req, res) => {
 // Admin marks conversation as read (resets unread_admin counter)
 router.patch("/:id/read", requireAuth, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     if (!(await canAccessConversation(req, id))) {
       return res.status(404).json({ error: "Percakapan tidak ditemukan" });
     }

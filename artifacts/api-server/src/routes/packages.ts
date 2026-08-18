@@ -332,7 +332,7 @@ router.get("/filter-options", async (req: Request, res: Response) => {
 // Public: fetch itinerary + days for a given departure
 router.get("/itinerary/:departureId", async (req: Request, res: Response) => {
   try {
-    const { departureId } = req.params;
+    const departureId = String(req.params.departureId);
 
     if (USE_SUPABASE_HTTP) {
       const rows = await supabaseGet(
@@ -411,7 +411,7 @@ router.get("/itinerary/:departureId", async (req: Request, res: Response) => {
 // Always uses Drizzle directly — this table lives only in the Replit DB.
 router.get("/gallery/by-package/:packageId", async (req: Request, res: Response) => {
   try {
-    const { packageId } = req.params;
+    const packageId = String(req.params.packageId);
 
     const rows = await db
       .select({
@@ -584,14 +584,14 @@ router.get("/:slug", async (req: Request, res: Response) => {
 
     const hotelMap = Object.fromEntries(allHotels.map((h) => [h.id, h]));
     const airlineMap = Object.fromEntries(allAirlines.map((a) => [a.id, a]));
-    const pricesByDep = allPrices.reduce<Record<string, typeof allPrices>>((acc, p) => {
-      (acc[p.departureId] ??= []).push(p);
-      return acc;
-    }, {});
-    const extraHotelsByDep = allExtraHotels.reduce<Record<string, typeof allExtraHotels>>((acc, eh) => {
-      if (eh.departureId) (acc[eh.departureId] ??= []).push(eh);
-      return acc;
-    }, {});
+    const pricesByDep: Record<string, any[]> = {};
+    for (const p of allPrices as any[]) {
+      (pricesByDep[p.departureId] ??= []).push(p);
+    }
+    const extraHotelsByDep: Record<string, any[]> = {};
+    for (const eh of allExtraHotels as any[]) {
+      if (eh.departureId) (extraHotelsByDep[eh.departureId] ??= []).push(eh);
+    }
 
     const departuresWithDetail = deps.map((dep) => {
       const dHotelMakkah = dep.hotelMakkahId ? hotelMap[dep.hotelMakkahId] : null;

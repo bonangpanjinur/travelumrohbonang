@@ -63,11 +63,11 @@ export default function PaymentPolicies() {
     setLoading(true);
     try {
       const [policyResponse, packageResponse] = await Promise.all([
-        apiFetch("/api/admin/payment-policies"),
-        apiFetch("/api/admin/packages"),
+        apiFetch<{ data?: Policy[] } | Policy[]>("/api/admin/payment-policies"),
+        apiFetch<{ data?: PackageOption[] } | PackageOption[]>("/api/admin/packages"),
       ]);
-      setPolicies(policyResponse?.data ?? policyResponse ?? []);
-      setPackages(packageResponse?.data ?? packageResponse ?? []);
+      setPolicies(Array.isArray(policyResponse) ? policyResponse : policyResponse.data ?? []);
+      setPackages(Array.isArray(packageResponse) ? packageResponse : packageResponse.data ?? []);
     } catch (error) {
       console.error(error);
       toast.error("Aturan pembayaran belum dapat dimuat");
@@ -93,13 +93,13 @@ export default function PaymentPolicies() {
     if (activeCodes.includes("payment_methods")) rules.push({ ruleCode: "payment_methods", ruleType: "text", value: paymentMethods, displayText: paymentMethods || "Metode pembayaran belum diisi." });
     return rules;
   }
-  async function createDraft() {
-    if (!name.trim()) return toast.error("Nama aturan wajib diisi");
-    if (scope === "package" && !packageId) return toast.error("Pilih paket terlebih dahulu");
-    if (!activeCodes.length) return toast.error("Pilih minimal satu aturan");
-    if (downPayment < 0 || cancellationFee < 0 || changeFee < 0 || (downPaymentMode === "percentage" && downPayment > 100) || (cancellationMode === "percentage" && cancellationFee > 100) || changeFee > 100) return toast.error("Nilai persentase harus antara 0 sampai 100 dan nominal tidak boleh negatif");
-    if (cancellationMode === "tiered" && cancellationTiers.some((tier) => tier.value < 0 || (tier.mode === "percentage" && tier.value > 100))) return toast.error("Periksa nilai pada tingkat biaya pembatalan");
-    if (activeCodes.includes("installment_schedule") && installments.reduce((sum, row) => sum + Number(row.percentage), 0) > 100) return toast.error("Total persentase cicilan tidak boleh lebih dari 100%");
+  async function createDraft(): Promise<void> {
+    if (!name.trim()) { toast.error("Nama aturan wajib diisi"); return; }
+    if (scope === "package" && !packageId) { toast.error("Pilih paket terlebih dahulu"); return; }
+    if (!activeCodes.length) { toast.error("Pilih minimal satu aturan"); return; }
+    if (downPayment < 0 || cancellationFee < 0 || changeFee < 0 || (downPaymentMode === "percentage" && downPayment > 100) || (cancellationMode === "percentage" && cancellationFee > 100) || changeFee > 100) { toast.error("Nilai persentase harus antara 0 sampai 100 dan nominal tidak boleh negatif"); return; }
+    if (cancellationMode === "tiered" && cancellationTiers.some((tier) => tier.value < 0 || (tier.mode === "percentage" && tier.value > 100))) { toast.error("Periksa nilai pada tingkat biaya pembatalan"); return; }
+    if (activeCodes.includes("installment_schedule") && installments.reduce((sum, row) => sum + Number(row.percentage), 0) > 100) { toast.error("Total persentase cicilan tidak boleh lebih dari 100%"); return; }
     setSaving(true);
     try {
       await apiFetch("/api/admin/payment-policies", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name.trim(), scope, packageId: scope === "package" ? packageId : null, rules: buildRules() }) });

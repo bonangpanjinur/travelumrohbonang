@@ -89,7 +89,7 @@ router.post("/", async (req, res) => {
       id: crypto.randomUUID(),
       bookingId,
       branchId: booking.branchId ?? "hq",
-      userId: booking.userId ?? null,
+      userId: booking.userId ?? String((req as any).user?.id ?? ""),
       reason,
       amount: parsedAmount,
       bankName: bankName ?? null,

@@ -7,6 +7,7 @@ import { Router, Request, Response } from "express";
 import { db, sql } from "@workspace/db";
 import { resolveUserScope } from "../../lib/scopeGuard";
 import { buildBookingScopeCondition } from "../../lib/scopeConditions";
+import { sendWhatsApp, paymentDeadlineAlertWA } from "@workspace/whatsapp";
 import {
   generateIncomeStatementPdf,
   generateBalanceSheetPdf,
@@ -911,11 +912,11 @@ router.get("/reports/cash-flow", async (req: Request, res: Response) => {
 
     const getRows = (r: any) => (r as any).rows ?? r;
 
-    const inflowMap = new Map(getRows(inflows).map((r: any) => [
+    const inflowMap = new Map<string, number>(getRows(inflows).map((r: any) => [
       new Date(r.month).toISOString().slice(0, 7),
       Number(r.total),
     ]));
-    const outflowMap = new Map(getRows(outflows).map((r: any) => [
+    const outflowMap = new Map<string, number>(getRows(outflows).map((r: any) => [
       new Date(r.month).toISOString().slice(0, 7),
       Number(r.total),
     ]));
@@ -1420,8 +1421,8 @@ router.get("/reports/cash-flow.pdf", async (req: Request, res: Response) => {
       `),
     ]);
     const getRows = (r: any) => (r as any).rows ?? r;
-    const inflowMap  = new Map(getRows(inflows).map((r: any)  => [new Date(r.month).toISOString().slice(0, 7), Number(r.total)]));
-    const outflowMap = new Map(getRows(outflows).map((r: any) => [new Date(r.month).toISOString().slice(0, 7), Number(r.total)]));
+    const inflowMap  = new Map<string, number>(getRows(inflows).map((r: any)  => [new Date(r.month).toISOString().slice(0, 7), Number(r.total)]));
+    const outflowMap = new Map<string, number>(getRows(outflows).map((r: any) => [new Date(r.month).toISOString().slice(0, 7), Number(r.total)]));
     const allMonths  = Array.from(new Set([...inflowMap.keys(), ...outflowMap.keys()])).sort();
     const monthly = allMonths.map(m => ({ month: m, inflow: inflowMap.get(m) ?? 0, outflow: outflowMap.get(m) ?? 0, net: (inflowMap.get(m) ?? 0) - (outflowMap.get(m) ?? 0) }));
     const totalInflow  = monthly.reduce((s, r) => s + r.inflow,  0);

@@ -479,7 +479,7 @@ router.post("/bulk-verify", requireFinance, async (req, res) => {
 
 router.patch("/verify/:id", requireFinance, async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const adminId = (req as any).user?.id as string | undefined;
 
     // F2-05: Seluruh verify (update status + bookingPayments + jurnal) dalam satu
@@ -598,7 +598,7 @@ router.patch("/verify/:id", requireFinance, async (req, res) => {
 
 router.patch("/reject/:id", requireFinance, async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const adminId = (req as any).user?.id as string | undefined;
     const { reason } = req.body as { reason?: string };
 

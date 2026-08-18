@@ -110,6 +110,7 @@ export async function generateInstallmentSchedule(
     // Fetch booking + package info
     const [row] = await db
       .select({
+        branchId: bookings.branchId,
         totalPrice: bookings.totalPrice,
         paymentScheme: bookings.paymentScheme,
         createdAt: bookings.createdAt,
@@ -142,6 +143,7 @@ export async function generateInstallmentSchedule(
     await db.insert(installmentSchedules).values(
       installmentRows.map((r) => ({
         id: crypto.randomUUID(),
+        branchId: row.branchId ?? "hq",
         bookingId,
         installmentNumber: r.installmentNumber,
         dueDate: r.dueDate,

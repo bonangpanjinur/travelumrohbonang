@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, profiles, agents, eq, or, ilike } from "@workspace/db";
+import { db, profiles, agents, userRoles, eq, or, ilike } from "@workspace/db";
 import {
   ProfileSchema,
   AdminUpdateUserRequest,
@@ -128,22 +128,24 @@ router.patch("/:id", validate(AdminUpdateUserRequest), async (req, res) => {
   try {
     const id = req.params.id as string;
     const updates = req.body as AdminUpdateUserInput;
+    const { role, ...profileUpdates } = updates as AdminUpdateUserInput & { role?: string };
     const requesterRole = (req.user as any)?.role as string;
 
     // Owner cannot touch super_admin accounts or promote anyone to super_admin/owner.
     if (requesterRole === "owner") {
       // Fetch the target user's current role
       const [target] = await db.select().from(profiles).where(eq(profiles.id, id)).limit(1);
-      if (target?.role === "super_admin") {
+      const [targetRole] = await db.select({ role: userRoles.role }).from(userRoles).where(eq(userRoles.userId, id as any)).limit(1);
+      if (targetRole?.role === "super_admin") {
         res.status(403).json({ error: "Owner cannot modify a super admin account" });
         return;
       }
-      if (target?.role === "owner" && target.id !== (req.user as any)?.id) {
+      if (targetRole?.role === "owner" && target.id !== (req.user as any)?.id) {
         res.status(403).json({ error: "Owner cannot modify another owner account" });
         return;
       }
       // Prevent promoting to super_admin or owner
-      if (updates.role === "super_admin" || updates.role === "owner") {
+      if (role === "super_admin" || role === "owner") {
         res.status(403).json({ error: "Owner cannot assign the super_admin or owner role" });
         return;
       }
@@ -151,9 +153,18 @@ router.patch("/:id", validate(AdminUpdateUserRequest), async (req, res) => {
 
     const [updated] = await db
       .update(profiles)
-      .set(updates)
+      .set(profileUpdates)
       .where(eq(profiles.id, id))
       .returning();
+
+    if (role !== undefined) {
+      const [existingRole] = await db.select({ id: userRoles.id }).from(userRoles).where(eq(userRoles.userId, id as any)).limit(1);
+      if (existingRole) {
+        await db.update(userRoles).set({ role }).where(eq(userRoles.id, existingRole.id));
+      } else {
+        await db.insert(userRoles).values({ id: crypto.randomUUID(), userId: id as any, role, createdAt: new Date() });
+      }
+    }
 
     if (!updated) {
       res.status(404).json({ error: "User not found" });
@@ -161,8 +172,8 @@ router.patch("/:id", validate(AdminUpdateUserRequest), async (req, res) => {
     }
 
     // Sync agents table whenever the role field is touched
-    if (updates.role !== undefined) {
-      await syncAgentRecord(id, updates.role as string);
+    if (role !== undefined) {
+      await syncAgentRecord(id, role as string);
     }
 
     res.json(ProfileSchema.parse(updated));

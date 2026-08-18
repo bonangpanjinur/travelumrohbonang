@@ -145,7 +145,8 @@ const WITHDRAWAL_TRANSITIONS: Record<string, string[]> = {
 router.patch("/withdrawals/:id", async (req, res) => {
   try {
     const { status, adminNotes, proofUrl } = req.body as {
-      status?: string;
+      status?: "requested" | "approved" | "rejected" | "paid";
+
       adminNotes?: string;
       proofUrl?: string;
     };

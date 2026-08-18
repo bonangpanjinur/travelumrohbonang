@@ -760,7 +760,7 @@ router.post("/group", async (req, res) => {
     const hex = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
     const bookingCode = `BNG-${yymm}-${hex}`;
 
-    const groupPaymentSnapshots = await buildBookingPaymentSnapshots(packageId, calculatedGroupTotal, depRow.departureDate);
+    const groupPaymentSnapshots = await buildBookingPaymentSnapshots(packageId, calculatedGroupTotal, dep.departureDate);
     // F-14: Snapshot exchange rate at booking time
     const groupCurrency = currency || "IDR";
     let groupExchangeRate = 1;
@@ -1187,7 +1187,7 @@ const VALID_PIC_TYPES = new Set(["pusat", "agen", "cabang", "karyawan"]);
 
 router.patch("/:id/pic", requireStaff, async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const { picType, picId } = req.body as { picType?: string | null; picId?: string | null };
 
     // Validate picType
@@ -1246,7 +1246,7 @@ router.patch("/:id/pic", requireStaff, async (req, res) => {
 
 router.patch("/:id/branch", async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const { branchId } = req.body;
     await db
       .update(bookings)
@@ -1262,7 +1262,7 @@ router.patch("/:id/branch", async (req, res) => {
 // BKG-F03: Update catatan/notes booking
 router.patch("/:id/notes", async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const { notes } = req.body as { notes?: string | null };
     await db
       .update(bookings)
@@ -1942,8 +1942,8 @@ router.get("/:id/passport-recommendation", async (req, res) => {
           birthDate: p.birth_date ? String(p.birth_date) : null,
           gender: p.gender ?? null,
         })),
-        tenantName: brandingSb.company_name ?? "UmrohPlus",
-        city: brandingSb.company_city ?? "Jakarta",
+        tenantName: String(brandingSb.company_name ?? "UmrohPlus"),
+        city: String(brandingSb.company_city ?? "Jakarta"),
       });
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
@@ -1982,8 +1982,8 @@ router.get("/:id/passport-recommendation", async (req, res) => {
         birthDate: p.birthDate ? String(p.birthDate) : null,
         gender: p.gender ?? null,
       })),
-      tenantName: branding.company_name ?? "UmrohPlus",
-      city: branding.company_city ?? "Jakarta",
+      tenantName: String(branding.company_name ?? "UmrohPlus"),
+      city: String(branding.company_city ?? "Jakarta"),
     });
 
     res.setHeader("Content-Type", "application/pdf");
@@ -2036,7 +2036,7 @@ router.delete("/bulk", requireSuperAdmin, async (req, res) => {
 
 router.delete("/:id", requireSuperAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const [existing] = await db
       .select({ id: bookings.id, bookingCode: bookings.bookingCode, departureId: bookings.departureId })

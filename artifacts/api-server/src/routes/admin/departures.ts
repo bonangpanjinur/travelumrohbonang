@@ -1123,7 +1123,7 @@ router.post("/:id/blast", async (req, res) => {
 
       if ((channel === "wa" || channel === "both") && phone) {
         try {
-          await sendWhatsApp(phone, waBody);
+          await sendWhatsApp({ to: phone, message: waBody });
           sentWa++;
         } catch { failedWa++; }
       }

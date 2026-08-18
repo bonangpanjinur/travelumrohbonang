@@ -54,8 +54,6 @@ function logDiag(
 // When DATABASE_URL is not a real externally-reachable Postgres URL (absent,
 // placeholder, or a Replit-internal host like "helium"), fall back to Supabase
 // PostgREST HTTP to avoid connection timeouts in Vercel serverless.
-import { shouldUseSupabaseHttp } from "../lib/dbFlags";
-
 const USE_SUPABASE_HTTP = shouldUseSupabaseHttp();
 
 async function supabaseForward(

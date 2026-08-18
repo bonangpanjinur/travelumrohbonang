@@ -187,7 +187,7 @@ router.post("/start", writeLimiter, async (req, res) => {
 // ── GET /chat/conversations/:id/messages ─────────────────────────────────────
 router.get("/conversations/:id/messages", generalLimiter, chatAuth, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     // Guests can only read their own conversation
     if (req.chatRole === "guest" && req.guestConversationId !== id) {
@@ -220,7 +220,7 @@ router.get("/conversations/:id/messages", generalLimiter, chatAuth, async (req, 
 // ── POST /chat/conversations/:id/messages ─────────────────────────────────────
 router.post("/conversations/:id/messages", writeLimiter, chatAuth, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const { message } = req.body as { message?: string };
 
     const normalizedMessage = message?.trim() ?? "";
@@ -285,7 +285,7 @@ router.post("/conversations/:id/messages", writeLimiter, chatAuth, async (req, r
 // ── PATCH /chat/conversations/:id/read ───────────────────────────────────────
 router.patch("/conversations/:id/read", generalLimiter, chatAuth, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     // ── Ownership check (same as GET/POST message routes) ─────────────────
     if (req.chatRole === "guest" && req.guestConversationId !== id) {

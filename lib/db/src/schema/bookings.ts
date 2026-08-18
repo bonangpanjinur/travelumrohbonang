@@ -87,6 +87,7 @@ export const bookingPilgrims = pgTable("booking_pilgrims", {
 
 export const pilgrimDocuments = pgTable("pilgrim_documents", {
   id: text("id").primaryKey(),
+  branchId: text("branch_id").notNull().references(() => branches.id, { onDelete: "restrict" }),
   pilgrimId: text("pilgrim_id").notNull().references(() => bookingPilgrims.id, { onDelete: "cascade" }),
   bookingId: text("booking_id").notNull().references(() => bookings.id, { onDelete: "cascade" }),
   documentType: text("document_type").notNull(),
@@ -100,6 +101,7 @@ export const pilgrimDocuments = pgTable("pilgrim_documents", {
 }, (t) => [
   index("idx_pilgrim_docs_pilgrim_id").on(t.pilgrimId),
   index("idx_pilgrim_docs_booking_id").on(t.bookingId),
+  index("idx_pilgrim_docs_branch_id").on(t.branchId),
 ]);
 
 export const checkIns = pgTable("check_ins", {

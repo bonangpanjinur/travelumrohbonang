@@ -165,7 +165,7 @@ router.post("/refunds", async (req, res) => {
 
     // BUG-5: Verify booking ownership and existence
     const [booking] = await db
-      .select({ userId: bookings.userId, totalPrice: bookings.totalPrice, status: bookings.status })
+      .select({ userId: bookings.userId, branchId: bookings.branchId, totalPrice: bookings.totalPrice, status: bookings.status })
       .from(bookings)
       .where(eq(bookings.id, bookingId))
       .limit(1);
@@ -203,6 +203,7 @@ router.post("/refunds", async (req, res) => {
       .insert(refundRequests)
       .values({
         id: crypto.randomUUID(),
+        branchId: booking.branchId ?? "hq",
         userId,
         bookingId,
         reason: reason.trim(),
@@ -658,7 +659,7 @@ router.get("/:id/payments", async (req, res) => {
 
 router.post("/:id/payments", async (req, res) => {
   try {
-    const id = req.params.id;
+    const id = String(req.params.id);
     const userId = req.user!.id;
     const { amount, paymentMethod, paymentType, proofUrl } = req.body;
 
@@ -670,7 +671,7 @@ router.post("/:id/payments", async (req, res) => {
     }
 
     const [booking] = await db
-      .select({ userId: bookings.userId, status: bookings.status, totalPrice: bookings.totalPrice })
+      .select({ userId: bookings.userId, branchId: bookings.branchId, status: bookings.status, totalPrice: bookings.totalPrice })
       .from(bookings)
       .where(eq(bookings.id, id))
       .limit(1);
@@ -711,6 +712,7 @@ router.post("/:id/payments", async (req, res) => {
         .insert(payments)
         .values({
           id: crypto.randomUUID(),
+          branchId: booking.branchId ?? "hq",
           bookingId: id,
           amount: parsedAmount,
           paymentMethod,
@@ -805,7 +807,7 @@ router.get("/:id/installments", async (req, res) => {
  */
 router.post("/:id/installments/:n/pay", async (req, res) => {
   try {
-    const bookingId = req.params.id as string;
+    const bookingId = String(req.params.id);
     const installmentNumber = parseInt(req.params.n as string, 10);
     const userId = req.user!.id;
 
@@ -816,7 +818,7 @@ router.post("/:id/installments/:n/pay", async (req, res) => {
 
     // Verify ownership
     const [booking] = await db
-      .select({ userId: bookings.userId, bookingCode: bookings.bookingCode })
+      .select({ userId: bookings.userId, branchId: bookings.branchId, bookingCode: bookings.bookingCode })
       .from(bookings)
       .where(eq(bookings.id, bookingId))
       .limit(1);
@@ -973,6 +975,7 @@ router.post("/:id/installments/:n/pay", async (req, res) => {
       .insert(paymentGatewayTransactions)
       .values({
         id: crypto.randomUUID(),
+        branchId: booking.branchId ?? "hq",
         bookingId,
         gateway,
         orderId,

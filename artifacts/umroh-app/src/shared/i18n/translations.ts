@@ -191,7 +191,6 @@ export const translations: Record<Language, Record<string, string>> = {
     "menu.payments": "Pembayaran",
     "menu.installments": "Cicilan",
     "menu.cost_profitability": "HPP & Profitabilitas",
-    "menu.accounting": "Akuntansi & Keuangan",
     "menu.payment_gateway": "Gerbang Pembayaran",
     "menu.payment_policies": "Aturan Pembayaran",
     "menu.analytics_dashboard": "Dasbor Analitik",

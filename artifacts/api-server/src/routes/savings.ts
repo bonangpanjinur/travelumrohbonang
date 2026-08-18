@@ -93,13 +93,12 @@ router.post("/", async (req, res) => {
     let resolvedTarget = targetAmount ?? 0;
     if (targetPackageId) {
       const [pkg] = await db
-        .select({ title: packages.title, basePrice: packages.basePrice })
+        .select({ title: packages.title })
         .from(packages)
         .where(eq(packages.id, targetPackageId))
         .limit(1);
       if (pkg) {
         targetPackageName = pkg.title;
-        if (!targetAmount && pkg.basePrice) resolvedTarget = Number(pkg.basePrice);
       }
     }
 

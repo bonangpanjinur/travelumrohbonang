@@ -65,7 +65,7 @@ router.post("/", async (req: any, res) => {
 
     // Verify ownership
     const [booking] = await db
-      .select({ id: bookings.id, departureId: bookings.departureId })
+      .select({ id: bookings.id, branchId: bookings.branchId, departureId: bookings.departureId })
       .from(bookings)
       .where(and(eq(bookings.id, bookingId), eq(bookings.userId, userId)))
       .limit(1);
@@ -139,6 +139,7 @@ router.post("/", async (req: any, res) => {
         .insert(pilgrimDocuments)
         .values({
           id,
+          branchId: booking.branchId ?? "hq",
           pilgrimId,
           bookingId,
           documentType,

@@ -165,6 +165,14 @@ router.post("/init-pilgrim/:pilgrimId", async (req: any, res) => {
   if (!bookingId) return res.status(400).json({ error: "bookingId diperlukan" });
 
   try {
+    const [booking] = await db
+      .select({ branchId: bookings.branchId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+    if (!booking) return res.status(404).json({ error: "Booking tidak ditemukan" });
+    const branchId = booking.branchId ?? "hq";
+
     // Ambil tipe dokumen aktif dari DB (fallback ke hardcoded jika tabel kosong)
     const configuredTypes = await db
       .select({ code: documentTypes.code })
@@ -188,6 +196,7 @@ router.post("/init-pilgrim/:pilgrimId", async (req: any, res) => {
       await db.insert(pilgrimDocuments).values(
         missing.map((t) => ({
           id: crypto.randomUUID(),
+          branchId,
           pilgrimId,
           bookingId,
           documentType: t,
@@ -253,10 +262,18 @@ router.get("/", async (req: any, res) => {
  */
 router.put("/", async (req: any, res) => {
   const { pilgrimId, bookingId, documentType, fileUrl, status, notes } = req.body as Record<string, string | undefined>;
-  if (!pilgrimId || !documentType) {
-    return res.status(400).json({ error: "pilgrimId dan documentType diperlukan" });
+  if (!pilgrimId || !documentType || !bookingId) {
+    return res.status(400).json({ error: "pilgrimId, bookingId, dan documentType diperlukan" });
   }
   try {
+    const [booking] = await db
+      .select({ branchId: bookings.branchId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+    if (!booking) return res.status(404).json({ error: "Booking tidak ditemukan" });
+    const branchId = booking.branchId ?? "hq";
+
     const [existing] = await db
       .select({ id: pilgrimDocuments.id })
       .from(pilgrimDocuments)
@@ -285,8 +302,9 @@ router.put("/", async (req: any, res) => {
         .insert(pilgrimDocuments)
         .values({
           id: crypto.randomUUID(),
+          branchId,
           pilgrimId,
-          bookingId: bookingId || null,
+          bookingId,
           documentType,
           fileUrl: fileUrl || null,
           status: (status || "submitted") as any,

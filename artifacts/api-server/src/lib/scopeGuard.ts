@@ -20,10 +20,12 @@ export type UserScopeType = "global" | "branch" | "agent";
 
 export interface UserScope {
   type: UserScopeType;
+  /** Authenticated user id, when available to callers/tests. */
+  userId?: string;
   /** Populated when type === 'branch'. Null means no branch configured. */
-  branchId: string | null;
+  branchId?: string | null;
   /** Populated when type === 'agent'. Null means no agent record found. */
-  agentId: string | null;
+  agentId?: string | null;
 }
 
 // Augment Express Request to carry the resolved scope
