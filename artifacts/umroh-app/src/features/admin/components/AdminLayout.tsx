@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Outlet, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { apiFetch } from "@/shared/lib/apiClient";
 import AdminSidebar from "./AdminSidebar";
@@ -10,8 +10,22 @@ import { AdminQueryErrorBoundary } from "./AdminQueryErrorBoundary";
 import { AdminHealthBanner } from "./AdminHealthBanner";
 import { AdminSessionTimeoutModal } from "./AdminSessionTimeoutModal";
 import { AdminThemeContext, useAdminThemeProvider } from "@/features/admin/hooks/useAdminTheme";
-import { FeatureFlagsProvider } from "@/features/admin/hooks/useFeatureFlags";
+import { FeatureFlagsProvider, useFeatureFlags } from "@/features/admin/hooks/useFeatureFlags";
+import { getFeatureForPath } from "@/features/admin/config/featureDefinitions";
 import AdminFloatingChat from "./AdminFloatingChat";
+
+const FeatureRouteGuard = () => {
+  const location = useLocation();
+  const { role } = useAuth();
+  const { loading, isEnabled } = useFeatureFlags();
+  const feature = getFeatureForPath(location.pathname);
+
+  if (loading) return <div className="flex min-h-[240px] items-center justify-center p-8"><p className="text-sm text-muted-foreground">Memeriksa akses fitur...</p></div>;
+  if (role !== "super_admin" && feature && !isEnabled(feature)) {
+    return <Navigate to="/admin" replace state={{ featureDisabled: feature }} />;
+  }
+  return <Outlet />;
+};
 
 const AdminLayout = () => {
   const { role, signOut } = useAuth();
@@ -88,7 +102,7 @@ const AdminLayout = () => {
           {/* key={location.pathname} resets the boundary on every route change
               so a crash on one page doesn't bleed into the next page. */}
           <AdminQueryErrorBoundary key={location.pathname}>
-            <Outlet />
+            <FeatureRouteGuard />
           </AdminQueryErrorBoundary>
         </div>
       </main>

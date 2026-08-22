@@ -66,7 +66,7 @@ export const FEATURE_DEFINITIONS: FeatureDef[] = [
     description: "Database jemaah, data per booking, dan manifest keberangkatan.",
     category: "Operasional",
     icon: Users,
-    routes: ["/admin/pilgrims", "/admin/pilgrims-db", "/admin/manifest"],
+    routes: ["/admin/pilgrims", "/admin/pilgrims-db", "/admin/manifest", "/admin/departure-readiness"],
     critical: true,
   },
   {
@@ -75,7 +75,7 @@ export const FEATURE_DEFINITIONS: FeatureDef[] = [
     description: "Upload, tracking, dan pengelolaan dokumen paspor & visa.",
     category: "Operasional",
     icon: FileCheck,
-    routes: ["/admin/documents", "/admin/document-tracking"],
+    routes: ["/admin/documents", "/admin/document-tracking", "/admin/visa-tracking"],
   },
   {
     id: "room_assignment",
@@ -99,7 +99,7 @@ export const FEATURE_DEFINITIONS: FeatureDef[] = [
     description: "Kelola perlengkapan manasik, distribusi, dan laporan perlengkapan.",
     category: "Operasional",
     icon: Backpack,
-    routes: ["/admin/manasik", "/admin/equipment", "/admin/equipment-report"],
+    routes: ["/admin/manasik", "/admin/equipment", "/admin/equipment-report", "/admin/equipment-distribution"],
   },
   // ── Keuangan ───────────────────────────────────────────────────────────────
   {
@@ -125,7 +125,7 @@ export const FEATURE_DEFINITIONS: FeatureDef[] = [
     description: "Proses pengajuan dan persetujuan refund dari jamaah.",
     category: "Keuangan",
     icon: Wallet,
-    routes: ["/admin/refunds"],
+    routes: ["/admin/refunds", "/admin/agent-withdrawals"],
   },
   {
     id: "coupons",
@@ -141,7 +141,7 @@ export const FEATURE_DEFINITIONS: FeatureDef[] = [
     description: "Laporan keuangan, HPP, akuntansi, dan dashboard analitik bisnis.",
     category: "Keuangan",
     icon: BarChart3,
-    routes: ["/admin/reports", "/admin/analytics", "/admin/accounting", "/admin/package-costs"],
+    routes: ["/admin/reports", "/admin/analytics", "/admin/accounting", "/admin/package-costs", "/admin/finance-dashboard", "/admin/departure-finance", "/admin/chart-of-accounts", "/admin/general-ledger", "/admin/trial-balance", "/admin/financial-reports", "/admin/bank-reconciliation", "/admin/accounting-export", "/admin/budget-cashflow"],
   },
   {
     id: "contracts",

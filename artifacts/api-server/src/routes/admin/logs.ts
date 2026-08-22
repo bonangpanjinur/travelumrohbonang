@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, auditLogs, errorLogs, desc, eq } from "@workspace/db";
+import { db, auditLogs, errorLogs, desc, eq, and, or, ilike, gte, lte } from "@workspace/db";
 import { FULL_ADMIN_ROLES } from "../../lib/roleConstants";
 import diagLogsRouter from "./diagLogs";
 
@@ -18,6 +18,12 @@ function parseLimit(raw: unknown): number {
   return Math.min(Math.floor(n), MAX_LOG_LIMIT);
 }
 
+function parseDate(value: unknown): Date | undefined {
+  if (typeof value !== "string" || !value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
 function userLogFilter(req: import("express").Request, column: any) {
   const user = (req as any).user as { id?: string; role?: string } | undefined;
   if (user?.role && FULL_ADMIN_ROLES.has(user.role)) return undefined;
@@ -28,11 +34,22 @@ router.get("/audit", async (req, res) => {
   try {
     const limit = parseLimit(req.query.limit);
     const offset = Math.max(0, Number(req.query.offset) || 0);
+    const conditions: any[] = [];
     const scope = userLogFilter(req, auditLogs.userId);
+    if (scope) conditions.push(scope);
+    if (typeof req.query.action === "string" && req.query.action.trim()) conditions.push(eq(auditLogs.action, req.query.action.trim()));
+    if (typeof req.query.q === "string" && req.query.q.trim()) {
+      const q = `%${req.query.q.trim()}%`;
+      conditions.push(or(ilike(auditLogs.action, q), ilike(auditLogs.entityType, q), ilike(auditLogs.entityId, q)));
+    }
+    const from = parseDate(req.query.from);
+    const to = parseDate(req.query.to);
+    if (from) conditions.push(gte(auditLogs.createdAt, from));
+    if (to) conditions.push(lte(auditLogs.createdAt, to));
     const data = await db
       .select()
       .from(auditLogs)
-      .where(scope)
+      .where(conditions.length ? and(...conditions) : undefined)
       .orderBy(desc(auditLogs.createdAt))
       .limit(limit)
       .offset(offset);
@@ -46,11 +63,22 @@ router.get("/error", async (req, res) => {
   try {
     const limit = parseLimit(req.query.limit);
     const offset = Math.max(0, Number(req.query.offset) || 0);
+    const conditions: any[] = [];
     const scope = userLogFilter(req, errorLogs.userId);
+    if (scope) conditions.push(scope);
+    if (typeof req.query.level === "string" && req.query.level.trim()) conditions.push(eq(errorLogs.level, req.query.level.trim()));
+    if (typeof req.query.q === "string" && req.query.q.trim()) {
+      const q = `%${req.query.q.trim()}%`;
+      conditions.push(or(ilike(errorLogs.message, q), ilike(errorLogs.url, q), ilike(errorLogs.level, q)));
+    }
+    const from = parseDate(req.query.from);
+    const to = parseDate(req.query.to);
+    if (from) conditions.push(gte(errorLogs.createdAt, from));
+    if (to) conditions.push(lte(errorLogs.createdAt, to));
     const data = await db
       .select()
       .from(errorLogs)
-      .where(scope)
+      .where(conditions.length ? and(...conditions) : undefined)
       .orderBy(desc(errorLogs.createdAt))
       .limit(limit)
       .offset(offset);
