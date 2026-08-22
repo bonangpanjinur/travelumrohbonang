@@ -76,3 +76,10 @@ Status belum dapat dinaikkan menjadi fully verified sampai canonical production 
 [2]: `artifacts/api-server/src/middlewares/sensitiveActionLimiter.ts` — Sensitive-action rate limiting middleware.  
 [3]: `artifacts/api-server/src/lib/securityAudit.ts` — Structured security audit logger.  
 [4]: `production-auth-monitoring-2026-08-22.md` — Previous production black-box monitoring record.
+
+
+## Addendum: production host rediscovered
+
+Environment hosting metadata identifies `https://travelvins.vercel.app` as the active production alias. A read-only smoke test on 22 August 2026 returned `GET /api/health` with HTTP 200 and `{"status":"ok","database":"connected","server":"running"}`. Anonymous `POST /api/admin/integrations/test-whatsapp` returned HTTP 401, and anonymous `POST /api/admin/users/pentest-actor/impersonate` also returned HTTP 401. Neither request contained valid credentials, so no provider call, mutation, or privileged audit action was intentionally triggered. The responses exposed the general global rate-limit headers but did not expose sensitive configuration.
+
+This confirms the active host and anonymous denial boundary. Authenticated session bridge, audit-log write, and sensitive-action production rate-limit thresholds still require a valid admin session or an approved non-production credential.
