@@ -175,6 +175,39 @@ router.post("/import", async (req, res) => {
   }
 });
 
+// ── GET /exceptions — pusat pengecualian lintas domain ─────────────────────────
+router.get("/exceptions", async (req, res) => {
+  try {
+    const scope = await resolveUserScope(req);
+    const branchFilter = scope.type === "branch" && scope.branchId ? sql`and b.branch_id = ${scope.branchId}` : sql``;
+    const [bank, receivables, orphanPayments, refunds, commissions] = await Promise.all([
+      db.execute(sql`select count(*)::int as count, coalesce(sum(amount), 0)::bigint as amount from bank_mutations where is_matched = false`),
+      db.execute(sql`
+        with paid as (select booking_id, coalesce(sum(amount), 0) as amount from booking_payments where is_voided = false group by booking_id)
+        select count(*)::int as count, coalesce(sum(b.total_price - coalesce(p.amount, 0)), 0)::bigint as amount
+        from bookings b left join paid p on p.booking_id = b.id
+        where b.status = 'confirmed' and b.total_price > coalesce(p.amount, 0) ${branchFilter}
+      `),
+      db.execute(sql`select count(*)::int as count, coalesce(sum(bp.amount), 0)::bigint as amount from booking_payments bp left join bookings b on b.id = bp.booking_id where b.id is null and bp.is_voided = false`),
+      db.execute(sql`select count(*)::int as count, coalesce(sum(amount), 0)::bigint as amount from refund_requests where status in ('pending', 'requested')`),
+      db.execute(sql`select count(*)::int as count, coalesce(sum(amount), 0)::bigint as amount from agent_commissions where status = 'pending'`),
+    ]);
+    const first = (result: any) => ((result as any).rows ?? result)[0] ?? {};
+    res.json({
+      generatedAt: new Date().toISOString(),
+      exceptions: [
+        { code: "unmatched_bank", label: "Mutasi bank belum match", count: Number(first(bank).count ?? 0), amount: Number(first(bank).amount ?? 0) },
+        { code: "confirmed_unpaid", label: "Booking confirmed belum lunas", count: Number(first(receivables).count ?? 0), amount: Number(first(receivables).amount ?? 0) },
+        { code: "orphan_payment", label: "Pembayaran tanpa booking", count: Number(first(orphanPayments).count ?? 0), amount: Number(first(orphanPayments).amount ?? 0) },
+        { code: "pending_refund", label: "Refund menunggu proses", count: Number(first(refunds).count ?? 0), amount: Number(first(refunds).amount ?? 0) },
+        { code: "pending_commission", label: "Komisi menunggu settlement", count: Number(first(commissions).count ?? 0), amount: Number(first(commissions).amount ?? 0) },
+      ],
+    });
+  } catch (err) {
+    sendAdminError(res, "GET /api/admin/bank-reconciliation/exceptions", err);
+  }
+});
+
 // ── PATCH /:id — manual match / update ───────────────────────────────────────
 
 router.patch("/:id", async (req, res) => {

@@ -24,6 +24,10 @@ interface ReconciliationResult {
   data: BankMutation[];
   stats: { total: number; matched: number; unmatched: number; totalKredit: number; totalDebit: number };
 }
+interface FinanceExceptionResult {
+  generatedAt: string;
+  exceptions: Array<{ code: string; label: string; count: number; amount: number }>;
+}
 
 const fmtCurrency = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(Math.abs(n));
 
@@ -71,6 +75,10 @@ export default function BankReconciliation() {
 
   const rows = result?.data ?? [];
   const stats = result?.stats;
+  const { data: exceptionResult } = useQuery<FinanceExceptionResult>({
+    queryKey: ["finance-exceptions"],
+    queryFn: () => apiFetch("/api/admin/bank-reconciliation/exceptions"),
+  });
 
   const importMutation = useMutation({
     mutationFn: (body: any) => apiFetch("/api/admin/bank-reconciliation/import", { method: "POST", body: JSON.stringify(body) }),
@@ -127,6 +135,24 @@ export default function BankReconciliation() {
           </Button>
         </div>
       </div>
+
+      {/* Exception Center */}
+      {exceptionResult?.exceptions && (
+        <Card className="border-amber-200">
+          <CardHeader className="pb-3"><CardTitle className="text-base">Pusat Exception Keuangan</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {exceptionResult.exceptions.map((item) => (
+                <div key={item.code} className={`rounded-lg border p-3 ${item.count > 0 ? "border-amber-200 bg-amber-50/50" : "border-emerald-200 bg-emerald-50/40"}`}>
+                  <p className="text-xs text-muted-foreground">{item.label}</p>
+                  <p className="text-xl font-bold tabular-nums">{item.count}</p>
+                  {item.amount > 0 && <p className="text-xs text-muted-foreground">{fmtCurrency(item.amount)}</p>}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary Cards */}
       {stats && (
