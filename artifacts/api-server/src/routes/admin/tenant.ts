@@ -61,6 +61,21 @@ router.post("/packages", async (req, res) => {
   }
 });
 
+router.patch("/packages/:id", async (req, res) => {
+  try {
+    const allowed = {
+      isFeatured: typeof req.body?.isFeatured === "boolean" ? req.body.isFeatured : undefined,
+      sortOrder: typeof req.body?.sortOrder === "number" ? req.body.sortOrder : undefined,
+    };
+    const updates = Object.fromEntries(Object.entries(allowed).filter(([, value]) => value !== undefined));
+    const [data] = await db.update(tenantSitePackages).set(updates).where(eq(tenantSitePackages.id, req.params.id)).returning();
+    if (!data) return res.status(404).json({ error: "Tenant site package not found" });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update tenant site package" });
+  }
+});
+
 router.delete("/packages/:id", async (req, res) => {
   try {
     await db.delete(tenantSitePackages).where(eq(tenantSitePackages.id, req.params.id));

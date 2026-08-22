@@ -26,7 +26,8 @@ export const AdminUpdateUserRequest = z.object({
   name: z.string().min(1).optional(),
   phone: z.string().optional(),
   avatarUrl: z.string().optional(),
-  branchId: z.string().optional(),
+  branchId: z.string().nullable().optional(),
+  role: z.enum(["super_admin", "owner", "admin", "branch_manager", "finance", "staff", "agent", "buyer", "user"]).optional(),
 });
 
 export const AdminCreateDepartureRequest = z.object({

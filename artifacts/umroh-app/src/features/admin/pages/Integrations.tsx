@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/shared/lib/apiClient";
-import { supabase } from "@/shared/integrations/supabase/client";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
 import { Input } from "@/shared/components/ui/input";
@@ -147,23 +146,20 @@ const Integrations = () => {
     setTestSending(true);
     try {
       if (p === "resend") {
-        const { data, error } = await supabase.functions.invoke("send-email", {
-          body: {
+        await apiFetch("/api/admin/integrations/test-email", {
+          method: "POST",
+          body: JSON.stringify({
             to: testTo.trim(),
             subject: testSubject || "Tes Email",
-            html: `<p>${testMessage.replace(/</g, "&lt;")}</p>`,
             text: testMessage,
-          },
+          }),
         });
-        if (error) throw error;
-        if ((data as any)?.error) throw new Error((data as any).error);
         toast.success("Email uji berhasil dikirim");
       } else {
-        const { data, error } = await supabase.functions.invoke("send-whatsapp", {
-          body: { to: testTo.trim(), message: testMessage, provider: p },
+        await apiFetch("/api/admin/integrations/test-whatsapp", {
+          method: "POST",
+          body: JSON.stringify({ to: testTo.trim(), message: testMessage }),
         });
-        if (error) throw error;
-        if ((data as any)?.error) throw new Error((data as any).error);
         toast.success(`WhatsApp uji berhasil dikirim via ${p}`);
       }
       setTestOpen(null);

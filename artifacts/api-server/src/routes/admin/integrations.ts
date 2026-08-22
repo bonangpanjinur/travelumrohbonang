@@ -1,9 +1,48 @@
 import { Router } from "express";
+import { requireSuperAdmin } from "../../middlewares/requireAdmin";
+import { sendWhatsApp } from "@workspace/whatsapp";
+import { sendEmail } from "@workspace/email";
 import { db, integrationSecrets, eq } from "@workspace/db";
 
 const router = Router();
 
 const MASK = "********";
+
+router.post("/test-whatsapp", requireSuperAdmin, async (req, res) => {
+  const to = typeof req.body?.to === "string" ? req.body.to.trim() : "";
+  const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
+  if (!to || !message || message.length > 4000) {
+    res.status(400).json({ error: "Nomor tujuan dan pesan wajib diisi (maksimal 4000 karakter)" });
+    return;
+  }
+  const result = await sendWhatsApp({ to, message });
+  if (!result.sent) {
+    res.status(502).json({ error: "WhatsApp test gagal dikirim", reason: result.reason });
+    return;
+  }
+  res.json({ sent: true });
+});
+
+router.post("/test-email", requireSuperAdmin, async (req, res) => {
+  const to = typeof req.body?.to === "string" ? req.body.to.trim() : "";
+  const subject = typeof req.body?.subject === "string" ? req.body.subject.trim() : "";
+  const text = typeof req.body?.text === "string" ? req.body.text : "";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || !subject || !text || text.length > 10000) {
+    res.status(400).json({ error: "Email, subject, dan pesan wajib diisi dengan format valid" });
+    return;
+  }
+  const safeText = text.replace(/[<>]/g, "");
+  const result = await sendEmail({
+    to,
+    subject: subject.slice(0, 180),
+html: `<p>${safeText.replace(/\n/g, "<br />")}</p>`
+  });
+  if (!result.sent) {
+    res.status(502).json({ error: "Email test gagal dikirim", reason: result.reason });
+    return;
+  }
+  res.json({ sent: true });
+});
 
 /**
  * The GET handler below redacts every config value to MASK before sending

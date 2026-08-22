@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Badge } from "@/shared/components/ui/badge";
@@ -35,12 +35,32 @@ const TenantPackageManager = ({ tenantSiteId, tenantName }: TenantPackageManager
   const [loading, setLoading] = useState(false);
 
   const fetchData = async () => {
-    const [pkgRes, assignedRes] = await Promise.all([
-      supabase.from("packages").select("id, title, slug, image_url, is_active, package_type").eq("is_active", true).order("title"),
-      supabase.from("tenant_site_packages").select("id, package_id, is_featured, sort_order").eq("tenant_site_id", tenantSiteId).order("sort_order"),
-    ]);
-    if (pkgRes.data) setAllPackages(pkgRes.data);
-    if (assignedRes.data) setAssignedPackages(assignedRes.data);
+    try {
+      const [pkgRes, assignedRes] = await Promise.all([
+        apiFetch<{ data: Array<Record<string, unknown>> }>("/api/packages?active=true"),
+        apiFetch<Array<Record<string, unknown>>>("/api/admin/tenant/packages"),
+      ]);
+      const packages = (pkgRes.data ?? []).map((pkg) => ({
+        id: String(pkg.id),
+        title: String(pkg.title ?? ""),
+        slug: String(pkg.slug ?? ""),
+        image_url: (pkg.imageUrl as string | null) ?? null,
+        is_active: (pkg.isActive as boolean | null) ?? true,
+        package_type: (pkg.packageType as string | null) ?? null,
+      }));
+      const assigned = (assignedRes ?? [])
+        .filter((item) => item.tenantSiteId === tenantSiteId)
+        .map((item) => ({
+          id: String(item.id),
+          package_id: String(item.packageId),
+          is_featured: (item.isFeatured as boolean | null) ?? false,
+          sort_order: (item.sortOrder as number | null) ?? 0,
+        }));
+      setAllPackages(packages);
+      setAssignedPackages(assigned);
+    } catch (error: any) {
+      toast.error(error?.message || "Gagal memuat paket tenant");
+    }
   };
 
   useEffect(() => { fetchData(); }, [tenantSiteId]);
@@ -50,26 +70,39 @@ const TenantPackageManager = ({ tenantSiteId, tenantName }: TenantPackageManager
 
   const handleAssign = async (packageId: string) => {
     setLoading(true);
-    const { error } = await supabase.from("tenant_site_packages").insert({
-      tenant_site_id: tenantSiteId,
-      package_id: packageId,
-      sort_order: assignedPackages.length,
-    });
-    if (error) toast.error(error.message);
-    else { toast.success("Paket ditambahkan"); fetchData(); }
+    try {
+      await apiFetch("/api/admin/tenant/packages", {
+        method: "POST",
+        body: JSON.stringify({ tenantSiteId, packageId, sortOrder: assignedPackages.length }),
+      });
+      toast.success("Paket ditambahkan");
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.message || "Gagal menambahkan paket");
+    }
     setLoading(false);
   };
 
   const handleRemove = async (id: string) => {
-    const { error } = await supabase.from("tenant_site_packages").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else { toast.success("Paket dihapus"); fetchData(); }
+    try {
+      await apiFetch(`/api/admin/tenant/packages/${id}`, { method: "DELETE" });
+      toast.success("Paket dihapus");
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.message || "Gagal menghapus paket");
+    }
   };
 
   const handleToggleFeatured = async (id: string, current: boolean) => {
-    const { error } = await supabase.from("tenant_site_packages").update({ is_featured: !current }).eq("id", id);
-    if (error) toast.error(error.message);
-    else fetchData();
+    try {
+      await apiFetch(`/api/admin/tenant/packages/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isFeatured: !current }),
+      });
+      fetchData();
+    } catch (error: any) {
+      toast.error(error?.message || "Gagal memperbarui paket");
+    }
   };
 
   const getPackageInfo = (packageId: string) => allPackages.find(p => p.id === packageId);

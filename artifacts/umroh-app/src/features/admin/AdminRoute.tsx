@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate, Outlet, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import * as OTPAuth from "otpauth";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useAuthSettings } from "@/features/admin/hooks/useAuthSettings";
@@ -9,13 +9,16 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { useToast } from "@/shared/hooks/use-toast";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
+import { canAccessAdminRoute } from "./adminRouteAccess";
 
 const ISSUER = "Umroh Gateway";
 
 const sessionKey = (uid: string) => `admin_2fa_verified_${uid}`;
 
 const AdminRoute = () => {
-  const { user, isAdmin, loading, signOut } = useAuth();
+  const { user, role, loading, signOut } = useAuth();
+  const location = useLocation();
+  const routeAllowed = canAccessAdminRoute(location.pathname, role);
   const { settings, loading: settingsLoading } = useAuthSettings();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -30,7 +33,7 @@ const AdminRoute = () => {
 
   useEffect(() => {
     const run = async () => {
-      if (!user || !isAdmin) {
+      if (!user || !routeAllowed) {
         setChecking(false);
         return;
       }
@@ -51,7 +54,7 @@ const AdminRoute = () => {
       setChecking(false);
     };
     run();
-  }, [user, isAdmin]);
+  }, [user, routeAllowed, location.pathname]);
 
   const verifyCode = async () => {
     if (!user || !totpSecret) return;
@@ -100,7 +103,7 @@ const AdminRoute = () => {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (!isAdmin) return <Navigate to="/dashboard" replace />;
+  if (!role || !routeAllowed) return <Navigate to="/dashboard" replace state={{ from: location.pathname }} />;
 
   // 2FA enforcement
   if (settings.enable_2fa && settings.require_2fa) {

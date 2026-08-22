@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -51,13 +51,11 @@ const AdminUsers = () => {
     if (!impersonateUser) return;
     setImpersonating(true);
     try {
-      const redirect = `${window.location.origin}/dashboard?impersonated=1`;
-      const { data, error } = await supabase.functions.invoke("admin-impersonate", {
-        body: { target_user_id: impersonateUser.id, redirect_to: redirect },
+      const data = await apiFetch<{ action_link: string }>(`/api/admin/users/${impersonateUser.id}/impersonate`, {
+        method: "POST",
       });
-      if (error) throw error;
       if (data?.action_link) {
-        window.open(data.action_link, "_blank");
+        window.open(data.action_link, "_blank", "noopener,noreferrer");
         toast({ title: "Link impersonate dibuka di tab baru", description: `Anda akan login sebagai ${impersonateUser.email}` });
       } else {
         throw new Error("Tidak menerima action link");
@@ -73,43 +71,12 @@ const AdminUsers = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, name, email, phone, created_at, branch_id")
-        .order("created_at", { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
-
-      if (rolesError) throw rolesError;
-
-      // A user can have multiple rows in user_roles (unique is on user_id+role).
-      // Always surface the highest-privilege role instead of whichever row came last.
-      const roleMap = new Map<string, string>();
-      roles?.forEach((r) => {
-        const current = roleMap.get(r.user_id);
-        if (!current || ROLE_PRIORITY.indexOf(r.role) < ROLE_PRIORITY.indexOf(current)) {
-          roleMap.set(r.user_id, r.role);
-        }
-      });
-
-      const combined: UserWithRole[] = (profiles || []).map((p: any) => ({
-        ...p,
-        role: roleMap.get(p.id) || "buyer",
-      }));
-
-      setUsers(combined);
-
-      const { data: branchData, error: branchError } = await supabase
-        .from("branches")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name");
-      if (branchError) throw branchError;
-      setBranches(branchData || []);
+      const [usersResponse, branchesResponse] = await Promise.all([
+        apiFetch<{ data: UserWithRole[] }>("/api/admin/users"),
+        apiFetch<Array<{ id: string; name: string }>>("/api/admin/branches"),
+      ]);
+      setUsers(usersResponse.data ?? []);
+      setBranches((branchesResponse ?? []).filter((branch) => !!branch.id && !!branch.name));
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({ title: "Gagal memuat data user", variant: "destructive" });
@@ -125,25 +92,10 @@ const AdminUsers = () => {
   const handleRoleChange = async (userId: string, newRole: string) => {
     setUpdatingId(userId);
     try {
-      // The unique constraint is on (user_id, role) — NOT user_id alone — so an
-      // upsert with onConflict "user_id" errors out ("no unique or exclusion
-      // constraint matching the ON CONFLICT specification"). Replace the user's
-      // roles instead: insert the new one first, then drop the stale ones so the
-      // user is never left without a role.
-      const { error: insertError } = await supabase
-        .from("user_roles")
-        .upsert(
-          { id: crypto.randomUUID(), user_id: userId, role: newRole },
-          { onConflict: "user_id,role", ignoreDuplicates: true },
-        );
-      if (insertError) throw insertError;
-
-      const { error: cleanupError } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userId)
-        .neq("role", newRole);
-      if (cleanupError) throw cleanupError;
+      await apiFetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ role: newRole }),
+      });
 
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
@@ -162,11 +114,10 @@ const AdminUsers = () => {
     setUpdatingId(userId);
     try {
       const newBranch = branchId === "__none__" ? null : branchId;
-      const { error } = await supabase
-        .from("profiles")
-        .update({ branch_id: newBranch })
-        .eq("id", userId);
-      if (error) throw error;
+      await apiFetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ branchId: newBranch }),
+      });
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, branch_id: newBranch } : u)));
       toast({ title: "Cabang berhasil diubah" });
     } catch (error: any) {
