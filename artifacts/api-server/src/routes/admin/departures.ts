@@ -956,7 +956,7 @@ router.post("/:id/sync-quota", async (req, res) => {
 
     if (!dep) return res.status(404).json({ error: "Departure not found" });
 
-    // Hanya booking TERBAYAR yang mengurangi kursi
+    // Booking confirmed/completed yang mengurangi kursi, walaupun belum lunas
     const filledMap = await getFilledSeatsMap([departureId]);
     const realFilled = filledMap.get(departureId) ?? 0;
     const newRemaining = Math.max(0, (dep.quota ?? 0) - realFilled);
