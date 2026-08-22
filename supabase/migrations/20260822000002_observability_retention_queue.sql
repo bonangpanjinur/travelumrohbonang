@@ -1,5 +1,56 @@
 -- Production observability and retention foundation.
 -- Destructive purge is intentionally not performed by this migration.
+-- This migration is self-contained: it also creates the legacy log tables
+-- required by the retention policies when they do not exist yet.
+
+CREATE TABLE IF NOT EXISTS public.request_log (
+  id text PRIMARY KEY,
+  ip text,
+  endpoint text NOT NULL,
+  user_id text,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_request_log_user_id ON public.request_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_request_log_created_at ON public.request_log(created_at);
+
+CREATE TABLE IF NOT EXISTS public.error_logs (
+  id text PRIMARY KEY,
+  user_id text,
+  level text NOT NULL,
+  message text NOT NULL,
+  stack text,
+  url text,
+  user_agent text,
+  context jsonb,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_error_logs_level ON public.error_logs(level);
+CREATE INDEX IF NOT EXISTS idx_error_logs_created_at ON public.error_logs(created_at);
+
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+  id text PRIMARY KEY,
+  user_id text,
+  action text NOT NULL,
+  entity_type text,
+  entity_id text,
+  metadata jsonb,
+  user_agent text,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON public.audit_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.audit_logs(created_at);
+
+CREATE TABLE IF NOT EXISTS public.pilgrim_doc_access_logs (
+  id text PRIMARY KEY,
+  user_id text,
+  pilgrim_id text,
+  doc_type text,
+  storage_path text,
+  context text,
+  created_at timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_pilgrim_doc_access_logs_user_id ON public.pilgrim_doc_access_logs(user_id);
 
 CREATE TABLE IF NOT EXISTS public.log_retention_policies (
   id text PRIMARY KEY,
