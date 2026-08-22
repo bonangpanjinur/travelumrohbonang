@@ -34,7 +34,7 @@ import {
   type AdminUpdateBookingStatusInput,
 } from "@workspace/api-zod";
 import { validate } from "../../middlewares/validate";
-import { syncDepartureQuota } from "../../lib/seatQuota";
+import { isSeatReservedStatus, syncDepartureQuota } from "../../lib/seatQuota";
 import { sendAdminError } from "../../lib/adminApiError";
 import { awardLoyaltyPointsForBooking } from "../../lib/loyalty";
 import { requireSuperAdmin, requireStaff } from "../../middlewares/requireAdmin";
@@ -624,7 +624,7 @@ router.post("/", async (req, res) => {
         });
       }
 
-      // Kursi hanya berkurang jika booking sudah dibayar — sinkronkan dari data pembayaran.
+      // Booking admin dibuat confirmed, jadi sinkronisasi ini langsung mencadangkan seat.
       await syncDepartureQuota(departureId, tx);
 
       return newBooking;
@@ -843,7 +843,7 @@ router.post("/group", async (req, res) => {
         });
       }
 
-      // Kursi hanya berkurang jika booking sudah dibayar — sinkronkan dari data pembayaran.
+      // Booking admin dibuat confirmed, jadi sinkronisasi ini langsung mencadangkan seat.
       await syncDepartureQuota(departureId, tx);
 
       return newBooking;
@@ -938,9 +938,12 @@ router.patch(
 
         if (!row) return null;
 
-        // Restore quota when booking transitions to cancelled (use paxCount for group bookings)
-        if (newStatus === "cancelled" && current.status !== "cancelled" && current.departureId) {
-          // Restore quota and reset status from 'penuh' → 'active' if seats open up again
+        // Recalculate quota whenever a booking starts/stops holding seats.
+        // `confirmed` is the approval point; payment status is intentionally
+        // not consulted, so approved unpaid bookings still reserve seats.
+        const wasSeatReserved = isSeatReservedStatus(current.status);
+        const isSeatReserved = isSeatReservedStatus(newStatus);
+        if (current.departureId && wasSeatReserved !== isSeatReserved) {
           await syncDepartureQuota(current.departureId, tx);
         }
 
@@ -1038,7 +1041,9 @@ router.patch("/bulk-status", async (req, res) => {
           changedBy: (req as any).user?.id ?? "admin-bulk",
           notes: "Bulk status update",
         });
-        if (newStatus === "cancelled" && row.departureId) {
+        // Bulk approval must reserve seats just like single-booking approval;
+        // cancellation recalculates and releases seats when appropriate.
+        if (row.departureId && ["confirmed", "cancelled"].includes(newStatus)) {
           await syncDepartureQuota(row.departureId, tx);
         }
       }
@@ -2022,7 +2027,7 @@ router.delete("/bulk", requireSuperAdmin, async (req, res) => {
     await db.transaction(async (tx) => {
       // Hapus semua booking sekaligus (cascade via DB constraints)
       await tx.delete(bookings).where(inArray(bookings.id, ids));
-      // Kursi dihitung ulang dari booking terbayar yang tersisa
+      // Kursi dihitung ulang dari booking confirmed/completed yang tersisa
       for (const depId of departureGroups.keys()) {
         await syncDepartureQuota(depId, tx);
       }

@@ -133,8 +133,8 @@ export async function syncBookingStatus(
       .where(eq(bookings.id, bookingId));
   }
 
-  // Kursi keberangkatan hanya terpakai oleh booking yang sudah dibayar —
-  // hitung ulang setiap kali status pembayaran berubah.
+  // Seat mengikuti status approval booking, bukan status pembayaran;
+  // hitung ulang tetap dilakukan agar quota tidak stale setelah perubahan payment.
   const [depRow] = await runner
     .select({ departureId: bookings.departureId })
     .from(bookings)

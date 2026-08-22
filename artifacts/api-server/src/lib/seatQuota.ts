@@ -2,23 +2,24 @@ import { db, sql } from "@workspace/db";
 
 /**
  * Aturan kursi (seat) keberangkatan:
- * - Kursi hanya berkurang jika booking SUDAH DIBAYAR (ada pembayaran non-void > 0,
- *   atau status booking sudah menandakan lunas/dibayar).
- * - Booking terdaftar tapi belum bayar TIDAK mengurangi kursi.
+ * - Kursi berkurang ketika booking sudah di-approve (status confirmed) atau
+ *   sudah selesai (completed), walaupun pembayaran belum lunas.
+ * - Booking baru/draft/pending/waiting_payment belum mengurangi kursi.
  * - Booking dibatalkan / dihapus otomatis mengembalikan kursi (karena dihitung ulang).
  *
  * Semua perhitungan sisa kursi harus memakai helper ini agar konsisten
  * antara halaman paket, jadwal keberangkatan, dan admin.
  */
-export const PAID_SEAT_CONDITION = sql`
-  b.status IS DISTINCT FROM 'cancelled'
-  AND COALESCE((
-    SELECT SUM(pt.amount) FROM booking_payments pt
-    WHERE pt.booking_id = b.id AND pt.is_voided = false
-  ), 0) > 0
+/** Booking yang sudah di-approve memegang seat, meskipun belum ada pembayaran. */
+export const SEAT_RESERVED_STATUSES = ["confirmed", "completed"] as const;
+export function isSeatReservedStatus(status?: string | null): boolean {
+  return status === "confirmed" || status === "completed";
+}
+export const SEAT_RESERVED_CONDITION = sql`
+  b.status IN ('confirmed', 'completed')
 `;
 
-/** Jumlah kursi terpakai (hanya booking terbayar) per departure. */
+/** Jumlah kursi terpakai (booking approved/completed) per departure. */
 export async function getFilledSeatsMap(depIds: string[]): Promise<Map<string, number>> {
   if (!depIds.length) return new Map();
   // NOTE: interpolating a JS array in drizzle's `sql` expands it into a tuple
@@ -30,7 +31,7 @@ export async function getFilledSeatsMap(depIds: string[]): Promise<Map<string, n
            COALESCE(SUM(b.pax_count), 0)::int AS filled
     FROM bookings b
     WHERE b.departure_id::text = ANY(string_to_array(${idsCsv}, ','))
-      AND ${PAID_SEAT_CONDITION}
+      AND ${SEAT_RESERVED_CONDITION}
     GROUP BY b.departure_id
   `);
   const rows = ((result as any).rows ?? result) as Array<{ departure_id: string; filled: number }>;
@@ -58,7 +59,8 @@ export async function getRemainingSeatsMap(
 
 /**
  * Sinkronkan kolom remaining_quota (dan status penuh/active) di DB
- * berdasarkan booking terbayar. Aman dipanggil setelah create/cancel/delete/bayar.
+ * berdasarkan booking yang sudah di-approve/selesai. Aman dipanggil setelah
+ * create/approve/cancel/delete/payment.
  */
 export async function syncDepartureQuota(
   departureId?: string | null,
@@ -70,12 +72,12 @@ export async function syncDepartureQuota(
     SET
       remaining_quota = GREATEST(0, pd.quota - COALESCE((
         SELECT SUM(b.pax_count) FROM bookings b
-        WHERE b.departure_id = pd.id AND ${PAID_SEAT_CONDITION}
+        WHERE b.departure_id = pd.id AND ${SEAT_RESERVED_CONDITION}
       ), 0)),
       status = CASE
         WHEN GREATEST(0, pd.quota - COALESCE((
           SELECT SUM(b.pax_count) FROM bookings b
-          WHERE b.departure_id = pd.id AND ${PAID_SEAT_CONDITION}
+          WHERE b.departure_id = pd.id AND ${SEAT_RESERVED_CONDITION}
         ), 0)) <= 0 THEN 'penuh'
         WHEN pd.status = 'penuh' THEN 'active'
         ELSE pd.status

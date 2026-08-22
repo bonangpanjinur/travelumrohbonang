@@ -431,7 +431,7 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
         res.status(404).json({ error: "Keberangkatan tidak ditemukan" });
         return;
       }
-      // Kursi terpakai dihitung dari booking yang SUDAH DIBAYAR saja
+      // Kursi terpakai dihitung dari booking yang sudah di-approve/confirmed
       const filledMap = await getFilledSeatsMap([departureId]);
       const remainingSeats = Math.max(0, (dep.quota ?? 0) - (filledMap.get(departureId) ?? 0));
       if (remainingSeats <= 0 || dep.status === "penuh") {
@@ -459,7 +459,7 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
     // happen in ONE atomic transaction so they all succeed or all roll back.
     // The quota UPDATE uses WHERE remaining_quota > 0 to prevent last-seat races.
     const created = await db.transaction(async (tx) => {
-      // Kursi hanya berkurang saat booking dibayar — sinkronkan dari data pembayaran.
+      // Sinkronkan quota; booking baru belum confirmed sehingga belum memegang seat.
       await syncDepartureQuota(departureId, tx);
 
       // Loyalty point redemption inside the same tx — rolled back automatically
