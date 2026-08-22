@@ -90,3 +90,6 @@ This confirms the active host and anonymous denial boundary. Authenticated sessi
 The active host initially returned HTTP 401 for an OPTIONS preflight to `/api/admin/integrations/test-whatsapp` from `https://travelvins.vercel.app`. Source inspection showed that the active Vercel alias was present in hosting environment metadata but missing from the code-level default production CORS allowlist. When an origin is rejected by the CORS callback, the request continues to authentication and can therefore receive 401 instead of the expected preflight response.
 
 The default allowlist has now been updated to include `https://travelvins.vercel.app`, while preserving the two canonical Vins Tour origins. API regression tests (7 files, 42 tests) and API typecheck pass after the change. This fix is committed and should be redeployed before rechecking the production OPTIONS response.
+
+
+A post-push recheck at 06:11:36 UTC still returned HTTP 401 for the production OPTIONS request. This is consistent with the active deployment not yet rebuilding from commit `e4300d9f`, or with a production environment configuration that has not been updated. The source-level fix is present in `main`; production verification must be repeated after the deployment platform reports the new commit live.
