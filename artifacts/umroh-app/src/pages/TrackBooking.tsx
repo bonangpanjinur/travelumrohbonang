@@ -41,6 +41,7 @@ const STATUS_CONFIG: Record<
   confirmed: { label: "Terkonfirmasi", color: "text-green-700", bg: "bg-green-50", Icon: CheckCircle2 },
   completed: { label: "Selesai / Lunas", color: "text-emerald-700", bg: "bg-emerald-50", Icon: CheckCircle2 },
   cancelled: { label: "Dibatalkan", color: "text-red-700", bg: "bg-red-50", Icon: XCircle },
+  expired: { label: "Expired — pembayaran belum diterima", color: "text-red-700", bg: "bg-red-50", Icon: AlertCircle },
 };
 
 const TYPE_LABEL: Record<string, string> = {

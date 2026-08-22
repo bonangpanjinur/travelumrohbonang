@@ -23,6 +23,8 @@ interface BookingData {
   bookingCode: string;
   totalPrice: number;
   status: string;
+  approvedAt?: string | null;
+  approvalExpiresAt?: string | null;
   userId: string;
   packageTitle: string | null;
   minimumDp: number | null;
@@ -57,6 +59,7 @@ const Payment = () => {
   const [bankAccounts, setBankAccounts] = useState<{ bank: string; number: string; name: string }[]>([]);
   const [selectedBankIndex, setSelectedBankIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     if (authLoading) return;
@@ -101,6 +104,12 @@ const Payment = () => {
     fetchData();
   }, [bookingId, user, authLoading, navigate, toast]);
 
+  // Keep the displayed approval countdown fresh without requiring a page reload.
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   // Calculate paid amount and remaining
   const paidAmount = existingPayments
     .filter(p => p.status === "paid")
@@ -130,6 +139,17 @@ const Payment = () => {
   const fullDeadline = departureDate 
     ? addDays(departureDate, -fullDeadlineDays) 
     : null;
+
+  const approvalExpiresAt = booking?.approvalExpiresAt ? new Date(booking.approvalExpiresAt) : null;
+  const approvalExpiryMs = approvalExpiresAt?.getTime() ?? null;
+  const isApprovalExpired = booking?.status === "expired" || (approvalExpiryMs !== null && approvalExpiryMs <= nowMs);
+  const approvalTimeLeft = approvalExpiryMs !== null ? Math.max(0, approvalExpiryMs - nowMs) : null;
+  const formatTimeLeft = (ms: number) => {
+    const totalMinutes = Math.ceil(ms / 60_000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return hours > 0 ? `${hours} jam ${minutes} menit` : `${minutes} menit`;
+  };
 
   // Determine current payment amount based on option
   const getCurrentPaymentAmount = () => {
@@ -184,7 +204,10 @@ const Payment = () => {
   };
 
   const handleConfirmPayment = async () => {
-    if (!booking) return;
+    if (!booking || isApprovalExpired) {
+      toast({ title: "Booking sudah expired", description: "Batas waktu pembayaran booking ini telah berakhir.", variant: "destructive" });
+      return;
+    }
 
     const paymentAmount = getCurrentPaymentAmount();
     const isFullPayment = paymentOption === "full" || paymentAmount >= remainingAmount;
@@ -290,8 +313,28 @@ const Payment = () => {
                 </div>
               </div>
 
+              {approvalTimeLeft !== null && !isApprovalExpired && booking.status === "confirmed" && (
+                <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+                  <Clock className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-semibold">Batas pembayaran approval</p>
+                    <p className="mt-1">Selesaikan pembayaran dalam <strong>{formatTimeLeft(approvalTimeLeft)}</strong> agar booking dan seat tetap aktif.</p>
+                  </div>
+                </div>
+              )}
+
+              {isApprovalExpired && booking.status !== "completed" && (
+                <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-900 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-100">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-semibold">Booking sudah expired</p>
+                    <p className="mt-1">Seat sudah dilepas karena belum ada pembayaran dalam batas waktu approval.</p>
+                  </div>
+                </div>
+              )}
+
               {/* Payment Options */}
-              {remainingAmount > 0 && !hasPendingPayment && (
+              {remainingAmount > 0 && !hasPendingPayment && !isApprovalExpired && (
                 <div className="space-y-4">
                   <h3 className="font-bold">Pilih Opsi Pembayaran</h3>
                   <RadioGroup value={paymentOption} onValueChange={(v: "dp" | "full") => setPaymentOption(v)} className="grid grid-cols-1 gap-3">
@@ -351,7 +394,7 @@ const Payment = () => {
               )}
 
               {/* Upload Proof */}
-              {!hasPendingPayment && remainingAmount > 0 && (
+              {!hasPendingPayment && remainingAmount > 0 && !isApprovalExpired && (
                 <div className="space-y-4">
                   <h3 className="font-bold">Upload Bukti Transfer</h3>
                   <div 
@@ -394,7 +437,7 @@ const Payment = () => {
                     <p className="text-sm text-muted-foreground">Pembayaran Anda sedang diperiksa oleh tim kami. Mohon tunggu 1x24 jam.</p>
                   </div>
                 </div>
-              ) : remainingAmount > 0 ? (
+              ) : remainingAmount > 0 && !isApprovalExpired ? (
                 <Button 
                   className="w-full gradient-gold text-primary h-12 text-lg font-bold"
                   disabled={!proofUrl || uploading}
