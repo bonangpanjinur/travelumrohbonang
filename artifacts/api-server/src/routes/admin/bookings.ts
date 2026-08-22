@@ -35,6 +35,7 @@ import {
 } from "@workspace/api-zod";
 import { validate } from "../../middlewares/validate";
 import { isSeatReservedStatus, syncDepartureQuota } from "../../lib/seatQuota";
+import { getApprovalExpiryDate } from "../../lib/bookingApprovalExpiry";
 import { sendAdminError } from "../../lib/adminApiError";
 import { awardLoyaltyPointsForBooking } from "../../lib/loyalty";
 import { requireSuperAdmin, requireStaff } from "../../middlewares/requireAdmin";
@@ -593,6 +594,8 @@ router.post("/", async (req, res) => {
           agentId: effectiveAgentId,
           userId,
           status: "confirmed",
+          approvedAt: new Date(),
+          approvalExpiresAt: getApprovalExpiryDate(),
           picType: effectivePicType,
           picId: effectivePicId,
           pemesanName: resolvedPemesanName,
@@ -796,6 +799,8 @@ router.post("/group", async (req, res) => {
           branchId: branchId || null,
           agentId: groupAgentId || null,
           status: "confirmed",
+          approvedAt: now,
+          approvalExpiresAt: getApprovalExpiryDate(now),
           picType: groupPicType,
           picId: groupPicId,
           isGroupBooking: true,
@@ -886,6 +891,7 @@ router.patch(
         confirmed: ["completed", "cancelled"],
         completed: [],   // terminal — tidak bisa balik
         cancelled: [],   // terminal — tidak bisa balik
+        expired: [],     // terminal — pembayaran terlambat tidak mengaktifkan kembali
       };
 
       const [current] = await db
@@ -925,6 +931,13 @@ router.patch(
       // ──────────────────────────────────────────────────────────────────────
 
       const updateData: Record<string, any> = { status: newStatus };
+      if (newStatus === "confirmed" && currentStatus !== "confirmed") {
+        const approvedAt = new Date();
+        updateData.approvedAt = approvedAt;
+        updateData.approvalExpiresAt = getApprovalExpiryDate(approvedAt);
+      } else if (newStatus === "cancelled") {
+        updateData.approvalExpiresAt = null;
+      }
       if (notes !== undefined) updateData.notes = notes;
 
       // BK-DB02: wrap status update + quota restoration in a single transaction
@@ -1024,7 +1037,15 @@ router.patch("/bulk-status", async (req, res) => {
 
       const rows = await tx
         .update(bookings)
-        .set({ status: newStatus })
+        .set(
+          newStatus === "confirmed"
+            ? {
+                status: newStatus,
+                approvedAt: new Date(),
+                approvalExpiresAt: getApprovalExpiryDate(),
+              }
+            : { status: newStatus, approvalExpiresAt: null },
+        )
         .where(inArray(bookings.id, ids))
         .returning({ id: bookings.id, departureId: bookings.departureId });
 

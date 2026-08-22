@@ -8,6 +8,7 @@ import { startFollowUpCron } from "./lib/followUpCron";
 import { startPaymentDeadlineAlertCron } from "./lib/paymentDeadlineAlertCron";
 import { startExchangeRateCron } from "./lib/exchangeRateCron";
 import { startBankReconciliationCron } from "./lib/bankReconciliationCron";
+import { startBookingApprovalExpiryCron } from "./lib/bookingApprovalExpiryCron";
 
 // ── Step 1: Validate required env vars — fail fast before anything else ───────
 // If SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY are missing the process exits
@@ -53,6 +54,8 @@ app.listen(port, async (err) => {
   startExchangeRateCron();
   // F3-03: start daily auto-reconciliation bank scheduler (02:00 WIB)
   startBankReconciliationCron();
+  // Release seats for approved bookings that received no payment in time.
+  startBookingApprovalExpiryCron();
 
   logger.info({ port }, "Server listening");
 });

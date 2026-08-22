@@ -17,6 +17,9 @@ export const bookings = pgTable("bookings", {
   picId: text("pic_id"),
   picType: text("pic_type"),
   status: text("status"),
+  /** Timestamp saat admin menyetujui booking dan expiry reservation dimulai. */
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  approvalExpiresAt: timestamp("approval_expires_at", { withTimezone: true }),
   totalPrice: integer("total_price").notNull(),
   currency: text("currency").notNull(),
   exchangeRate: doublePrecision("exchange_rate").default(1), // rate_to_idr snapshot at booking time
@@ -45,6 +48,7 @@ export const bookings = pgTable("bookings", {
   index("idx_bookings_departure_id").on(t.departureId),
   index("idx_bookings_agent_id").on(t.agentId),
   index("idx_bookings_status").on(t.status),
+  index("idx_bookings_approval_expiry").on(t.status, t.approvalExpiresAt),
 ]);
 
 export const bookingRooms = pgTable("booking_rooms", {

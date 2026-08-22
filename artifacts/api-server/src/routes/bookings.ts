@@ -81,6 +81,8 @@ router.get("/", async (req, res) => {
         departureId: bookings.departureId,
         branchId: bookings.branchId,
         status: bookings.status,
+        approvedAt: bookings.approvedAt,
+        approvalExpiresAt: bookings.approvalExpiresAt,
         totalPrice: bookings.totalPrice,
         currency: bookings.currency,
         paymentScheme: bookings.paymentScheme,
@@ -241,6 +243,8 @@ router.get("/:id", async (req, res) => {
         departureId: bookings.departureId,
         branchId: bookings.branchId,
         status: bookings.status,
+        approvedAt: bookings.approvedAt,
+        approvalExpiresAt: bookings.approvalExpiresAt,
         totalPrice: bookings.totalPrice,
         currency: bookings.currency,
         paymentScheme: bookings.paymentScheme,
@@ -320,6 +324,8 @@ router.get("/:id/confirmation.pdf", async (req, res) => {
       .select({
         bookingCode: bookings.bookingCode,
         status: bookings.status,
+        approvedAt: bookings.approvedAt,
+        approvalExpiresAt: bookings.approvalExpiresAt,
         totalPrice: bookings.totalPrice,
         currency: bookings.currency,
         paymentScheme: bookings.paymentScheme,
@@ -682,7 +688,7 @@ router.post("/:id/payments", async (req, res) => {
     }
 
     // BUG-4: Don't accept payments on terminal or already-paid bookings
-    const TERMINAL_STATUSES = ["cancelled", "completed"];
+    const TERMINAL_STATUSES = ["cancelled", "completed", "expired"];
     if (TERMINAL_STATUSES.includes(booking.status ?? "")) {
       res.status(409).json({ error: `Booking dengan status '${booking.status}' tidak dapat menerima pembayaran baru` });
       return;

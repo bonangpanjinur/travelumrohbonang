@@ -111,7 +111,8 @@ export async function syncBookingStatus(
   if (
     !current ||
     current.status === "cancelled" ||
-    current.status === "completed"
+    current.status === "completed" ||
+    current.status === "expired"
   ) {
     return;
   }
