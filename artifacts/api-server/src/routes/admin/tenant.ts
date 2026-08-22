@@ -1,8 +1,11 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { db, tenantSites, tenantSitePackages, templateUpgradeOrders, eq, desc, sql, and, inArray } from "@workspace/db";
 import { logSecurityAudit } from "../../lib/securityAudit";
 
 const router = Router();
+const upgradeWriteLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false });
+const FINANCE_APPROVER_ROLES = new Set(["super_admin", "owner", "admin", "branch_manager", "finance"]);
 
 const TENANT_FIELDS = [
   "subdomain", "customDomain", "siteName", "tagline", "logoUrl", "primaryColor", "secondaryColor",
@@ -146,7 +149,7 @@ router.get("/pricing", async (_req, res) => {
 });
 
 // Template Upgrade Orders
-router.post("/upgrades", async (req, res) => {
+router.post("/upgrades", upgradeWriteLimiter, async (req, res) => {
   try {
     const { tenantSiteId, currentTemplate, targetTemplate, proofUrl, notes } = req.body ?? {};
     const requestedBy = (req.user as any)?.id;
@@ -207,12 +210,12 @@ router.get("/upgrades", async (req, res) => {
   }
 });
 
-router.patch("/upgrades/:id", async (req, res) => {
+router.patch("/upgrades/:id", upgradeWriteLimiter, async (req, res) => {
   try {
     const { status, notes } = req.body ?? {};
     const allowedStatuses = ["pending", "proof_submitted", "approved", "rejected"];
     if (status !== undefined && !allowedStatuses.includes(status)) return res.status(400).json({ error: "Status upgrade tidak valid" });
-    const [before] = await db.select().from(templateUpgradeOrders).where(eq(templateUpgradeOrders.id, req.params.id)).limit(1);
+    const [before] = await db.select().from(templateUpgradeOrders).where(eq(templateUpgradeOrders.id, String(req.params.id))).limit(1);
     if (!before) return res.status(404).json({ error: "Upgrade order not found" });
     const transitions: Record<string, string[]> = {
       pending: ["proof_submitted", "rejected"],
@@ -226,11 +229,14 @@ router.patch("/upgrades/:id", async (req, res) => {
     if (status === "approved" && before.status !== "proof_submitted") {
       return res.status(409).json({ error: "Order hanya dapat disetujui setelah bukti pembayaran disubmit" });
     }
+    if (status === "approved" && !FINANCE_APPROVER_ROLES.has((req.user as any)?.role)) {
+      return res.status(403).json({ error: "Role tidak berwenang menyetujui upgrade template" });
+    }
     const updates: Record<string, unknown> = {};
     if (status !== undefined) updates.status = status;
     if (notes !== undefined) updates.notes = typeof notes === "string" ? notes.slice(0, 2000) : null;
     if (!Object.keys(updates).length) return res.status(400).json({ error: "Tidak ada perubahan" });
-    const [data] = await db.update(templateUpgradeOrders).set(updates as any).where(and(eq(templateUpgradeOrders.id, req.params.id), eq(templateUpgradeOrders.status, before.status))).returning();
+    const [data] = await db.update(templateUpgradeOrders).set(updates as any).where(and(eq(templateUpgradeOrders.id, String(req.params.id)), eq(templateUpgradeOrders.status, before.status))).returning();
     if (!data) return res.status(409).json({ error: "Order berubah oleh proses lain; muat ulang lalu coba lagi" });
     await logSecurityAudit(req, "admin.template_upgrade.update", "success", { entityType: "template_upgrade_order", entityId: data.id, metadata: { from: before.status, to: data.status } });
     res.json(data);

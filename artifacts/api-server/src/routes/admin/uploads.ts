@@ -7,6 +7,7 @@ import path from "path";
 import fs from "fs";
 import crypto from "node:crypto";
 import multer from "multer";
+import rateLimit from "express-rate-limit";
 import { resolveUserScope } from "../../lib/scopeGuard";
 
 // Resolve upload dir and ensure it exists — called lazily at request time,
@@ -29,7 +30,7 @@ const storage = multer.diskStorage({
         const branchId = scope.type === "branch" && scope.branchId ? scope.branchId : "hq";
         cb(null, getUploadDir(branchId));
       })
-      .catch((err) => cb(err as Error, getUploadDir("legacy")));
+      .catch((err) => cb(err as Error, ""));
   },
   filename: (_req, file, cb) => {
     const extensions: Record<string, string> = {
@@ -41,19 +42,45 @@ const storage = multer.diskStorage({
   },
 });
 
+const allowedMediaTypes = new Set([
+  "image/jpeg", "image/png", "image/webp", "image/gif",
+  "application/pdf", "video/mp4", "video/webm", "video/ogg", "application/epub+zip",
+]);
+const imageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
-  fileFilter: (_req, file, cb) => {
-    const allowed = [
-      "image/jpeg", "image/png", "image/webp", "image/gif",
-      "application/pdf",
-      "video/mp4", "video/webm", "video/ogg",
-      "application/epub+zip",
-    ];
-    cb(null, allowed.includes(file.mimetype));
-  },
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => cb(null, allowedMediaTypes.has(file.mimetype)),
 });
+const imageUpload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => cb(null, imageTypes.has(file.mimetype)),
+});
+const uploadLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: "draft-8", legacyHeaders: false });
+
+function hasValidSignature(buffer: Buffer, mimetype: string): boolean {
+  if (mimetype === "image/jpeg") return buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]));
+  if (mimetype === "image/png") return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (mimetype === "image/gif") return ["GIF87a", "GIF89a"].includes(buffer.subarray(0, 6).toString("ascii"));
+  if (mimetype === "image/webp") return buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP";
+  if (mimetype === "application/pdf") return buffer.subarray(0, 5).toString("ascii") === "%PDF-";
+  if (mimetype === "video/mp4") return buffer.subarray(4, 8).toString("ascii") === "ftyp";
+  if (mimetype === "video/webm") return buffer.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
+  if (mimetype === "video/ogg") return buffer.subarray(0, 4).toString("ascii") === "OggS";
+  if (mimetype === "application/epub+zip") return buffer.subarray(0, 2).toString("ascii") === "PK";
+  return false;
+}
+
+async function validateUploadedFile(file: Express.Multer.File): Promise<boolean> {
+  const sample = await fs.promises.readFile(file.path);
+  return sample.length > 0 && hasValidSignature(sample, file.mimetype);
+}
+
+async function removeUploadedFile(file?: Express.Multer.File): Promise<void> {
+  if (!file?.path) return;
+  try { await fs.promises.unlink(file.path); } catch {}
+}
 
 const router = Router();
 
@@ -62,18 +89,23 @@ const router = Router();
  * Multipart upload: terima file gambar, simpan ke disk lokal.
  * Returns { url } — URL yang bisa diakses lewat /api/admin/uploads/files/:filename
  */
-router.post("/image", upload.single("file"), async (req: any, res) => {
+router.post("/image", uploadLimiter, imageUpload.single("file"), async (req: any, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "File tidak diterima atau format tidak didukung (JPG/PNG/WebP)" });
+    }
+    if (!await validateUploadedFile(req.file)) {
+      await removeUploadedFile(req.file);
+      return res.status(400).json({ error: "Isi file tidak cocok dengan tipe yang diklaim" });
     }
     const scope = await resolveUserScope(req);
     const branchId = scope.type === "branch" && scope.branchId ? scope.branchId : "hq";
     const url = `/api/admin/uploads/files/${encodeURIComponent(branchId)}/${encodeURIComponent(req.file.filename)}`;
     return res.json({ url, filename: req.file.filename, branchId, size: req.file.size, correlationId: req.correlationId ?? null });
   } catch (err) {
+    await removeUploadedFile(req.file);
     console.error("[uploads] upload error:", err);
-    return res.status(500).json({ error: "Gagal upload gambar" });
+    return res.status(500).json({ error: "Gagal upload gambar", correlationId: req.correlationId ?? null });
   }
 });
 
@@ -82,18 +114,23 @@ router.post("/image", upload.single("file"), async (req: any, res) => {
  * Endpoint generik — terima PDF, video, gambar, epub.
  * Returns { url } — URL yang bisa diakses lewat /api/admin/uploads/files/:filename
  */
-router.post("/file", upload.single("file"), async (req: any, res) => {
+router.post("/file", uploadLimiter, upload.single("file"), async (req: any, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "File tidak diterima atau format tidak didukung (PDF/MP4/WebM/JPG/PNG/EPUB)" });
+    }
+    if (!await validateUploadedFile(req.file)) {
+      await removeUploadedFile(req.file);
+      return res.status(400).json({ error: "Isi file tidak cocok dengan tipe yang diklaim" });
     }
     const scope = await resolveUserScope(req);
     const branchId = scope.type === "branch" && scope.branchId ? scope.branchId : "hq";
     const url = `/api/admin/uploads/files/${encodeURIComponent(branchId)}/${encodeURIComponent(req.file.filename)}`;
     return res.json({ url, filename: req.file.filename, branchId, size: req.file.size, mimetype: req.file.mimetype, correlationId: req.correlationId ?? null });
   } catch (err) {
+    await removeUploadedFile(req.file);
     console.error("[uploads] upload error:", err);
-    return res.status(500).json({ error: "Gagal upload file" });
+    return res.status(500).json({ error: "Gagal upload file", correlationId: req.correlationId ?? null });
   }
 });
 
