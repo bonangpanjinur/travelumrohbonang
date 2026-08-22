@@ -246,8 +246,12 @@
      Visible keyboard focus ring on all interactive elements.
      Uses the gold accent colour to match the brand and meet WCAG 2.1 AA. */
   :focus-visible {
-    outline: 2px solid hsl(var(--gold));
+    /* Gold is the brand accent, but it does not provide enough contrast on
+       light surfaces by itself. Use the primary tone for the outline and
+       retain gold as a subtle halo. */
+    outline: 2px solid hsl(var(--primary));
     outline-offset: 2px;
+    box-shadow: 0 0 0 4px hsl(var(--gold) / 0.3);
   }
 
   /* Touch target helpers – apply to any interactive element that might be
@@ -255,9 +259,21 @@
   .touch-target {
     min-height: 44px;
     min-width: 44px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+  }
+
+  /* Avoid hover/entrance motion for users who explicitly request less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   /* Thin, unobtrusive scrollbar for the admin sidebar nav */
@@ -451,7 +467,7 @@
   }
 
   /* Elemen yang hanya muncul saat cetak */
-  .print\\:block {
+  .print\:block {
     display: block !important;
   }
 

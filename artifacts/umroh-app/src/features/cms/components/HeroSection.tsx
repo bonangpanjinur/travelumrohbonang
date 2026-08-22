@@ -278,10 +278,10 @@ const HeroSection = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
-              className="flex gap-8 mt-12 pt-8 border-t border-primary-foreground/20"
+              className="grid grid-cols-2 gap-x-6 gap-y-5 mt-12 pt-8 border-t border-primary-foreground/20 sm:flex sm:gap-8"
             >
               {settings.stats.map((stat) => (
-                <div key={stat.label}>
+                <div key={stat.label} className="min-w-0">
                   <div className="text-2xl sm:text-3xl font-display font-bold text-gold">
                     {stat.value}
                   </div>
