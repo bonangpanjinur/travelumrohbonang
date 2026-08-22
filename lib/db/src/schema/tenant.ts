@@ -68,6 +68,8 @@ export const templateUpgradeOrders = pgTable("template_upgrade_orders", {
   currentTemplate: text("current_template"),
   targetTemplate: text("target_template"),
   price: integer("price"),
+  proofUrl: text("proof_url"),
+  notes: text("notes"),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [

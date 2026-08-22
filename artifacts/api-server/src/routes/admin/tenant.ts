@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, tenantSites, tenantSitePackages, templateUpgradeOrders, eq, desc } from "@workspace/db";
+import { db, tenantSites, tenantSitePackages, templateUpgradeOrders, eq, desc, sql } from "@workspace/db";
 
 const router = Router();
 
@@ -125,7 +125,65 @@ router.delete("/packages/:id", async (req, res) => {
   }
 });
 
+// Template pricing — read-only server-side source for upgrade dialog.
+router.get("/pricing", async (_req, res) => {
+  try {
+    const result = await db.execute(sql`
+      select template_name, price, description
+      from template_pricing
+      where is_active = true
+      order by price asc
+    `);
+    res.json(((result as any).rows ?? result).map((row: any) => ({
+      template_name: String(row.template_name),
+      price: Number(row.price ?? 0),
+      description: row.description ?? null,
+    })));
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch template pricing" });
+  }
+});
+
 // Template Upgrade Orders
+router.post("/upgrades", async (req, res) => {
+  try {
+    const { tenantSiteId, currentTemplate, targetTemplate, proofUrl, notes } = req.body ?? {};
+    const requestedBy = (req.user as any)?.id;
+    if (typeof requestedBy !== "string" || typeof tenantSiteId !== "string" || typeof targetTemplate !== "string") {
+      return res.status(400).json({ error: "tenantSiteId dan targetTemplate wajib diisi" });
+    }
+    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(targetTemplate)) {
+      return res.status(400).json({ error: "Template tujuan tidak valid" });
+    }
+    const [tenant] = await db.select({ id: tenantSites.id, template: tenantSites.template }).from(tenantSites).where(eq(tenantSites.id, tenantSiteId)).limit(1);
+    if (!tenant) return res.status(404).json({ error: "Tenant site not found" });
+
+    const pricing = await db.execute(sql`
+      select price from template_pricing
+      where template_name = ${targetTemplate} and is_active = true
+      limit 1
+    `);
+    const price = Number(((pricing as any).rows ?? pricing)[0]?.price ?? NaN);
+    if (!Number.isFinite(price)) return res.status(400).json({ error: "Harga template tidak tersedia" });
+
+    const [data] = await db.insert(templateUpgradeOrders).values({
+      id: crypto.randomUUID(),
+      tenantSiteId,
+      requestedBy,
+      currentTemplate: typeof currentTemplate === "string" ? currentTemplate : tenant.template,
+      targetTemplate,
+      price,
+      proofUrl: typeof proofUrl === "string" ? proofUrl : null,
+      notes: typeof notes === "string" ? notes.slice(0, 2000) : null,
+      status: typeof proofUrl === "string" && proofUrl ? "proof_submitted" : "pending",
+      createdAt: new Date(),
+    }).returning();
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to create upgrade order" });
+  }
+});
+
 router.get("/upgrades", async (req, res) => {
   try {
     const data = await db.select().from(templateUpgradeOrders).orderBy(desc(templateUpgradeOrders.createdAt));
@@ -137,7 +195,15 @@ router.get("/upgrades", async (req, res) => {
 
 router.patch("/upgrades/:id", async (req, res) => {
   try {
-    const [data] = await db.update(templateUpgradeOrders).set(req.body).where(eq(templateUpgradeOrders.id, req.params.id)).returning();
+    const { status, notes } = req.body ?? {};
+    const allowedStatuses = ["pending", "proof_submitted", "approved", "rejected"];
+    if (status !== undefined && !allowedStatuses.includes(status)) return res.status(400).json({ error: "Status upgrade tidak valid" });
+    const updates: Record<string, unknown> = {};
+    if (status !== undefined) updates.status = status;
+    if (notes !== undefined) updates.notes = typeof notes === "string" ? notes.slice(0, 2000) : null;
+    if (!Object.keys(updates).length) return res.status(400).json({ error: "Tidak ada perubahan" });
+    const [data] = await db.update(templateUpgradeOrders).set(updates as any).where(eq(templateUpgradeOrders.id, req.params.id)).returning();
+    if (!data) return res.status(404).json({ error: "Upgrade order not found" });
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to update upgrade order" });

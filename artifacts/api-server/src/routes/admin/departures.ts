@@ -1005,8 +1005,19 @@ router.get("/:id/readiness", async (req, res) => {
 
     const bookingIds = depBookings.map((b) => b.id);
 
-    // Payment stats (no DB needed)
-    const paid = depBookings.filter((b) => ["paid", "confirmed", "completed"].includes(b.status ?? "")).length;
+    // Payment stats use the booking_payments ledger, not booking status. A confirmed
+    // booking may still be unpaid and must remain visible as a blocker/receivable.
+    const paymentRows = bookingIds.length
+      ? await db
+          .select({ bookingId: bookingPayments.bookingId, amount: bookingPayments.amount })
+          .from(bookingPayments)
+          .where(and(inArray(bookingPayments.bookingId, bookingIds), eq(bookingPayments.isVoided, false)))
+      : [];
+    const paidByBooking = new Map<string, number>();
+    for (const payment of paymentRows) {
+      paidByBooking.set(payment.bookingId, (paidByBooking.get(payment.bookingId) ?? 0) + Number(payment.amount ?? 0));
+    }
+    const paid = depBookings.filter((booking) => (paidByBooking.get(booking.id) ?? 0) >= Number(booking.totalPrice ?? 0)).length;
     const unpaid = depBookings.length - paid;
 
     // Days until departure (no DB needed)
@@ -1022,6 +1033,7 @@ router.get("/:id/readiness", async (req, res) => {
         documents: { total: 0, complete: 0, incomplete: 0 },
         seats: { total: 0, assigned: 0, unassigned: 0 },
         checkIn: { total: 0, done: 0, pending: 0 },
+        blockers: [],
       });
     }
 
@@ -1057,6 +1069,13 @@ router.get("/:id/readiness", async (req, res) => {
       }
     }
 
+    const blockers = [
+      unpaid > 0 ? { code: "unpaid", severity: "high", count: unpaid, label: "Jemaah masih memiliki sisa pembayaran" } : null,
+      docIncomplete > 0 ? { code: "documents", severity: "high", count: docIncomplete, label: "Jemaah belum melengkapi dokumen wajib" } : null,
+      totalJemaah - seatAssigned > 0 ? { code: "seats", severity: "medium", count: totalJemaah - seatAssigned, label: "Jemaah belum mendapat nomor kursi" } : null,
+      Math.max(0, totalJemaah - checkInDone) > 0 ? { code: "check_in", severity: "medium", count: Math.max(0, totalJemaah - checkInDone), label: "Jemaah belum check-in" } : null,
+    ].filter(Boolean);
+
     res.json({
       departure: { id: dep.id, departureDate: dep.departureDate, returnDate: dep.returnDate, quota: dep.quota, packageTitle: dep.packageTitle, daysUntil },
       jemaah: { total: totalJemaah, bookings: depBookings.length },
@@ -1064,6 +1083,7 @@ router.get("/:id/readiness", async (req, res) => {
       documents: { total: totalJemaah, complete: docComplete, incomplete: docIncomplete },
       seats: { total: totalJemaah, assigned: seatAssigned, unassigned: totalJemaah - seatAssigned },
       checkIn: { total: totalJemaah, done: checkInDone, pending: Math.max(0, totalJemaah - checkInDone) },
+      blockers,
     });
   } catch (err) {
     sendAdminError(res, "GET /api/admin/departures/:id/readiness", err);

@@ -48,6 +48,7 @@ interface ReadinessData {
   documents:{ total: number; complete: number; incomplete: number };
   seats:    { total: number; assigned: number; unassigned: number };
   checkIn:  { total: number; done: number; pending: number };
+  blockers?: Array<{ code: string; severity: string; count: number; label: string }>;
 }
 
 // ─── Progress ring ────────────────────────────────────────────────────────────
@@ -466,7 +467,18 @@ export default function DepartureReadiness() {
                     </Badge>
                   </div>
                 )}
-                {data.payment.unpaid === 0 && data.documents.incomplete === 0 && data.seats.unassigned === 0 && (
+                {data.checkIn.pending > 0 && (
+                  <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-emerald-50 border border-emerald-100">
+                    <span className="text-sm text-emerald-700 flex items-center gap-2">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      {data.checkIn.pending} jemaah belum check-in
+                    </span>
+                    <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs">
+                      Check-in
+                    </Badge>
+                  </div>
+                )}
+                {data.payment.unpaid === 0 && data.documents.incomplete === 0 && data.seats.unassigned === 0 && data.checkIn.pending === 0 && (
                   <div className="py-4 text-center text-sm text-muted-foreground">
                     <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
                     Semua item siap! Keberangkatan ini sudah fully prepared.

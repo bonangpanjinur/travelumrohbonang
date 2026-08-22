@@ -5,7 +5,7 @@ import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Badge } from "@/shared/components/ui/badge";
 import { Crown, ArrowRight, Upload, Loader2, ImageIcon, X } from "lucide-react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -55,13 +55,9 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
     setNotes("");
     setIsDragging(false);
 
-    supabase
-      .from("template_pricing")
-      .select("template_name, price, description")
-      .eq("is_active", true)
-      .then(({ data }) => {
-        if (data) setPricing(data as PricingInfo[]);
-      });
+    apiFetch<PricingInfo[]>("/api/admin/tenant/pricing")
+      .then((data) => setPricing(data))
+      .catch(() => toast.error("Gagal memuat harga template"));
   }, [open]);
 
   const availableTemplates = pricing.filter(p =>
@@ -120,11 +116,13 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
     if (!proofFile || !user) return null;
     setUploading(true);
     try {
-      const ext = proofFile.name.split(".").pop() || "jpg";
-      const path = `${user.id}/upgrade-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("payment-proofs").upload(path, proofFile);
-      if (error) throw error;
-      return path;
+      const formData = new FormData();
+      formData.append("file", proofFile);
+      const uploaded = await apiFetch<{ url: string }>("/api/admin/uploads/file", {
+        method: "POST",
+        body: formData,
+      });
+      return uploaded.url;
     } catch (err: any) {
       toast.error("Gagal upload bukti: " + err.message);
       return null;
@@ -146,17 +144,16 @@ const UpgradeDialog = ({ open, onOpenChange, featureName, tenantSiteId, currentT
         }
       }
 
-      const { error } = await supabase.from("template_upgrade_orders").insert({
-        tenant_site_id: tenantSiteId,
-        requested_by: user.id,
-        current_template: currentTemplate || "classic",
-        target_template: selectedTemplate,
-        price: selectedPricing?.price || 0,
-        status: proofUrl ? "paid" : "pending",
-        proof_url: proofUrl,
-        notes: notes || null,
+      await apiFetch("/api/admin/tenant/upgrades", {
+        method: "POST",
+        body: JSON.stringify({
+          tenantSiteId,
+          currentTemplate: currentTemplate || "classic",
+          targetTemplate: selectedTemplate,
+          proofUrl,
+          notes: notes || null,
+        }),
       });
-      if (error) throw error;
       setSubmitted(true);
       toast.success("Pengajuan upgrade berhasil dikirim!");
     } catch (err: any) {
