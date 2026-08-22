@@ -14,7 +14,7 @@ const AdminBranding = ({ branding, isMobile = false }: AdminBrandingProps) => {
   const textSize = isMobile ? "text-lg" : "text-xl";
 
   return (
-    <Link to="/admin/dashboard" className="flex items-center gap-2">
+    <Link to="/admin" className="flex items-center gap-2">
       {showLogo && (
         branding.logo_url ? (
           <img 
