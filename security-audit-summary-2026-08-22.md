@@ -83,3 +83,10 @@ Status belum dapat dinaikkan menjadi fully verified sampai canonical production 
 Environment hosting metadata identifies `https://travelvins.vercel.app` as the active production alias. A read-only smoke test on 22 August 2026 returned `GET /api/health` with HTTP 200 and `{"status":"ok","database":"connected","server":"running"}`. Anonymous `POST /api/admin/integrations/test-whatsapp` returned HTTP 401, and anonymous `POST /api/admin/users/pentest-actor/impersonate` also returned HTTP 401. Neither request contained valid credentials, so no provider call, mutation, or privileged audit action was intentionally triggered. The responses exposed the general global rate-limit headers but did not expose sensitive configuration.
 
 This confirms the active host and anonymous denial boundary. Authenticated session bridge, audit-log write, and sensitive-action production rate-limit thresholds still require a valid admin session or an approved non-production credential.
+
+
+## Addendum: CORS preflight finding and remediation
+
+The active host initially returned HTTP 401 for an OPTIONS preflight to `/api/admin/integrations/test-whatsapp` from `https://travelvins.vercel.app`. Source inspection showed that the active Vercel alias was present in hosting environment metadata but missing from the code-level default production CORS allowlist. When an origin is rejected by the CORS callback, the request continues to authentication and can therefore receive 401 instead of the expected preflight response.
+
+The default allowlist has now been updated to include `https://travelvins.vercel.app`, while preserving the two canonical Vins Tour origins. API regression tests (7 files, 42 tests) and API typecheck pass after the change. This fix is committed and should be redeployed before rechecking the production OPTIONS response.

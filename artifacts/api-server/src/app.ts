@@ -30,6 +30,8 @@ app.set("trust proxy", 1);
 const DEFAULT_PRODUCTION_ORIGINS = [
   "https://vinstourtravel.com",
   "https://www.vinstourtravel.com",
+  // Active Vercel production alias; keep it available even if the env var is stale.
+  "https://travelvins.vercel.app",
 ];
 const configuredOrigins = (process.env.ALLOWED_ORIGINS ?? "")
   .split(",")
