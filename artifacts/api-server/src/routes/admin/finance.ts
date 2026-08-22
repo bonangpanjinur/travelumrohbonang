@@ -387,8 +387,8 @@ router.post("/piutang/remind", async (req: Request, res: Response) => {
         b.total_price - COALESCE(paid.total_paid, 0)            AS outstanding,
         dep.departure_date,
         pkg.title                                                AS package_title,
-        prof.name                                                AS customer_name,
-        prof.phone                                               AS customer_phone
+        COALESCE(b.pemesan_name, b.pic_name, prof.name)         AS customer_name,
+        COALESCE(b.pemesan_phone, b.pic_phone, prof.phone)      AS customer_phone
       FROM bookings b
       LEFT JOIN (
         SELECT booking_id, SUM(amount) AS total_paid
@@ -418,7 +418,7 @@ router.post("/piutang/remind", async (req: Request, res: Response) => {
     let failed = 0;
     const errors: string[] = [];
 
-    // Rate-limit: kirim max 10 per batch (anti-spam WA provider)
+    // Rate-limit: kirim max 50 per batch (anti-spam WA provider)
     const batch = data.slice(0, 50);
 
     for (const row of batch) {
