@@ -89,7 +89,7 @@ router.get("/dashboard", async (req: Request, res: Response) => {
           FROM booking_payments WHERE is_voided = false
           GROUP BY booking_id
         ) paid ON paid.booking_id = b.id
-        WHERE b.status NOT IN ('cancelled', 'draft')
+        WHERE b.status IN ('confirmed', 'approved', 'pending', 'waiting_payment', 'completed', 'paid')
           AND COALESCE(paid.total_paid, 0) < b.total_price
           AND ${scopeCond}
       `),
@@ -103,7 +103,7 @@ router.get("/dashboard", async (req: Request, res: Response) => {
           FROM booking_payments WHERE is_voided = false
           GROUP BY booking_id
         ) paid ON paid.booking_id = b.id
-        WHERE b.status NOT IN ('cancelled', 'draft')
+        WHERE b.status IN ('confirmed', 'approved', 'pending', 'waiting_payment', 'completed', 'paid')
           AND COALESCE(paid.total_paid, 0) >= b.total_price
           AND ${scopeCond}
       `),
@@ -138,7 +138,7 @@ router.get("/dashboard", async (req: Request, res: Response) => {
           COUNT(DISTINCT CASE WHEN COALESCE(paid.total_paid, 0) < b.total_price THEN b.id END) AS belum_lunas_count
         FROM package_departures dep
         JOIN packages pkg ON pkg.id = dep.package_id
-        JOIN bookings b ON b.departure_id = dep.id AND b.status NOT IN ('cancelled', 'draft')
+        JOIN bookings b ON b.departure_id = dep.id AND b.status IN ('confirmed', 'approved', 'pending', 'waiting_payment', 'completed', 'paid')
         LEFT JOIN (
           SELECT booking_id, SUM(amount) AS total_paid
           FROM booking_payments WHERE is_voided = false
@@ -169,7 +169,7 @@ router.get("/dashboard", async (req: Request, res: Response) => {
           FROM booking_payments WHERE is_voided = false
           GROUP BY booking_id
         ) paid ON paid.booking_id = b.id
-        WHERE b.status NOT IN ('cancelled', 'draft')
+        WHERE b.status IN ('confirmed', 'approved', 'pending', 'waiting_payment', 'completed', 'paid')
           AND COALESCE(paid.total_paid, 0) < b.total_price
           AND ${scopeCond}
         GROUP BY bucket
@@ -275,7 +275,7 @@ router.get("/piutang", async (req: Request, res: Response) => {
         FROM booking_payments WHERE is_voided = false
         GROUP BY booking_id
       ) paid ON paid.booking_id = b.id
-      WHERE b.status NOT IN ('cancelled', 'draft')
+      WHERE b.status IN ('confirmed', 'approved', 'pending', 'waiting_payment', 'completed', 'paid')
         AND COALESCE(paid.total_paid, 0) < b.total_price
         AND ${scopeCond}
         ${package_id   ? sql`AND b.package_id   = ${package_id}`   : sql``}
@@ -399,7 +399,7 @@ router.post("/piutang/remind", async (req: Request, res: Response) => {
       LEFT JOIN packages            pkg ON pkg.id = b.package_id
       LEFT JOIN profiles            prof ON prof.id::text = b.user_id::text
       WHERE b.id = ANY(${validIds}::text[])
-        AND b.status NOT IN ('cancelled', 'draft')
+        AND b.status IN ('confirmed', 'approved', 'pending', 'waiting_payment', 'completed', 'paid')
         AND b.total_price - COALESCE(paid.total_paid, 0) > 0
     `);
 
@@ -1077,7 +1077,7 @@ router.get("/reports/cost-vs-actual", async (req: Request, res: Response) => {
         (
           SELECT COUNT(*)::int FROM bookings b
           WHERE b.departure_id = dep.id
-            AND b.status NOT IN ('cancelled', 'draft')
+            AND b.status IN ('confirmed', 'approved', 'pending', 'waiting_payment', 'completed', 'paid')
         ) AS filled_seats
       FROM package_costs pc
       JOIN packages pkg ON pkg.id = pc.package_id
