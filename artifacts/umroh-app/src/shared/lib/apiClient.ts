@@ -2,78 +2,116 @@ import { supabaseAuth } from "@/shared/integrations/supabase/auth-client";
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
 
+type ApiErrorBody = {
+  error?: string;
+  detail?: string;
+  hint?: string;
+  fieldErrors?: Record<string, string[]>;
+};
+
+export type ApiError = Error & {
+  status?: number;
+  code?: string;
+  fieldErrors?: Record<string, string[]>;
+  hint?: string;
+  body?: unknown;
+};
+
+function buildHeaders(options: RequestInit, accessToken?: string): Headers {
+  const headers = new Headers(options.headers);
+
+  if (!(options.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (accessToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
+  return headers;
+}
+
+async function getAccessToken(forceRefresh = false): Promise<string | undefined> {
+  try {
+    if (forceRefresh) {
+      const { data, error } = await supabaseAuth.auth.refreshSession();
+      if (error) return undefined;
+      return data.session?.access_token;
+    }
+
+    const { data, error } = await supabaseAuth.auth.getSession();
+    if (error) return undefined;
+    return data.session?.access_token;
+  } catch {
+    return undefined;
+  }
+}
+
+function createApiError(status: number, body: ApiErrorBody): ApiError {
+  let message = body.detail ?? body.error ?? `HTTP ${status}`;
+
+  if (body.fieldErrors && Object.keys(body.fieldErrors).length > 0) {
+    const fields = Object.entries(body.fieldErrors)
+      .map(([field, errors]) => `${field}: ${errors.join(", ")}`)
+      .join(" • ");
+    message = `Validasi gagal — ${fields}`;
+  } else if (body.hint && body.error !== "validation_failed") {
+    message = `${message} — ${body.hint}`;
+  }
+
+  const error = new Error(message) as ApiError;
+  error.status = status;
+  error.code = body.error;
+  error.fieldErrors = body.fieldErrors;
+  error.hint = body.hint;
+  error.body = body;
+  return error;
+}
+
+async function parseResponse<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  if (!text) return undefined as T;
+
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    const error = new Error(
+      `Server returned non-JSON response (${response.status}): ${text.slice(0, 200)}`,
+    ) as ApiError;
+    error.status = response.status;
+    throw error;
+  }
+
+  if (!response.ok) {
+    throw createApiError(response.status, (body ?? {}) as ApiErrorBody);
+  }
+
+  return body as T;
+}
+
 export async function apiFetch<T = unknown>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const headers = new Headers(options.headers);
+  const initialToken = await getAccessToken();
 
-  // Only set Content-Type for non-FormData bodies
-  if (!(options.body instanceof FormData)) {
-    headers.set("Content-Type", "application/json");
-  }
-
-  // Auto-attach Supabase session token so admin API middleware can authenticate
-  try {
-    const { data: { session } } = await supabaseAuth.auth.getSession();
-    if (session?.access_token && !headers.has("Authorization")) {
-      headers.set("Authorization", `Bearer ${session.access_token}`);
-    }
-  } catch {
-    // Session unavailable — request proceeds without auth header
-  }
-
-  const res = await fetch(`${API_BASE}${path}`, {
+  const send = (token?: string) => fetch(`${API_BASE}${path}`, {
     ...options,
-    headers,
+    headers: buildHeaders(options, token),
     credentials: "include",
   });
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText }));
-    const b = body as {
-      error?: string;
-      detail?: string;
-      hint?: string;
-      fieldErrors?: Record<string, string[]>;
-    };
+  let response = await send(initialToken);
 
-    // Build a human-readable message: validation errors → list fields;
-    // otherwise use detail || error, with hint appended when useful.
-    let message = b.detail ?? b.error ?? `HTTP ${res.status}`;
-    if (b.fieldErrors && Object.keys(b.fieldErrors).length > 0) {
-      const parts = Object.entries(b.fieldErrors)
-        .map(([field, msgs]) => `${field}: ${msgs.join(", ")}`)
-        .join(" • ");
-      message = `Validasi gagal — ${parts}`;
-    } else if (b.hint && b.error !== "validation_failed") {
-      message = `${message} — ${b.hint}`;
+  // Refresh and retry exactly once for a stale token. Do not retry other
+  // status codes because POST/PUT actions may have side effects.
+  if (response.status === 401 && initialToken) {
+    const refreshedToken = await getAccessToken(true);
+    if (refreshedToken && refreshedToken !== initialToken) {
+      response = await send(refreshedToken);
     }
-
-    const err = new Error(message) as Error & {
-      status?: number;
-      code?: string;
-      fieldErrors?: Record<string, string[]>;
-      hint?: string;
-      body?: unknown;
-    };
-    err.status = res.status;
-    err.code = b.error;
-    err.fieldErrors = b.fieldErrors;
-    err.hint = b.hint;
-    err.body = body;
-    throw err;
   }
 
-  // Handle empty body (some DELETE/PATCH routes return 200 with no content)
-  const text = await res.text();
-  if (!text) return undefined as T;
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    // Server returned non-JSON (e.g. HTML error page from proxy/CDN)
-    const err = new Error(`Server returned non-JSON response (${res.status}): ${text.slice(0, 200)}`) as Error & { status?: number };
-    err.status = res.status;
-    throw err;
-  }
+  return parseResponse<T>(response);
 }
