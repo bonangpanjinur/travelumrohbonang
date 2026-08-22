@@ -75,7 +75,11 @@ const AdminUsers = () => {
         apiFetch<{ data: UserWithRole[] }>("/api/admin/users"),
         apiFetch<Array<{ id: string; name: string }>>("/api/admin/branches"),
       ]);
-      setUsers(usersResponse.data ?? []);
+      setUsers((usersResponse.data ?? []).map((user) => ({
+        ...user,
+        created_at: (user as any).createdAt ?? null,
+        branch_id: (user as any).branchId ?? null,
+      })));
       setBranches((branchesResponse ?? []).filter((branch) => !!branch.id && !!branch.name));
     } catch (error) {
       console.error("Error fetching users:", error);

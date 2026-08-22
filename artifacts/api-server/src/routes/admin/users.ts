@@ -92,13 +92,22 @@ const router = Router();
 router.get("/", async (req, res) => {
   try {
     const { search } = req.query as { search?: string };
+    const profileColumns = {
+      id: profiles.id,
+      name: profiles.name,
+      email: profiles.email,
+      phone: profiles.phone,
+      avatarUrl: profiles.avatarUrl,
+      branchId: profiles.branchId,
+      createdAt: profiles.createdAt,
+    };
     const profileRows = search
       ? await db
-          .select()
+          .select(profileColumns)
           .from(profiles)
           .where(or(ilike(profiles.name, `%${search}%`), ilike(profiles.email, `%${search}%`)))
           .limit(8)
-      : await db.select().from(profiles).limit(200);
+      : await db.select(profileColumns).from(profiles).limit(200);
 
     const roleRows = await db
       .select({ userId: userRoles.userId, role: userRoles.role })
