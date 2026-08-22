@@ -5,6 +5,7 @@
 import { Router } from "express";
 import path from "path";
 import fs from "fs";
+import crypto from "node:crypto";
 import multer from "multer";
 import { resolveUserScope } from "../../lib/scopeGuard";
 
@@ -31,8 +32,12 @@ const storage = multer.diskStorage({
       .catch((err) => cb(err as Error, getUploadDir("legacy")));
   },
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || ".bin";
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    const extensions: Record<string, string> = {
+      "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif",
+      "application/pdf": ".pdf", "video/mp4": ".mp4", "video/webm": ".webm", "video/ogg": ".ogv",
+      "application/epub+zip": ".epub",
+    };
+    cb(null, `${crypto.randomUUID()}${extensions[file.mimetype] ?? ".bin"}`);
   },
 });
 
@@ -65,7 +70,7 @@ router.post("/image", upload.single("file"), async (req: any, res) => {
     const scope = await resolveUserScope(req);
     const branchId = scope.type === "branch" && scope.branchId ? scope.branchId : "hq";
     const url = `/api/admin/uploads/files/${encodeURIComponent(branchId)}/${encodeURIComponent(req.file.filename)}`;
-    return res.json({ url, filename: req.file.filename, branchId, size: req.file.size });
+    return res.json({ url, filename: req.file.filename, branchId, size: req.file.size, correlationId: req.correlationId ?? null });
   } catch (err) {
     console.error("[uploads] upload error:", err);
     return res.status(500).json({ error: "Gagal upload gambar" });
@@ -85,7 +90,7 @@ router.post("/file", upload.single("file"), async (req: any, res) => {
     const scope = await resolveUserScope(req);
     const branchId = scope.type === "branch" && scope.branchId ? scope.branchId : "hq";
     const url = `/api/admin/uploads/files/${encodeURIComponent(branchId)}/${encodeURIComponent(req.file.filename)}`;
-    return res.json({ url, filename: req.file.filename, branchId, size: req.file.size, mimetype: req.file.mimetype });
+    return res.json({ url, filename: req.file.filename, branchId, size: req.file.size, mimetype: req.file.mimetype, correlationId: req.correlationId ?? null });
   } catch (err) {
     console.error("[uploads] upload error:", err);
     return res.status(500).json({ error: "Gagal upload file" });

@@ -4,7 +4,9 @@ import { auditLogs, db } from "@workspace/db";
 export type SecurityAuditAction =
   | "admin.impersonation"
   | "admin.test_email"
-  | "admin.test_whatsapp";
+  | "admin.test_whatsapp"
+  | "admin.template_upgrade.submit"
+  | "admin.template_upgrade.update";
 
 function redactTarget(value: string): string {
   if (value.includes("@")) {
@@ -25,17 +27,21 @@ export async function logSecurityAudit(
     reason?: string;
     target?: string;
     provider?: string;
+    metadata?: Record<string, unknown>;
   } = {},
 ): Promise<void> {
-  const metadata = Object.fromEntries(
-    Object.entries({
-      result,
-      reason: options.reason,
-      target: options.target ? redactTarget(options.target) : undefined,
-      provider: options.provider,
-      ip: req.ip,
-    }).filter(([, value]) => value !== undefined && value !== null && value !== ""),
-  );
+  const metadata = {
+    ...Object.fromEntries(
+      Object.entries({
+        result,
+        reason: options.reason,
+        target: options.target ? redactTarget(options.target) : undefined,
+        provider: options.provider,
+        ip: req.ip,
+      }).filter(([, value]) => value !== undefined && value !== null && value !== ""),
+    ),
+    ...(options.metadata ?? {}),
+  };
 
   try {
     await db.insert(auditLogs).values({

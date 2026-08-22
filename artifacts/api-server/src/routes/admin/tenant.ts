@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { db, tenantSites, tenantSitePackages, templateUpgradeOrders, eq, desc, sql } from "@workspace/db";
+import { db, tenantSites, tenantSitePackages, templateUpgradeOrders, eq, desc, sql, and, inArray } from "@workspace/db";
+import { logSecurityAudit } from "../../lib/securityAudit";
 
 const router = Router();
 
@@ -161,6 +162,15 @@ router.post("/upgrades", async (req, res) => {
     const [tenant] = await db.select({ id: tenantSites.id, template: tenantSites.template }).from(tenantSites).where(eq(tenantSites.id, tenantSiteId)).limit(1);
     if (!tenant) return res.status(404).json({ error: "Tenant site not found" });
 
+    const existing = await db.select().from(templateUpgradeOrders).where(and(
+      eq(templateUpgradeOrders.tenantSiteId, tenantSiteId),
+      eq(templateUpgradeOrders.targetTemplate, targetTemplate),
+      inArray(templateUpgradeOrders.status, ["pending", "proof_submitted"]),
+    )).limit(1);
+    if (existing[0]) {
+      return res.status(200).json({ ...existing[0], deduplicated: true });
+    }
+
     const pricing = await db.execute(sql`
       select price from template_pricing
       where template_name = ${targetTemplate} and is_active = true
@@ -181,6 +191,7 @@ router.post("/upgrades", async (req, res) => {
       status: typeof proofUrl === "string" && proofUrl ? "proof_submitted" : "pending",
       createdAt: new Date(),
     }).returning();
+    await logSecurityAudit(req, "admin.template_upgrade.submit", "success", { entityType: "template_upgrade_order", entityId: data.id, metadata: { tenantSiteId, targetTemplate } });
     res.status(201).json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to create upgrade order" });
@@ -201,12 +212,27 @@ router.patch("/upgrades/:id", async (req, res) => {
     const { status, notes } = req.body ?? {};
     const allowedStatuses = ["pending", "proof_submitted", "approved", "rejected"];
     if (status !== undefined && !allowedStatuses.includes(status)) return res.status(400).json({ error: "Status upgrade tidak valid" });
+    const [before] = await db.select().from(templateUpgradeOrders).where(eq(templateUpgradeOrders.id, req.params.id)).limit(1);
+    if (!before) return res.status(404).json({ error: "Upgrade order not found" });
+    const transitions: Record<string, string[]> = {
+      pending: ["proof_submitted", "rejected"],
+      proof_submitted: ["approved", "rejected"],
+      approved: [],
+      rejected: ["pending"],
+    };
+    if (status !== undefined && status !== before.status && !transitions[before.status]?.includes(status)) {
+      return res.status(409).json({ error: `Transisi status ${before.status} ke ${status} tidak diizinkan` });
+    }
+    if (status === "approved" && before.status !== "proof_submitted") {
+      return res.status(409).json({ error: "Order hanya dapat disetujui setelah bukti pembayaran disubmit" });
+    }
     const updates: Record<string, unknown> = {};
     if (status !== undefined) updates.status = status;
     if (notes !== undefined) updates.notes = typeof notes === "string" ? notes.slice(0, 2000) : null;
     if (!Object.keys(updates).length) return res.status(400).json({ error: "Tidak ada perubahan" });
-    const [data] = await db.update(templateUpgradeOrders).set(updates as any).where(eq(templateUpgradeOrders.id, req.params.id)).returning();
-    if (!data) return res.status(404).json({ error: "Upgrade order not found" });
+    const [data] = await db.update(templateUpgradeOrders).set(updates as any).where(and(eq(templateUpgradeOrders.id, req.params.id), eq(templateUpgradeOrders.status, before.status))).returning();
+    if (!data) return res.status(409).json({ error: "Order berubah oleh proses lain; muat ulang lalu coba lagi" });
+    await logSecurityAudit(req, "admin.template_upgrade.update", "success", { entityType: "template_upgrade_order", entityId: data.id, metadata: { from: before.status, to: data.status } });
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to update upgrade order" });
