@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Globe, ExternalLink, Copy, Info, CheckCircle2, AlertTriangle, Package, Crown } from "lucide-react";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 import { Separator } from "@/shared/components/ui/separator";
-import { useAuth } from "@/shared/hooks/useAuth";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 import TenantPackageManager from "@/features/admin/components/TenantPackageManager";
 import UpgradeDialog from "@/features/admin/components/UpgradeDialog";
@@ -74,6 +73,61 @@ const emptyForm: Partial<TenantSite> = {
   agent_id: null,
 };
 
+const toTenantApiPayload = (form: Partial<TenantSite>) => ({
+  subdomain: form.subdomain,
+  customDomain: form.custom_domain,
+  siteName: form.site_name,
+  tagline: form.tagline,
+  logoUrl: form.logo_url,
+  primaryColor: form.primary_color,
+  secondaryColor: form.secondary_color,
+  heroImageUrl: form.hero_image_url,
+  heroTitle: form.hero_title,
+  heroSubtitle: form.hero_subtitle,
+  aboutText: form.about_text,
+  whatsappNumber: form.whatsapp_number,
+  phone: form.phone,
+  email: form.email,
+  address: form.address,
+  instagramUrl: form.instagram_url,
+  facebookUrl: form.facebook_url,
+  isActive: form.is_active,
+  template: form.template,
+  gscVerification: form.gsc_verification,
+  seoDefaultImage: form.seo_default_image,
+  branchId: form.branch_id,
+  agentId: form.agent_id,
+});
+
+const fromTenantApi = (site: any): TenantSite => ({
+  id: site.id,
+  owner_id: site.ownerId,
+  branch_id: site.branchId,
+  agent_id: site.agentId,
+  subdomain: site.subdomain,
+  custom_domain: site.customDomain,
+  site_name: site.siteName,
+  tagline: site.tagline,
+  logo_url: site.logoUrl,
+  primary_color: site.primaryColor,
+  secondary_color: site.secondaryColor,
+  hero_image_url: site.heroImageUrl,
+  hero_title: site.heroTitle,
+  hero_subtitle: site.heroSubtitle,
+  about_text: site.aboutText,
+  whatsapp_number: site.whatsappNumber,
+  phone: site.phone,
+  email: site.email,
+  address: site.address,
+  instagram_url: site.instagramUrl,
+  facebook_url: site.facebookUrl,
+  is_active: site.isActive,
+  template: site.template,
+  gsc_verification: site.gscVerification,
+  seo_default_image: site.seoDefaultImage,
+  created_at: site.createdAt,
+});
+
 const DnsRecordRow = ({ type, name, value }: { type: string; name: string; value: string }) => {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -93,7 +147,6 @@ const DnsRecordRow = ({ type, name, value }: { type: string; name: string; value
 };
 
 const TenantSitesAdmin = () => {
-  const { user } = useAuth();
   const [sites, setSites] = useState<TenantSite[]>([]);
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
@@ -107,17 +160,18 @@ const TenantSitesAdmin = () => {
   const [upgradeTarget, setUpgradeTarget] = useState<TenantSite | null>(null);
 
   const fetchAll = async () => {
-    const [sitesRes, branchesRes, agentsRes] = await Promise.all([
-      supabase.from("tenant_sites").select("*").order("created_at", { ascending: false }),
-      supabase.from("branches").select("id, name").eq("is_active", true),
-      supabase.from("agents").select("id, name").eq("is_active", true),
-    ]);
-    if (sitesRes.error) toast.error(sitesRes.error.message || "Gagal memuat situs");
-    if (branchesRes.error) toast.error(branchesRes.error.message || "Gagal memuat cabang");
-    if (agentsRes.error) toast.error(agentsRes.error.message || "Gagal memuat agen");
-    if (sitesRes.data) setSites(sitesRes.data as TenantSite[]);
-    if (branchesRes.data) setBranches(branchesRes.data);
-    if (agentsRes.data) setAgents(agentsRes.data);
+    try {
+      const [siteRows, branchRows, agentRows] = await Promise.all([
+        apiFetch<any[]>("/api/admin/tenant"),
+        apiFetch<any[]>("/api/admin/branches"),
+        apiFetch<any[]>("/api/admin/agents"),
+      ]);
+      setSites(siteRows.map(fromTenantApi));
+      setBranches(branchRows.filter((branch) => branch.isActive !== false).map((branch) => ({ id: branch.id, name: branch.name })));
+      setAgents(agentRows.filter((agent) => agent.isActive !== false).map((agent) => ({ id: agent.id, name: agent.name })));
+    } catch (error: any) {
+      toast.error(error?.message || "Gagal memuat data situs");
+    }
   };
 
   useEffect(() => { fetchAll(); }, []);
@@ -130,12 +184,16 @@ const TenantSitesAdmin = () => {
     setLoading(true);
     try {
       if (editId) {
-        const { error } = await supabase.from("tenant_sites").update(form).eq("id", editId);
-        if (error) throw error;
+        await apiFetch(`/api/admin/tenant/${editId}`, {
+          method: "PATCH",
+          body: JSON.stringify(toTenantApiPayload(form)),
+        });
         toast.success("Situs berhasil diperbarui");
       } else {
-        const { error } = await supabase.from("tenant_sites").insert({ ...form, owner_id: user?.id } as any);
-        if (error) throw error;
+        await apiFetch("/api/admin/tenant", {
+          method: "POST",
+          body: JSON.stringify(toTenantApiPayload(form)),
+        });
         toast.success("Situs berhasil dibuat");
       }
       setDialogOpen(false);
@@ -157,11 +215,12 @@ const TenantSitesAdmin = () => {
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    const { error } = await supabase.from("tenant_sites").delete().eq("id", deleteId);
-    if (error) toast.error(error.message);
-    else {
+    try {
+      await apiFetch(`/api/admin/tenant/${deleteId}`, { method: "DELETE" });
       toast.success("Situs berhasil dihapus");
-      fetchAll();
+      await fetchAll();
+    } catch (error: any) {
+      toast.error(error?.message || "Gagal menghapus situs");
     }
     setDeleteId(null);
   };
