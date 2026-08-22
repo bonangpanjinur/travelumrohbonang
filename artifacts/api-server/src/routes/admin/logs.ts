@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, auditLogs, errorLogs, desc, eq, and, or, ilike, gte, lte } from "@workspace/db";
+import { db, auditLogs, errorLogs, logRetentionPolicies, desc, eq, and, or, ilike, gte, lte, sql } from "@workspace/db";
 import { FULL_ADMIN_ROLES } from "../../lib/roleConstants";
 import diagLogsRouter from "./diagLogs";
 
@@ -29,6 +29,43 @@ function userLogFilter(req: import("express").Request, column: any) {
   if (user?.role && FULL_ADMIN_ROLES.has(user.role)) return undefined;
   return user?.id ? eq(column, user.id) : eq(column, "__unauthenticated__");
 }
+
+const RETENTION_TABLES: Record<string, string> = {
+  request: "request_log",
+  application_error: "error_logs",
+  security_audit: "audit_logs",
+  proof_access: "pilgrim_doc_access_logs",
+};
+
+router.post("/retention/dry-run", async (req, res) => {
+  const role = (req.user as any)?.role;
+  if (role !== "super_admin") return res.status(403).json({ error: "Retention dry-run membutuhkan Super Admin" });
+  try {
+    const policies = await db.select().from(logRetentionPolicies).where(eq(logRetentionPolicies.enabled, true));
+    const results = await Promise.all(policies.map(async (policy) => {
+      const table = RETENTION_TABLES[policy.logType];
+      if (!table) return { logType: policy.logType, retentionDays: policy.retentionDays, supported: false, candidates: 0 };
+      const cutoff = new Date(Date.now() - policy.retentionDays * 86_400_000);
+      const result = await db.execute(sql.raw(`
+        SELECT COUNT(*)::int AS candidates
+        FROM ${table} l
+        WHERE l.created_at < '${cutoff.toISOString()}'
+          AND NOT EXISTS (
+            SELECT 1 FROM log_retention_holds h
+            WHERE h.status = 'active'
+              AND h.log_type = '${policy.logType.replace(/'/g, "''")}'
+              AND (h.entity_id IS NULL OR h.entity_id = l.id)
+              AND (h.expires_at IS NULL OR h.expires_at > now())
+          )
+      `));
+      const rows = (result as any).rows ?? result;
+      return { logType: policy.logType, retentionDays: policy.retentionDays, cutoff, supported: true, candidates: Number(rows[0]?.candidates ?? 0) };
+    }));
+    res.json({ ok: true, dryRun: true, correlationId: (req as any).correlationId ?? null, results });
+  } catch (err) {
+    res.status(500).json({ error: "Retention dry-run gagal", correlationId: (req as any).correlationId ?? null });
+  }
+});
 
 router.get("/audit", async (req, res) => {
   try {

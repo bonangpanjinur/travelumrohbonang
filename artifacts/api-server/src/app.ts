@@ -11,6 +11,8 @@ import { logger } from "./lib/logger";
 import { generalLimiter } from "./middlewares/rateLimiter";
 import { requestMetrics } from "./lib/requestMetrics";
 import { authMiddleware } from "./middlewares/authMiddleware";
+import { observabilityMiddleware, sanitizeLogPayload } from "./middlewares/observability";
+import { recordErrorEvent } from "./lib/errorEvent";
 
 const app = express();
 
@@ -60,6 +62,8 @@ function corsOrigin(
   callback(null, false);
 }
 
+app.use(observabilityMiddleware);
+
 app.use(
   pinoHttp({
     logger,
@@ -78,6 +82,7 @@ app.use(
       req(req) {
         return {
           id: req.id,
+          correlationId: (req as any).correlationId,
           method: req.method,
           url: req.url?.split("?")[0],
         };
@@ -138,17 +143,27 @@ app.use((err: any, req: import("express").Request, res: import("express").Respon
   // Always log the full error server-side (visible in Vercel / Replit logs)
   // TEMP DIAG: explicit err.name / err.message / err.stack fields per
   // diagnostic request, on top of the existing full-object log.
-  console.error("[app] unhandled error", {
-    method:  req.method,
-    route:   req.originalUrl,
-    name:    err?.name,
-    message: err?.message,
-    stack:   err?.stack,
+  const correlationId = (req as any).correlationId ?? req.id ?? "unknown";
+  void recordErrorEvent({
+    error: err,
+    route: req.originalUrl?.split("?")[0],
+    operation: `${req.method} ${req.originalUrl?.split("?")[0]}`,
+    correlationId,
+    requestId: String(req.id ?? ""),
+    userId: (req as any).user?.id ?? null,
   });
+  console.error("[app] unhandled error", sanitizeLogPayload({
+    correlationId,
+    method: req.method,
+    route: req.originalUrl?.split("?")[0],
+    name: err?.name,
+    message: err?.message,
+    stack: err?.stack,
+  }));
 
   if (isProduction) {
     // Never leak internals to the client in production
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error", correlationId });
   } else {
     // In development, surface details so middleware/route bugs are visible
     // without needing to tail the server logs
@@ -157,6 +172,7 @@ app.use((err: any, req: import("express").Request, res: import("express").Respon
       route:   req.originalUrl,
       method:  req.method,
       stack:   err?.stack ?? null,
+      correlationId,
     });
   }
 });
