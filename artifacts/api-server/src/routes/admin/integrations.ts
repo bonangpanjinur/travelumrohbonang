@@ -2,32 +2,38 @@ import { Router } from "express";
 import { requireSuperAdmin } from "../../middlewares/requireAdmin";
 import { sendWhatsApp } from "@workspace/whatsapp";
 import { sendEmail } from "@workspace/email";
+import { sensitiveActionLimiter } from "../../middlewares/sensitiveActionLimiter";
+import { logSecurityAudit } from "../../lib/securityAudit";
 import { db, integrationSecrets, eq } from "@workspace/db";
 
 const router = Router();
 
 const MASK = "********";
 
-router.post("/test-whatsapp", requireSuperAdmin, async (req, res) => {
+router.post("/test-whatsapp", requireSuperAdmin, sensitiveActionLimiter("admin.test_whatsapp", 10), async (req, res) => {
   const to = typeof req.body?.to === "string" ? req.body.to.trim() : "";
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   if (!to || !message || message.length > 4000) {
+    await logSecurityAudit(req, "admin.test_whatsapp", "failure", { reason: "invalid_input", target: to || undefined });
     res.status(400).json({ error: "Nomor tujuan dan pesan wajib diisi (maksimal 4000 karakter)" });
     return;
   }
   const result = await sendWhatsApp({ to, message });
   if (!result.sent) {
+    await logSecurityAudit(req, "admin.test_whatsapp", "failure", { reason: result.reason || "provider_error", target: to });
     res.status(502).json({ error: "WhatsApp test gagal dikirim", reason: result.reason });
     return;
   }
+  await logSecurityAudit(req, "admin.test_whatsapp", "success", { target: to });
   res.json({ sent: true });
 });
 
-router.post("/test-email", requireSuperAdmin, async (req, res) => {
+router.post("/test-email", requireSuperAdmin, sensitiveActionLimiter("admin.test_email", 10), async (req, res) => {
   const to = typeof req.body?.to === "string" ? req.body.to.trim() : "";
   const subject = typeof req.body?.subject === "string" ? req.body.subject.trim() : "";
   const text = typeof req.body?.text === "string" ? req.body.text : "";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || !subject || !text || text.length > 10000) {
+    await logSecurityAudit(req, "admin.test_email", "failure", { reason: "invalid_input", target: to || undefined });
     res.status(400).json({ error: "Email, subject, dan pesan wajib diisi dengan format valid" });
     return;
   }
@@ -38,9 +44,11 @@ router.post("/test-email", requireSuperAdmin, async (req, res) => {
 html: `<p>${safeText.replace(/\n/g, "<br />")}</p>`
   });
   if (!result.sent) {
+    await logSecurityAudit(req, "admin.test_email", "failure", { reason: result.reason || "provider_error", target: to });
     res.status(502).json({ error: "Email test gagal dikirim", reason: result.reason });
     return;
   }
+  await logSecurityAudit(req, "admin.test_email", "success", { target: to });
   res.json({ sent: true });
 });
 
