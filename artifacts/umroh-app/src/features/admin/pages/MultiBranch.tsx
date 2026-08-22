@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/shared/integrations/supabase/client";
+import { apiFetch } from "@/shared/lib/apiClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Badge } from "@/shared/components/ui/badge";
@@ -13,130 +13,40 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { format, subMonths, startOfMonth } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 
+interface BranchMetric {
+  branchId: string;
+  branchName: string;
+  totalBookings: number;
+  paidBookings: number;
+  revenue: number;
+  receivableBookings: number;
+  seatHeldBookings: number;
+  pilgrims: number;
+  agents: number;
+  monthlyData: Record<string, number>;
+}
+
 const AdminMultiBranch = () => {
   const [selectedBranch, setSelectedBranch] = useState<string>("all");
 
-  // Fetch branches
-  const { data: branches = [] } = useQuery({
-    queryKey: ["multi-branch-branches"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("branches")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data || [];
-    },
+  const { data: branchMetrics = [], isLoading } = useQuery({
+    queryKey: ["multi-branch-metrics"],
+    queryFn: () => apiFetch<BranchMetric[]>("/api/admin/analytics/multi-branch"),
   });
 
-  // Fetch all bookings with branch info
-  const { data: bookings = [], isLoading } = useQuery({
-    queryKey: ["multi-branch-bookings"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("id, booking_code, total_price, status, created_at, branch_id, packages(title)")
-        .order("created_at", { ascending: false })
-        .limit(1000);
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Fetch agents per branch
-  const { data: agents = [] } = useQuery({
-    queryKey: ["multi-branch-agents"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("agents")
-        .select("id, name, branch_id, is_active")
-        .eq("is_active", true);
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Fetch pilgrims count per booking
-  const { data: pilgrimCounts = [] } = useQuery({
-    queryKey: ["multi-branch-pilgrims"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("booking_pilgrims")
-        .select("booking_id");
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Compute per-branch stats
-  const branchStats = useMemo(() => {
-    const stats: Record<string, {
-      name: string;
-      totalBookings: number;
-      paidBookings: number;
-      revenue: number;
-      pendingPayments: number;
-      pilgrims: number;
-      agents: number;
-      monthlyData: Record<string, number>;
-    }> = {};
-
-    // Initialize "Pusat" for bookings without branch
-    const initBranch = (id: string, name: string) => {
-      if (!stats[id]) {
-        stats[id] = {
-          name,
-          totalBookings: 0,
-          paidBookings: 0,
-          revenue: 0,
-          pendingPayments: 0,
-          pilgrims: 0,
-          agents: 0,
-          monthlyData: {},
-        };
-      }
-    };
-
-    branches.forEach((b: any) => initBranch(b.id, b.name));
-    initBranch("pusat", "Pusat (Tanpa Cabang)");
-
-    // Pilgrim lookup
-    const pilgrimsByBooking: Record<string, number> = {};
-    pilgrimCounts.forEach((p: any) => {
-      pilgrimsByBooking[p.booking_id] = (pilgrimsByBooking[p.booking_id] || 0) + 1;
-    });
-
-    // Process bookings
-    bookings.forEach((b: any) => {
-      const branchId = b.branch_id || "pusat";
-      if (!stats[branchId]) initBranch(branchId, "Cabang Lainnya");
-
-      stats[branchId].totalBookings++;
-      if (b.status === "paid") {
-        stats[branchId].paidBookings++;
-        stats[branchId].revenue += Number(b.total_price) || 0;
-      }
-      if (b.status === "pending" || b.status === "waiting_payment") {
-        stats[branchId].pendingPayments++;
-      }
-      stats[branchId].pilgrims += pilgrimsByBooking[b.id] || 0;
-
-      // Monthly data
-      const month = b.created_at?.slice(0, 7);
-      if (month) {
-        stats[branchId].monthlyData[month] = (stats[branchId].monthlyData[month] || 0) + 1;
-      }
-    });
-
-    // Count agents per branch
-    agents.forEach((a: any) => {
-      const branchId = a.branch_id || "pusat";
-      if (stats[branchId]) stats[branchId].agents++;
-    });
-
-    return stats;
-  }, [bookings, branches, agents, pilgrimCounts]);
+  const branchStats = useMemo(() => Object.fromEntries(
+    branchMetrics.map((metric) => [metric.branchId, {
+      name: metric.branchName,
+      totalBookings: metric.totalBookings,
+      paidBookings: metric.paidBookings,
+      revenue: metric.revenue,
+      pendingPayments: metric.receivableBookings,
+      pilgrims: metric.pilgrims,
+      agents: metric.agents,
+      monthlyData: metric.monthlyData ?? {},
+      seatHeldBookings: metric.seatHeldBookings,
+    }]),
+  ), [branchMetrics]);
 
   // Filter stats based on selected branch
   const filteredStats = useMemo(() => {
@@ -194,9 +104,9 @@ const AdminMultiBranch = () => {
   const branchRanking = useMemo(() => {
     return Object.entries(branchStats)
       .map(([id, stat]) => ({ id, ...stat }))
-      .filter((s) => s.totalBookings > 0 || branches.some((b: any) => b.id === s.id))
+      .filter((s) => s.totalBookings > 0 || s.id === "pusat")
       .sort((a, b) => b.revenue - a.revenue);
-  }, [branchStats, branches]);
+  }, [branchStats]);
 
   return (
     <div className="space-y-6">
@@ -214,8 +124,8 @@ const AdminMultiBranch = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Semua Cabang</SelectItem>
-            {branches.map((b: any) => (
-              <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+            {branchMetrics.filter((metric) => metric.branchId !== "pusat").map((metric) => (
+              <SelectItem key={metric.branchId} value={metric.branchId}>{metric.branchName}</SelectItem>
             ))}
             <SelectItem value="pusat">Pusat (Tanpa Cabang)</SelectItem>
           </SelectContent>

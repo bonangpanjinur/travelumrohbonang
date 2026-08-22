@@ -363,4 +363,95 @@ router.get("/dashboard-stats", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/analytics/multi-branch
+ * Server-side branch KPIs. Uses booking_payments as cash-revenue source and
+ * keeps confirmed unpaid bookings visible as receivables/seat-held bookings.
+ */
+router.get("/multi-branch", async (req, res) => {
+  try {
+    const from = req.query.from ? new Date(String(req.query.from)) : null;
+    const to = req.query.to ? new Date(String(req.query.to)) : null;
+    const hasFrom = from && !Number.isNaN(from.getTime());
+    const hasTo = to && !Number.isNaN(to.getTime());
+    const rows = await db.execute(sql`
+      with paid_by_booking as (
+        select booking_id, coalesce(sum(amount), 0)::numeric as paid
+        from booking_payments
+        where is_voided = false
+        group by booking_id
+      ),
+      branch_keys as (
+        select id as branch_id, name as branch_name from branches where is_active = true
+        union all
+        select 'pusat'::text, 'Pusat (Tanpa Cabang)'::text
+      ),
+      booking_stats as (
+        select
+          coalesce(br.id, 'pusat') as branch_id,
+          coalesce(br.name, 'Pusat (Tanpa Cabang)') as branch_name,
+          count(distinct b.id)::int as total_bookings,
+          count(distinct b.id) filter (where b.status = 'paid' or coalesce(pb.paid, 0) >= b.total_price)::int as paid_bookings,
+          coalesce(sum(coalesce(pb.paid, 0)), 0)::numeric as revenue,
+          count(distinct b.id) filter (where b.status = 'confirmed' and coalesce(pb.paid, 0) < b.total_price)::int as receivable_bookings,
+          count(distinct b.id) filter (where b.status in ('confirmed', 'completed'))::int as seat_held_bookings,
+          count(distinct bp.id)::int as pilgrims
+        from bookings b
+        left join branches br on br.id = b.branch_id
+        left join paid_by_booking pb on pb.booking_id = b.id
+        left join booking_pilgrims bp on bp.booking_id = b.id
+        where b.status not in ('cancelled', 'draft')
+          ${hasFrom ? sql`and b.created_at >= ${from}` : sql``}
+          ${hasTo ? sql`and b.created_at <= ${to}` : sql``}
+        group by coalesce(br.id, 'pusat'), coalesce(br.name, 'Pusat (Tanpa Cabang)')
+      ),
+      monthly_stats as (
+        select branch_id, jsonb_object_agg(month_key, booking_count) as monthly_data
+        from (
+          select coalesce(br.id, 'pusat') as branch_id,
+                 to_char(b.created_at, 'YYYY-MM') as month_key,
+                 count(distinct b.id)::int as booking_count
+          from bookings b
+          left join branches br on br.id = b.branch_id
+          where b.status not in ('cancelled', 'draft')
+            ${hasFrom ? sql`and b.created_at >= ${from}` : sql``}
+            ${hasTo ? sql`and b.created_at <= ${to}` : sql``}
+          group by coalesce(br.id, 'pusat'), to_char(b.created_at, 'YYYY-MM')
+        ) grouped_months
+        group by branch_id
+      )
+      select
+        bk.branch_id,
+        bk.branch_name,
+        coalesce(bs.total_bookings, 0)::int as total_bookings,
+        coalesce(bs.paid_bookings, 0)::int as paid_bookings,
+        coalesce(bs.revenue, 0)::numeric as revenue,
+        coalesce(bs.receivable_bookings, 0)::int as receivable_bookings,
+        coalesce(bs.seat_held_bookings, 0)::int as seat_held_bookings,
+        coalesce(bs.pilgrims, 0)::int as pilgrims,
+        (select count(*)::int from agents a where a.is_active = true and coalesce(a.branch_id, 'pusat') = bk.branch_id) as agents,
+        coalesce(ms.monthly_data, '{}'::jsonb) as monthly_data
+      from branch_keys bk
+      left join booking_stats bs on bs.branch_id = bk.branch_id
+      left join monthly_stats ms on ms.branch_id = bk.branch_id
+      order by bk.branch_name
+    `);
+
+    res.json((rows.rows as Array<Record<string, unknown>>).map((row) => ({
+      branchId: String(row.branch_id),
+      branchName: String(row.branch_name),
+      totalBookings: Number(row.total_bookings ?? 0),
+      paidBookings: Number(row.paid_bookings ?? 0),
+      revenue: Number(row.revenue ?? 0),
+      receivableBookings: Number(row.receivable_bookings ?? 0),
+      seatHeldBookings: Number(row.seat_held_bookings ?? 0),
+      pilgrims: Number(row.pilgrims ?? 0),
+      agents: Number(row.agents ?? 0),
+      monthlyData: (row.monthly_data ?? {}) as Record<string, number>,
+    })));
+  } catch (err) {
+    sendAdminError(res, "GET /api/admin/analytics/multi-branch", err);
+  }
+});
 export default router;
+
