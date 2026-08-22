@@ -66,12 +66,12 @@ function DocSlot({
       // 1. Upload file → dapat URL
       const fd = new FormData();
       fd.append("file", file);
-      const uploadRes = await fetch(
-        (import.meta.env.BASE_URL ?? "").replace(/\/$/, "") + "/api/admin/pilgrim-documents/upload",
-        { method: "POST", body: fd, credentials: "include" },
-      );
-      if (!uploadRes.ok) throw new Error((await uploadRes.json())?.error ?? "Upload gagal");
-      const { url } = await uploadRes.json();
+      fd.append("bookingId", bookingId);
+      fd.append("pilgrimId", pilgrimId);
+      const { url } = await apiFetch<{ url: string }>("/api/admin/pilgrim-documents/upload", {
+        method: "POST",
+        body: fd,
+      });
 
       // 2. Simpan metadata dokumen
       await apiFetch("/api/admin/pilgrim-documents", {

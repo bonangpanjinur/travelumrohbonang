@@ -6,10 +6,11 @@
 import { Router } from "express";
 import { db, pilgrimDocuments, documentTypes, bookingPilgrims, bookings, packages, eq, and, inArray, asc, sql } from "@workspace/db";
 import { resolveUserScope } from "../../lib/scopeGuard";
-import { buildBookingScopeCondition } from "../../lib/scopeConditions";
+import { buildBookingScopeCondition, isBookingInScope } from "../../lib/scopeConditions";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../../lib/supabaseEnv";
 
 // Resolve upload dir and ensure it exists — called lazily at request time,
 // never at module load, so the server can't crash during cold-start on Vercel
@@ -23,46 +24,118 @@ function getUploadDir(): string {
   return dir;
 }
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, getUploadDir()),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname) || ".bin";
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-  },
+const allowedDocumentTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+const documentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => cb(null, allowedDocumentTypes.has(file.mimetype)),
 });
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
-  fileFilter: (_req, file, cb) => {
-    const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-    cb(null, allowed.includes(file.mimetype));
-  },
-});
+function documentExtension(mimetype: string): string {
+  return ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "application/pdf": ".pdf" } as Record<string, string>)[mimetype] ?? ".bin";
+}
+
+function validDocumentSignature(buffer: Buffer, mimetype: string): boolean {
+  if (mimetype === "image/jpeg") return buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]));
+  if (mimetype === "image/png") return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (mimetype === "image/webp") return buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP";
+  if (mimetype === "application/pdf") return buffer.subarray(0, 5).toString("ascii") === "%PDF-";
+  return false;
+}
+
+async function uploadDocumentToPrivateStorage(file: Express.Multer.File, branchId: string): Promise<string> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error("Private document storage is not configured");
+  const bucket = process.env.SUPABASE_DOCUMENT_BUCKET || "pilgrim-documents";
+  const objectName = `admin/${branchId}/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}${documentExtension(file.mimetype)}`;
+  const encodedPath = objectName.split("/").map(encodeURIComponent).join("/");
+  const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(bucket)}/${encodedPath}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, apikey: SUPABASE_SERVICE_ROLE_KEY, "Content-Type": file.mimetype, "x-upsert": "false" },
+    body: file.buffer,
+  });
+  if (!response.ok) throw new Error(`Document storage upload failed (${response.status})`);
+  return `/private-documents/${bucket}/${objectName}`;
+}
+
+function fileUrlMatchesBranch(fileUrl: string, branchId: string): boolean {
+  const prefix = "/api/admin/pilgrim-documents/files/";
+  if (!fileUrl.startsWith(prefix)) return false;
+  try {
+    const token = fileUrl.slice(prefix.length);
+    const objectPath = Buffer.from(token, "base64url").toString("utf8");
+    const bucket = process.env.SUPABASE_DOCUMENT_BUCKET || "pilgrim-documents";
+    return objectPath.startsWith(`/private-documents/${bucket}/admin/${branchId}/`);
+  } catch { return false; }
+}
+
+async function deletePrivateObject(objectPath: string): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !objectPath.startsWith("/private-documents/")) return;
+  const value = objectPath.replace(/^\/private-documents\//, "");
+  const slash = value.indexOf("/");
+  if (slash <= 0) return;
+  const bucket = value.slice(0, slash);
+  const objectName = value.slice(slash + 1).split("/").map(encodeURIComponent).join("/");
+  await fetch(`${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(bucket)}/${objectName}`, { method: "DELETE", headers: { Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, apikey: SUPABASE_SERVICE_ROLE_KEY } }).catch(() => undefined);
+}
 
 const router = Router();
 
 /**
  * POST /api/admin/pilgrim-documents/upload
- * Multipart upload: menerima file dan menyimpan ke disk lokal.
- * Returns { url } — URL relatif yang bisa diakses lewat /api/admin/pilgrim-documents/files/:filename
+ * Multipart upload: menerima file dan menyimpan ke private object storage.
+ * Returns { url } — URL internal yang hanya dapat diakses setelah scope check.
  */
-router.post("/upload", upload.single("file"), async (req: any, res) => {
+router.post("/upload", documentUpload.single("file"), async (req: any, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "File tidak diterima atau format tidak didukung (JPG/PNG/PDF)" });
-    const url = `/api/admin/pilgrim-documents/files/${req.file.filename}`;
-    return res.json({ url, filename: req.file.filename, size: req.file.size });
+    if (!validDocumentSignature(req.file.buffer, req.file.mimetype)) {
+      return res.status(400).json({ error: "Isi file tidak cocok dengan tipe yang diklaim" });
+    }
+    const { bookingId, pilgrimId } = req.body as { bookingId?: string; pilgrimId?: string };
+    if (!bookingId || !pilgrimId) return res.status(400).json({ error: "bookingId dan pilgrimId wajib diisi" });
+    const scope = await resolveUserScope(req);
+    const scopeCond = buildBookingScopeCondition(scope, "bookings");
+    const [booking] = await db.select({ branchId: bookings.branchId }).from(bookings).where(and(eq(bookings.id, bookingId), scopeCond)).limit(1);
+    if (!booking) return res.status(404).json({ error: "Booking tidak ditemukan" });
+    const [pilgrim] = await db.select({ id: bookingPilgrims.id }).from(bookingPilgrims).where(and(eq(bookingPilgrims.id, pilgrimId), eq(bookingPilgrims.bookingId, bookingId))).limit(1);
+    if (!pilgrim) return res.status(403).json({ error: "Pilgrim tidak berada dalam booking tersebut" });
+    const branchId = booking.branchId ?? "hq";
+    const objectPath = await uploadDocumentToPrivateStorage(req.file, branchId);
+    const token = Buffer.from(objectPath).toString("base64url");
+    const url = `/api/admin/pilgrim-documents/files/${token}`;
+    return res.json({ url, filename: `${crypto.randomUUID()}${documentExtension(req.file.mimetype)}`, size: req.file.size, correlationId: req.correlationId ?? null });
   } catch (err) {
     console.error("[pilgrim-documents] upload error:", err);
-    return res.status(500).json({ error: "Gagal upload file" });
+    return res.status(500).json({ error: "Gagal upload file", correlationId: req.correlationId ?? null });
   }
 });
 
-/** GET /api/admin/pilgrim-documents/files/:filename — Sajikan file yang sudah diupload */
-router.get("/files/:filename", (req: any, res) => {
-  const filePath = path.join(getUploadDir(), req.params.filename);
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: "File tidak ditemukan" });
-  res.sendFile(filePath);
+/** GET /api/admin/pilgrim-documents/files/:token — Serve private document after scope check */
+router.get("/files/:token", async (req: any, res) => {
+  const token = String(req.params.token ?? "");
+  if (!token || token.includes("..")) return res.status(400).json({ error: "Token tidak valid" });
+  let objectPath: string;
+  try { objectPath = Buffer.from(token, "base64url").toString("utf8"); } catch { return res.status(400).json({ error: "Token tidak valid" }); }
+  if (!objectPath.startsWith("/private-documents/")) return res.status(400).json({ error: "Token tidak valid" });
+  const fileUrl = `/api/admin/pilgrim-documents/files/${token}`;
+  const scope = await resolveUserScope(req);
+  const rows = await db.select({ branchId: bookings.branchId, agentId: bookings.agentId, picType: bookings.picType, picId: bookings.picId })
+    .from(pilgrimDocuments).leftJoin(bookings, eq(pilgrimDocuments.bookingId, bookings.id)).where(eq(pilgrimDocuments.fileUrl, fileUrl)).limit(1);
+  if (!rows[0] || !isBookingInScope(rows[0], scope)) return res.status(404).json({ error: "File tidak ditemukan" });
+  const value = objectPath.replace(/^\/private-documents\//, "");
+  const slash = value.indexOf("/");
+  if (slash <= 0 || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return res.status(404).json({ error: "File tidak ditemukan" });
+  const bucket = value.slice(0, slash);
+  const objectName = value.slice(slash + 1);
+  const response = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${encodeURIComponent(bucket)}`, {
+    method: "POST", headers: { Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`, apikey: SUPABASE_SERVICE_ROLE_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ expiresIn: 300, paths: [objectName] }),
+  });
+  if (!response.ok) return res.status(404).json({ error: "File tidak ditemukan" });
+  const payload = await response.json() as { signedURLs?: Array<{ signedURL?: string }> };
+  const signed = payload.signedURLs?.[0]?.signedURL;
+  if (!signed) return res.status(404).json({ error: "File tidak ditemukan" });
+  return res.redirect(302, signed.startsWith("http") ? signed : `${SUPABASE_URL}/storage/v1${signed}`);
 });
 
 /**
@@ -220,16 +293,19 @@ router.post("/init-pilgrim/:pilgrimId", async (req: any, res) => {
  */
 router.patch("/:docId", async (req: any, res) => {
   const { status, notes } = req.body as Record<string, string | undefined>;
-  if (!status) return res.status(400).json({ error: "status diperlukan" });
+  const allowedStatuses = new Set(["pending", "submitted", "verified", "rejected"]);
+  if (!status || !allowedStatuses.has(status)) return res.status(400).json({ error: "status dokumen tidak valid" });
   try {
+    const scope = await resolveUserScope(req);
+    const scopeCond = buildBookingScopeCondition(scope);
     const [updated] = await db
       .update(pilgrimDocuments)
       .set({
         status: status as any,
-        notes: notes || null,
-        verifiedAt: new Date(),
+        notes: notes?.slice(0, 2000) || null,
+        verifiedAt: status === "verified" ? new Date() : null,
       })
-      .where(eq(pilgrimDocuments.id, req.params.docId))
+      .where(and(eq(pilgrimDocuments.id, String(req.params.docId)), sql`EXISTS (SELECT 1 FROM bookings b WHERE b.id = ${pilgrimDocuments.bookingId} AND ${scopeCond})`))
       .returning();
     if (!updated) return res.status(404).json({ error: "Dokumen tidak ditemukan" });
     return res.json({ message: "Status diperbarui", doc: updated });
@@ -244,11 +320,14 @@ router.get("/", async (req: any, res) => {
   const { pilgrimId } = req.query as Record<string, string | undefined>;
   if (!pilgrimId) return res.status(400).json({ error: "pilgrimId diperlukan" });
   try {
+    const scope = await resolveUserScope(req);
+    const scopeCond = buildBookingScopeCondition(scope);
     const docs = await db
-      .select()
+      .select({ doc: pilgrimDocuments })
       .from(pilgrimDocuments)
-      .where(eq(pilgrimDocuments.pilgrimId, pilgrimId));
-    return res.json({ data: docs });
+      .where(and(eq(pilgrimDocuments.pilgrimId, pilgrimId), sql`EXISTS (SELECT 1 FROM bookings b WHERE b.id = ${pilgrimDocuments.bookingId} AND ${scopeCond})`));
+    const data = docs.map((row) => row.doc);
+    return res.json({ data });
   } catch (err) {
     console.error("[admin/pilgrim-documents] GET error:", err);
     return res.status(500).json({ error: "Gagal memuat dokumen" });
@@ -262,17 +341,25 @@ router.get("/", async (req: any, res) => {
  */
 router.put("/", async (req: any, res) => {
   const { pilgrimId, bookingId, documentType, fileUrl, status, notes } = req.body as Record<string, string | undefined>;
+  const allowedStatuses = new Set(["pending", "submitted", "verified", "rejected"]);
   if (!pilgrimId || !documentType || !bookingId) {
     return res.status(400).json({ error: "pilgrimId, bookingId, dan documentType diperlukan" });
   }
+  if (status && !allowedStatuses.has(status)) return res.status(400).json({ error: "status dokumen tidak valid" });
+  if (fileUrl !== undefined && fileUrl !== null && fileUrl !== "" && !fileUrl.startsWith("/api/admin/pilgrim-documents/files/")) return res.status(400).json({ error: "fileUrl harus berasal dari upload dokumen internal" });
   try {
+    const scope = await resolveUserScope(req);
+    const scopeCond = buildBookingScopeCondition(scope, "bookings");
     const [booking] = await db
       .select({ branchId: bookings.branchId })
       .from(bookings)
-      .where(eq(bookings.id, bookingId))
+      .where(and(eq(bookings.id, bookingId), scopeCond))
       .limit(1);
     if (!booking) return res.status(404).json({ error: "Booking tidak ditemukan" });
     const branchId = booking.branchId ?? "hq";
+    if (fileUrl && !fileUrlMatchesBranch(fileUrl, branchId)) return res.status(400).json({ error: "fileUrl tidak sesuai dengan branch booking" });
+    const [pilgrim] = await db.select({ id: bookingPilgrims.id }).from(bookingPilgrims).where(and(eq(bookingPilgrims.id, pilgrimId), eq(bookingPilgrims.bookingId, bookingId))).limit(1);
+    if (!pilgrim) return res.status(403).json({ error: "Pilgrim tidak berada dalam booking tersebut" });
 
     const [existing] = await db
       .select({ id: pilgrimDocuments.id })
@@ -291,7 +378,7 @@ router.put("/", async (req: any, res) => {
         .set({
           fileUrl: fileUrl || null,
           status: (status || "submitted") as any,
-          notes: notes || null,
+          notes: notes?.slice(0, 2000) || null,
           submittedAt: new Date(),
         })
         .where(eq(pilgrimDocuments.id, existing.id))
@@ -308,7 +395,7 @@ router.put("/", async (req: any, res) => {
           documentType,
           fileUrl: fileUrl || null,
           status: (status || "submitted") as any,
-          notes: notes || null,
+          notes: notes?.slice(0, 2000) || null,
           submittedAt: new Date(),
           createdAt: new Date(),
         })
@@ -324,9 +411,11 @@ router.put("/", async (req: any, res) => {
 /** DELETE /api/admin/pilgrim-documents/:docId */
 router.delete("/:docId", async (req: any, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    const scopeCond = buildBookingScopeCondition(scope);
     const [deleted] = await db
       .delete(pilgrimDocuments)
-      .where(eq(pilgrimDocuments.id, req.params.docId))
+      .where(and(eq(pilgrimDocuments.id, String(req.params.docId)), sql`EXISTS (SELECT 1 FROM bookings b WHERE b.id = ${pilgrimDocuments.bookingId} AND ${scopeCond})`))
       .returning();
     if (!deleted) return res.status(404).json({ error: "Dokumen tidak ditemukan" });
     return res.json({ message: "Dokumen dihapus" });

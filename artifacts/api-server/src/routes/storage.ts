@@ -124,7 +124,7 @@ router.post("/object/:bucket/*filePath", requireAuth, handleUpload);
 router.put("/object/:bucket/*filePath", requireAuth, handleUpload);
 
 // GET /storage/v1/object/public/:bucket/*filePath
-router.get("/object/public/:bucket/*filePath", (req: Request, res: Response) => {
+router.get("/object/public/:bucket/*filePath", requireAuth, (req: Request, res: Response) => {
   const { bucket } = req.params as Record<string, string>;
   const filePath = getWildcardPath(req);
   if (!filePath) return res.status(400).json({ error: "Missing file path" });
