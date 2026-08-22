@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canAccessAdminRoute, getAdminRouteRoles } from "./adminRouteAccess";
+import { getFeatureForPath } from "./config/featureDefinitions";
 
 describe("admin route access", () => {
   it("allows operational roles on the admin dashboard", () => {
@@ -21,5 +22,12 @@ describe("admin route access", () => {
   it("closes unlisted admin routes to full admins by default", () => {
     expect(canAccessAdminRoute("/admin/internal-only", "admin")).toBe(true);
     expect(canAccessAdminRoute("/admin/internal-only", "staff")).toBe(false);
+  });
+
+  it("maps extended feature routes to their domain flags", () => {
+    expect(getFeatureForPath("/admin/financial-reports")).toBe("reports");
+    expect(getFeatureForPath("/admin/visa-tracking")).toBe("documents");
+    expect(getFeatureForPath("/admin/equipment-distribution")).toBe("equipment");
+    expect(getFeatureForPath("/admin/agent-withdrawals")).toBe("agents");
   });
 });

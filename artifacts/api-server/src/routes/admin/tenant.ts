@@ -155,6 +155,9 @@ router.post("/upgrades", async (req, res) => {
     if (!/^[a-zA-Z0-9_-]{1,64}$/.test(targetTemplate)) {
       return res.status(400).json({ error: "Template tujuan tidak valid" });
     }
+    if (proofUrl !== undefined && proofUrl !== null && (typeof proofUrl !== "string" || !proofUrl.startsWith("/api/admin/uploads/"))) {
+      return res.status(400).json({ error: "Bukti pembayaran harus berasal dari upload internal" });
+    }
     const [tenant] = await db.select({ id: tenantSites.id, template: tenantSites.template }).from(tenantSites).where(eq(tenantSites.id, tenantSiteId)).limit(1);
     if (!tenant) return res.status(404).json({ error: "Tenant site not found" });
 
