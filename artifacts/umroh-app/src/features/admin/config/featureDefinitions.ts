@@ -125,7 +125,7 @@ export const FEATURE_DEFINITIONS: FeatureDef[] = [
     description: "Proses pengajuan dan persetujuan refund dari jamaah.",
     category: "Keuangan",
     icon: Wallet,
-    routes: ["/admin/refunds", "/admin/agent-withdrawals"],
+    routes: ["/admin/refunds"],
   },
   {
     id: "coupons",
