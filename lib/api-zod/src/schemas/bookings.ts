@@ -26,10 +26,17 @@ export const BookingSchema = z.object({
   createdAt: z.coerce.date().nullable(),
 });
 
+const BookingRoomSelection = z.object({
+  roomType: z.string().min(1),
+  quantity: z.number().int().positive(),
+});
+
 export const CreateBookingRequest = z.object({
   packageId: z.string(),
   departureId: z.string(),
-  totalPrice: z.number().positive(),
+  // Deprecated client hint; backend calculates the authoritative total from rooms.
+  totalPrice: z.number().positive().optional(),
+  rooms: z.array(BookingRoomSelection).min(1),
   currency: z.string().default("IDR"),
   paymentScheme: z.string().optional(),
   policyAccepted: z.boolean().optional(),

@@ -347,7 +347,9 @@ const Booking = () => {
         body: JSON.stringify({
           packageId: pkg.id,
           departureId: departure.id,
+          // totalPrice is retained only as a backward-compatible hint; backend recalculates it.
           totalPrice: getTotalPrice(),
+          rooms: rooms.filter((r) => r.quantity > 0).map((r) => ({ roomType: r.room_type, quantity: r.quantity })),
           currency: "IDR",
           picType: finalPicType,
           picId: finalPicId ?? undefined,
@@ -364,19 +366,6 @@ const Booking = () => {
         }),
       });
 
-      await apiFetch(`/api/bookings/${booking.id}/rooms`, {
-        method: "POST",
-        body: JSON.stringify({
-          rooms: rooms
-            .filter((r) => r.quantity > 0)
-            .map((r) => ({
-              roomType: r.room_type,
-              price: r.price,
-              quantity: r.quantity,
-              subtotal: r.quantity * r.price,
-            })),
-        }),
-      });
 
       await apiFetch(`/api/bookings/${booking.id}/pilgrims`, {
         method: "POST",

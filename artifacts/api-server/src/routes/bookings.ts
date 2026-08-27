@@ -5,6 +5,7 @@ import {
   bookings,
   packages,
   packageDepartures,
+  departurePrices,
   bookingRooms,
   bookingPilgrims,
   payments,
@@ -37,6 +38,7 @@ import QRCode from "qrcode";
 import { branches } from "@workspace/db";
 import { buildBookingPaymentSnapshots, snapshotEffectivePaymentPolicy } from "../lib/paymentPolicyBooking";
 import { resolvePaymentPolicy } from "../lib/paymentPolicyResolver";
+import { calculateAuthoritativeBookingPrice, BookingPricingError } from "../lib/bookingPricing";
 import {
   BookingListResponse,
   BookingWithDetailsSchema,
@@ -459,6 +461,7 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
       redeemPoints,
       policyAccepted,
       invoicePreferences,
+      rooms: requestedRooms,
     } = req.body as CreateBookingInput;
 
     if (!req.isAuthenticated()) {
@@ -466,6 +469,24 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
       return;
     }
     const userId = req.user.id;
+
+    // P0: Calculate the booking total from authoritative departure prices.
+    // The client may send totalPrice for backward compatibility, but it is never trusted.
+    const departurePriceRows = await db
+      .select({ roomType: departurePrices.roomType, price: departurePrices.price })
+      .from(departurePrices)
+      .where(eq(departurePrices.departureId, departureId));
+    let calculatedPricing;
+    try {
+      calculatedPricing = calculateAuthoritativeBookingPrice(requestedRooms, departurePriceRows.map((row) => ({ roomType: row.roomType, price: Number(row.price) })));
+    } catch (error) {
+      if (error instanceof BookingPricingError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      throw error;
+    }
+    const calculatedBasePrice = calculatedPricing.total;
 
     // P3-10: Validasi kapasitas keberangkatan sebelum booking dibuat
     if (departureId) {
@@ -492,7 +513,7 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
     const departureForPolicy = departureId
       ? (await db.select({ departureDate: packageDepartures.departureDate }).from(packageDepartures).where(eq(packageDepartures.id, departureId)).limit(1))[0]?.departureDate
       : null;
-    const paymentSnapshots = await buildBookingPaymentSnapshots(packageId, totalPrice, departureForPolicy);
+    const paymentSnapshots = await buildBookingPaymentSnapshots(packageId, calculatedBasePrice, departureForPolicy);
     const effectivePolicy = await resolvePaymentPolicy(packageId);
     if (effectivePolicy.isConfigured && policyAccepted !== true) {
       res.status(400).json({ error: "Persetujuan aturan pembayaran wajib diberikan sebelum booking dibuat" });
@@ -520,11 +541,11 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
 
       // Loyalty point redemption inside the same tx — rolled back automatically
       // if the subsequent booking insert fails (no dangling deductions).
-      let finalPrice = totalPrice;
+      let finalPrice = calculatedBasePrice;
       if (redeemPoints) {
         try {
           const { discount } = await redeemLoyaltyPointsForBooking(userId, redeemPoints, bookingId, tx);
-          finalPrice = Math.max(0, totalPrice - discount);
+          finalPrice = Math.max(0, calculatedBasePrice - discount);
         } catch (err: any) {
           const wrapped = new Error(err instanceof Error ? err.message : "Gagal menukar poin");
           (wrapped as any).code = "REDEMPTION_FAIL";
@@ -568,6 +589,15 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
           createdAt: new Date(),
         })
         .returning();
+      await tx.insert(bookingRooms).values(calculatedPricing.lines.map((line) => ({
+        id: crypto.randomUUID(),
+        bookingId: bookingId,
+        roomType: line.roomType,
+        price: String(line.price),
+        quantity: line.quantity,
+        subtotal: String(line.subtotal),
+        createdAt: new Date(),
+      })));
       return row;
     });
 
@@ -606,7 +636,7 @@ router.post(
       const userId = req.user.id;
 
       const [booking] = await db
-        .select({ id: bookings.id })
+        .select({ id: bookings.id, departureId: bookings.departureId })
         .from(bookings)
         .where(and(eq(bookings.id, id), eq(bookings.userId, userId)))
         .limit(1);
@@ -617,14 +647,31 @@ router.post(
       }
 
       const { rooms } = req.body as { rooms: BookingRoom[] };
-
-      const rows = rooms.map((r) => ({
+      if (!booking.departureId) {
+        res.status(400).json({ error: "Booking tidak memiliki keberangkatan" });
+        return;
+      }
+      const officialPrices = await db
+        .select({ roomType: departurePrices.roomType, price: departurePrices.price })
+        .from(departurePrices)
+        .where(eq(departurePrices.departureId, booking.departureId));
+      let calculatedPricing;
+      try {
+        calculatedPricing = calculateAuthoritativeBookingPrice(rooms.map((room) => ({ roomType: room.roomType, quantity: room.quantity })), officialPrices.map((row) => ({ roomType: row.roomType, price: Number(row.price) })));
+      } catch (error) {
+        if (error instanceof BookingPricingError) {
+          res.status(400).json({ error: error.message });
+          return;
+        }
+        throw error;
+      }
+      const rows: Array<typeof bookingRooms.$inferInsert> = calculatedPricing.lines.map((line) => ({
         id: crypto.randomUUID(),
         bookingId: id,
-        roomType: r.roomType,
-        price: String(r.price),
-        quantity: r.quantity,
-        subtotal: String(r.subtotal),
+        roomType: line.roomType,
+        price: String(line.price),
+        quantity: line.quantity,
+        subtotal: String(line.subtotal),
         createdAt: new Date(),
       }));
 
