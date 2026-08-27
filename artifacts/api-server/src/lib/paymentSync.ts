@@ -24,6 +24,7 @@ import {
   sum,
 } from "@workspace/db";
 import { emailNotifications } from "./notifications/emailNotifications";
+import { autoIssueCertificatesForPaidBooking } from "./autoIssueCertificates";
 
 type DbRunner = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -132,6 +133,12 @@ export async function syncBookingStatus(
       .update(bookings)
       .set({ status: newStatus })
       .where(eq(bookings.id, bookingId));
+  }
+
+  if (paymentStatus === "paid" && runner === db) {
+    void autoIssueCertificatesForPaidBooking(bookingId)
+      .then((result) => console.info(`[certificate-auto-issue] booking=${bookingId} issued=${result.issued} skipped=${result.skipped}`))
+      .catch((error) => console.error(`[certificate-auto-issue] booking=${bookingId} failed`, error));
   }
 
   // Seat mengikuti status approval booking, bukan status pembayaran;
@@ -341,6 +348,12 @@ export async function syncFromGatewayTransaction({
 
   if (paymentResult.duplicate) return;
   const { paymentStatus } = paymentResult;
+
+  if (paymentStatus === "paid") {
+    void autoIssueCertificatesForPaidBooking(bookingId)
+      .then((result) => console.info(`[certificate-auto-issue] booking=${bookingId} issued=${result.issued} skipped=${result.skipped}`))
+      .catch((error) => console.error(`[certificate-auto-issue] booking=${bookingId} failed`, error));
+  }
 
   // In-app notification for the jamaah.
   if (booking.userId) {
