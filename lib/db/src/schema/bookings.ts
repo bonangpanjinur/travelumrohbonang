@@ -27,6 +27,9 @@ export const bookings = pgTable("bookings", {
   // Immutable snapshots captured when the booking is created.
   paymentPolicySnapshot: jsonb("payment_policy_snapshot"),
   paymentScheduleSnapshot: jsonb("payment_schedule_snapshot"),
+  policyAcceptedAt: timestamp("policy_accepted_at", { withTimezone: true }),
+  policyAcceptedVersion: text("policy_accepted_version"),
+  invoicePreferences: jsonb("invoice_preferences"),
   notes: text("notes"),
   // Group booking fields
   isGroupBooking: boolean("is_group_booking").notNull().default(false),

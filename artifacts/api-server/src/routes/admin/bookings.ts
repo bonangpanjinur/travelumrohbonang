@@ -1314,7 +1314,7 @@ router.get("/:id/invoice-data", async (req, res) => {
         db.execute(sql`
           SELECT
             b.id, b.booking_code, b.package_id, b.total_price, b.status, b.created_at,
-            b.payment_policy_snapshot, b.payment_schedule_snapshot,
+            b.payment_policy_snapshot, b.payment_schedule_snapshot, b.invoice_preferences,
             b.branch_id, b.agent_id, b.pic_type, b.pic_id,
             pkg.title      AS package_title,
             dep.departure_date,
@@ -1431,6 +1431,7 @@ router.get("/:id/invoice-data", async (req, res) => {
         status: sbBooking.status,
         paymentPolicySnapshot: fallbackPolicySnapshot,
         paymentScheduleSnapshot: fallbackScheduleSnapshot,
+        invoicePreferences: sbBooking.invoice_preferences ?? null,
         pilgrims: sbPilgrims.map((p: any) => ({ name: p.name, gender: p.gender })),
         rooms: (Array.isArray(sbRooms) ? sbRooms : []).map((r: any) => ({
           room_type: r.room_type,
@@ -1482,6 +1483,7 @@ router.get("/:id/invoice-data", async (req, res) => {
       status: booking.status,
       paymentPolicySnapshot,
       paymentScheduleSnapshot,
+      invoicePreferences: booking.invoice_preferences ?? null,
       pilgrims: (pilgrimsResult || []).map((p: any) => ({
         name: p.name,
         gender: p.gender,

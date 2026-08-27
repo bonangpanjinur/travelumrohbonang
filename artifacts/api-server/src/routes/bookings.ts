@@ -35,7 +35,8 @@ import {
 import { generateBookingConfirmationPdf } from "../lib/pdf/bookingConfirmation";
 import QRCode from "qrcode";
 import { branches } from "@workspace/db";
-import { buildBookingPaymentSnapshots } from "../lib/paymentPolicyBooking";
+import { buildBookingPaymentSnapshots, snapshotEffectivePaymentPolicy } from "../lib/paymentPolicyBooking";
+import { resolvePaymentPolicy } from "../lib/paymentPolicyResolver";
 import {
   BookingListResponse,
   BookingWithDetailsSchema,
@@ -55,6 +56,44 @@ import { validate } from "../middlewares/validate";
 const router = Router();
 
 router.use(requireAuth);
+
+// Customer-facing effective policy preview. Internal policy IDs and audit fields are omitted.
+router.get("/policy", async (req, res) => {
+  try {
+    const packageId = typeof req.query.packageId === "string" ? req.query.packageId : "";
+    const departureId = typeof req.query.departureId === "string" ? req.query.departureId : "";
+    if (!packageId || !departureId) {
+      res.status(400).json({ error: "packageId dan departureId wajib diisi" });
+      return;
+    }
+    const [departure] = await db
+      .select({ id: packageDepartures.id, packageId: packageDepartures.packageId, departureDate: packageDepartures.departureDate })
+      .from(packageDepartures)
+      .where(and(eq(packageDepartures.id, departureId), eq(packageDepartures.packageId, packageId)))
+      .limit(1);
+    if (!departure) {
+      res.status(404).json({ error: "Keberangkatan tidak ditemukan untuk paket ini" });
+      return;
+    }
+    const policy = await resolvePaymentPolicy(packageId);
+    const snapshot = snapshotEffectivePaymentPolicy(policy);
+    const policyVersion = [
+      policy.globalPolicy ? `global-v${policy.globalPolicy.version}` : null,
+      policy.packagePolicy ? `package-v${policy.packagePolicy.version}` : null,
+    ].filter(Boolean).join("+") || "unconfigured";
+    res.json({
+      packageId,
+      departureId,
+      departureDate: departure.departureDate,
+      policyVersion,
+      isConfigured: policy.isConfigured,
+      rules: snapshot.rules,
+    });
+  } catch (err) {
+    console.error("[bookings] GET /policy error:", err);
+    res.status(500).json({ error: "Gagal memuat aturan pembayaran" });
+  }
+});
 
 function generateBookingCode(): string {
   // Use crypto.randomUUID() for collision-resistant codes (avoids Math.random() bias)
@@ -418,6 +457,8 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
       picId,
       agentId,
       redeemPoints,
+      policyAccepted,
+      invoicePreferences,
     } = req.body as CreateBookingInput;
 
     if (!req.isAuthenticated()) {
@@ -452,6 +493,15 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
       ? (await db.select({ departureDate: packageDepartures.departureDate }).from(packageDepartures).where(eq(packageDepartures.id, departureId)).limit(1))[0]?.departureDate
       : null;
     const paymentSnapshots = await buildBookingPaymentSnapshots(packageId, totalPrice, departureForPolicy);
+    const effectivePolicy = await resolvePaymentPolicy(packageId);
+    if (effectivePolicy.isConfigured && policyAccepted !== true) {
+      res.status(400).json({ error: "Persetujuan aturan pembayaran wajib diberikan sebelum booking dibuat" });
+      return;
+    }
+    const policyVersion = [
+      effectivePolicy.globalPolicy ? `global-v${effectivePolicy.globalPolicy.version}` : null,
+      effectivePolicy.packagePolicy ? `package-v${effectivePolicy.packagePolicy.version}` : null,
+    ].filter(Boolean).join("+") || "unconfigured";
 
     const {
       isGroupBooking,
@@ -495,6 +545,16 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
           paymentScheme: paymentScheme ?? null,
           paymentPolicySnapshot: paymentSnapshots.paymentPolicySnapshot,
           paymentScheduleSnapshot: paymentSnapshots.paymentScheduleSnapshot,
+          policyAcceptedAt: policyAccepted === true ? new Date() : null,
+          policyAcceptedVersion: policyAccepted === true ? policyVersion : null,
+          invoicePreferences: invoicePreferences ?? {
+            digital: true,
+            email: false,
+            whatsapp: false,
+            includePaymentPolicy: true,
+            includePaymentSchedule: true,
+            includePilgrims: true,
+          },
           notes: notes ?? null,
           status: "draft",
           picType: picType ?? null,

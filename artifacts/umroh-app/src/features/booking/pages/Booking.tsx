@@ -63,7 +63,21 @@ interface Agent {
   branch?: { name: string } | null;
 }
 
-const STEPS = ["Pilih Kamar", "Data Jemaah", "PIC & Konfirmasi"];
+interface PaymentPolicyRule {
+  ruleCode: string;
+  ruleType: string;
+  value: unknown;
+  displayText?: string | null;
+  isEnabled?: boolean;
+}
+
+interface CustomerPaymentPolicy {
+  policyVersion: string;
+  isConfigured: boolean;
+  rules: PaymentPolicyRule[];
+}
+
+const STEPS = ["Pilih Kamar", "Data Jemaah", "Pembayaran & Konfirmasi"];
 
 const Booking = () => {
   const { format: formatPrice } = useCurrency();
@@ -98,6 +112,17 @@ const Booking = () => {
   const [picAgentId, setPicAgentId] = useState<string>("");
   const [myPoints, setMyPoints] = useState<number>(0);
   const [redeemPointsInput, setRedeemPointsInput] = useState<string>("");
+  const [paymentPolicy, setPaymentPolicy] = useState<CustomerPaymentPolicy | null>(null);
+  const [policyLoading, setPolicyLoading] = useState(false);
+  const [policyAccepted, setPolicyAccepted] = useState(false);
+  const [invoicePreferences, setInvoicePreferences] = useState({
+    digital: true,
+    email: false,
+    whatsapp: false,
+    includePaymentPolicy: true,
+    includePaymentSchedule: true,
+    includePilgrims: true,
+  });
   // Guard: prevent re-fetching (and rooms reset) if auth object reference changes mid-session
   const dataFetchedRef = useRef(false);
 
@@ -150,6 +175,12 @@ const Booking = () => {
         const dep = (pkgData.departures ?? []).find((d: any) => d.id === departureId) ?? null;
         if (dep) {
           setDeparture(dep as Departure);
+          setPolicyLoading(true);
+          const policyData = await apiFetch<CustomerPaymentPolicy>(
+            `/api/bookings/policy?packageId=${encodeURIComponent(pkgData.id)}&departureId=${encodeURIComponent(departureId)}`
+          );
+          setPaymentPolicy(policyData);
+          setPolicyLoading(false);
           const initialRooms = (dep as Departure).prices.map((p) => ({
             room_type: p.room_type,
             quantity: 0,
@@ -158,6 +189,7 @@ const Booking = () => {
           setRooms(initialRooms);
         }
       }
+      setPolicyLoading(false);
       setLoading(false);
     };
 
@@ -191,6 +223,17 @@ const Booking = () => {
 
   const getLoyaltyDiscount = () => getRedeemPoints() * LOYALTY_IDR_PER_POINT;
   const getFinalPrice = () => Math.max(0, getTotalPrice() - getLoyaltyDiscount());
+  const getPolicyRule = (code: string) => paymentPolicy?.rules.find((rule) => rule.ruleCode === code && rule.isEnabled !== false);
+  const getDownPaymentLabel = () => {
+    const rule = getPolicyRule("down_payment");
+    if (!rule) return "Sesuai konfirmasi admin";
+    const value = rule.value as any;
+    const percentage = typeof value === "number" ? value : value?.percentage;
+    const amount = value?.amount;
+    if (typeof percentage === "number") return `${percentage}% atau ${formatPrice(Math.round(getFinalPrice() * percentage / 100))}`;
+    if (typeof amount === "number") return formatPrice(amount);
+    return rule.displayText || "Sesuai aturan pembayaran";
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -248,6 +291,14 @@ const Booking = () => {
   const handleSubmit = async () => {
     if (!user || !pkg || !departure) return;
     if (submitting) return;
+    if (policyLoading) {
+      toast({ title: "Aturan pembayaran belum siap", description: "Tunggu sebentar lalu coba lagi.", variant: "destructive" });
+      return;
+    }
+    if (paymentPolicy?.isConfigured && !policyAccepted) {
+      toast({ title: "Persetujuan diperlukan", description: "Baca dan setujui aturan pembayaran sebelum konfirmasi booking.", variant: "destructive" });
+      return;
+    }
 
     if (!captchaToken) {
       toast({ title: "Verifikasi captcha", description: "Selesaikan captcha sebelum konfirmasi booking.", variant: "destructive" });
@@ -302,6 +353,8 @@ const Booking = () => {
           picId: finalPicId ?? undefined,
           agentId: agentIdFromRef ?? undefined,
           redeemPoints: redeemPoints >= LOYALTY_MIN_REDEEM ? redeemPoints : undefined,
+          policyAccepted,
+          invoicePreferences,
           // Group booking fields
           isGroupBooking: isGroupBooking || undefined,
           groupName: isGroupBooking && groupName ? groupName : undefined,
@@ -791,6 +844,46 @@ const Booking = () => {
                   </div>
                 )}
 
+                <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">Aturan Pembayaran</p>
+                      <p className="text-xs text-muted-foreground">Berlaku untuk paket dan keberangkatan yang Anda pilih.</p>
+                    </div>
+                    {paymentPolicy?.policyVersion && <Badge variant="outline">{paymentPolicy.policyVersion}</Badge>}
+                  </div>
+                  {policyLoading ? (
+                    <div className="space-y-2 animate-pulse"><div className="h-4 rounded bg-muted w-3/4" /><div className="h-4 rounded bg-muted w-2/3" /></div>
+                  ) : paymentPolicy?.isConfigured ? (
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between gap-4"><span className="text-muted-foreground">DP minimum</span><span className="font-semibold text-right">{getDownPaymentLabel()}</span></div>
+                      {paymentPolicy.rules.filter((rule) => rule.ruleCode !== "down_payment").slice(0, 4).map((rule) => (
+                        <div key={rule.ruleCode} className="flex gap-2"><span className="text-emerald-700">✓</span><span>{rule.displayText || rule.ruleCode}</span></div>
+                      ))}
+                      <p className="pt-1 text-xs text-muted-foreground">Aturan lengkap akan tersimpan pada invoice dan booking Anda.</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Aturan pembayaran khusus belum dikonfigurasi. Silakan ikuti instruksi admin setelah booking dibuat.</p>
+                  )}
+                  {paymentPolicy?.isConfigured && (
+                    <label className="flex items-start gap-3 border-t border-emerald-200 pt-3 text-sm cursor-pointer">
+                      <input type="checkbox" className="mt-1 h-4 w-4 accent-emerald-700" checked={policyAccepted} onChange={(e) => setPolicyAccepted(e.target.checked)} />
+                      <span>Saya telah membaca dan menyetujui aturan pembayaran, termasuk jadwal cicilan, batas pelunasan, pembatalan, dan refund.</span>
+                    </label>
+                  )}
+                </div>
+
+                <div className="p-4 rounded-xl border border-border bg-background space-y-3">
+                  <div><p className="font-semibold">Pilihan Invoice</p><p className="text-xs text-muted-foreground">Invoice digital selalu tersedia di menu Booking Saya.</p></div>
+                  <label className="flex items-start gap-3 text-sm cursor-pointer"><input type="checkbox" className="mt-1 h-4 w-4 accent-emerald-700" checked={invoicePreferences.digital} onChange={(e) => setInvoicePreferences((current) => ({ ...current, digital: e.target.checked }))} /><span><strong>Invoice digital</strong><br /><span className="text-xs text-muted-foreground">Dapat diunduh setelah booking berhasil.</span></span></label>
+                  <label className="flex items-start gap-3 text-sm cursor-pointer"><input type="checkbox" className="mt-1 h-4 w-4 accent-emerald-700" checked={invoicePreferences.email} onChange={(e) => setInvoicePreferences((current) => ({ ...current, email: e.target.checked }))} /><span><strong>Kirim invoice melalui email</strong><br /><span className="text-xs text-muted-foreground">Menggunakan email akun Anda.</span></span></label>
+                  <label className="flex items-start gap-3 text-sm cursor-pointer"><input type="checkbox" className="mt-1 h-4 w-4 accent-emerald-700" checked={invoicePreferences.whatsapp} onChange={(e) => setInvoicePreferences((current) => ({ ...current, whatsapp: e.target.checked }))} /><span><strong>Kirim notifikasi melalui WhatsApp</strong><br /><span className="text-xs text-muted-foreground">Link invoice dikirim jika nomor WhatsApp tersedia.</span></span></label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-border text-sm">
+                    <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={invoicePreferences.includePaymentPolicy} onChange={(e) => setInvoicePreferences((current) => ({ ...current, includePaymentPolicy: e.target.checked }))} /> Sertakan aturan pembayaran</label>
+                    <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={invoicePreferences.includePaymentSchedule} onChange={(e) => setInvoicePreferences((current) => ({ ...current, includePaymentSchedule: e.target.checked }))} /> Sertakan jadwal cicilan</label>
+                  </div>
+                </div>
+
                 <div className="p-4 bg-muted rounded-xl space-y-2">
                   <div className="flex justify-between">
                     <span>Total Jemaah</span>
@@ -838,7 +931,7 @@ const Booking = () => {
               ) : (
                 <div className="flex flex-col items-end gap-3">
                   <TurnstileCaptcha onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} />
-                  <Button onClick={handleSubmit} disabled={submitting || !captchaToken} className="gradient-gold text-primary">
+                  <Button onClick={handleSubmit} disabled={submitting || !captchaToken || policyLoading || Boolean(paymentPolicy?.isConfigured && !policyAccepted)} className="gradient-gold text-primary">
                     {submitting ? (
                       <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Memproses...</>
                     ) : "Konfirmasi Booking"}

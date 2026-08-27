@@ -14,6 +14,7 @@ export interface InvoiceData {
   status: string;
   paymentPolicySnapshot: { rules?: { ruleCode: string; displayText?: string | null; value?: unknown }[] } | null;
   paymentScheduleSnapshot: { sequence: number; code: string; label: string; percentage: number | null; amount: number; dueDate: string | null; status: string }[];
+  invoicePreferences?: { digital?: boolean; email?: boolean; whatsapp?: boolean; includePaymentPolicy?: boolean; includePaymentSchedule?: boolean; includePilgrims?: boolean } | null;
   pilgrims: { name: string; gender: string | null }[];
   rooms: { room_type: string; quantity: number; price: number; subtotal: number }[];
   payments: { payment_type: string | null; amount: number; status: string | null; paid_at: string | null }[];
@@ -63,7 +64,9 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
     .filter((p) => p.status === "paid" || p.status === null)
     .reduce((sum, p) => sum + p.amount, 0);
   const remaining = data.totalPrice - totalPaid;
-  const policyRules = data.paymentPolicySnapshot?.rules ?? [];
+  const policyRules = data.invoicePreferences?.includePaymentPolicy === false ? [] : data.paymentPolicySnapshot?.rules ?? [];
+  const paymentSchedule = data.invoicePreferences?.includePaymentSchedule === false ? [] : data.paymentScheduleSnapshot;
+  const pilgrims = data.invoicePreferences?.includePilgrims === false ? [] : data.pilgrims;
 
   // Generate QR code for tracking
   const trackingUrl = `${window.location.origin}/track/${data.bookingCode}`;
@@ -155,12 +158,12 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
     </tbody>
   </table>` : ""}
 
-  ${data.pilgrims.length > 0 ? `
-  <div class="section-title">Daftar Jemaah (${data.pilgrims.length} orang)</div>
+  ${pilgrims.length > 0 ? `
+  <div class="section-title">Daftar Jemaah (${pilgrims.length} orang)</div>
   <table>
     <thead><tr><th>No</th><th>Nama</th><th>Jenis Kelamin</th></tr></thead>
     <tbody>
-      ${data.pilgrims.map((p, i) => {
+      ${pilgrims.map((p, i) => {
         const g = p.gender?.toLowerCase() ?? "";
         const gLabel = g === "l" || g === "male" || g === "laki-laki" ? "Laki-laki"
           : g === "p" || g === "female" || g === "perempuan" ? "Perempuan"
@@ -170,15 +173,15 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
     </tbody>
   </table>` : ""}
 
-  ${data.paymentScheduleSnapshot.length > 0 || policyRules.length > 0 ? `
+  ${paymentSchedule.length > 0 || policyRules.length > 0 ? `
   <div class="section-title">Aturan Pembayaran</div>
-  ${data.paymentScheduleSnapshot.length > 0 ? `<table>
+  ${paymentSchedule.length > 0 ? `<table>
     <thead><tr><th>No</th><th>Tahap Pembayaran</th><th class="text-right">Nominal</th><th>Jatuh Tempo</th><th>Status</th></tr></thead>
     <tbody>
-      ${data.paymentScheduleSnapshot.map((item) => `<tr><td>${item.sequence}</td><td>${item.label}</td><td class="text-right">${formatRp(item.amount)}${item.percentage !== null ? ` (${item.percentage}%)` : ""}</td><td>${formatDate(item.dueDate)}</td><td>${item.status === "pending" ? "Belum dibayar" : item.status}</td></tr>`).join("")}
+      ${paymentSchedule.map((item) => `<tr><td>${item.sequence}</td><td>${item.label}</td><td class="text-right">${formatRp(item.amount)}${item.percentage !== null ? ` (${item.percentage}%)` : ""}</td><td>${formatDate(item.dueDate)}</td><td>${item.status === "pending" ? "Belum dibayar" : item.status}</td></tr>`).join("")}
     </tbody>
   </table>` : ""}
-  ${policyRules.length ? `<div style="font-size:12px;color:#666;margin-top:${data.paymentScheduleSnapshot.length > 0 ? "-12px" : "0"};margin-bottom:18px"><strong>Ketentuan:</strong><ul style="margin:6px 0 0 18px">${policyRules.map((rule) => `<li>${rule.displayText || rule.ruleCode}</li>`).join("")}</ul></div>` : ""}
+  ${policyRules.length ? `<div style="font-size:12px;color:#666;margin-top:${paymentSchedule.length > 0 ? "-12px" : "0"};margin-bottom:18px"><strong>Ketentuan:</strong><ul style="margin:6px 0 0 18px">${policyRules.map((rule) => `<li>${rule.displayText || rule.ruleCode}</li>`).join("")}</ul></div>` : ""}
   ` : ""}
 
   ${data.payments.length > 0 ? `
