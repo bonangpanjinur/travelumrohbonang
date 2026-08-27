@@ -18,6 +18,7 @@ import { buildBookingScopeCondition, isBookingInScope, scopeDeniedMessage } from
 const router = Router();
 
 const DEFAULT_DESIGN = {
+  layout: "elegant",
   page: { width: 1123, height: 794, background: "#fffdf7" },
   accent: "#b88a2a",
   title: "SERTIFIKAT {TYPE}",
@@ -28,7 +29,51 @@ const DEFAULT_DESIGN = {
   footer: "Semoga menjadi amal ibadah yang diterima Allah SWT.",
   showLogo: true,
   showAddress: true,
+  backgroundColor: "#fffdf7",
+  borderWidth: 12,
+  borderRadius: 12,
+  watermarkText: "",
+  showCertificateNumber: true,
+  showIssueDate: true,
+  signatureName: "Direktur Utama",
+  signatureTitle: "Pimpinan Travel",
+  sealText: "RESMI",
 };
+
+function sanitizeDesign(input: unknown) {
+  const source = input && typeof input === "object" ? input as Record<string, unknown> : {};
+  const safeText = (key: string, fallback: string, max = 300) => typeof source[key] === "string" ? String(source[key]).slice(0, max) : fallback;
+  const safeColor = (key: string, fallback: string) => typeof source[key] === "string" && /^#[0-9a-fA-F]{6}$/.test(String(source[key])) ? String(source[key]) : fallback;
+  const safeNumber = (key: string, fallback: number, min: number, max: number) => typeof source[key] === "number" && Number.isFinite(source[key]) ? Math.min(max, Math.max(min, Number(source[key]))) : fallback;
+  const safeUrl = (key: string, fallback: string) => {
+    const value = typeof source[key] === "string" ? String(source[key]).trim() : fallback;
+    return value === "" || /^https:\/\//i.test(value) || /^data:image\/(png|jpeg|webp);base64,/i.test(value) ? value.slice(0, 2_000_000) : fallback;
+  };
+  return {
+    ...DEFAULT_DESIGN,
+    layout: ["elegant", "classic", "modern", "premium"].includes(String(source.layout)) ? String(source.layout) : DEFAULT_DESIGN.layout,
+    accent: safeColor("accent", DEFAULT_DESIGN.accent),
+    recipientColor: safeColor("recipientColor", DEFAULT_DESIGN.recipientColor),
+    backgroundColor: safeColor("backgroundColor", DEFAULT_DESIGN.backgroundColor),
+    title: safeText("title", DEFAULT_DESIGN.title),
+    subtitle: safeText("subtitle", DEFAULT_DESIGN.subtitle),
+    body: safeText("body", DEFAULT_DESIGN.body),
+    footer: safeText("footer", DEFAULT_DESIGN.footer, 500),
+    recipientSize: safeNumber("recipientSize", DEFAULT_DESIGN.recipientSize, 24, 72),
+    borderWidth: safeNumber("borderWidth", DEFAULT_DESIGN.borderWidth, 0, 30),
+    borderRadius: safeNumber("borderRadius", DEFAULT_DESIGN.borderRadius, 0, 40),
+    watermarkText: safeText("watermarkText", DEFAULT_DESIGN.watermarkText, 80),
+    showLogo: source.showLogo !== false,
+    showAddress: source.showAddress !== false,
+    showAdditionalLogo: source.showAdditionalLogo === true,
+    additionalLogoUrl: safeUrl("additionalLogoUrl", ""),
+    showCertificateNumber: source.showCertificateNumber !== false,
+    showIssueDate: source.showIssueDate !== false,
+    signatureName: safeText("signatureName", DEFAULT_DESIGN.signatureName, 120),
+    signatureTitle: safeText("signatureTitle", DEFAULT_DESIGN.signatureTitle, 120),
+    sealText: safeText("sealText", DEFAULT_DESIGN.sealText, 40),
+  };
+}
 
 router.get("/selector/packages", async (req, res) => {
   try {
@@ -138,7 +183,7 @@ router.post("/templates", async (req, res) => {
       branchId: targetBranchId,
       name: String(name).trim(),
       certificateType: certificateType === "badal_umroh" ? "badal_umroh" : "umroh",
-      design: { ...DEFAULT_DESIGN, ...design },
+      design: sanitizeDesign(design),
       createdBy: (req.user as any).id,
       updatedAt: new Date(),
     }).returning();
@@ -159,7 +204,7 @@ router.patch("/templates/:id", async (req, res) => {
     }
     const [updated] = await db.update(certificateTemplates).set({
       ...(req.body.name ? { name: String(req.body.name).trim() } : {}),
-      ...(req.body.design ? { design: req.body.design } : {}),
+      ...(req.body.design ? { design: sanitizeDesign(req.body.design) } : {}),
       ...(req.body.certificateType ? { certificateType: req.body.certificateType === "badal_umroh" ? "badal_umroh" : "umroh" } : {}),
       updatedAt: new Date(),
     }).where(eq(certificateTemplates.id, existing.id)).returning();
@@ -214,7 +259,7 @@ router.post("/booking/:bookingId/pilgrim/:pilgrimId/issue", async (req, res) => 
       recipientName: pilgrim.name,
       performerName: certificateType === "badal_umroh" ? String(req.body?.performerName || "") || null : null,
       issuedAt: req.body?.issuedAt ? new Date(req.body.issuedAt) : new Date(),
-      payload: { bookingCode: booking.bookingCode, packageTitle: req.body?.packageTitle || null, design: req.body?.design || null },
+      payload: { bookingCode: booking.bookingCode, packageTitle: typeof req.body?.packageTitle === "string" ? req.body.packageTitle.slice(0, 200) : null, design: sanitizeDesign(req.body?.design) },
       createdBy: (req.user as any).id,
     }).returning();
     res.status(201).json({ data: created });

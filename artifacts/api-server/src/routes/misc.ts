@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, currencies, tenantSites, siteSettings, eq } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth";
+import { requireFinance } from "../middlewares/requireAdmin";
 
 const router = Router();
 
@@ -58,7 +59,7 @@ router.get("/payment-settings", async (req, res) => {
 // ── Payment Settings (admin write) ───────────────────────────────────────────
 // Protected endpoint — only authenticated users (admin) may update bank accounts.
 
-router.put("/payment-settings", requireAuth, async (req, res) => {
+router.put("/payment-settings", requireFinance, async (req, res) => {
   try {
     const { bankAccounts } = req.body as { bankAccounts?: unknown[] };
     if (!Array.isArray(bankAccounts) || bankAccounts.length === 0) {

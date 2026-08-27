@@ -66,6 +66,7 @@ const AdminFAQ = lazy(() => import("./features/admin/pages/FAQ"));
 const AdminFloatingButtons = lazy(() => import("./features/admin/pages/FloatingButtons"));
 const AdminBlog = lazy(() => import("./features/admin/pages/Blog"));
 const AdminSettings = lazy(() => import("./features/admin/pages/Settings"));
+const AdminInvoiceDesigner = lazy(() => import("./features/admin/pages/InvoiceDesigner"));
 const AdminNavigation = lazy(() => import("./features/admin/pages/Navigation"));
 const AdminPilgrims = lazy(() => import("./features/admin/pages/Pilgrims"));
 const AdminPilgrimsDatabase = lazy(() => import("./features/admin/pages/PilgrimsDatabase"));
@@ -282,6 +283,7 @@ const AppContent = () => {
           <Route path="guide-steps" element={<AdminGuideSteps />} />
           <Route path="services" element={<AdminServices />} />
           <Route path="settings" element={<AdminSettings />} />
+          <Route path="invoice-designer" element={<AdminInvoiceDesigner />} />
           {/* Premium routes */}
           <Route path="accounting" element={<AdminAccounting />} />
           <Route path="package-costs" element={<PackageCosts />} />

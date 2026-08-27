@@ -267,6 +267,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Integrasi & API Keys", labelKey: "menu.integrations", href: "/admin/integrations", icon: KeyRound, roles: SUPER_ONLY },
       { label: "Pengaturan Login (2FA)", labelKey: "menu.login_settings", href: "/admin/login-settings", icon: Lock, roles: SUPER_ADMIN_ADMIN },
       { label: "Pengaturan Umum", labelKey: "menu.general_settings", href: "/admin/settings", icon: Settings, roles: SUPER_ADMIN_ADMIN },
+      { label: "Desain Invoice", labelKey: "menu.invoice_designer", href: "/admin/invoice-designer", icon: FileText, roles: SUPER_ADMIN_ADMIN },
     ],
   },
 ];

@@ -22,6 +22,15 @@ type Design = {
   showAddress: boolean;
   additionalLogoUrl: string;
   showAdditionalLogo: boolean;
+  backgroundColor?: string;
+  borderWidth?: number;
+  borderRadius?: number;
+  watermarkText?: string;
+  showCertificateNumber?: boolean;
+  showIssueDate?: boolean;
+  signatureName?: string;
+  signatureTitle?: string;
+  sealText?: string;
 };
 
 type PackageOption = { id: string; title: string };
@@ -34,7 +43,9 @@ const TEMPLATES: Record<string, Design> = {
   elegant: { layout: "elegant", accent: "#123f35", title: "SERTIFIKAT {TYPE}", subtitle: "Diberikan kepada", body: "Dengan ini menerangkan bahwa", recipientSize: 42, recipientColor: "#123f35", footer: "Semoga menjadi amal ibadah yang diterima Allah SWT.", showLogo: true, showAddress: true, additionalLogoUrl: "", showAdditionalLogo: false },
   classic: { layout: "classic", accent: "#b88a2a", title: "PIAGAM PENGHARGAAN {TYPE}", subtitle: "Diberikan sebagai apresiasi kepada", body: "Telah menyelesaikan ibadah dengan khidmat", recipientSize: 38, recipientColor: "#1e293b", footer: "Barakallahu fiikum.", showLogo: true, showAddress: true, additionalLogoUrl: "", showAdditionalLogo: false },
   modern: { layout: "modern", accent: "#0ea5e9", title: "CERTIFICATE OF {TYPE}", subtitle: "This is to certify that", body: "Has successfully completed the journey", recipientSize: 48, recipientColor: "#0f172a", footer: "May your journey be blessed.", showLogo: true, showAddress: false, additionalLogoUrl: "", showAdditionalLogo: false },
-  premium: { layout: "premium", accent: "#7c2d12", title: "SERTIFIKAT EKSKLUSIF {TYPE}", subtitle: "Penghargaan tertinggi untuk", body: "Atas dedikasi dan kesungguhan dalam beribadah", recipientSize: 40, recipientColor: "#431407", footer: "Vins Tour Travel - Melayani dengan Sepenuh Hati", showLogo: true, showAddress: true, additionalLogoUrl: "", showAdditionalLogo: false },
+  premium: { layout: "premium", accent: "#7c2d12", title: "SERTIFIKAT EKSKLUSIF {TYPE}", subtitle: "Penghargaan tertinggi untuk", body: "Atas dedikasi dan kesungguhan dalam beribadah", recipientSize: 40, recipientColor: "#431407", footer: "Vins Tour Travel - Melayani dengan Sepenuh Hati", showLogo: true, showAddress: true, additionalLogoUrl: "", showAdditionalLogo: false, backgroundColor: "#fff7ed", borderWidth: 12, borderRadius: 12, watermarkText: "BARAKALLAH", showCertificateNumber: true, showIssueDate: true, signatureName: "Direktur Utama", signatureTitle: "Pimpinan Travel", sealText: "RESMI" },
+  sahaba: { layout: "classic", accent: "#166534", title: "SERTIFIKAT PERJALANAN {TYPE}", subtitle: "Dengan penuh rasa syukur diberikan kepada", body: "Atas terselesaikannya perjalanan ibadah", recipientSize: 40, recipientColor: "#14532d", footer: "Semoga Allah menerima amal ibadah dan memberikan keberkahan.", showLogo: true, showAddress: true, additionalLogoUrl: "", showAdditionalLogo: false, backgroundColor: "#f0fdf4", borderWidth: 8, borderRadius: 4, watermarkText: "UMROH", showCertificateNumber: true, showIssueDate: true, signatureName: "Manajemen", signatureTitle: "Travel Umroh", sealText: "SAH" },
+  minimal: { layout: "modern", accent: "#334155", title: "CERTIFICATE {TYPE}", subtitle: "Presented with appreciation to", body: "For completing the spiritual journey", recipientSize: 44, recipientColor: "#0f172a", footer: "May this journey bring lasting blessings.", showLogo: true, showAddress: false, additionalLogoUrl: "", showAdditionalLogo: false, backgroundColor: "#ffffff", borderWidth: 3, borderRadius: 0, watermarkText: "", showCertificateNumber: true, showIssueDate: true, signatureName: "Authorized Signatory", signatureTitle: "", sealText: "" },
 };
 
 const initialDesign: Design = TEMPLATES.elegant;
@@ -240,6 +251,10 @@ export default function CertificateGenerator() {
               <div className="grid grid-cols-2 gap-3"><div><Label>Warna Aksen</Label><Input className="mt-1 h-10 p-1" type="color" value={design.accent} onChange={(e) => updateDesign("accent", e.target.value)} /></div><div><Label>Warna Nama</Label><Input className="mt-1 h-10 p-1" type="color" value={design.recipientColor} onChange={(e) => updateDesign("recipientColor", e.target.value)} /></div></div>
               <div><Label>Ukuran Nama: {design.recipientSize}px</Label><input className="mt-3 w-full accent-[#b88a2a]" type="range" min="24" max="58" value={design.recipientSize} onChange={(e) => updateDesign("recipientSize", Number(e.target.value))} /></div>
               <div><Label>Kalimat Penutup</Label><Textarea className="mt-1" rows={3} value={design.footer} onChange={(e) => updateDesign("footer", e.target.value)} /></div>
+              <div className="grid grid-cols-2 gap-3"><div><Label>Warna Latar</Label><Input className="mt-1 h-10 p-1" type="color" value={design.backgroundColor || "#fffdf7"} onChange={(e) => updateDesign("backgroundColor", e.target.value)} /></div><div><Label>Ketebalan Bingkai</Label><Input className="mt-1" type="number" min={0} max={30} value={design.borderWidth ?? 12} onChange={(e) => updateDesign("borderWidth", Number(e.target.value))} /></div></div>
+              <div><Label>Watermark</Label><Input className="mt-1" placeholder="Contoh: BARAKALLAH" value={design.watermarkText || ""} onChange={(e) => updateDesign("watermarkText", e.target.value)} /></div>
+              <div className="grid grid-cols-2 gap-3"><div><Label>Nama Penandatangan</Label><Input className="mt-1" value={design.signatureName || ""} onChange={(e) => updateDesign("signatureName", e.target.value)} /></div><div><Label>Jabatan</Label><Input className="mt-1" value={design.signatureTitle || ""} onChange={(e) => updateDesign("signatureTitle", e.target.value)} /></div></div>
+              <div className="grid grid-cols-2 gap-2 text-sm"><label className="flex items-center gap-2"><input type="checkbox" checked={design.showCertificateNumber !== false} onChange={(e) => updateDesign("showCertificateNumber", e.target.checked)} /> Nomor sertifikat</label><label className="flex items-center gap-2"><input type="checkbox" checked={design.showIssueDate !== false} onChange={(e) => updateDesign("showIssueDate", e.target.checked)} /> Tanggal terbit</label></div>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={design.showLogo} onChange={(e) => updateDesign("showLogo", e.target.checked)} /> Tampilkan logo utama travel</label>
               <div className="rounded-xl border border-dashed border-slate-300 p-3"><Label>Logo Tambahan</Label><p className="mt-1 text-[11px] text-muted-foreground">Upload logo partner, sponsor, atau masukkan URL logo.</p><Input className="mt-2" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={(e) => handleAdditionalLogoUpload(e.target.files?.[0])} /><Input className="mt-2" placeholder="https://contoh.com/logo.png" value={design.additionalLogoUrl.startsWith("data:") ? "" : design.additionalLogoUrl} onChange={(e) => updateDesign("additionalLogoUrl", e.target.value)} /><label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={design.showAdditionalLogo} disabled={!design.additionalLogoUrl} onChange={(e) => updateDesign("showAdditionalLogo", e.target.checked)} /> Tampilkan logo tambahan</label>{design.additionalLogoUrl && <button type="button" className="mt-2 text-xs font-medium text-red-600" onClick={() => { updateDesign("additionalLogoUrl", ""); updateDesign("showAdditionalLogo", false); }}>Hapus logo tambahan</button>}</div>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={design.showAddress} onChange={(e) => updateDesign("showAddress", e.target.checked)} /> Tampilkan alamat perusahaan</label>
@@ -250,8 +265,9 @@ export default function CertificateGenerator() {
           <div className="space-y-4">
             <div className="flex items-center justify-between"><div><p className="text-sm font-semibold">Preview Sertifikat</p><p className="text-xs text-muted-foreground">Perubahan desain terlihat secara langsung.</p></div><Button variant="outline" className="gap-2" onClick={printCertificate}><Download className="h-4 w-4" /> Cetak / PDF</Button></div>
             <div className="overflow-auto rounded-3xl border bg-slate-200/70 p-4 shadow-inner md:p-8">
-              <div className={`certificate-print-root relative mx-auto flex aspect-[1.414/1] max-w-[1000px] flex-col overflow-hidden rounded-xl border-[12px] p-6 text-center shadow-2xl md:p-10 ${design.layout === "modern" ? "bg-white" : design.layout === "classic" ? "bg-[#fffaf0]" : design.layout === "premium" ? "bg-[#fff7ed]" : "bg-[#fffdf7]"}`} style={{ borderColor: design.accent }}>
+              <div className="certificate-print-root relative mx-auto flex aspect-[1.414/1] max-w-[1000px] flex-col overflow-hidden p-6 text-center shadow-2xl md:p-10" style={{ backgroundColor: design.backgroundColor || (design.layout === "modern" ? "#ffffff" : design.layout === "classic" ? "#fffaf0" : design.layout === "premium" ? "#fff7ed" : "#fffdf7"), borderColor: design.accent, borderWidth: design.borderWidth ?? 12, borderStyle: "solid", borderRadius: design.borderRadius ?? 12 }}>
                 <div className="pointer-events-none absolute inset-4 rounded-lg border" style={{ borderColor: `${design.accent}66` }} />
+                {design.watermarkText && <div className="pointer-events-none absolute inset-0 flex items-center justify-center -rotate-12 text-6xl font-black uppercase tracking-[0.3em] opacity-[0.06]" style={{ color: design.accent }}>{design.watermarkText}</div>}
                 {design.layout === "classic" && <div className="pointer-events-none absolute left-7 top-7 h-16 w-16 rounded-full border-2 opacity-40" style={{ borderColor: design.accent }} />}
                 {design.layout === "premium" && <div className="pointer-events-none absolute bottom-7 right-7 h-20 w-20 rotate-45 border-2 opacity-40" style={{ borderColor: design.accent }} />}
                 {design.layout === "modern" && <div className="pointer-events-none absolute left-0 top-0 h-2 w-1/3" style={{ backgroundColor: design.accent }} />}
@@ -268,9 +284,11 @@ export default function CertificateGenerator() {
                   <p className="mt-3 max-w-full break-words text-center font-serif font-bold leading-tight" style={{ color: design.recipientColor, fontSize: `clamp(24px, 4vw, ${design.recipientSize}px)` }}>{recipientName || "Nama Jemaah"}</p>
                   {certificateType === "badal_umroh" && <p className="mt-2 text-xs text-slate-600 md:text-sm">Dilaksanakan oleh <strong>{performerName || "Nama Pelaksana Badal"}</strong></p>}
                   <p className="mx-auto mt-4 max-w-xl text-[10px] italic leading-relaxed text-slate-500 md:mt-6 md:text-xs">{design.footer}</p>
+                  {(design.signatureName || design.signatureTitle) && <div className="mt-4 text-[10px] text-slate-600 md:mt-6 md:text-xs"><div className="mx-auto mb-1 h-px w-28" style={{ backgroundColor: `${design.accent}88` }} /><strong>{design.signatureName}</strong>{design.signatureTitle && <><br />{design.signatureTitle}</>}</div>}
                 </div>
                 <div className="relative w-full shrink-0 border-t pt-2 text-center" style={{ borderColor: `${design.accent}44` }}>
                   {design.showAddress && address && <p className="mx-auto max-w-[90%] break-words text-[8px] leading-tight text-slate-400 md:text-[10px]">{address}</p>}
+                  {(design.showCertificateNumber !== false || design.showIssueDate !== false) && <p className="mt-1 text-[8px] text-slate-400 md:text-[10px]">{design.showCertificateNumber !== false && "No. UMR-2026-0001"}{design.showCertificateNumber !== false && design.showIssueDate !== false && " · "}{design.showIssueDate !== false && new Date().toLocaleDateString("id-ID")}</p>}
                 </div>
               </div>
             </div>

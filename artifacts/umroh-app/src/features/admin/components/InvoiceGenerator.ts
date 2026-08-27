@@ -3,10 +3,16 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import QRCode from "qrcode";
 
+export interface InvoiceTemplateSettings {
+  templateKey?: string; paper?: string; orientation?: string; primaryColor?: string; accentColor?: string; fontFamily?: string; borderStyle?: string;
+  showLogo?: boolean; showQr?: boolean; showCompanyAddress?: boolean; showCustomerPhone?: boolean; showRoomBreakdown?: boolean; showPilgrims?: boolean; showPaymentHistory?: boolean; showPaymentPolicy?: boolean; showPaymentSchedule?: boolean; footerText?: string;
+}
+
 export interface InvoiceData {
   bookingCode: string;
   customerName: string;
   customerEmail: string;
+  customerPhone?: string | null;
   packageTitle: string;
   departureDate: string | null;
   totalPrice: number;
@@ -21,11 +27,16 @@ export interface InvoiceData {
   companyName: string;
   companyTagline: string;
   logoUrl: string;
+  invoiceTemplate?: InvoiceTemplateSettings | null;
 }
 
 export const fetchInvoiceData = async (bookingId: string): Promise<InvoiceData | null> => {
   try {
-    return await apiFetch<InvoiceData>(`/api/admin/bookings/${bookingId}/invoice-data`);
+    const [invoice, template] = await Promise.all([
+      apiFetch<InvoiceData>(`/api/admin/bookings/${bookingId}/invoice-data`),
+      apiFetch<{ data?: { value?: InvoiceTemplateSettings } }>("/api/admin/settings/invoice-template").catch(() => null),
+    ]);
+    return { ...invoice, invoiceTemplate: template?.data?.value ?? null };
   } catch (e) {
     console.error("[fetchInvoiceData]", e);
     return null;
@@ -51,6 +62,12 @@ const roomLabel: Record<string, string> = {
 
 export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> => {
   const formatRp = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
+  const template = data.invoiceTemplate ?? {};
+  const primaryColor = template.primaryColor || "#0d6b4e";
+  const accentColor = template.accentColor || "#b88a2a";
+  const fontFamily = template.fontFamily || "Segoe UI";
+  const showLogo = template.showLogo !== false;
+  const showQr = template.showQr !== false;
   const formatDate = (d: string | null) => {
     if (!d) return "-";
     try {
@@ -64,9 +81,9 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
     .filter((p) => p.status === "paid" || p.status === null)
     .reduce((sum, p) => sum + p.amount, 0);
   const remaining = data.totalPrice - totalPaid;
-  const policyRules = data.invoicePreferences?.includePaymentPolicy === false ? [] : data.paymentPolicySnapshot?.rules ?? [];
-  const paymentSchedule = data.invoicePreferences?.includePaymentSchedule === false ? [] : data.paymentScheduleSnapshot;
-  const pilgrims = data.invoicePreferences?.includePilgrims === false ? [] : data.pilgrims;
+  const policyRules = data.invoicePreferences?.includePaymentPolicy === false || template.showPaymentPolicy === false ? [] : data.paymentPolicySnapshot?.rules ?? [];
+  const paymentSchedule = data.invoicePreferences?.includePaymentSchedule === false || template.showPaymentSchedule === false ? [] : data.paymentScheduleSnapshot;
+  const pilgrims = data.invoicePreferences?.includePilgrims === false || template.showPilgrims === false ? [] : data.pilgrims;
 
   // Generate QR code for tracking
   const trackingUrl = `${window.location.origin}/track/${data.bookingCode}`;
@@ -84,12 +101,12 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
   <title>Invoice ${data.bookingCode}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1a1a1a; background: #fff; padding: 40px; max-width: 800px; margin: 0 auto; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0d6b4e; padding-bottom: 20px; margin-bottom: 30px; }
-    .company h1 { font-size: 24px; color: #0d6b4e; margin-bottom: 2px; }
+    body { font-family: '${fontFamily}', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1a1a1a; background: #fff; padding: 40px; max-width: 800px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid ${primaryColor}; padding-bottom: 20px; margin-bottom: 30px; }
+    .company h1 { font-size: 24px; color: ${primaryColor}; margin-bottom: 2px; }
     .company p { font-size: 12px; color: #666; }
     .invoice-title { text-align: right; }
-    .invoice-title h2 { font-size: 28px; color: #0d6b4e; font-weight: 700; }
+    .invoice-title h2 { font-size: 28px; color: ${primaryColor}; font-weight: 700; }
     .invoice-title p { font-size: 13px; color: #666; margin-top: 4px; }
     .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 6px; }
     .status-paid,.status-confirmed,.status-completed { background: #dcfce7; color: #166534; }
@@ -100,13 +117,13 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
     .info-box h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #999; margin-bottom: 8px; }
     .info-box p { font-size: 14px; line-height: 1.6; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-    th { background: #f0fdf4; color: #0d6b4e; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 12px; text-align: left; border-bottom: 2px solid #0d6b4e; }
+    th { background: ${primaryColor}12; color: ${primaryColor}; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 12px; text-align: left; border-bottom: 2px solid ${primaryColor}; }
     td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #e5e7eb; }
     .text-right { text-align: right; }
     .text-center { text-align: center; }
     .summary { margin-left: auto; width: 280px; }
     .summary-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
-    .summary-row.total { border-top: 2px solid #0d6b4e; padding-top: 10px; margin-top: 6px; font-weight: 700; font-size: 16px; color: #0d6b4e; }
+    .summary-row.total { border-top: 2px solid ${accentColor}; padding-top: 10px; margin-top: 6px; font-weight: 700; font-size: 16px; color: ${primaryColor}; }
     .summary-row.remaining { color: #dc2626; font-weight: 600; }
     .section-title { font-size: 14px; font-weight: 700; color: #0d6b4e; margin-bottom: 12px; margin-top: 28px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
     .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: flex-end; }
@@ -121,7 +138,7 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
 <body>
   <div class="header">
     <div class="company">
-      ${data.logoUrl ? `<img src="${data.logoUrl}" class="logo-img" alt="${data.companyName}" />` : ""}
+      ${showLogo && data.logoUrl ? `<img src="${data.logoUrl}" class="logo-img" alt="${data.companyName}" />` : ""}
       <h1>${data.companyName}</h1>
       <p>${data.companyTagline}</p>
     </div>
@@ -133,10 +150,11 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
     </div>
   </div>
 
+  ${template.showCompanyAddress === false ? "" : ""}
   <div class="info-grid">
     <div class="info-box">
       <h3>Ditagihkan Kepada</h3>
-      <p><strong>${data.customerName}</strong><br/>${data.customerEmail}</p>
+      <p><strong>${data.customerName}</strong><br/>${data.customerEmail}${template.showCustomerPhone !== false && data.customerPhone ? `<br/>${data.customerPhone}` : ""}</p>
     </div>
     <div class="info-box">
       <h3>Detail Perjalanan</h3>
@@ -144,7 +162,7 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
     </div>
   </div>
 
-  ${data.rooms.length > 0 ? `
+  ${template.showRoomBreakdown !== false && data.rooms.length > 0 ? `
   <div class="section-title">Rincian Kamar</div>
   <table>
     <thead><tr><th>Tipe Kamar</th><th class="text-center">Jumlah</th><th class="text-right">Harga/Pax</th><th class="text-right">Subtotal</th></tr></thead>
@@ -184,7 +202,7 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
   ${policyRules.length ? `<div style="font-size:12px;color:#666;margin-top:${paymentSchedule.length > 0 ? "-12px" : "0"};margin-bottom:18px"><strong>Ketentuan:</strong><ul style="margin:6px 0 0 18px">${policyRules.map((rule) => `<li>${rule.displayText || rule.ruleCode}</li>`).join("")}</ul></div>` : ""}
   ` : ""}
 
-  ${data.payments.length > 0 ? `
+  ${template.showPaymentHistory !== false && data.payments.length > 0 ? `
   <div class="section-title">Riwayat Pembayaran</div>
   <table>
     <thead><tr><th>Tipe</th><th class="text-right">Jumlah</th><th>Tanggal Bayar</th></tr></thead>
@@ -209,10 +227,10 @@ export const generateInvoiceHTML = async (data: InvoiceData): Promise<string> =>
 
   <div class="footer">
     <div class="footer-text">
-      <p>Invoice ini dihasilkan secara otomatis oleh sistem ${data.companyName}.</p>
+      <p>${template.footerText || `Invoice ini dihasilkan secara otomatis oleh sistem ${data.companyName}.`}</p>
       <p>Terima kasih atas kepercayaan Anda.</p>
     </div>
-    ${qrDataUrl ? `
+    ${showQr && qrDataUrl ? `
     <div class="qr-section">
       <img src="${qrDataUrl}" alt="QR Tracking" />
       <p>Scan untuk cek status pembayaran</p>
