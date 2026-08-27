@@ -17,13 +17,11 @@ import {
   airlines,
   eq,
   and,
-  or,
   ne,
   lt,
   desc,
   asc,
   sql,
-  sum,
 } from "@workspace/db";
 import { emailNotifications } from "../lib/notifications/emailNotifications";
 import { waNotifications } from "../lib/notifications/waNotifications";
@@ -39,6 +37,7 @@ import { branches } from "@workspace/db";
 import { buildBookingPaymentSnapshots, snapshotEffectivePaymentPolicy } from "../lib/paymentPolicyBooking";
 import { resolvePaymentPolicy } from "../lib/paymentPolicyResolver";
 import { calculateAuthoritativeBookingPrice, BookingPricingError } from "../lib/bookingPricing";
+import { validatePaymentAgainstSchedule } from "../lib/paymentScheduleValidation";
 import {
   BookingListResponse,
   BookingWithDetailsSchema,
@@ -784,7 +783,7 @@ router.post("/:id/payments", async (req, res) => {
     }
 
     const [booking] = await db
-      .select({ userId: bookings.userId, branchId: bookings.branchId, status: bookings.status, totalPrice: bookings.totalPrice })
+      .select({ userId: bookings.userId, branchId: bookings.branchId, status: bookings.status, totalPrice: bookings.totalPrice, paymentScheduleSnapshot: bookings.paymentScheduleSnapshot })
       .from(bookings)
       .where(eq(bookings.id, id))
       .limit(1);
@@ -801,26 +800,25 @@ router.post("/:id/payments", async (req, res) => {
       return;
     }
 
-    // F1-01: Hitung sisa hutang dari verified+pending payments di DB (overpayment prevention)
-    const [{ totalPaid }] = await db
-      .select({ totalPaid: sum(payments.amount) })
-      .from(payments)
-      .where(
-        and(
-          eq(payments.bookingId, id),
-          or(eq(payments.status, "verified"), eq(payments.status, "pending")),
-        ),
-      );
-    const sisaHutang = booking.totalPrice - Number(totalPaid ?? 0);
-    if (parsedAmount > sisaHutang) {
-      res.status(400).json({
-        error: `Jumlah pembayaran melebihi sisa tagihan. Sisa yang perlu dibayar: Rp ${sisaHutang.toLocaleString("id-ID")}`,
-      });
-      return;
-    }
-
-    // BUG-2: Wrap insert + status update in ONE transaction so they're atomic
+    // Validate against the immutable schedule inside the same transaction as the insert.
     const created = await db.transaction(async (tx) => {
+      const existingPayments = await tx
+        .select({ amount: payments.amount, status: payments.status })
+        .from(payments)
+        .where(eq(payments.bookingId, id));
+      const validation = validatePaymentAgainstSchedule({
+        amount: parsedAmount,
+        paymentType,
+        totalPrice: booking.totalPrice,
+        schedule: booking.paymentScheduleSnapshot,
+        existingPayments,
+      });
+      if (!validation.ok) {
+        const error = new Error(validation.error);
+        (error as any).statusCode = validation.error.includes("menunggu verifikasi") ? 409 : 400;
+        throw error;
+      }
+
       const [payment] = await tx
         .insert(payments)
         .values({
@@ -848,7 +846,11 @@ router.post("/:id/payments", async (req, res) => {
     });
 
     res.status(201).json(created);
-  } catch (e) { console.error("[route error]", e);
+  } catch (e: any) { console.error("[route error]", e);
+    if (e?.statusCode === 400 || e?.statusCode === 409) {
+      res.status(e.statusCode).json({ error: e.message });
+      return;
+    }
     res.status(500).json({ error: "Failed to create payment" });
   }
 });
