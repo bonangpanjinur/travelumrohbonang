@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+      
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #2C3E50;
+        color: #ECF0F1;
+        overflow: hidden;
+      }
+      
+      .slide-container {
+        width: 1280px;
+        min-height: 720px;
+        background: #2C3E50;
+        position: relative;
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+      }
+      
+      .checklist-area {
+        padding-top: 60px;
+        padding-left: 80px;
+        position: relative;
+        z-index: 2;
+      }
+      
+      .recommendation-area {
+        background: rgba(52, 152, 219, 0.05);
+        padding-top: 60px;
+        padding-left: 40px;
+        padding-right: 80px;
+        position: relative;
+        z-index: 2;
+        border-left: 3px solid #3498DB;
+      }
+      
+      .diagonal-rule {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, transparent 59.5%, #E74C3C 60%, #E74C3C 60.5%, transparent 61%);
+        z-index: 1;
+        pointer-events: none;
+      }
+      
+      h2 {
+        font-size: 42px;
+        font-weight: 700;
+        color: #ECF0F1;
+        text-transform: uppercase;
+        margin-bottom: 40px;
+      }
+      
+      h3 {
+        font-size: 24px;
+        font-weight: 700;
+        color: #3498DB;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+      }
+      
+      .checklist-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      
+      .check-item {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+      
+      .check-item i {
+        color: #E74C3C;
+        font-size: 20px;
+        padding-top: 4px;
+      }
+      
+      .check-text {
+        font-size: 18px;
+        color: #BDC3C7;
+        line-height: 1.4;
+      }
+      
+      .gate-list {
+        margin-top: 20px;
+      }
+      
+      .gate-item {
+        background: rgba(236, 240, 241, 0.05);
+        padding-top: 15px;
+        padding-left: 20px;
+        margin-bottom: 15px;
+        border-left: 4px solid #E74C3C;
+      }
+      
+      .gate-title {
+        font-weight: 700;
+        font-size: 16px;
+        color: #ECF0F1;
+        margin-bottom: 5px;
+      }
+      
+      .gate-desc {
+        font-size: 14px;
+        color: #BDC3C7;
+      }
+      
+      .verdict-banner {
+        margin-top: 40px;
+        padding-top: 20px;
+        padding-left: 20px;
+        background: #E74C3C;
+        color: white;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 20px;
+      }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="diagonal-rule"></div>
+        
+        <div class="checklist-area">
+            <h2>Staging Checklist</h2>
+            <div class="checklist-grid">
+                <div class="check-group">
+                    <div class="check-item">
+                        <i class="fas fa-square"></i>
+                        <div class="check-text">Jalankan seluruh migration database (termasuk unique index certificate).</div>
+                    </div>
+                    <div class="check-item">
+                        <i class="fas fa-square"></i>
+                        <div class="check-text">Siapkan seed data: paket, departure, harga kamar, dan policy aktif.</div>
+                    </div>
+                    <div class="check-item">
+                        <i class="fas fa-square"></i>
+                        <div class="check-text">Konfigurasi Gateway Sandbox dengan signature secret non-production.</div>
+                    </div>
+                </div>
+                <div class="check-group">
+                    <div class="check-item">
+                        <i class="fas fa-square"></i>
+                        <div class="check-text">Verifikasi 12 skenario kritis: dari booking hingga auto-issue sertifikat.</div>
+                    </div>
+                    <div class="check-item">
+                        <i class="fas fa-square"></i>
+                        <div class="check-text">Tambahkan cleanup test data berdasarkan testRunId.</div>
+                    </div>
+                    <div class="check-item">
+                        <i class="fas fa-square"></i>
+                        <div class="check-text">Lakukan database assertion untuk integritas data finansial.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="recommendation-area">
+            <h3>Execution Gates</h3>
+            <div class="gate-list">
+                <div class="gate-item">
+                    <div class="gate-title">GATE 1: INFRASTRUCTURE</div>
+                    <div class="gate-desc">Migration & seed fixture berhasil 100%.</div>
+                </div>
+                <div class="gate-item">
+                    <div class="gate-title">GATE 2: JOURNEY</div>
+                    <div class="gate-desc">Browser journey customer & admin lulus.</div>
+                </div>
+                <div class="gate-item">
+                    <div class="gate-title">GATE 3: PAYMENT</div>
+                    <div class="gate-desc">Gateway callback & replay test lulus.</div>
+                </div>
+                <div class="gate-item">
+                    <div class="gate-title">GATE 4: INTEGRITY</div>
+                    <div class="gate-desc">Audit database transaksi & sertifikat PASS.</div>
+                </div>
+            </div>
+            
+            <div class="verdict-banner">
+                GO FOR STAGING PREP<br>
+                <span style="font-size: 14px; font-weight: 400;">NO-GO FOR PRODUCTION SIGN-OFF</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+      
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #2C3E50;
+        color: #ECF0F1;
+        overflow: hidden;
+      }
+      
+      .slide-container {
+        width: 1280px;
+        min-height: 720px;
+        background: #2C3E50;
+        position: relative;
+      }
+      
+      .header-area {
+        padding-top: 60px;
+        padding-left: 80px;
+      }
+      
+      h2 {
+        font-size: 48px;
+        font-weight: 700;
+        color: #ECF0F1;
+        text-transform: uppercase;
+      }
+      
+      .diagonal-rule {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(150deg, transparent 70%, #E74C3C 70.2%, #E74C3C 70.5%, transparent 70.7%);
+        z-index: 1;
+        pointer-events: none;
+      }
+      
+      .content-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 80px;
+        padding-top: 80px;
+        padding-left: 80px;
+        padding-right: 80px;
+        position: relative;
+        z-index: 2;
+      }
+      
+      .chart-wrapper {
+        background: rgba(236, 240, 241, 0.03);
+        padding-top: 40px;
+        padding-left: 40px;
+        padding-right: 40px;
+        height: 400px;
+      }
+      
+      .details-list {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+      }
+      
+      .detail-card {
+        border-top: 3px solid #3498DB;
+        padding-top: 20px;
+      }
+      
+      .detail-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #3498DB;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+      }
+      
+      .detail-text {
+        font-size: 22px;
+        color: #BDC3C7;
+        line-height: 1.4;
+      }
+      
+      .status-pass {
+        color: #2ECC71;
+        font-weight: 700;
+      }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="diagonal-rule"></div>
+        
+        <div class="header-area">
+            <h2>Regression Results Summary</h2>
+        </div>
+        
+        <div class="content-grid">
+            <div class="chart-wrapper">
+                <div style="height: 320px;">
+                    <canvas id="regressionChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="details-list">
+                <div class="detail-card">
+                    <div class="detail-title">Test Execution</div>
+                    <div class="detail-text">
+                        Total <b class="status-pass">83 test lulus</b> secara otomatis tanpa regresi pada kontrak API dan alur frontend.
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">Build Status</div>
+                    <div class="detail-text">
+                        Status <b class="status-pass">PASS</b> untuk production build. Seluruh aset teroptimasi dan siap dideploy.
+                    </div>
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-title">Type Integrity</div>
+                    <div class="detail-text">
+                        TypeScript typecheck <b class="status-pass">LULUS</b>. Tidak ditemukan konflik tipe pada integrasi baru.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('regressionChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['API / Backend', 'Frontend UI'],
+                datasets: [{
+                    label: 'Tests Passed',
+                    data: [56, 27],
+                    backgroundColor: ['#3498DB', '#E74C3C'],
+                    barThickness: 60
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: 'DISTRIBUSI KELULUSAN TEST',
+                        color: '#ECF0F1',
+                        font: { size: 18, weight: 'bold' }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(236, 240, 241, 0.1)' },
+                        ticks: { color: '#BDC3C7', font: { size: 14 } },
+                        beginAtZero: true
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#ECF0F1', font: { size: 16, weight: 'bold' } }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

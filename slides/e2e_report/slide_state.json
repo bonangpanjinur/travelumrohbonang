@@ -1,0 +1,100 @@
+{
+  "project_info": {
+    "title": "Cover Slide",
+    "created": 1787873592.713,
+    "last_updated": 1787873657.373,
+    "total_slides": 8
+  },
+  "slides": [
+    {
+      "id": "cover",
+      "state": "edited",
+      "pageNum": 1
+    },
+    {
+      "id": "executive_verdict",
+      "state": "edited",
+      "pageNum": 2
+    },
+    {
+      "id": "business_scope",
+      "state": "edited",
+      "pageNum": 3
+    },
+    {
+      "id": "regression_results",
+      "state": "edited",
+      "pageNum": 4
+    },
+    {
+      "id": "transaction_control",
+      "state": "edited",
+      "pageNum": 5
+    },
+    {
+      "id": "fully_paid_workflow",
+      "state": "edited",
+      "pageNum": 6
+    },
+    {
+      "id": "staging_blockers",
+      "state": "edited",
+      "pageNum": 7
+    },
+    {
+      "id": "go_live_checklist",
+      "state": "edited",
+      "pageNum": 8
+    }
+  ],
+  "outline": [
+    {
+      "id": "cover",
+      "title": "Cover Slide",
+      "summary": "Judul presentasi, subjudul, dan informasi sesi.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "executive_verdict",
+      "title": "Executive Verdict",
+      "summary": "Kesimpulan kesiapan staging berdasarkan hasil regression test.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "business_scope",
+      "title": "Business Scope Covered",
+      "summary": "Cakupan alur bisnis yang diuji dalam skenario E2E.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "regression_results",
+      "title": "Regression Results Summary",
+      "summary": "Statistik kelulusan test API, frontend, dan build.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "transaction_control",
+      "title": "Transaction & Pricing Control",
+      "summary": "Mekanisme anti-manipulasi harga dan validasi schedule.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "fully_paid_workflow",
+      "title": "Fully Paid & Auto-Issue Workflow",
+      "summary": "Integrasi pelunasan dengan penerbitan sertifikat otomatis.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "staging_blockers",
+      "title": "Staging Blockers & Dependencies",
+      "summary": "Daftar infrastruktur yang masih harus disiapkan untuk staging.",
+      "image_plan": "Use a suitable image if needed"
+    },
+    {
+      "id": "go_live_checklist",
+      "title": "Go-Live & Staging Checklist",
+      "summary": "Langkah-langkah verifikasi kritis sebelum production sign-off.",
+      "image_plan": "Use a suitable image if needed"
+    }
+  ]
+}

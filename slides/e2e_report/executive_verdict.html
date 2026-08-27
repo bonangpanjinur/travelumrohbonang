@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+      
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #2C3E50;
+        color: #ECF0F1;
+        overflow: hidden;
+      }
+      
+      .slide-container {
+        width: 1280px;
+        min-height: 720px;
+        background: #2C3E50;
+        position: relative;
+      }
+      
+      .header-area {
+        padding-top: 60px;
+        padding-left: 80px;
+        position: relative;
+        z-index: 2;
+      }
+      
+      h2 {
+        font-size: 48px;
+        font-weight: 700;
+        color: #ECF0F1;
+        text-transform: uppercase;
+      }
+      
+      .diagonal-accent {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 400px;
+        height: 100%;
+        background: linear-gradient(135deg, transparent 49%, #3498DB 50%, #3498DB 51%, transparent 52%);
+        z-index: 1;
+      }
+      
+      .main-grid {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 60px;
+        padding-top: 60px;
+        padding-left: 80px;
+        padding-right: 80px;
+        position: relative;
+        z-index: 2;
+      }
+      
+      .verdict-box {
+        background: linear-gradient(90deg, rgba(52, 152, 219, 0.1), transparent);
+        border-left: 3px solid #3498DB;
+        padding-top: 30px;
+        padding-left: 30px;
+      }
+      
+      .status-badge {
+        display: inline-block;
+        background: #E74C3C;
+        color: white;
+        padding: 10px 20px;
+        font-weight: 700;
+        font-size: 24px;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+      }
+      
+      .verdict-text {
+        font-size: 32px;
+        font-weight: 700;
+        line-height: 1.3;
+        color: #ECF0F1;
+        margin-bottom: 30px;
+      }
+      
+      .point-list {
+        list-style: none;
+      }
+      
+      .point-item {
+        font-size: 22px;
+        color: #BDC3C7;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: flex-start;
+        gap: 15px;
+      }
+      
+      .point-item i {
+        color: #3498DB;
+        padding-top: 5px;
+      }
+      
+      .stats-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      
+      .stat-card {
+        background: rgba(236, 240, 241, 0.05);
+        padding-top: 25px;
+        padding-left: 25px;
+        border-top: 3px solid #E74C3C;
+      }
+      
+      .stat-value {
+        font-size: 54px;
+        font-weight: 700;
+        color: #E74C3C;
+      }
+      
+      .stat-label {
+        font-size: 18px;
+        color: #BDC3C7;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="diagonal-accent"></div>
+        
+        <div class="header-area">
+            <h2>Executive Verdict</h2>
+        </div>
+        
+        <div class="main-grid">
+            <div class="verdict-box">
+                <div class="status-badge">Ready for Staging</div>
+                <div class="verdict-text">
+                    Siap masuk staging, belum siap production-like sign-off.
+                </div>
+                <div class="point-list">
+                    <div class="point-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Regression suite lulus: 83 test (56 API, 27 Frontend).</span>
+                    </div>
+                    <div class="point-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Code path booking, payment, dan auto-issue terhubung.</span>
+                    </div>
+                    <div class="point-item">
+                        <i class="fas fa-exclamation-triangle" style="color: #E74C3C;"></i>
+                        <span>Full E2E terblokir ketersediaan runtime DB & Gateway Sandbox.</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-value">83</div>
+                    <div class="stat-label">Total Test Passed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">100%</div>
+                    <div class="stat-label">Typecheck & Build Success</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

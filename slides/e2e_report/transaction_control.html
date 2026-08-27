@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+      
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #2C3E50;
+        color: #ECF0F1;
+        overflow: hidden;
+      }
+      
+      .slide-container {
+        width: 1280px;
+        min-height: 720px;
+        background: #2C3E50;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .header-area {
+        padding-top: 60px;
+        padding-left: 80px;
+        z-index: 10;
+      }
+      
+      h2 {
+        font-size: 48px;
+        font-weight: 700;
+        color: #ECF0F1;
+        text-transform: uppercase;
+      }
+      
+      .diagonal-rule {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(115deg, transparent 49.8%, #E74C3C 50%, #E74C3C 50.2%, transparent 50.4%);
+        z-index: 1;
+        pointer-events: none;
+      }
+      
+      .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 100px;
+        padding-top: 80px;
+        padding-left: 80px;
+        padding-right: 80px;
+        flex-grow: 1;
+        z-index: 2;
+      }
+      
+      .feature-group {
+        display: flex;
+        flex-direction: column;
+        gap: 40px;
+      }
+      
+      .feature-item {
+        display: flex;
+        gap: 25px;
+        align-items: flex-start;
+      }
+      
+      .icon-circle {
+        width: 60px;
+        height: 60px;
+        background: #E74C3C;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: white;
+        flex-shrink: 0;
+      }
+      
+      .feature-text h3 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: #3498DB;
+      }
+      
+      .feature-text p {
+        font-size: 18px;
+        color: #BDC3C7;
+        line-height: 1.5;
+      }
+      
+      .security-badge {
+        margin-top: 40px;
+        padding-top: 20px;
+        padding-left: 20px;
+        background: rgba(231, 76, 60, 0.1);
+        border-top: 3px solid #E74C3C;
+      }
+      
+      .security-badge span {
+        font-weight: 700;
+        color: #E74C3C;
+        text-transform: uppercase;
+        font-size: 16px;
+      }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="diagonal-rule"></div>
+        
+        <div class="header-area">
+            <h2>Transaction & Pricing Control</h2>
+        </div>
+        
+        <div class="content-grid">
+            <div class="feature-group">
+                <div class="feature-item">
+                    <div class="icon-circle"><i class="fas fa-calculator"></i></div>
+                    <div class="feature-text">
+                        <h3>Authoritative Pricing</h3>
+                        <p>Harga kamar dan total booking dihitung ulang di backend menggunakan data resmi departure. Input harga dari client diabaikan.</p>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="icon-circle"><i class="fas fa-shield-alt"></i></div>
+                    <div class="feature-text">
+                        <h3>Schedule Validation</h3>
+                        <p>Setiap pembayaran divalidasi terhadap <b>paymentScheduleSnapshot</b>. DP dan cicilan harus sesuai nominal yang ditentukan.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="feature-group" style="padding-top: 120px;">
+                <div class="feature-item">
+                    <div class="icon-circle"><i class="fas fa-sort-amount-down"></i></div>
+                    <div class="feature-text">
+                        <h3>Sequence Enforcement</h3>
+                        <p>Cicilan hanya diterima jika mengikuti urutan jadwal yang benar. Mencegah pembayaran tahap akhir sebelum DP lunas.</p>
+                    </div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="icon-circle"><i class="fas fa-ban"></i></div>
+                    <div class="feature-text">
+                        <h3>Anti-Overpayment</h3>
+                        <p>Sistem menolak otomatis pembayaran yang melebihi sisa tagihan atau status pembayaran yang sudah lunas.</p>
+                    </div>
+                </div>
+                
+                <div class="security-badge">
+                    <span><i class="fas fa-lock"></i> Server-Side Integrity Verified</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

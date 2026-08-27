@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+      
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #2C3E50;
+        color: #ECF0F1;
+        overflow: hidden;
+      }
+      
+      .slide-container {
+        width: 1280px;
+        min-height: 720px;
+        background: #2C3E50;
+        position: relative;
+      }
+      
+      .header-area {
+        padding-top: 60px;
+        padding-left: 80px;
+      }
+      
+      h2 {
+        font-size: 48px;
+        font-weight: 700;
+        color: #ECF0F1;
+        text-transform: uppercase;
+      }
+      
+      .diagonal-divider {
+        position: absolute;
+        top: 150px;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, #E74C3C, #3498DB);
+        transform: rotate(-2deg);
+      }
+      
+      .flow-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 30px;
+        padding-top: 120px;
+        padding-left: 80px;
+        padding-right: 80px;
+      }
+      
+      .flow-card {
+        padding-top: 30px;
+        position: relative;
+      }
+      
+      .step-num {
+        font-size: 64px;
+        font-weight: 700;
+        color: rgba(52, 152, 219, 0.2);
+        position: absolute;
+        top: -10px;
+        left: 0;
+      }
+      
+      .icon-box {
+        width: 80px;
+        height: 80px;
+        background: #3498DB;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        color: white;
+        margin-bottom: 25px;
+        position: relative;
+        z-index: 2;
+      }
+      
+      h3 {
+        font-size: 26px;
+        font-weight: 700;
+        color: #ECF0F1;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+      }
+      
+      .description {
+        font-size: 18px;
+        color: #BDC3C7;
+        line-height: 1.6;
+      }
+      
+      .description b {
+        color: #E74C3C;
+      }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header-area">
+            <h2>Business Scope Covered</h2>
+        </div>
+        
+        <div class="diagonal-divider"></div>
+        
+        <div class="flow-grid">
+            <div class="flow-card">
+                <div class="step-num">01</div>
+                <div class="icon-box"><i class="fas fa-file-invoice"></i></div>
+                <h3>Booking</h3>
+                <div class="description">
+                    Backend menghitung harga dari <b>departure resmi</b>. Manipulasi harga client ditolak otomatis.
+                </div>
+            </div>
+            
+            <div class="flow-card">
+                <div class="step-num">02</div>
+                <div class="icon-box"><i class="fas fa-calendar-check"></i></div>
+                <h3>Payment Schedule</h3>
+                <div class="description">
+                    Validasi nominal DP & cicilan terhadap <b>snapshot schedule</b>. Mencegah overpayment.
+                </div>
+            </div>
+            
+            <div class="flow-card">
+                <div class="step-num">03</div>
+                <div class="icon-box"><i class="fas fa-check-double"></i></div>
+                <h3>Pelunasan</h3>
+                <div class="description">
+                    Deteksi otomatis status <b>fully paid</b> memicu sinkronisasi status booking ke confirmed.
+                </div>
+            </div>
+            
+            <div class="flow-card">
+                <div class="step-num">04</div>
+                <div class="icon-box"><i class="fas fa-certificate"></i></div>
+                <h3>Sertifikat</h3>
+                <div class="description">
+                    <b>Auto-issue</b> sertifikat Umroh per jemaah dengan guard idempotensi database.
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

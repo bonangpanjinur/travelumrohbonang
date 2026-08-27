@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+      
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #2C3E50;
+        color: #ECF0F1;
+        overflow: hidden;
+      }
+      
+      .slide-container {
+        width: 1280px;
+        min-height: 720px;
+        background: #2C3E50;
+        position: relative;
+      }
+      
+      .header-area {
+        padding-top: 60px;
+        padding-left: 80px;
+        position: relative;
+        z-index: 2;
+      }
+      
+      h2 {
+        font-size: 48px;
+        font-weight: 700;
+        color: #ECF0F1;
+        text-transform: uppercase;
+      }
+      
+      .diagonal-rule {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(155deg, transparent 70%, #E74C3C 70.2%, #E74C3C 70.5%, transparent 70.7%);
+        z-index: 1;
+        pointer-events: none;
+      }
+      
+      .content-grid {
+        display: grid;
+        grid-template-columns: 1.8fr 1fr;
+        gap: 50px;
+        padding-top: 60px;
+        padding-left: 80px;
+        padding-right: 80px;
+        position: relative;
+        z-index: 2;
+      }
+      
+      .table-container {
+        width: 100%;
+      }
+      
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        color: #BDC3C7;
+        font-size: 20px;
+      }
+      
+      th {
+        text-align: left;
+        padding-top: 20px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid #3498DB;
+        color: #ECF0F1;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+      
+      td {
+        padding-top: 25px;
+        padding-bottom: 25px;
+        border-bottom: 1px solid rgba(189, 195, 199, 0.2);
+      }
+      
+      .status-tag {
+        color: #E74C3C;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      
+      .impact-panel {
+        background: rgba(231, 76, 60, 0.05);
+        border-top: 3px solid #E74C3C;
+        padding-top: 30px;
+        padding-left: 30px;
+        padding-right: 30px;
+      }
+      
+      .impact-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #E74C3C;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+      }
+      
+      .impact-text {
+        font-size: 18px;
+        line-height: 1.6;
+        color: #BDC3C7;
+      }
+      
+      .impact-text b {
+        color: #ECF0F1;
+      }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="diagonal-rule"></div>
+        
+        <div class="header-area">
+            <h2>Staging Blockers & Dependencies</h2>
+        </div>
+        
+        <div class="content-grid">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Dependency</th>
+                            <th>Status</th>
+                            <th>Dampak</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Database Staging</td>
+                            <td><span class="status-tag"><i class="fas fa-times-circle"></i> Belum Ada</span></td>
+                            <td>Tidak dapat membuat data booking/payment nyata.</td>
+                        </tr>
+                        <tr>
+                            <td>Payment Gateway Sandbox</td>
+                            <td><span class="status-tag"><i class="fas fa-times-circle"></i> Belum Ada</span></td>
+                            <td>Callback settlement belum dapat diuji secara otomatis.</td>
+                        </tr>
+                        <tr>
+                            <td>Browser E2E Harness</td>
+                            <td><span class="status-tag"><i class="fas fa-times-circle"></i> Belum Ada</span></td>
+                            <td>Journey customer belum diverifikasi via browser.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="impact-panel">
+                <div class="impact-title">Risiko Operasional</div>
+                <div class="impact-text">
+                    Tanpa infrastruktur di atas, status <b>Full E2E Production-Like</b> belum dapat dinyatakan lulus. <br><br>
+                    Pengujian saat ini terbatas pada <b>Static Code Path</b> dan <b>API Boundary</b>. Diperlukan verifikasi runtime sebelum rilis publik.
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

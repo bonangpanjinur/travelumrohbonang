@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+      
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #2C3E50;
+        color: #ECF0F1;
+        overflow: hidden;
+      }
+      
+      .slide-container {
+        width: 1280px;
+        min-height: 720px;
+        position: relative;
+        background: #2C3E50;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding-left: 80px;
+      }
+      
+      .diagonal-line {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        pointer-events: none;
+      }
+      
+      .line-1 {
+        position: absolute;
+        width: 150%;
+        height: 3px;
+        background: linear-gradient(90deg, #E74C3C, #3498DB);
+        top: 30%;
+        left: -25%;
+        transform: rotate(-15deg);
+      }
+      
+      .line-2 {
+        position: absolute;
+        width: 150%;
+        height: 3px;
+        background: linear-gradient(90deg, #3498DB, #E74C3C);
+        bottom: 25%;
+        left: -25%;
+        transform: rotate(5deg);
+      }
+      
+      .content-wrapper {
+        position: relative;
+        z-index: 2;
+        max-width: 900px;
+      }
+      
+      h1 {
+        font-size: 72px;
+        font-weight: 700;
+        line-height: 1.1;
+        margin-bottom: 20px;
+        color: #ECF0F1;
+        text-transform: uppercase;
+        letter-spacing: -1px;
+      }
+      
+      .subtitle {
+        font-size: 28px;
+        font-weight: 400;
+        color: #BDC3C7;
+        margin-bottom: 60px;
+        border-left: 5px solid #E74C3C;
+        padding-left: 20px;
+      }
+      
+      .meta {
+        font-size: 18px;
+        color: #3498DB;
+        font-weight: 700;
+        display: flex;
+        gap: 30px;
+      }
+      
+      .accent-box {
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 300px;
+        height: 100%;
+        background: linear-gradient(135deg, rgba(231, 76, 60, 0.1), rgba(52, 152, 219, 0.1));
+        clip-path: polygon(20% 0%, 100% 0%, 100% 100%, 0% 100%);
+        z-index: 0;
+      }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="accent-box"></div>
+        <div class="diagonal-line">
+            <div class="line-1"></div>
+            <div class="line-2"></div>
+        </div>
+        
+        <div class="content-wrapper">
+            <h1>E2E Testing &<br>Staging Readiness</h1>
+            <div class="subtitle">
+                Alur Booking → Pembayaran → Sertifikat Otomatis
+            </div>
+            <div class="meta">
+                <span><i class="fas fa-calendar-alt"></i> 28 Agustus 2026</span>
+                <span><i class="fas fa-project-diagram"></i> Travel Umroh Bonang</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
