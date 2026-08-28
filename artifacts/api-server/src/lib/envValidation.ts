@@ -21,9 +21,10 @@ const ENV_SPEC: EnvSpec[] = [
   { key: "PORT",                      required: false, description: "HTTP listen port (injected by Replit workflow)" },
   { key: "SUPABASE_URL",              required: false, description: "Supabase project URL (optional if DATABASE_URL is set)" },
   { key: "SUPABASE_SERVICE_ROLE_KEY", required: false, description: "Supabase service role key (server-only, optional if DATABASE_URL is set)" },
-  { key: "SUPABASE_ANON_KEY",         required: false, description: "Supabase anon key (also accepts VITE_SUPABASE_ANON_KEY)" },
+  { key: "SUPABASE_ANON_KEY",         required: false, description: "Supabase anon key (also accepts VITE_SUPABASE_ANON_KEY or VITE_SUPABASE_PUBLISHABLE_KEY)" },
   { key: "VITE_SUPABASE_URL",         required: false, description: "Vite-prefixed Supabase URL (fallback)" },
   { key: "VITE_SUPABASE_ANON_KEY",    required: false, description: "Vite-prefixed anon key (fallback)" },
+  { key: "VITE_SUPABASE_PUBLISHABLE_KEY", required: false, description: "Supabase publishable key (anon/public fallback)" },
   { key: "DATABASE_URL",              required: false, description: "Direct Postgres URL (dev/Replit)" },
   { key: "ALLOWED_ORIGINS",           required: false, description: "Comma-separated CORS allowlist (prod)" },
   { key: "ADMIN_EMAILS",              required: false, description: "Comma-separated super-admin email list" },
@@ -43,7 +44,9 @@ function resolveValue(key: string): string | undefined {
   if (direct) return direct;
   // Supabase VITE_ fallbacks (mirrors supabaseEnv.ts)
   if (key === "SUPABASE_URL") return process.env["VITE_SUPABASE_URL"];
-  if (key === "SUPABASE_ANON_KEY") return process.env["VITE_SUPABASE_ANON_KEY"];
+  if (key === "SUPABASE_ANON_KEY") {
+    return process.env["VITE_SUPABASE_ANON_KEY"] || process.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
+  }
   return undefined;
 }
 
