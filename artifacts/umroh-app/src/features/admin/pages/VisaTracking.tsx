@@ -25,7 +25,12 @@ interface VisaApp {
   pilgrimGender: string | null; bookingCode: string; departureId: string | null;
 }
 
-interface Departure { id: string; departureDate: string; packageTitle: string; }
+interface Departure {
+  id: string;
+  departureDate: string;
+  packageTitle?: string | null;
+  package?: { id: string; title: string } | null;
+}
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   draft:      { label: "Draft",       color: "bg-gray-100 text-gray-700" },
@@ -146,11 +151,15 @@ export default function VisaTracking() {
           <SelectTrigger className="w-56"><SelectValue placeholder="Semua Keberangkatan" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Semua Keberangkatan</SelectItem>
-            {departures.map((d: any) => (
-              <SelectItem key={d.id} value={d.id}>
-                {d.packageTitle ?? d.package_title ?? "?"} — {d.departureDate ?? d.departure_date}
-              </SelectItem>
-            ))}
+            {departures.map((d) => {
+              const packageTitle = d.packageTitle ?? d.package?.title ?? "Paket Umroh";
+              const date = d.departureDate;
+              return (
+                <SelectItem key={d.id} value={d.id}>
+                  {packageTitle} — {date}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
