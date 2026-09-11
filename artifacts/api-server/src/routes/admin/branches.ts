@@ -4,6 +4,10 @@ import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
 
+function branchCode() {
+  return `CB-${crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase()}`;
+}
+
 async function branchIdsForScope(scope: Awaited<ReturnType<typeof resolveUserScope>>) {
   if (scope.type === "global") return null;
   if (scope.type === "branch") return scope.branchId ? [scope.branchId] : [];
@@ -34,6 +38,7 @@ router.post("/", async (req, res) => {
     const id = crypto.randomUUID();
     const [data] = await db.insert(branches).values({
       ...req.body,
+      code: req.body?.code?.trim() || branchCode(),
       id,
       createdAt: new Date(),
     }).returning();

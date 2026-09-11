@@ -37,6 +37,10 @@ interface Agent {
   phone: string | null;
   email: string | null;
   photoUrl: string | null;
+  joinedAt: string | null;
+  bannerIdCardUrl: string | null;
+  mouNumber: string | null;
+  validUntil: string | null;
   referralCode: string | null;
   publicSlug: string | null;
   publicDescription: string | null;
@@ -57,6 +61,10 @@ type AgentForm = {
   dateOfBirth: string;
   phone: string;
   email: string;
+  joinedAt: string;
+  bannerIdCardUrl: string;
+  mouNumber: string;
+  validUntil: string;
   referralCode: string;
   publicSlug: string;
   publicDescription: string;
@@ -75,6 +83,10 @@ const emptyForm: AgentForm = {
   dateOfBirth: "",
   phone: "",
   email: "",
+  joinedAt: "",
+  bannerIdCardUrl: "",
+  mouNumber: "",
+  validUntil: "",
   referralCode: "",
   publicSlug: "",
   publicDescription: "",
@@ -99,6 +111,9 @@ const AdminAgents = () => {
   const [form, setForm] = useState<AgentForm>({ ...emptyForm });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [createBranchInline, setCreateBranchInline] = useState(false);
+  const [newBranchName, setNewBranchName] = useState("");
+  const [newBranchAddress, setNewBranchAddress] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -141,6 +156,10 @@ const AdminAgents = () => {
       dateOfBirth: form.dateOfBirth || null,
       phone: form.phone.trim() || null,
       email: form.email.trim() || null,
+      joinedAt: form.joinedAt || null,
+      bannerIdCardUrl: form.bannerIdCardUrl.trim() || null,
+      mouNumber: form.mouNumber.trim() || null,
+      validUntil: form.validUntil || null,
       referralCode: form.referralCode.trim().toUpperCase() || null,
       publicSlug: form.publicSlug.trim() || null,
       publicDescription: form.publicDescription.trim() || null,
@@ -161,6 +180,13 @@ const AdminAgents = () => {
     };
 
     try {
+      if (createBranchInline) {
+        if (!newBranchName.trim()) throw new Error("Nama cabang wajib diisi");
+        const createdBranch = await apiFetch<any>("/api/admin/branches", { method: "POST", body: JSON.stringify({ name: newBranchName.trim(), address: newBranchAddress.trim() || null }) });
+        const branch = { id: createdBranch.id, code: createdBranch.code || null, name: createdBranch.name };
+        setBranches((current) => [...current, branch]);
+        payload.branchId = branch.id;
+      }
       if (photoFile) {
         const path = `${editing?.id || crypto.randomUUID()}/${Date.now()}-${photoFile.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
         const { error: uploadError } = await supabase.storage.from("agent-photos").upload(path, photoFile, { upsert: true, contentType: photoFile.type });
@@ -193,6 +219,10 @@ const AdminAgents = () => {
       dateOfBirth: agent.dateOfBirth || "",
       phone: agent.phone || "",
       email: agent.email || "",
+      joinedAt: agent.joinedAt || "",
+      bannerIdCardUrl: agent.bannerIdCardUrl || "",
+      mouNumber: agent.mouNumber || "",
+      validUntil: agent.validUntil || "",
       referralCode: agent.referralCode || "",
       publicSlug: agent.publicSlug || "",
       publicDescription: agent.publicDescription || "",
@@ -212,6 +242,9 @@ const AdminAgents = () => {
     setForm({ ...emptyForm });
     setPhotoFile(null);
     setPhotoPreview(null);
+    setCreateBranchInline(false);
+    setNewBranchName("");
+    setNewBranchAddress("");
   };
 
   const executeDelete = async (id: string) => {
@@ -291,6 +324,12 @@ const AdminAgents = () => {
                   {photoPreview ? <img src={photoPreview} alt="Foto agen" className="h-20 w-20 rounded-full object-cover border border-border" /> : <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold">{form.name?.charAt(0)?.toUpperCase() || "A"}</div>}
                   <div><Label htmlFor="agent-photo">Foto profil agen/mitra</Label><Input id="agent-photo" type="file" accept="image/jpeg,image/png,image/webp" className="mt-1 max-w-sm" onChange={(event) => { const file = event.target.files?.[0] || null; setPhotoFile(file); if (file) setPhotoPreview(URL.createObjectURL(file)); }} /><p className="text-[11px] text-muted-foreground mt-1">JPG, PNG, atau WebP. Foto tampil di dashboard dan halaman publik.</p></div>
                 </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div><Label>GABUNG</Label><Input type="date" value={form.joinedAt} onChange={(e) => setForm({ ...form, joinedAt: e.target.value })} className="mt-1" /></div>
+                  <div><Label>MASA BERLAKU</Label><Input type="date" value={form.validUntil} onChange={(e) => setForm({ ...form, validUntil: e.target.value })} className="mt-1" /></div>
+                  <div><Label>NO MOU</Label><Input value={form.mouNumber} onChange={(e) => setForm({ ...form, mouNumber: e.target.value })} placeholder="MOU/2026/001" className="mt-1" /></div>
+                  <div><Label>BANNER & ID CARD</Label><Input value={form.bannerIdCardUrl} onChange={(e) => setForm({ ...form, bannerIdCardUrl: e.target.value })} placeholder="URL file atau link Storage" className="mt-1" /></div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div><Label>Nama Agen *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Bonang Panji Nur" className="mt-1" /></div>
                   <div><Label>Gender</Label><Select value={form.gender || "none"} onValueChange={(value) => setForm({ ...form, gender: value === "none" ? "" : value })}><SelectTrigger className="mt-1"><SelectValue placeholder="Pilih gender" /></SelectTrigger><SelectContent><SelectItem value="none">Belum diisi</SelectItem><SelectItem value="L">Laki-laki</SelectItem><SelectItem value="P">Perempuan</SelectItem></SelectContent></Select></div>
@@ -298,13 +337,17 @@ const AdminAgents = () => {
                   <div><Label>Nomor Telepon</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="08xxxxxxxxxx" className="mt-1" /></div>
                 </div>
                 <div><Label>Alamat Agen</Label><Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Alamat lengkap agen" rows={2} className="mt-1" /></div>
+                <div className="rounded-xl border border-primary/15 bg-primary/[0.03] p-3">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={createBranchInline} onChange={(e) => setCreateBranchInline(e.target.checked)} /> Buat cabang baru dari form ini</label>
+                  {createBranchInline && <div className="mt-3 grid gap-3 md:grid-cols-2"><div><Label>Nama Cabang *</Label><Input value={newBranchName} onChange={(e) => setNewBranchName(e.target.value)} placeholder="Cabang Jakarta" className="mt-1" /></div><div><Label>Alamat Cabang</Label><Input value={newBranchAddress} onChange={(e) => setNewBranchAddress(e.target.value)} placeholder="Alamat cabang" className="mt-1" /></div><p className="text-[11px] text-muted-foreground md:col-span-2">Kode cabang akan dibuat otomatis oleh sistem, lalu langsung dipakai untuk agen ini.</p></div>}
+                </div>
               </section>
 
               <section className="space-y-3 border-t border-border pt-4">
                 <p className="text-sm font-semibold text-primary">Kode, cabang, dan komisi</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div><Label>Kode Cabang</Label><Select value={form.branchId || "none"} onValueChange={(value) => setForm({ ...form, branchId: value === "none" ? "" : value })}><SelectTrigger className="mt-1"><SelectValue placeholder="Pilih cabang" /></SelectTrigger><SelectContent><SelectItem value="none">Pusat / tanpa cabang</SelectItem>{branches.map((branch) => <SelectItem key={branch.id} value={branch.id}>{branch.code ? `${branch.code} — ` : ""}{branch.name}</SelectItem>)}</SelectContent></Select></div>
-                  <div><Label>Kode Agen</Label><Input value={form.agentCode} onChange={(e) => setForm({ ...form, agentCode: e.target.value.toUpperCase().replace(/\s+/g, "-") })} placeholder="A001VINS26" className="mt-1 font-mono" /><p className="text-[11px] text-muted-foreground mt-1">Otomatis dibuat bila dikosongkan.</p></div>
+                  <div><Label>Kode Agen (otomatis)</Label><Input value={form.agentCode} readOnly placeholder="Dibuat otomatis saat disimpan" className="mt-1 bg-muted font-mono" /><p className="text-[11px] text-muted-foreground mt-1">Kode unik dibuat otomatis oleh sistem.</p></div>
                   <div><Label>Komisi (%)</Label><Input type="number" min="0" max="100" step="0.5" value={form.commissionPercent} onChange={(e) => setForm({ ...form, commissionPercent: Number(e.target.value) || 0 })} className="mt-1" /></div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -347,7 +390,7 @@ const AdminAgents = () => {
       {loading ? <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold" /></div> : filteredAgents.length === 0 ? <div className="text-center py-16 text-muted-foreground">{searchTerm || filterBranch !== "all" ? "Tidak ada agen yang sesuai filter" : "Belum ada agen terdaftar"}</div> : <>
         <div className="bg-card border border-border rounded-xl overflow-hidden"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Kode</TableHead><TableHead>Nama & Kontak</TableHead><TableHead>Gender / Tgl Lahir</TableHead><TableHead>Alamat</TableHead><TableHead>Cabang</TableHead><TableHead>Publik / QR</TableHead><TableHead className="text-center">Status</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader><TableBody>{paginatedItems.map((agent) => <TableRow key={agent.id}>
           <TableCell><div className="font-mono text-xs font-semibold">{agent.agentCode || "-"}</div><div className="text-[10px] text-muted-foreground">ref: {agent.referralCode || "-"}</div></TableCell>
-          <TableCell><div className="flex items-center gap-3">{agent.photoUrl ? <img src={agent.photoUrl} alt={agent.name} className="h-10 w-10 rounded-full object-cover border border-border" /> : <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">{agent.name.charAt(0).toUpperCase()}</div>}<div><div className="font-semibold">{agent.name}</div><div className="flex items-center gap-1 text-xs text-muted-foreground mt-1"><Phone className="w-3 h-3" />{agent.phone || "-"}</div></div></div></TableCell>
+          <TableCell><div className="flex items-center gap-3">{agent.photoUrl ? <img src={agent.photoUrl} alt={agent.name} className="h-10 w-10 rounded-full object-cover border border-border" /> : <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">{agent.name.charAt(0).toUpperCase()}</div>}<div><div className="font-semibold">{agent.name}</div><div className="flex items-center gap-1 text-xs text-muted-foreground mt-1"><Phone className="w-3 h-3" />{agent.phone || "-"}</div><div className="mt-1 text-[10px] text-muted-foreground">Gabung: {agent.joinedAt || "-"} · MOU: {agent.mouNumber || "-"}</div><div className="text-[10px] text-muted-foreground">Berlaku: {agent.validUntil || "-"}</div></div></div></TableCell>
           <TableCell><div>{agent.gender === "L" ? "Laki-laki" : agent.gender === "P" ? "Perempuan" : "-"}</div><div className="text-xs text-muted-foreground flex items-center gap-1 mt-1"><CalendarDays className="w-3 h-3" />{agent.dateOfBirth || "-"}</div></TableCell>
           <TableCell className="max-w-[220px]"><div className="truncate text-sm" title={agent.address || ""}>{agent.address || "-"}</div></TableCell>
           <TableCell>{agent.branch ? <Badge variant="outline" className="font-normal"><Building2 className="w-3 h-3 mr-1" />{agent.branch.code ? `${agent.branch.code} — ` : ""}{agent.branch.name}</Badge> : <span className="text-muted-foreground">Pusat</span>}</TableCell>
