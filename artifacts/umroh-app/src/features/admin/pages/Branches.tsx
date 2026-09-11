@@ -78,6 +78,8 @@ const AdminBranches = () => {
   const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
+  const [addInitialAgent, setAddInitialAgent] = useState(false);
+  const [initialAgent, setInitialAgent] = useState({ name: "", phone: "", email: "" });
   const [provinces, setProvinces] = useState<{ code: string; name: string }[]>([]);
   const [regencies, setRegencies] = useState<{ code: string; name: string }[]>([]);
   const [districts, setDistricts] = useState<{ code: string; name: string }[]>([]);
@@ -187,18 +189,31 @@ const AdminBranches = () => {
       description: form.description.trim() || null,
     };
     try {
+      let savedBranch: any;
       if (editing) {
-        await apiFetch(`/api/admin/branches/${editing.id}`, {
+        savedBranch = await apiFetch(`/api/admin/branches/${editing.id}`, {
           method: "PATCH",
           body: JSON.stringify(payload),
         });
         toast({ title: "Cabang diupdate!" });
       } else {
-        await apiFetch("/api/admin/branches", {
+        savedBranch = await apiFetch("/api/admin/branches", {
           method: "POST",
           body: JSON.stringify(payload),
         });
         toast({ title: "Cabang ditambahkan!" });
+      }
+      if (addInitialAgent && initialAgent.name.trim()) {
+        await apiFetch("/api/admin/agents", {
+          method: "POST",
+          body: JSON.stringify({
+            name: initialAgent.name.trim(),
+            phone: initialAgent.phone.trim() || null,
+            email: initialAgent.email.trim().toLowerCase() || null,
+            branchId: savedBranch?.id || editing?.id,
+          }),
+        });
+        toast({ title: "Agen pertama berhasil ditambahkan", description: "Agen otomatis terhubung ke cabang ini." });
       }
       fetchBranches();
       setIsOpen(false);
@@ -250,6 +265,8 @@ const AdminBranches = () => {
   const resetForm = () => {
     setEditing(null);
     setForm({ ...empty });
+    setAddInitialAgent(false);
+    setInitialAgent({ name: "", phone: "", email: "" });
   };
 
   const downloadBranchTemplate = () => {
@@ -333,6 +350,11 @@ const AdminBranches = () => {
                 <div><Label>URL Foto/Logo Cabang</Label><Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://..." type="url" className="mt-1" /></div>
                 <div><Label>Deskripsi Singkat</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Jelaskan layanan atau cakupan cabang ini" rows={3} className="mt-1" /></div>
               </section>
+              {!editing && <section className="space-y-3 rounded-xl border border-primary/15 bg-primary/[0.03] p-4">
+                <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-primary"><input type="checkbox" checked={addInitialAgent} onChange={(e) => setAddInitialAgent(e.target.checked)} /> Tambahkan agen pertama untuk cabang ini</label>
+                <p className="text-xs text-muted-foreground">Agen akan otomatis terhubung ke cabang setelah cabang berhasil disimpan. Kode agen dibuat oleh sistem berdasarkan kode cabang.</p>
+                {addInitialAgent && <div className="grid grid-cols-1 gap-3 md:grid-cols-3"><div><Label>Nama Agen *</Label><Input value={initialAgent.name} onChange={(e) => setInitialAgent({ ...initialAgent, name: e.target.value })} placeholder="Nama lengkap agen" className="mt-1" required={addInitialAgent} /></div><div><Label>Telepon</Label><Input value={initialAgent.phone} onChange={(e) => setInitialAgent({ ...initialAgent, phone: e.target.value })} placeholder="08xxxxxxxxxx" className="mt-1" /></div><div><Label>Email</Label><Input type="email" value={initialAgent.email} onChange={(e) => setInitialAgent({ ...initialAgent, email: e.target.value })} placeholder="agen@contoh.id" className="mt-1" /></div></div>}
+              </section>}
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
                 <Button type="submit" className="gradient-gold text-primary">Simpan</Button>
