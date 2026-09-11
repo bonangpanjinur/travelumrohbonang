@@ -147,6 +147,8 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Admin sidebar menu items
     "menu.dashboard": "Dasbor",
+    "menu.agent_portal": "Portal Agen Saya",
+    "menu.branch_dashboard": "Dasbor Cabang Saya",
     "menu.notifications": "Notifikasi",
     "menu.main_website": "Situs Utama",
     "sidebar.search_placeholder": "Cari menu...",
@@ -385,6 +387,8 @@ export const translations: Record<Language, Record<string, string>> = {
 
     // Admin sidebar menu items
     "menu.dashboard": "Dashboard",
+    "menu.agent_portal": "My Agent Portal",
+    "menu.branch_dashboard": "My Branch Dashboard",
     "menu.notifications": "Notifications",
     "menu.main_website": "Main Website",
     "sidebar.search_placeholder": "Search menu...",

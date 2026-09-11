@@ -73,11 +73,10 @@ const router = Router();
 // Every admin route requires a valid authenticated session
 router.use(requireAuth);
 
-// ── Super-admin-only routes ─────────────────────────────────────────────────
-// Agents router contains role-management endpoints (POST/DELETE /roles)
-// protected individually by requireSuperAdmin inside the router itself.
-// The GET /roles endpoint is readable by all admins.
-router.use("/agents", requireAdmin, adminAgentsRouter);
+// ── Agent directory routes ───────────────────────────────────────────────────
+// The router resolves the current user's agent/branch scope. Role-management
+// endpoints remain protected individually by requireSuperAdmin.
+router.use("/agents", requireOperational, adminAgentsRouter);
 router.use("/integrations", requireSuperAdmin, adminIntegrationsRouter);
 // GET readable by all admin roles; PUT/DELETE restricted to super_admin inside the router
 router.use("/menu-permissions", requireOperational, adminMenuPermissionsRouter);

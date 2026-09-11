@@ -117,6 +117,8 @@ export const menuGroups: MenuGroup[] = [
     icon: LayoutDashboard,
     items: [
       { label: "Dasbor", labelKey: "menu.dashboard", href: "/admin", icon: LayoutDashboard, roles: FINANCE_OPERATIONAL },
+      { label: "Portal Agen Saya", labelKey: "menu.agent_portal", href: "/agent-portal", icon: Briefcase, roles: ["agent"] },
+      { label: "Dasbor Cabang Saya", labelKey: "menu.branch_dashboard", href: "/branch-dashboard", icon: Building2, roles: ["branch_manager"] },
       { label: "Notifikasi", labelKey: "menu.notifications", href: "/admin/notifications", icon: BellRing, roles: FINANCE_OPERATIONAL },
     ],
   },

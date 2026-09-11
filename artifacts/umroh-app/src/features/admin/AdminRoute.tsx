@@ -105,6 +105,16 @@ const AdminRoute = () => {
   if (!user) return <Navigate to="/auth" replace />;
   if (!role || !routeAllowed) return <Navigate to="/dashboard" replace state={{ from: location.pathname }} />;
 
+  // Agents and branch managers have dedicated scoped portals. They may still
+  // open explicitly allowed operational admin routes, but the admin landing
+  // page must never present the HQ dashboard as their home screen.
+  if (location.pathname === "/admin" && role === "agent") {
+    return <Navigate to="/agent-portal" replace />;
+  }
+  if (location.pathname === "/admin" && role === "branch_manager") {
+    return <Navigate to="/branch-dashboard" replace />;
+  }
+
   // 2FA enforcement
   if (settings.enable_2fa && settings.require_2fa) {
     if (!totpEnabled) {

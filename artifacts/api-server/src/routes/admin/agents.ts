@@ -67,6 +67,12 @@ async function agentInScope(agentId: string, scope: Awaited<ReturnType<typeof re
   return ids === null || ids.includes(agentId);
 }
 
+async function canCreateAgent(req: any, branchId: string | null, scope: Awaited<ReturnType<typeof resolveUserScope>>) {
+  if (req.user?.role === "agent") return false;
+  if (scope.type === "global") return true;
+  return scope.type === "branch" && !!scope.branchId && branchId === scope.branchId;
+}
+
 // Agents
 router.get("/", async (req, res) => {
   try {
@@ -81,6 +87,11 @@ router.get("/", async (req, res) => {
 
 router.post("/", async (req, res) => {
   try {
+    const scope = await resolveUserScope(req);
+    const requestedBranchId = req.body?.branchId == null || req.body?.branchId === "" ? null : String(req.body.branchId);
+    if (!(await canCreateAgent(req, requestedBranchId, scope))) {
+      return res.status(403).json({ error: "Anda hanya dapat mengelola agen pada scope Anda" });
+    }
     const id = crypto.randomUUID();
     const [data] = await db.insert(agents).values({
       ...normalizeAgentPayload(req.body as Record<string, unknown>),
@@ -97,6 +108,9 @@ router.post("/", async (req, res) => {
 router.patch("/:id", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
+    if (req.user?.role === "agent" && req.body?.branchId !== undefined) {
+      return res.status(403).json({ error: "Agen tidak dapat memindahkan agen ke cabang lain" });
+    }
     const existing = await db.select().from(agents).where(eq(agents.id, req.params.id)).limit(1);
     if (!existing[0] || !(await agentInScope(existing[0].id, scope))) return res.status(404).json({ error: "Agent not found" });
     // Strip immutable fields to prevent accidental overwrite of PK / createdAt
@@ -113,6 +127,7 @@ router.patch("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
+    if (req.user?.role === "agent") return res.status(403).json({ error: "Agen tidak dapat menghapus data agen" });
     const scope = await resolveUserScope(req);
     if (!(await agentInScope(req.params.id, scope))) return res.status(404).json({ error: "Agent not found" });
     const [deleted] = await db.delete(agents).where(eq(agents.id, req.params.id as string)).returning();
@@ -257,7 +272,13 @@ router.patch("/withdrawals/:id", async (req, res) => {
 // Affiliate Clicks
 router.get("/affiliate-clicks", async (req, res) => {
   try {
-    const data = await db.select().from(affiliateClicks).orderBy(desc(affiliateClicks.createdAt));
+    const scope = await resolveUserScope(req);
+    const ids = await agentIdsForScope(scope);
+    const data = ids === null
+      ? await db.select().from(affiliateClicks).orderBy(desc(affiliateClicks.createdAt))
+      : ids.length
+        ? await db.select().from(affiliateClicks).where(inArray(affiliateClicks.agentId, ids)).orderBy(desc(affiliateClicks.createdAt))
+        : [];
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch affiliate clicks" });
