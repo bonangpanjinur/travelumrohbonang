@@ -27,6 +27,7 @@ export const agents = pgTable("agents", {
   dateOfBirth: date("date_of_birth"),
   phone: text("phone"),
   email: text("email"),
+  photoUrl: text("photo_url"),
   referralCode: text("referral_code"),
   publicSlug: text("public_slug"),
   publicDescription: text("public_description"),

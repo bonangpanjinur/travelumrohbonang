@@ -14,6 +14,7 @@ interface PublicAgent {
   gender: string | null;
   address: string | null;
   phone: string | null;
+  photoUrl: string | null;
   agentCode: string | null;
   referralCode?: string | null;
   publicSlug: string;
@@ -88,6 +89,7 @@ const PublicAgentProfile = () => {
     name: agent.name,
     jobTitle: agent.status,
     telephone: agent.phone || undefined,
+    image: agent.photoUrl || undefined,
     address: displayAddress ? { "@type": "PostalAddress", streetAddress: displayAddress } : undefined,
     url: window.location.href,
     worksFor: { "@type": "TravelAgency", name: "Umroh Plus" },
@@ -102,13 +104,15 @@ const PublicAgentProfile = () => {
           <div className="absolute -right-28 -top-32 h-80 w-80 rounded-full bg-gold/20 blur-3xl" />
           <div className="absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
           <div className="container relative py-14 md:py-20">
+            <div className="flex flex-col md:flex-row md:items-center gap-8">
+              <div className="shrink-0">{agent.photoUrl ? <img src={agent.photoUrl} alt={`Foto ${agent.name}`} className="h-32 w-32 md:h-40 md:w-40 rounded-full object-cover border-4 border-gold/70 shadow-2xl" /> : <div className="h-32 w-32 md:h-40 md:w-40 rounded-full bg-white/10 border-4 border-gold/70 flex items-center justify-center text-5xl font-display font-bold text-gold">{agent.name.charAt(0).toUpperCase()}</div>}</div>
             <div className="max-w-3xl">
               <Badge className="bg-gold text-primary border-0"><ShieldCheck className="w-3.5 h-3.5 mr-1" /> {agent.status}</Badge>
               <p className="mt-5 text-sm uppercase tracking-[0.28em] text-gold-light">Profil Mitra Vins Tour</p>
               <h1 className="mt-3 text-4xl md:text-6xl font-display font-bold leading-[1.05]">{agent.name}</h1>
               <p className="mt-5 text-primary-foreground/75 text-lg max-w-xl leading-relaxed">{pageDescription}</p>
               <div className="flex flex-wrap gap-3 mt-8"><Button asChild className="gradient-gold text-primary"><Link to={bookingHref}>Lihat Paket Umroh <ArrowRight className="w-4 h-4 ml-2" /></Link></Button><Button variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" onClick={copyPageLink}>{copied ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}{copied ? "Link Tersalin" : "Bagikan Profil"}</Button></div>
-            </div>
+            </div></div>
           </div>
         </section>
 

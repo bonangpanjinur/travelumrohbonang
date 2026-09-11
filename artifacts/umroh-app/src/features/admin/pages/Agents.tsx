@@ -36,6 +36,7 @@ interface Agent {
   dateOfBirth: string | null;
   phone: string | null;
   email: string | null;
+  photoUrl: string | null;
   referralCode: string | null;
   publicSlug: string | null;
   publicDescription: string | null;
@@ -96,6 +97,8 @@ const AdminAgents = () => {
   const { toast } = useToast();
   const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } = useDeleteConfirm();
   const [form, setForm] = useState<AgentForm>({ ...emptyForm });
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -155,9 +158,16 @@ const AdminAgents = () => {
         .eq("email", form.email.trim())
         .maybeSingle();
       if (userProfile?.id) payload.userId = userProfile.id;
-    }
+    };
 
     try {
+      if (photoFile) {
+        const path = `${editing?.id || crypto.randomUUID()}/${Date.now()}-${photoFile.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
+        const { error: uploadError } = await supabase.storage.from("agent-photos").upload(path, photoFile, { upsert: true, contentType: photoFile.type });
+        if (uploadError) throw uploadError;
+        const { data: publicData } = supabase.storage.from("agent-photos").getPublicUrl(path);
+        payload.photoUrl = publicData.publicUrl;
+      }
       if (editing) {
         await apiFetch(`/api/admin/agents/${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) });
         toast({ title: "Agen berhasil diperbarui" });
@@ -192,12 +202,16 @@ const AdminAgents = () => {
       monthlyTarget: agent.monthlyTarget ?? "",
       isActive: agent.isActive,
     });
+    setPhotoFile(null);
+    setPhotoPreview(agent.photoUrl || null);
     setIsOpen(true);
   };
 
   const resetForm = () => {
     setEditing(null);
     setForm({ ...emptyForm });
+    setPhotoFile(null);
+    setPhotoPreview(null);
   };
 
   const executeDelete = async (id: string) => {
@@ -273,6 +287,10 @@ const AdminAgents = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
               <section className="space-y-3">
                 <p className="text-sm font-semibold text-primary">Data sesuai daftar mitra</p>
+                <div className="flex items-center gap-4 rounded-xl border border-dashed border-border p-4">
+                  {photoPreview ? <img src={photoPreview} alt="Foto agen" className="h-20 w-20 rounded-full object-cover border border-border" /> : <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-2xl font-bold">{form.name?.charAt(0)?.toUpperCase() || "A"}</div>}
+                  <div><Label htmlFor="agent-photo">Foto profil agen/mitra</Label><Input id="agent-photo" type="file" accept="image/jpeg,image/png,image/webp" className="mt-1 max-w-sm" onChange={(event) => { const file = event.target.files?.[0] || null; setPhotoFile(file); if (file) setPhotoPreview(URL.createObjectURL(file)); }} /><p className="text-[11px] text-muted-foreground mt-1">JPG, PNG, atau WebP. Foto tampil di dashboard dan halaman publik.</p></div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div><Label>Nama Agen *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Bonang Panji Nur" className="mt-1" /></div>
                   <div><Label>Gender</Label><Select value={form.gender || "none"} onValueChange={(value) => setForm({ ...form, gender: value === "none" ? "" : value })}><SelectTrigger className="mt-1"><SelectValue placeholder="Pilih gender" /></SelectTrigger><SelectContent><SelectItem value="none">Belum diisi</SelectItem><SelectItem value="L">Laki-laki</SelectItem><SelectItem value="P">Perempuan</SelectItem></SelectContent></Select></div>
@@ -329,7 +347,7 @@ const AdminAgents = () => {
       {loading ? <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold" /></div> : filteredAgents.length === 0 ? <div className="text-center py-16 text-muted-foreground">{searchTerm || filterBranch !== "all" ? "Tidak ada agen yang sesuai filter" : "Belum ada agen terdaftar"}</div> : <>
         <div className="bg-card border border-border rounded-xl overflow-hidden"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Kode</TableHead><TableHead>Nama & Kontak</TableHead><TableHead>Gender / Tgl Lahir</TableHead><TableHead>Alamat</TableHead><TableHead>Cabang</TableHead><TableHead>Publik / QR</TableHead><TableHead className="text-center">Status</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader><TableBody>{paginatedItems.map((agent) => <TableRow key={agent.id}>
           <TableCell><div className="font-mono text-xs font-semibold">{agent.agentCode || "-"}</div><div className="text-[10px] text-muted-foreground">ref: {agent.referralCode || "-"}</div></TableCell>
-          <TableCell><div className="font-semibold">{agent.name}</div><div className="flex items-center gap-1 text-xs text-muted-foreground mt-1"><Phone className="w-3 h-3" />{agent.phone || "-"}</div></TableCell>
+          <TableCell><div className="flex items-center gap-3">{agent.photoUrl ? <img src={agent.photoUrl} alt={agent.name} className="h-10 w-10 rounded-full object-cover border border-border" /> : <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">{agent.name.charAt(0).toUpperCase()}</div>}<div><div className="font-semibold">{agent.name}</div><div className="flex items-center gap-1 text-xs text-muted-foreground mt-1"><Phone className="w-3 h-3" />{agent.phone || "-"}</div></div></div></TableCell>
           <TableCell><div>{agent.gender === "L" ? "Laki-laki" : agent.gender === "P" ? "Perempuan" : "-"}</div><div className="text-xs text-muted-foreground flex items-center gap-1 mt-1"><CalendarDays className="w-3 h-3" />{agent.dateOfBirth || "-"}</div></TableCell>
           <TableCell className="max-w-[220px]"><div className="truncate text-sm" title={agent.address || ""}>{agent.address || "-"}</div></TableCell>
           <TableCell>{agent.branch ? <Badge variant="outline" className="font-normal"><Building2 className="w-3 h-3 mr-1" />{agent.branch.code ? `${agent.branch.code} — ` : ""}{agent.branch.name}</Badge> : <span className="text-muted-foreground">Pusat</span>}</TableCell>

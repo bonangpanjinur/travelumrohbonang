@@ -42,6 +42,7 @@ function normalizeAgentPayload(body: Record<string, unknown>, existingName?: str
     dateOfBirth,
     phone: body.phone == null || body.phone === "" ? null : String(body.phone).trim().slice(0, 40),
     email: body.email == null || body.email === "" ? null : String(body.email).trim().toLowerCase().slice(0, 160),
+    photoUrl: body.photoUrl == null || body.photoUrl === "" ? null : String(body.photoUrl).trim().slice(0, 1000),
     referralCode: referralCode || null,
     publicSlug: requestedSlug || `agen-${shortCode().toLowerCase()}`,
     publicDescription: body.publicDescription == null || body.publicDescription === "" ? null : String(body.publicDescription).trim().slice(0, 500),
