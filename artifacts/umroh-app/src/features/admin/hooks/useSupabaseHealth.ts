@@ -3,7 +3,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 export type HealthStatus = "checking" | "online" | "offline" | "recovering";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const SUPABASE_ANON_KEY = (
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+  || import.meta.env.VITE_SUPABASE_ANON_KEY
+) as string | undefined;
 const CHECK_INTERVAL_MS = 30_000;  // re-check every 30 s while visible
 const TIMEOUT_MS = 6_000;          // fail-fast timeout per check
 const RECOVER_HIDE_DELAY_MS = 4_000; // how long to show the "restored" banner
@@ -26,13 +29,11 @@ async function pingSupabase(): Promise<boolean> {
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const headers: Record<string, string> = {};
-    if (SUPABASE_ANON_KEY) {
-      headers["apikey"] = SUPABASE_ANON_KEY;
+    const headers: Record<string, string> = {
+      apikey: SUPABASE_ANON_KEY!,
       // Supabase REST also requires Authorization to return 200 (not 401).
-      // Both headers together prevent noisy 401s in the browser console.
-      headers["Authorization"] = `Bearer ${SUPABASE_ANON_KEY}`;
-    }
+      Authorization: `Bearer ${SUPABASE_ANON_KEY!}`,
+    };
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
       method: "HEAD",
