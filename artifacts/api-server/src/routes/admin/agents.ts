@@ -25,15 +25,23 @@ function shortCode() {
 
 async function generateAgentCode(branchId: string | null) {
   const year = new Date().getFullYear().toString().slice(-2);
-  // Agen tanpa branchId berarti agen kantor pusat. Gunakan identitas bisnis
-  // VINS, bukan HQ, agar kode pusat konsisten dengan format operasional.
+  // Agen tanpa branchId memakai identitas kantor pusat VINS.
   let branchCode = "VINS";
+  let referralBase = "VINS";
   if (branchId) {
     const [branch] = await db.select({ code: branches.code, name: branches.name }).from(branches).where(eq(branches.id, branchId)).limit(1);
     const fromName = String(branch?.name || "CABANG")
       .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
       .replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-    branchCode = String(branch?.code || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 12) || fromName.slice(0, 8) || "CABANG";
+    const configuredCode = String(branch?.code || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    const isHeadOffice = /KANTORPU(SAT)?|PUSAT/i.test(fromName) || configuredCode === "VINS";
+    if (isHeadOffice) {
+      branchCode = "VINSU";
+      referralBase = "VINS";
+    } else {
+      branchCode = configuredCode.slice(0, 12) || fromName.slice(0, 8) || "CABANG";
+      referralBase = branchCode;
+    }
   }
   const prefix = `A%${branchCode}${year}`;
   const existing = await db.select({ agentCode: agents.agentCode }).from(agents).where(like(agents.agentCode, prefix));
@@ -44,10 +52,19 @@ async function generateAgentCode(branchId: string | null) {
     candidate = `A${String(sequence).padStart(3, "0")}${branchCode}${year}`;
     sequence += 1;
   } while (used.has(candidate));
-  return candidate;
+  const referralPrefix = `A%${referralBase}${year}`;
+  const referralRows = await db.select({ referralCode: agents.referralCode }).from(agents).where(like(agents.referralCode, referralPrefix));
+  const referralUsed = new Set(referralRows.map((row) => row.referralCode).filter(Boolean));
+  let referralSequence = sequence - 1;
+  let referralCode = `A${String(referralSequence).padStart(3, "0")}${referralBase}${year}`;
+  while (referralUsed.has(referralCode)) {
+    referralSequence += 1;
+    referralCode = `A${String(referralSequence).padStart(3, "0")}${referralBase}${year}`;
+  }
+  return { agentCode: candidate, referralCode };
 }
 
-function normalizeAgentPayload(body: Record<string, unknown>, existingName?: string, generatedAgentCode?: string) {
+function normalizeAgentPayload(body: Record<string, unknown>, existingName?: string, generated?: { agentCode: string; referralCode: string }) {
   const name = String(body.name ?? existingName ?? "").trim();
   if (!name) throw new Error("Nama agen wajib diisi");
   const gender = body.gender == null || body.gender === "" ? null : String(body.gender).toUpperCase();
@@ -55,8 +72,8 @@ function normalizeAgentPayload(body: Record<string, unknown>, existingName?: str
   const dateOfBirth = body.dateOfBirth == null || body.dateOfBirth === "" ? null : String(body.dateOfBirth);
   if (dateOfBirth && !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) throw new Error("Tanggal lahir harus berformat YYYY-MM-DD");
   const requestedSlug = body.publicSlug == null || body.publicSlug === "" ? slugify(name) : slugify(String(body.publicSlug));
-  const agentCode = body.agentCode == null || body.agentCode === "" ? (generatedAgentCode || `AG-${shortCode()}`) : String(body.agentCode).trim().toUpperCase().replace(/\s+/g, "-").slice(0, 40);
-  const referralCode = body.referralCode == null || body.referralCode === "" ? agentCode : String(body.referralCode).trim().toUpperCase().replace(/\s+/g, "").slice(0, 40);
+  const agentCode = body.agentCode == null || body.agentCode === "" ? (generated?.agentCode || `AG-${shortCode()}`) : String(body.agentCode).trim().toUpperCase().replace(/\s+/g, "-").slice(0, 40);
+  const referralCode = body.referralCode == null || body.referralCode === "" ? (generated?.referralCode || agentCode) : String(body.referralCode).trim().toUpperCase().replace(/\s+/g, "").slice(0, 40);
   const commissionPercent = body.commissionPercent == null || body.commissionPercent === "" ? 0 : Number(body.commissionPercent);
   if (!Number.isFinite(commissionPercent) || commissionPercent < 0 || commissionPercent > 100) throw new Error("Komisi harus berada di antara 0 sampai 100 persen");
   return {
@@ -171,9 +188,9 @@ router.post("/", async (req, res) => {
       return res.status(403).json({ error: "Anda hanya dapat mengelola agen pada scope Anda" });
     }
     const id = crypto.randomUUID();
-    const generatedAgentCode = await generateAgentCode(requestedBranchId);
+    const generated = await generateAgentCode(requestedBranchId);
     const [data] = await db.insert(agents).values({
-      ...normalizeAgentPayload(req.body as Record<string, unknown>, undefined, generatedAgentCode),
+      ...normalizeAgentPayload(req.body as Record<string, unknown>, undefined, generated),
       id,
       createdAt: new Date(),
     }).returning();
@@ -195,8 +212,8 @@ router.patch("/:id", async (req, res) => {
     // Strip immutable fields to prevent accidental overwrite of PK / createdAt
     const { id: _id, createdAt: _createdAt, ...body } = req.body as Record<string, unknown>;
     const mergedAgent = { ...existing[0], ...body };
-    const generatedAgentCode = mergedAgent.agentCode ? undefined : await generateAgentCode(mergedAgent.branchId ? String(mergedAgent.branchId) : null);
-    const updates = normalizeAgentPayload(mergedAgent, existing[0].name, generatedAgentCode);
+    const generated = mergedAgent.agentCode ? undefined : await generateAgentCode(mergedAgent.branchId ? String(mergedAgent.branchId) : null);
+    const updates = normalizeAgentPayload(mergedAgent, existing[0].name, generated);
     const [data] = await db.update(agents).set(updates).where(eq(agents.id, req.params.id)).returning();
     if (!data) return res.status(404).json({ error: "Agent not found" });
     res.json(data);
