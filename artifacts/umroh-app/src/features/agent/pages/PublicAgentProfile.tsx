@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { MapPin, Phone, ArrowRight, ShieldCheck, Building2, Copy, CheckCircle2 } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  MapPin,
+  Phone,
+  Share2,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { apiFetch } from "@/shared/lib/apiClient";
 import SEO from "@/shared/components/seo/SEO";
 import Navbar from "@/shared/components/layout/Navbar";
@@ -65,8 +76,21 @@ const PublicAgentProfile = () => {
     return `/r/${encodeURIComponent(agent.referralCode)}?to=${encodeURIComponent("/paket")}`;
   }, [agent?.referralCode]);
 
+  const pageUrl = typeof window !== "undefined" ? window.location.href : "";
+  const whatsappHref = agent?.phone
+    ? `https://wa.me/${agent.phone.replace(/\D/g, "").replace(/^0/, "62")}?text=${encodeURIComponent(`Halo ${agent.name}, saya ingin bertanya tentang paket umroh.`)}`
+    : null;
+
   const copyPageLink = async () => {
-    await navigator.clipboard.writeText(window.location.href);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: agent ? `Profil ${agent.name}` : "Profil Agen", url: pageUrl });
+        return;
+      } catch {
+        // User cancelled native share; continue without showing an error.
+      }
+    }
+    await navigator.clipboard.writeText(pageUrl);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   };
@@ -91,50 +115,49 @@ const PublicAgentProfile = () => {
     telephone: agent.phone || undefined,
     image: agent.photoUrl || undefined,
     address: displayAddress ? { "@type": "PostalAddress", streetAddress: displayAddress } : undefined,
-    url: window.location.href,
+    url: pageUrl,
     worksFor: { "@type": "TravelAgency", name: "Umroh Plus" },
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <SEO title={pageTitle} description={pageDescription} url={window.location.href} jsonLd={jsonLd} />
+    <div className="min-h-screen bg-[#faf9f7]">
+      <SEO title={pageTitle} description={pageDescription} url={pageUrl} jsonLd={jsonLd} />
       <Navbar />
       <main>
-        <section className="relative overflow-hidden border-b border-border bg-primary text-primary-foreground">
-          <div className="absolute -right-28 -top-32 h-80 w-80 rounded-full bg-gold/20 blur-3xl" />
-          <div className="absolute -left-24 bottom-0 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-          <div className="container relative py-14 md:py-20">
-            <div className="flex flex-col md:flex-row md:items-center gap-8">
-              <div className="shrink-0">{agent.photoUrl ? <img src={agent.photoUrl} alt={`Foto ${agent.name}`} className="h-32 w-32 md:h-40 md:w-40 rounded-full object-cover border-4 border-gold/70 shadow-2xl" /> : <div className="h-32 w-32 md:h-40 md:w-40 rounded-full bg-white/10 border-4 border-gold/70 flex items-center justify-center text-5xl font-display font-bold text-gold">{agent.name.charAt(0).toUpperCase()}</div>}</div>
-            <div className="max-w-3xl">
-              <Badge className="bg-gold text-primary border-0"><ShieldCheck className="w-3.5 h-3.5 mr-1" /> {agent.status}</Badge>
-              <p className="mt-5 text-sm uppercase tracking-[0.28em] text-gold-light">Profil Mitra Vins Tour</p>
-              <h1 className="mt-3 text-4xl md:text-6xl font-display font-bold leading-[1.05]">{agent.name}</h1>
-              <p className="mt-5 text-primary-foreground/75 text-lg max-w-xl leading-relaxed">{pageDescription}</p>
-              <div className="flex flex-wrap gap-3 mt-8"><Button asChild className="gradient-gold text-primary"><Link to={bookingHref}>Lihat Paket Umroh <ArrowRight className="w-4 h-4 ml-2" /></Link></Button><Button variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" onClick={copyPageLink}>{copied ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}{copied ? "Link Tersalin" : "Bagikan Profil"}</Button></div>
-            </div></div>
+        <section className="relative isolate overflow-hidden bg-primary text-primary-foreground">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(219,165,45,0.24),transparent_28%),radial-gradient(circle_at_6%_95%,rgba(255,255,255,0.10),transparent_30%)]" />
+          <div className="absolute -right-40 -top-40 h-[28rem] w-[28rem] rounded-full border border-gold/20" />
+          <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full border border-gold/10" />
+          <div className="container relative max-w-6xl py-12 md:py-20 lg:py-24">
+            <div className="grid items-center gap-9 lg:grid-cols-[220px_1fr] lg:gap-14">
+              <div className="relative mx-auto lg:mx-0">
+                <div className="absolute -inset-3 rounded-full border border-gold/35" />
+                <div className="absolute -inset-6 rounded-full border border-white/10" />
+                {agent.photoUrl ? <img src={agent.photoUrl} alt={`Foto ${agent.name}`} className="relative h-44 w-44 rounded-full border-[5px] border-gold object-cover shadow-2xl md:h-52 md:w-52" /> : <div className="relative flex h-44 w-44 items-center justify-center rounded-full border-[5px] border-gold bg-white/10 text-6xl font-display font-bold text-gold shadow-2xl md:h-52 md:w-52">{agent.name.charAt(0).toUpperCase()}</div>}
+                <div className="absolute -bottom-2 left-1/2 flex -translate-x-1/2 items-center whitespace-nowrap rounded-full border border-gold/30 bg-primary px-3 py-1.5 text-xs font-semibold text-gold shadow-lg"><ShieldCheck className="mr-1.5 h-3.5 w-3.5" /> Agen Terverifikasi</div>
+              </div>
+              <div className="max-w-3xl text-center lg:text-left">
+                <div className="flex flex-wrap items-center justify-center gap-3 lg:justify-start"><Badge className="border-0 bg-gold text-primary"><ShieldCheck className="mr-1 h-3.5 w-3.5" /> {agent.status}</Badge><span className="text-xs font-semibold uppercase tracking-[0.25em] text-gold-light">Profil Mitra Resmi</span></div>
+                <h1 className="mt-5 text-4xl font-display font-bold leading-[1.05] tracking-tight md:text-6xl lg:text-7xl">{agent.name}</h1>
+                <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-primary-foreground/78 md:text-xl lg:mx-0">{pageDescription}</p>
+                <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
+                  <Button asChild size="lg" className="gradient-gold text-primary shadow-lg shadow-black/15"><Link to={bookingHref}>Lihat Paket Umroh <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+                  {whatsappHref ? <Button asChild size="lg" variant="outline" className="border-white/30 bg-transparent text-white hover:border-white/60 hover:bg-white/10"><a href={whatsappHref} target="_blank" rel="noreferrer"><Phone className="mr-2 h-4 w-4" /> Hubungi Agen</a></Button> : <Button size="lg" variant="outline" className="border-white/30 bg-transparent text-white hover:border-white/60 hover:bg-white/10" onClick={copyPageLink}>{copied ? <CheckCircle2 className="mr-2 h-4 w-4" /> : <Share2 className="mr-2 h-4 w-4" />}{copied ? "Link Tersalin" : "Bagikan Profil"}</Button>}
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        <section className="container py-10 md:py-16">
-          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6 md:gap-8">
-            <div className="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-sm">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Informasi Agen</p>
-              <h2 className="text-2xl font-display font-bold mt-2">Temui mitra resmi kami</h2>
-              <div className="grid sm:grid-cols-2 gap-4 mt-7">
-                <div className="rounded-xl bg-muted/50 p-4"><div className="flex items-center gap-2 text-muted-foreground text-sm"><ShieldCheck className="w-4 h-4 text-primary" /> Status</div><p className="font-semibold mt-2">{agent.status}</p></div>
-                <div className="rounded-xl bg-muted/50 p-4"><div className="flex items-center gap-2 text-muted-foreground text-sm"><span className="font-mono text-primary">#</span> Kode Agen</div><p className="font-mono font-semibold mt-2">{agent.agentCode || "-"}</p></div>
-              </div>
-              <div className="mt-5 space-y-4">
-                {agent.phone && <a href={`tel:${agent.phone}`} className="flex items-start gap-3 group"><Phone className="w-5 h-5 text-primary mt-0.5" /><span><span className="block text-xs text-muted-foreground">Nomor Telepon</span><span className="font-semibold group-hover:text-primary transition-colors">{agent.phone}</span></span></a>}
-                {displayAddress && <div className="flex items-start gap-3"><MapPin className="w-5 h-5 text-primary mt-0.5" /><span><span className="block text-xs text-muted-foreground">Alamat</span><span className="font-semibold leading-relaxed">{displayAddress}</span></span></div>}
-              </div>
+        <section className="container relative z-10 max-w-6xl py-10 md:py-16">
+          <div className="-mt-1 grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8">
+            <div className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm md:p-9">
+              <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">Informasi Agen</p><h2 className="mt-2 text-2xl font-display font-bold md:text-3xl">Temui mitra resmi kami</h2></div><div className="rounded-2xl bg-primary/8 p-3 text-primary"><Sparkles className="h-5 w-5" /></div></div>
+              <div className="mt-7 grid gap-3 sm:grid-cols-2"><div className="rounded-2xl bg-muted/55 p-4"><div className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="h-4 w-4 text-primary" /> Status</div><p className="mt-2 font-semibold">{agent.status}</p></div><div className="rounded-2xl bg-muted/55 p-4"><div className="flex items-center gap-2 text-sm text-muted-foreground"><span className="font-mono text-primary">#</span> Kode Agen</div><p className="mt-2 font-mono font-semibold">{agent.agentCode || "-"}</p></div></div>
+              <div className="mt-6 divide-y divide-border/70 rounded-2xl border border-border/70 px-4"><div className="flex items-start gap-3 py-4">{agent.phone ? <Phone className="mt-0.5 h-5 w-5 shrink-0 text-primary" /> : <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />}<span><span className="block text-xs text-muted-foreground">{agent.phone ? "Nomor Telepon" : "Mitra Resmi"}</span>{agent.phone ? <a href={`tel:${agent.phone}`} className="font-semibold transition-colors hover:text-primary">{agent.phone}</a> : <span className="font-semibold">Pendamping perjalanan ibadah Anda</span>}</span></div>{displayAddress && <div className="flex items-start gap-3 py-4"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><span><span className="block text-xs text-muted-foreground">Alamat</span><span className="font-semibold leading-relaxed">{displayAddress}</span></span></div>}</div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card p-6 md:p-8 shadow-sm flex flex-col justify-between">
-              <div><p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">Afiliasi</p><h2 className="text-2xl font-display font-bold mt-2">Butuh bantuan memilih paket?</h2><p className="text-muted-foreground mt-3 leading-relaxed">Hubungi agen ini untuk mendapatkan informasi dan pendampingan sebelum booking.</p></div>
-              <div className="mt-8 space-y-3">{agent.branch && <div className="flex items-start gap-3 text-sm"><Building2 className="w-5 h-5 text-primary mt-0.5" /><span><span className="block text-xs text-muted-foreground">Cabang</span><span className="font-semibold">{agent.branch.code ? `${agent.branch.code} — ` : ""}{agent.branch.name || "Pusat"}</span>{branchAddress && <span className="block text-muted-foreground mt-1">{branchAddress}</span>}</span></div>}{agent.branch?.mapUrl && <a href={agent.branch.mapUrl} target="_blank" rel="noreferrer" className="inline-flex text-sm text-primary hover:underline">Buka lokasi cabang <ArrowRight className="w-4 h-4 ml-1" /></a>}<Button asChild className="w-full gradient-gold text-primary mt-2"><Link to={bookingHref}>Jelajahi Paket Umroh <ArrowRight className="w-4 h-4 ml-2" /></Link></Button></div>
-            </div>
+            <div className="rounded-3xl border border-primary/10 bg-white p-6 shadow-sm md:p-9"><p className="text-xs font-bold uppercase tracking-[0.22em] text-primary">Afiliasi</p><h2 className="mt-2 text-2xl font-display font-bold md:text-3xl">Siap berangkat bersama?</h2><p className="mt-3 leading-relaxed text-muted-foreground">Dapatkan bantuan memilih paket yang sesuai dari agen resmi kami.</p><div className="mt-8 space-y-4">{agent.branch && <div className="flex items-start gap-3 rounded-2xl bg-muted/55 p-4"><Building2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><span><span className="block text-xs text-muted-foreground">Cabang</span><span className="font-semibold">{agent.branch.code ? `${agent.branch.code} — ` : ""}{agent.branch.name || "Pusat"}</span>{branchAddress && <span className="mt-1 block text-sm text-muted-foreground">{branchAddress}</span>}</span></div>}{agent.branch?.mapUrl && <a href={agent.branch.mapUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-sm font-semibold text-primary hover:underline">Buka lokasi cabang <ExternalLink className="ml-1.5 h-3.5 w-3.5" /></a>}<Button asChild size="lg" className="mt-2 w-full gradient-gold text-primary"><Link to={bookingHref}>Jelajahi Paket Umroh <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>{whatsappHref && <Button asChild size="lg" variant="outline" className="w-full"><a href={whatsappHref} target="_blank" rel="noreferrer"><Phone className="mr-2 h-4 w-4" /> Chat via WhatsApp</a></Button>}<button type="button" onClick={copyPageLink} className="flex w-full items-center justify-center gap-2 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-primary">{copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? "Link profil tersalin" : "Bagikan profil ini"}</button></div></div>
           </div>
         </section>
       </main>
