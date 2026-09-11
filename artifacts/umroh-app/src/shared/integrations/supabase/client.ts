@@ -12,7 +12,9 @@ const SUPABASE_URL = RAW_URL;
 
 // Placeholder prevents createClient from throwing when env vars are absent.
 // All /rest/v1 requests will simply return errors rather than crashing at init.
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+  || import.meta.env.VITE_SUPABASE_ANON_KEY
+  || 'placeholder-anon-key';
 
 if (!import.meta.env.DEV && (!RAW_URL || !SUPABASE_KEY)) {
   const missing = [
@@ -31,6 +33,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
     persistSession: false,
     autoRefreshToken: false,
     detectSessionInUrl: false,
+    storageKey: `sb-${new URL(SUPABASE_URL).hostname.split('.')[0]}-data-client`,
   },
   global: {
     // Attach the user's session token so RLS policies can identify the caller.

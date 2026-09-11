@@ -3,7 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 // Fall back to a non-routable placeholder so createClient doesn't throw on
 // missing env vars in dev/preview. All API calls will simply fail gracefully.
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+  || import.meta.env.VITE_SUPABASE_ANON_KEY
+  || 'placeholder-anon-key';
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   const missing = [

@@ -1,14 +1,18 @@
 import { useEffect } from "react";
-import { apiFetch } from "@/shared/lib/apiClient";
+import { supabase } from "@/shared/integrations/supabase/client";
 
 export const useDynamicFavicon = () => {
   useEffect(() => {
     const fetchAndSetFavicon = async () => {
       try {
-        const result = await apiFetch<{ data: Array<{ key: string; value: unknown }> }>(
-          "/api/cms/site-settings",
-        );
-        const brandingSetting = result?.data?.find((setting) => setting.key === "branding");
+        const { data, error } = await supabase
+          .from("site_settings")
+          .select("key, value")
+          .eq("category", "branding")
+          .eq("key", "branding")
+          .maybeSingle();
+        if (error) throw error;
+        const brandingSetting = data;
         const value = brandingSetting?.value;
         const faviconUrl =
           value && typeof value === "object" && !Array.isArray(value)
