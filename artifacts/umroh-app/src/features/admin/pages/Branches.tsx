@@ -7,7 +7,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2, MapPin, Phone, Clock3, Link2 } from "lucide-react";
 import { Download, Upload, FileSpreadsheet } from "lucide-react";
 import Papa from "papaparse";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
@@ -105,23 +105,35 @@ const AdminBranches = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.name.trim()) {
+      toast({ title: "Nama cabang wajib diisi", variant: "destructive" });
+      return;
+    }
+    if (form.latitude && (Number.isNaN(Number(form.latitude)) || Number(form.latitude) < -90 || Number(form.latitude) > 90)) {
+      toast({ title: "Latitude tidak valid", description: "Gunakan angka antara -90 sampai 90.", variant: "destructive" });
+      return;
+    }
+    if (form.longitude && (Number.isNaN(Number(form.longitude)) || Number(form.longitude) < -180 || Number(form.longitude) > 180)) {
+      toast({ title: "Longitude tidak valid", description: "Gunakan angka antara -180 sampai 180.", variant: "destructive" });
+      return;
+    }
     const payload: Record<string, unknown> = {
       code: form.code.trim().toUpperCase() || null,
-      name: form.name,
-      slug: form.slug || null,
-      address: form.address || null,
-      phone: form.phone || null,
-      email: form.email || null,
-      city: form.city || null,
-      region: form.region || null,
-      postalCode: form.postal_code || null,
+      name: form.name.trim(),
+      slug: form.slug.trim().toLowerCase().replace(/\s+/g, "-") || null,
+      address: form.address.trim() || null,
+      phone: form.phone.trim() || null,
+      email: form.email.trim().toLowerCase() || null,
+      city: form.city.trim() || null,
+      region: form.region.trim() || null,
+      postalCode: form.postal_code.trim() || null,
       country: form.country || "ID",
       latitude: form.latitude ? parseFloat(form.latitude) : null,
       longitude: form.longitude ? parseFloat(form.longitude) : null,
-      openingHours: form.opening_hours || null,
-      imageUrl: form.image_url || null,
-      mapUrl: form.map_url || null,
-      description: form.description || null,
+      openingHours: form.opening_hours.trim() || null,
+      imageUrl: form.image_url.trim() || null,
+      mapUrl: form.map_url.trim() || null,
+      description: form.description.trim() || null,
     };
     try {
       if (editing) {
@@ -225,7 +237,7 @@ const AdminBranches = () => {
     <div>
       <DeleteAlertDialog open={!!deleteTargetId} onOpenChange={() => setDeleteTargetId(null)} onConfirm={() => { if (deleteTargetId) executeDelete(deleteTargetId); setDeleteTargetId(null); }} />
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-display font-bold">Cabang</h1>
+        <div><h1 className="text-2xl font-display font-bold">Cabang</h1><p className="mt-1 text-sm text-muted-foreground">Kelola identitas, alamat, kontak, dan lokasi cabang yang terhubung dengan agen.</p></div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={downloadBranchTemplate}><Download className="w-4 h-4 mr-2" /> Template CSV</Button>
           <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4 mr-2" /> Import CSV</Button>
@@ -237,81 +249,33 @@ const AdminBranches = () => {
             <DialogHeader>
               <DialogTitle>{editing ? "Edit Cabang" : "Tambah Cabang"}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Kode Cabang</Label>
-                  <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().replace(/\s+/g, "-") })} placeholder="VINS" className="mt-1 font-mono" />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 border-b pb-2 text-sm font-semibold text-primary"><Building2 className="h-4 w-4" />Identitas Cabang</div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div><Label>Nama Cabang *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Kantor Cabang Bandung" required className="mt-1" /><p className="mt-1 text-[11px] text-muted-foreground">Nama ini akan tampil pada data agen dan halaman publik.</p></div>
+                  <div><Label>Kode Cabang</Label><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().replace(/\s+/g, "-") })} placeholder="Otomatis dari sistem" readOnly={!editing} className="mt-1 bg-muted font-mono" /><p className="mt-1 text-[11px] text-muted-foreground">Kode menjadi bagian dari kode agen, misalnya <b>A001BDG26</b>.</p></div>
                 </div>
-                <div>
-                  <Label>Nama Cabang *</Label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="mt-1" />
-                </div>
-                <div>
-                  <Label>Slug (SEO URL)</Label>
-                  <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="jakarta-pusat" className="mt-1" />
-                </div>
-              </div>
-              <div>
-                <Label>Alamat (jalan)</Label>
-                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="mt-1" />
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label>Kota</Label>
-                  <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="mt-1" />
-                </div>
-                <div>
-                  <Label>Provinsi</Label>
-                  <Input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} className="mt-1" />
-                </div>
-                <div>
-                  <Label>Kode Pos</Label>
-                  <Input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} className="mt-1" />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label>Negara (ISO)</Label>
-                  <Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder="ID" className="mt-1" />
-                </div>
-                <div>
-                  <Label>Latitude</Label>
-                  <Input value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} placeholder="-6.2088" className="mt-1" />
-                </div>
-                <div>
-                  <Label>Longitude</Label>
-                  <Input value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} placeholder="106.8456" className="mt-1" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Telepon</Label>
-                  <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="mt-1" />
-                </div>
-                <div>
-                  <Label>Email</Label>
-                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="mt-1" />
-                </div>
-              </div>
-              <div>
-                <Label>Jam Operasional (format schema.org)</Label>
-                <Input value={form.opening_hours} onChange={(e) => setForm({ ...form, opening_hours: e.target.value })} placeholder="Mo-Sa 09:00-17:00" className="mt-1" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>URL Gambar</Label>
-                  <Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} className="mt-1" />
-                </div>
-                <div>
-                  <Label>URL Google Maps</Label>
-                  <Input value={form.map_url} onChange={(e) => setForm({ ...form, map_url: e.target.value })} className="mt-1" />
-                </div>
-              </div>
-              <div>
-                <Label>Deskripsi singkat</Label>
-                <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1" rows={3} />
-              </div>
+                <div><Label>Slug Halaman Publik</Label><Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="bandung" className="mt-1" /><p className="mt-1 text-[11px] text-muted-foreground">Boleh dikosongkan; sistem akan membersihkan format slug otomatis.</p></div>
+              </section>
+              <section className="space-y-3 border-t pt-4">
+                <div className="flex items-center gap-2 border-b pb-2 text-sm font-semibold text-primary"><MapPin className="h-4 w-4" />Alamat Lengkap</div>
+                <div><Label>Alamat Jalan</Label><Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Nama jalan, nomor, gedung, lantai" rows={2} className="mt-1" /></div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3"><div><Label>Kota/Kabupaten</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Bandung" className="mt-1" /></div><div><Label>Provinsi</Label><Input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Jawa Barat" className="mt-1" /></div><div><Label>Kode Pos</Label><Input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} placeholder="40111" inputMode="numeric" className="mt-1" /></div></div>
+                <div><Label>Negara</Label><Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value.toUpperCase().slice(0, 2) })} placeholder="ID" maxLength={2} className="mt-1 max-w-[160px]" /></div>
+              </section>
+              <section className="space-y-3 border-t pt-4">
+                <div className="flex items-center gap-2 border-b pb-2 text-sm font-semibold text-primary"><Phone className="h-4 w-4" />Kontak & Operasional</div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2"><div><Label>Nomor Telepon/WhatsApp</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="08xxxxxxxxxx" className="mt-1" /></div><div><Label>Email Cabang</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="cabang@contoh.id" className="mt-1" /></div></div>
+                <div><Label><Clock3 className="mr-1 inline h-3.5 w-3.5" />Jam Operasional</Label><Input value={form.opening_hours} onChange={(e) => setForm({ ...form, opening_hours: e.target.value })} placeholder="Senin–Sabtu, 09:00–17:00" className="mt-1" /></div>
+              </section>
+              <section className="space-y-3 border-t pt-4">
+                <div className="flex items-center gap-2 border-b pb-2 text-sm font-semibold text-primary"><Link2 className="h-4 w-4" />Lokasi & Media</div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div><Label>Latitude</Label><Input value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} placeholder="-6.2088" inputMode="decimal" className="mt-1" /></div><div><Label>Longitude</Label><Input value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} placeholder="106.8456" inputMode="decimal" className="mt-1" /></div></div>
+                <div><Label>URL Google Maps</Label><Input value={form.map_url} onChange={(e) => setForm({ ...form, map_url: e.target.value })} placeholder="https://maps.google.com/..." type="url" className="mt-1" /></div>
+                <div><Label>URL Foto/Logo Cabang</Label><Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://..." type="url" className="mt-1" /></div>
+                <div><Label>Deskripsi Singkat</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Jelaskan layanan atau cakupan cabang ini" rows={3} className="mt-1" /></div>
+              </section>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Batal</Button>
                 <Button type="submit" className="gradient-gold text-primary">Simpan</Button>
@@ -343,10 +307,10 @@ const AdminBranches = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Kode</TableHead>
-                <TableHead>Nama Cabang</TableHead>
-                <TableHead>Kota</TableHead>
-                <TableHead>Telepon</TableHead>
-                <TableHead>Slug</TableHead>
+                <TableHead>Nama & Alamat</TableHead>
+                <TableHead>Wilayah</TableHead>
+                <TableHead>Kontak</TableHead>
+                <TableHead>Publik</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -354,10 +318,10 @@ const AdminBranches = () => {
               {paginatedItems.map((b) => (
                 <TableRow key={b.id}>
                   <TableCell className="font-mono text-xs">{b.code || "-"}</TableCell>
-                  <TableCell className="font-semibold">{b.name}</TableCell>
-                  <TableCell>{b.city || "-"}</TableCell>
-                  <TableCell>{b.phone || "-"}</TableCell>
-                  <TableCell className="text-muted-foreground">{b.slug || "-"}</TableCell>
+                  <TableCell><div className="font-semibold">{b.name}</div><div className="mt-1 max-w-[260px] truncate text-xs text-muted-foreground" title={b.address || ""}>{b.address || "Alamat belum diisi"}</div></TableCell>
+                  <TableCell><div>{b.city || "-"}</div><div className="text-xs text-muted-foreground">{b.region || ""}{b.postal_code ? ` · ${b.postal_code}` : ""}</div></TableCell>
+                  <TableCell><div>{b.phone || "-"}</div><div className="max-w-[180px] truncate text-xs text-muted-foreground">{b.email || ""}</div></TableCell>
+                  <TableCell><div className="text-xs text-muted-foreground">/{b.slug || "-"}</div><div className="mt-1 text-xs">{b.map_url ? "Maps tersedia" : "Maps belum diisi"}</div></TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(b)}><Pencil className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => setDeleteTargetId(b.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
