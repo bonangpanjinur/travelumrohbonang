@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { useToast } from "@/shared/hooks/use-toast";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Download, Upload, FileSpreadsheet } from "lucide-react";
+import Papa from "papaparse";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 import AdminPagination from "@/features/admin/components/AdminPagination";
 import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
@@ -60,6 +62,10 @@ const AdminBranches = () => {
   const { toast } = useToast();
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...empty });
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
   const { page, setPage, totalPages, totalCount, paginatedItems, pageSize } = useAdminPagination(branches);
 
   useEffect(() => {
@@ -177,11 +183,52 @@ const AdminBranches = () => {
     setForm({ ...empty });
   };
 
+  const downloadBranchTemplate = () => {
+    const headers = ["kode", "nama", "slug", "alamat", "telepon", "email", "kota", "provinsi", "kode_pos", "negara", "latitude", "longitude", "jam_operasional", "url_gambar", "url_google_maps", "deskripsi"];
+    const sample = ["", "Cabang Jakarta", "jakarta", "Jl. Contoh No. 1", "021123456", "jakarta@contoh.id", "Jakarta", "DKI Jakarta", "10110", "ID", "-6.2", "106.8", "Mo-Sa 09:00-17:00", "", "", "Deskripsi cabang"];
+    const blob = new Blob([[headers.join(","), sample.map((value) => `"${value.replace(/"/g, '""')}"`).join(",")].join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a"); anchor.href = url; anchor.download = "template-import-cabang.csv"; anchor.click(); URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = (file: File) => {
+    setImportErrors([]);
+    Papa.parse<Record<string, string>>(file, { header: true, skipEmptyLines: true, transformHeader: (header) => header.trim().toLowerCase(), complete: (result) => {
+      const rows = result.data.map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, String(value ?? "").trim()])));
+      const errors = rows.flatMap((row, index) => !row.nama ? [`Baris ${index + 2}: kolom nama wajib diisi`] : []);
+      setImportRows(rows.filter((row) => Object.values(row).some(Boolean)));
+      setImportErrors(errors);
+    }, error: (error) => setImportErrors([`File tidak dapat dibaca: ${error.message}`]) });
+  };
+
+  const executeImport = async () => {
+    if (!importRows.length || importErrors.length) return;
+    setImporting(true);
+    try {
+      for (const row of importRows) {
+        await apiFetch("/api/admin/branches", { method: "POST", body: JSON.stringify({
+          code: row.kode || null, name: row.nama, slug: row.slug || null, address: row.alamat || null,
+          phone: row.telepon || null, email: row.email || null, city: row.kota || null, region: row.provinsi || null,
+          postalCode: row.kode_pos || null, country: row.negara || "ID", latitude: row.latitude ? Number(row.latitude) : null,
+          longitude: row.longitude ? Number(row.longitude) : null, openingHours: row.jam_operasional || null,
+          imageUrl: row.url_gambar || null, mapUrl: row.url_google_maps || null, description: row.deskripsi || null,
+        }) });
+      }
+      toast({ title: `${importRows.length} cabang berhasil diimport` });
+      setImportOpen(false); setImportRows([]); fetchBranches();
+    } catch (error: any) {
+      toast({ title: "Import berhenti", description: error.message, variant: "destructive" });
+    } finally { setImporting(false); }
+  };
+
   return (
     <div>
       <DeleteAlertDialog open={!!deleteTargetId} onOpenChange={() => setDeleteTargetId(null)} onConfirm={() => { if (deleteTargetId) executeDelete(deleteTargetId); setDeleteTargetId(null); }} />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-display font-bold">Cabang</h1>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={downloadBranchTemplate}><Download className="w-4 h-4 mr-2" /> Template CSV</Button>
+          <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="w-4 h-4 mr-2" /> Import CSV</Button>
         <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button className="gradient-gold text-primary"><Plus className="w-4 h-4 mr-2" /> Tambah</Button>
@@ -272,6 +319,18 @@ const AdminBranches = () => {
             </form>
           </DialogContent>
         </Dialog>
+        <Dialog open={importOpen} onOpenChange={(open) => { setImportOpen(open); if (!open) { setImportRows([]); setImportErrors([]); } }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Import Data Cabang</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              <div className="rounded-xl border border-dashed border-border bg-muted/30 p-5 text-center"><FileSpreadsheet className="mx-auto h-8 w-8 text-primary" /><p className="mt-2 text-sm font-medium">Upload CSV sesuai format Cabang</p><p className="mt-1 text-xs text-muted-foreground">Kolom wajib: <b>nama</b>. Kode cabang boleh kosong dan akan dibuat otomatis.</p><input id="branch-import-file" type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleImportFile(file); event.currentTarget.value = ""; }} /><Button variant="outline" className="mt-3" onClick={() => document.getElementById("branch-import-file")?.click()}><Upload className="mr-2 h-4 w-4" /> Pilih File CSV</Button><Button variant="link" className="mt-3" onClick={downloadBranchTemplate}>Download template</Button></div>
+              {importErrors.length > 0 && <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{importErrors.map((error) => <div key={error}>{error}</div>)}</div>}
+              {importRows.length > 0 && <div><p className="mb-2 text-sm font-semibold">Preview {importRows.length} baris</p><div className="max-h-64 overflow-auto rounded-lg border"><Table><TableHeader><TableRow><TableHead>#</TableHead><TableHead>Nama</TableHead><TableHead>Kode</TableHead><TableHead>Kota</TableHead><TableHead>Provinsi</TableHead><TableHead>Telepon</TableHead></TableRow></TableHeader><TableBody>{importRows.slice(0, 100).map((row, index) => <TableRow key={`${row.nama}-${index}`}><TableCell>{index + 1}</TableCell><TableCell>{row.nama}</TableCell><TableCell>{row.kode || "Otomatis"}</TableCell><TableCell>{row.kota || "-"}</TableCell><TableCell>{row.provinsi || "-"}</TableCell><TableCell>{row.telepon || "-"}</TableCell></TableRow>)}</TableBody></Table></div></div>}
+              <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setImportOpen(false)}>Batal</Button><Button className="gradient-gold text-primary" disabled={!importRows.length || importErrors.length > 0 || importing} onClick={executeImport}>{importing ? "Mengimport..." : `Import ${importRows.length || ""} Cabang`}</Button></div>
+            </div>
+          </DialogContent>
+        </Dialog>
+        </div>
       </div>
 
       {loading ? (
