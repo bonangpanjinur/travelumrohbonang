@@ -128,7 +128,7 @@ const PublicAgentProfile = () => {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(219,165,45,0.24),transparent_28%),radial-gradient(circle_at_6%_95%,rgba(255,255,255,0.10),transparent_30%)]" />
           <div className="absolute -right-40 -top-40 h-[28rem] w-[28rem] rounded-full border border-gold/20" />
           <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full border border-gold/10" />
-          <div className="container relative max-w-6xl px-4 py-10 sm:px-6 sm:py-12 md:py-20 lg:px-8 lg:py-24">
+          <div className="container relative max-w-6xl px-4 pb-10 pt-24 sm:px-6 sm:pb-12 sm:pt-28 md:py-20 lg:px-8 lg:py-24">
             <div className="grid min-w-0 items-center gap-7 lg:grid-cols-[220px_1fr] lg:gap-14">
               <div className="relative mx-auto lg:mx-0">
                 <div className="absolute -inset-3 rounded-full border border-gold/35" />
