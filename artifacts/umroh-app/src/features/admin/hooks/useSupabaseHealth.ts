@@ -21,7 +21,7 @@ function isConfigured(): boolean {
   );
 }
 
-/** Ping the Supabase REST root — lightweight, no auth required. */
+/** Ping the Supabase Auth health endpoint; unlike REST root it does not need a table API key. */
 async function pingSupabase(): Promise<boolean> {
   if (!isConfigured()) return false;
 
@@ -29,18 +29,11 @@ async function pingSupabase(): Promise<boolean> {
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const headers: Record<string, string> = {
-      apikey: SUPABASE_ANON_KEY!,
-      // Supabase REST also requires Authorization to return 200 (not 401).
-      Authorization: `Bearer ${SUPABASE_ANON_KEY!}`,
-    };
-
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
-      method: "HEAD",
-      headers,
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/health`, {
+      method: "GET",
       signal: controller.signal,
     });
-    // 200 or 401 both mean the server is reachable
+    // Any response below 500 means Supabase is reachable.
     return res.status < 500;
   } catch {
     return false;

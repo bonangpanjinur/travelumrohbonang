@@ -10,7 +10,6 @@ export default function PWAInstallPrompt() {
 
   useEffect(() => {
     const handler = (event: Event) => {
-      event.preventDefault();
       setInstallEvent(event as InstallPromptEvent);
     };
     window.addEventListener("beforeinstallprompt", handler);

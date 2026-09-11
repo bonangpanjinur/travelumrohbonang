@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db, agents, agentCommissions, agentWithdrawals, affiliateClicks, userRoles, eq, desc, and, inArray } from "@workspace/db";
+import { sql } from "drizzle-orm";
 import { requireSuperAdmin } from "../../middlewares/requireAdmin";
 import { journalCommissionWithdrawal } from "../../lib/autoJournal";
 import { resolveUserScope } from "../../lib/scopeGuard";
@@ -78,12 +79,60 @@ async function canCreateAgent(req: any, branchId: string | null, scope: Awaited<
   return scope.type === "branch" && !!scope.branchId && branchId === scope.branchId;
 }
 
+/**
+ * Production databases can briefly lag behind the application deploy while the
+ * Supabase migration is being applied. Keep the read path compatible with the
+ * previous agents schema so existing agents remain visible instead of returning
+ * a generic 500 error.
+ */
+async function selectLegacyAgents(ids: string[] | null) {
+  const rows = await db.execute(sql`
+    SELECT id, user_id, branch_id, agent_code, name, gender, address,
+      date_of_birth, phone, email, photo_url, referral_code, public_slug,
+      public_description, public_page_enabled, commission_percent,
+      monthly_target, is_active, created_at
+    FROM agents
+    ${ids === null ? sql`` : sql`WHERE id = ANY(${ids}::text[])`}
+  `);
+  return (rows as any[]).map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    branchId: row.branch_id,
+    agentCode: row.agent_code,
+    name: row.name,
+    gender: row.gender,
+    address: row.address,
+    dateOfBirth: row.date_of_birth,
+    phone: row.phone,
+    email: row.email,
+    photoUrl: row.photo_url,
+    joinedAt: null,
+    bannerIdCardUrl: null,
+    mouNumber: null,
+    validUntil: null,
+    referralCode: row.referral_code,
+    publicSlug: row.public_slug,
+    publicDescription: row.public_description,
+    publicPageEnabled: row.public_page_enabled,
+    commissionPercent: row.commission_percent,
+    monthlyTarget: row.monthly_target,
+    isActive: row.is_active,
+    createdAt: row.created_at,
+  }));
+}
+
 // Agents
 router.get("/", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
     const ids = await agentIdsForScope(scope);
-    const data = ids === null ? await db.select().from(agents) : ids.length ? await db.select().from(agents).where(inArray(agents.id, ids)) : [];
+    let data;
+    try {
+      data = ids === null ? await db.select().from(agents) : ids.length ? await db.select().from(agents).where(inArray(agents.id, ids)) : [];
+    } catch (queryError) {
+      console.error("[admin/agents] current schema query failed; using legacy-compatible read:", queryError);
+      data = await selectLegacyAgents(ids);
+    }
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch agents" });
