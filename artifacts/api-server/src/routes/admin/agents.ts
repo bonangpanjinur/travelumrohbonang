@@ -25,10 +25,15 @@ function shortCode() {
 
 async function generateAgentCode(branchId: string | null) {
   const year = new Date().getFullYear().toString().slice(-2);
-  let branchCode = "HQ";
+  // Agen tanpa branchId berarti agen kantor pusat. Gunakan identitas bisnis
+  // VINS, bukan HQ, agar kode pusat konsisten dengan format operasional.
+  let branchCode = "VINS";
   if (branchId) {
-    const [branch] = await db.select({ code: branches.code }).from(branches).where(eq(branches.id, branchId)).limit(1);
-    branchCode = String(branch?.code || "HQ").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 12) || "HQ";
+    const [branch] = await db.select({ code: branches.code, name: branches.name }).from(branches).where(eq(branches.id, branchId)).limit(1);
+    const fromName = String(branch?.name || "CABANG")
+      .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    branchCode = String(branch?.code || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 12) || fromName.slice(0, 8) || "CABANG";
   }
   const prefix = `A%${branchCode}${year}`;
   const existing = await db.select({ agentCode: agents.agentCode }).from(agents).where(like(agents.agentCode, prefix));
