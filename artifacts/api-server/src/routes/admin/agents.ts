@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, agents, agentCommissions, agentWithdrawals, affiliateClicks, userRoles, eq, desc, and, inArray } from "@workspace/db";
+import { db, agents, branches, agentCommissions, agentWithdrawals, affiliateClicks, userRoles, eq, desc, and, inArray, like } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { requireSuperAdmin } from "../../middlewares/requireAdmin";
 import { journalCommissionWithdrawal } from "../../lib/autoJournal";
@@ -23,7 +23,26 @@ function shortCode() {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
 }
 
-function normalizeAgentPayload(body: Record<string, unknown>, existingName?: string) {
+async function generateAgentCode(branchId: string | null) {
+  const year = new Date().getFullYear().toString().slice(-2);
+  let branchCode = "HQ";
+  if (branchId) {
+    const [branch] = await db.select({ code: branches.code }).from(branches).where(eq(branches.id, branchId)).limit(1);
+    branchCode = String(branch?.code || "HQ").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 12) || "HQ";
+  }
+  const prefix = `A%${branchCode}${year}`;
+  const existing = await db.select({ agentCode: agents.agentCode }).from(agents).where(like(agents.agentCode, prefix));
+  const used = new Set(existing.map((row) => row.agentCode).filter(Boolean));
+  let sequence = 1;
+  let candidate = "";
+  do {
+    candidate = `A${String(sequence).padStart(3, "0")}${branchCode}${year}`;
+    sequence += 1;
+  } while (used.has(candidate));
+  return candidate;
+}
+
+function normalizeAgentPayload(body: Record<string, unknown>, existingName?: string, generatedAgentCode?: string) {
   const name = String(body.name ?? existingName ?? "").trim();
   if (!name) throw new Error("Nama agen wajib diisi");
   const gender = body.gender == null || body.gender === "" ? null : String(body.gender).toUpperCase();
@@ -31,7 +50,7 @@ function normalizeAgentPayload(body: Record<string, unknown>, existingName?: str
   const dateOfBirth = body.dateOfBirth == null || body.dateOfBirth === "" ? null : String(body.dateOfBirth);
   if (dateOfBirth && !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) throw new Error("Tanggal lahir harus berformat YYYY-MM-DD");
   const requestedSlug = body.publicSlug == null || body.publicSlug === "" ? slugify(name) : slugify(String(body.publicSlug));
-  const agentCode = body.agentCode == null || body.agentCode === "" ? `AG-${shortCode()}` : String(body.agentCode).trim().toUpperCase().replace(/\s+/g, "-").slice(0, 40);
+  const agentCode = body.agentCode == null || body.agentCode === "" ? (generatedAgentCode || `AG-${shortCode()}`) : String(body.agentCode).trim().toUpperCase().replace(/\s+/g, "-").slice(0, 40);
   const referralCode = body.referralCode == null || body.referralCode === "" ? agentCode : String(body.referralCode).trim().toUpperCase().replace(/\s+/g, "").slice(0, 40);
   const commissionPercent = body.commissionPercent == null || body.commissionPercent === "" ? 0 : Number(body.commissionPercent);
   if (!Number.isFinite(commissionPercent) || commissionPercent < 0 || commissionPercent > 100) throw new Error("Komisi harus berada di antara 0 sampai 100 persen");
@@ -147,8 +166,9 @@ router.post("/", async (req, res) => {
       return res.status(403).json({ error: "Anda hanya dapat mengelola agen pada scope Anda" });
     }
     const id = crypto.randomUUID();
+    const generatedAgentCode = await generateAgentCode(requestedBranchId);
     const [data] = await db.insert(agents).values({
-      ...normalizeAgentPayload(req.body as Record<string, unknown>),
+      ...normalizeAgentPayload(req.body as Record<string, unknown>, undefined, generatedAgentCode),
       id,
       createdAt: new Date(),
     }).returning();
@@ -169,7 +189,9 @@ router.patch("/:id", async (req, res) => {
     if (!existing[0] || !(await agentInScope(existing[0].id, scope))) return res.status(404).json({ error: "Agent not found" });
     // Strip immutable fields to prevent accidental overwrite of PK / createdAt
     const { id: _id, createdAt: _createdAt, ...body } = req.body as Record<string, unknown>;
-    const updates = normalizeAgentPayload({ ...existing[0], ...body }, existing[0].name);
+    const mergedAgent = { ...existing[0], ...body };
+    const generatedAgentCode = mergedAgent.agentCode ? undefined : await generateAgentCode(mergedAgent.branchId ? String(mergedAgent.branchId) : null);
+    const updates = normalizeAgentPayload(mergedAgent, existing[0].name, generatedAgentCode);
     const [data] = await db.update(agents).set(updates).where(eq(agents.id, req.params.id)).returning();
     if (!data) return res.status(404).json({ error: "Agent not found" });
     res.json(data);
