@@ -1,39 +1,8 @@
 {
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/umroh-app run build",
+  "buildCommand": "pnpm run build:vercel",
   "outputDirectory": "artifacts/umroh-app/dist",
-  "functions": {
-    "api/[...all].mjs": {
-      "includeFiles": "artifacts/api-server/dist/**",
-      "memory": 1024,
-      "maxDuration": 30
-    }
-  },
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/[...all].mjs" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/document-reminder",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/follow-up",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/installment-reminder",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/booking-approval-expiry",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/retention",
-      "schedule": "30 2 * * *"
-    }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
