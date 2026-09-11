@@ -63,6 +63,7 @@ export const muthawifs = pgTable("muthawifs", {
 
 export const branches = pgTable("branches", {
   id: text("id").primaryKey(),
+  code: text("code"),
   name: text("name").notNull(),
   slug: text("slug"),
   address: text("address"),
@@ -81,6 +82,7 @@ export const branches = pgTable("branches", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
+  uniqueIndex("uq_branches_code").on(t.code),
   uniqueIndex("uq_branches_slug").on(t.slug),
 ]);
 

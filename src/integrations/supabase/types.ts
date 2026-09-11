@@ -160,41 +160,62 @@ export type Database = {
       }
       agents: {
         Row: {
+          address: string | null
+          agent_code: string | null
           branch_id: string | null
           commission_percent: number | null
           created_at: string | null
+          date_of_birth: string | null
           email: string | null
+          gender: string | null
           id: string
           is_active: boolean | null
           monthly_target: number | null
           name: string
           phone: string | null
+          public_description: string | null
+          public_page_enabled: boolean | null
+          public_slug: string | null
           referral_code: string | null
           user_id: string | null
         }
         Insert: {
+          address?: string | null
+          agent_code?: string | null
           branch_id?: string | null
           commission_percent?: number | null
           created_at?: string | null
+          date_of_birth?: string | null
           email?: string | null
+          gender?: string | null
           id?: string
           is_active?: boolean | null
           monthly_target?: number | null
           name: string
           phone?: string | null
+          public_description?: string | null
+          public_page_enabled?: boolean | null
+          public_slug?: string | null
           referral_code?: string | null
           user_id?: string | null
         }
         Update: {
+          address?: string | null
+          agent_code?: string | null
           branch_id?: string | null
           commission_percent?: number | null
           created_at?: string | null
+          date_of_birth?: string | null
           email?: string | null
+          gender?: string | null
           id?: string
           is_active?: boolean | null
           monthly_target?: number | null
           name?: string
           phone?: string | null
+          public_description?: string | null
+          public_page_enabled?: boolean | null
+          public_slug?: string | null
           referral_code?: string | null
           user_id?: string | null
         }
@@ -514,6 +535,7 @@ export type Database = {
       branches: {
         Row: {
           address: string | null
+          code: string | null
           city: string | null
           country: string | null
           created_at: string | null
@@ -534,6 +556,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          code?: string | null
           city?: string | null
           country?: string | null
           created_at?: string | null
@@ -554,6 +577,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          code?: string | null
           city?: string | null
           country?: string | null
           created_at?: string | null
@@ -2890,24 +2914,42 @@ export type Database = {
     Views: {
       agents_public: {
         Row: {
+          address: string | null
+          agent_code: string | null
           branch_id: string | null
           id: string | null
           is_active: boolean | null
           name: string | null
+          phone: string | null
+          public_description: string | null
+          public_page_enabled: boolean | null
+          public_slug: string | null
           referral_code: string | null
         }
         Insert: {
+          address?: string | null
+          agent_code?: string | null
           branch_id?: string | null
           id?: string | null
           is_active?: boolean | null
           name?: string | null
+          phone?: string | null
+          public_description?: string | null
+          public_page_enabled?: boolean | null
+          public_slug?: string | null
           referral_code?: string | null
         }
         Update: {
+          address?: string | null
+          agent_code?: string | null
           branch_id?: string | null
           id?: string | null
           is_active?: boolean | null
           name?: string | null
+          phone?: string | null
+          public_description?: string | null
+          public_page_enabled?: boolean | null
+          public_slug?: string | null
           referral_code?: string | null
         }
         Relationships: [

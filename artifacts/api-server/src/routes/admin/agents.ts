@@ -6,6 +6,54 @@ import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
 
+const ALLOWED_GENDERS = new Set(["L", "P"]);
+
+function slugify(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 72);
+}
+
+function shortCode() {
+  return crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
+}
+
+function normalizeAgentPayload(body: Record<string, unknown>, existingName?: string) {
+  const name = String(body.name ?? existingName ?? "").trim();
+  if (!name) throw new Error("Nama agen wajib diisi");
+  const gender = body.gender == null || body.gender === "" ? null : String(body.gender).toUpperCase();
+  if (gender && !ALLOWED_GENDERS.has(gender)) throw new Error("Gender harus L atau P");
+  const dateOfBirth = body.dateOfBirth == null || body.dateOfBirth === "" ? null : String(body.dateOfBirth);
+  if (dateOfBirth && !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) throw new Error("Tanggal lahir harus berformat YYYY-MM-DD");
+  const requestedSlug = body.publicSlug == null || body.publicSlug === "" ? slugify(name) : slugify(String(body.publicSlug));
+  const agentCode = body.agentCode == null || body.agentCode === "" ? `AG-${shortCode()}` : String(body.agentCode).trim().toUpperCase().replace(/\s+/g, "-").slice(0, 40);
+  const referralCode = body.referralCode == null || body.referralCode === "" ? agentCode : String(body.referralCode).trim().toUpperCase().replace(/\s+/g, "").slice(0, 40);
+  const commissionPercent = body.commissionPercent == null || body.commissionPercent === "" ? 0 : Number(body.commissionPercent);
+  if (!Number.isFinite(commissionPercent) || commissionPercent < 0 || commissionPercent > 100) throw new Error("Komisi harus berada di antara 0 sampai 100 persen");
+  return {
+    name,
+    agentCode: agentCode || null,
+    gender,
+    address: body.address == null || body.address === "" ? null : String(body.address).trim().slice(0, 500),
+    dateOfBirth,
+    phone: body.phone == null || body.phone === "" ? null : String(body.phone).trim().slice(0, 40),
+    email: body.email == null || body.email === "" ? null : String(body.email).trim().toLowerCase().slice(0, 160),
+    referralCode: referralCode || null,
+    publicSlug: requestedSlug || `agen-${shortCode().toLowerCase()}`,
+    publicDescription: body.publicDescription == null || body.publicDescription === "" ? null : String(body.publicDescription).trim().slice(0, 500),
+    publicPageEnabled: body.publicPageEnabled !== false,
+    branchId: body.branchId == null || body.branchId === "" ? null : String(body.branchId),
+    commissionPercent: commissionPercent.toFixed(2),
+    monthlyTarget: body.monthlyTarget == null || body.monthlyTarget === "" ? null : Number(body.monthlyTarget),
+    isActive: body.isActive !== false,
+    ...(body.userId ? { userId: String(body.userId) } : {}),
+  };
+}
+
 async function agentIdsForScope(scope: Awaited<ReturnType<typeof resolveUserScope>>) {
   if (scope.type === "global") return null;
   if (scope.type === "agent") return scope.agentId ? [scope.agentId] : [];
@@ -35,28 +83,31 @@ router.post("/", async (req, res) => {
   try {
     const id = crypto.randomUUID();
     const [data] = await db.insert(agents).values({
-      ...req.body,
+      ...normalizeAgentPayload(req.body as Record<string, unknown>),
       id,
       createdAt: new Date(),
     }).returning();
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to create agent" });
+    const message = err instanceof Error ? err.message : "Failed to create agent";
+    res.status(message.includes("wajib") || message.includes("harus") || message.includes("Komisi") ? 400 : 500).json({ error: message });
   }
 });
 
 router.patch("/:id", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
-    const existing = await db.select({ id: agents.id }).from(agents).where(eq(agents.id, req.params.id)).limit(1);
+    const existing = await db.select().from(agents).where(eq(agents.id, req.params.id)).limit(1);
     if (!existing[0] || !(await agentInScope(existing[0].id, scope))) return res.status(404).json({ error: "Agent not found" });
     // Strip immutable fields to prevent accidental overwrite of PK / createdAt
-    const { id: _id, createdAt: _createdAt, ...updates } = req.body;
+    const { id: _id, createdAt: _createdAt, ...body } = req.body as Record<string, unknown>;
+    const updates = normalizeAgentPayload({ ...existing[0], ...body }, existing[0].name);
     const [data] = await db.update(agents).set(updates).where(eq(agents.id, req.params.id)).returning();
     if (!data) return res.status(404).json({ error: "Agent not found" });
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to update agent" });
+    const message = err instanceof Error ? err.message : "Failed to update agent";
+    res.status(message.includes("wajib") || message.includes("harus") || message.includes("Komisi") ? 400 : 500).json({ error: message });
   }
 });
 

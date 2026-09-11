@@ -160,41 +160,62 @@ export type Database = {
       }
       agents: {
         Row: {
+          address: string | null
+          agent_code: string | null
           branch_id: string | null
           commission_percent: number | null
           created_at: string | null
+          date_of_birth: string | null
           email: string | null
+          gender: string | null
           id: string
           is_active: boolean | null
           monthly_target: number | null
           name: string
           phone: string | null
+          public_description: string | null
+          public_page_enabled: boolean | null
+          public_slug: string | null
           referral_code: string | null
           user_id: string | null
         }
         Insert: {
+          address?: string | null
+          agent_code?: string | null
           branch_id?: string | null
           commission_percent?: number | null
           created_at?: string | null
+          date_of_birth?: string | null
           email?: string | null
+          gender?: string | null
           id?: string
           is_active?: boolean | null
           monthly_target?: number | null
           name: string
           phone?: string | null
+          public_description?: string | null
+          public_page_enabled?: boolean | null
+          public_slug?: string | null
           referral_code?: string | null
           user_id?: string | null
         }
         Update: {
+          address?: string | null
+          agent_code?: string | null
           branch_id?: string | null
           commission_percent?: number | null
           created_at?: string | null
+          date_of_birth?: string | null
           email?: string | null
+          gender?: string | null
           id?: string
           is_active?: boolean | null
           monthly_target?: number | null
           name?: string
           phone?: string | null
+          public_description?: string | null
+          public_page_enabled?: boolean | null
+          public_slug?: string | null
           referral_code?: string | null
           user_id?: string | null
         }
@@ -514,6 +535,7 @@ export type Database = {
       branches: {
         Row: {
           address: string | null
+          code: string | null
           city: string | null
           country: string | null
           created_at: string | null
@@ -534,6 +556,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          code?: string | null
           city?: string | null
           country?: string | null
           created_at?: string | null
@@ -554,6 +577,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          code?: string | null
           city?: string | null
           country?: string | null
           created_at?: string | null
@@ -1545,7 +1569,6 @@ export type Database = {
           is_active: boolean | null
           name: string
           parent_id: string | null
-          show_extra_hotels: boolean | null
           sort_order: number | null
         }
         Insert: {
@@ -1555,7 +1578,6 @@ export type Database = {
           is_active?: boolean | null
           name: string
           parent_id?: string | null
-          show_extra_hotels?: boolean | null
           sort_order?: number | null
         }
         Update: {
@@ -1565,7 +1587,6 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           parent_id?: string | null
-          show_extra_hotels?: boolean | null
           sort_order?: number | null
         }
         Relationships: [
@@ -2782,6 +2803,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tenant_sites_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tenant_sites_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
@@ -2884,6 +2912,56 @@ export type Database = {
       }
     }
     Views: {
+      agents_public: {
+        Row: {
+          address: string | null
+          agent_code: string | null
+          branch_id: string | null
+          id: string | null
+          is_active: boolean | null
+          name: string | null
+          phone: string | null
+          public_description: string | null
+          public_page_enabled: boolean | null
+          public_slug: string | null
+          referral_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          agent_code?: string | null
+          branch_id?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          phone?: string | null
+          public_description?: string | null
+          public_page_enabled?: boolean | null
+          public_slug?: string | null
+          referral_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          agent_code?: string | null
+          branch_id?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          phone?: string | null
+          public_description?: string | null
+          public_page_enabled?: boolean | null
+          public_slug?: string | null
+          referral_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty_balances: {
         Row: {
           total_points: number | null
@@ -2910,6 +2988,10 @@ export type Database = {
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       normalize_phone_id: { Args: { raw: string }; Returns: string }
       to_idr: { Args: { _amount: number; _currency: string }; Returns: number }
+      user_owns_pilgrim: {
+        Args: { _pilgrim_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

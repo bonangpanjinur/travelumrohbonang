@@ -14,6 +14,7 @@ import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
 
 interface Branch {
   id: string;
+  code: string | null;
   name: string;
   slug: string | null;
   address: string | null;
@@ -33,6 +34,7 @@ interface Branch {
 }
 
 const empty = {
+  code: "",
   name: "",
   slug: "",
   address: "",
@@ -69,6 +71,7 @@ const AdminBranches = () => {
       const data = await apiFetch<any[]>("/api/admin/branches");
       setBranches((data || []).map((b) => ({
         id: b.id,
+        code: b.code,
         name: b.name,
         slug: b.slug,
         address: b.address,
@@ -97,6 +100,7 @@ const AdminBranches = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload: Record<string, unknown> = {
+      code: form.code.trim().toUpperCase() || null,
       name: form.name,
       slug: form.slug || null,
       address: form.address || null,
@@ -138,6 +142,7 @@ const AdminBranches = () => {
   const handleEdit = (b: Branch) => {
     setEditing(b);
     setForm({
+      code: b.code || "",
       name: b.name || "",
       slug: b.slug || "",
       address: b.address || "",
@@ -187,6 +192,10 @@ const AdminBranches = () => {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Kode Cabang</Label>
+                  <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().replace(/\s+/g, "-") })} placeholder="VINS" className="mt-1 font-mono" />
+                </div>
                 <div>
                   <Label>Nama Cabang *</Label>
                   <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className="mt-1" />
@@ -274,6 +283,7 @@ const AdminBranches = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Kode</TableHead>
                 <TableHead>Nama Cabang</TableHead>
                 <TableHead>Kota</TableHead>
                 <TableHead>Telepon</TableHead>
@@ -284,6 +294,7 @@ const AdminBranches = () => {
             <TableBody>
               {paginatedItems.map((b) => (
                 <TableRow key={b.id}>
+                  <TableCell className="font-mono text-xs">{b.code || "-"}</TableCell>
                   <TableCell className="font-semibold">{b.name}</TableCell>
                   <TableCell>{b.city || "-"}</TableCell>
                   <TableCell>{b.phone || "-"}</TableCell>

@@ -1,5 +1,5 @@
 import {
-  pgTable, pgEnum, text, integer, boolean, numeric, timestamp, uuid,
+  pgTable, pgEnum, text, integer, boolean, numeric, timestamp, date, uuid,
   index, uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -20,16 +20,25 @@ export const agents = pgTable("agents", {
   id: text("id").primaryKey(),
   userId: text("user_id"),                 // references auth.users — no local FK
   branchId: text("branch_id").references(() => branches.id, { onDelete: "set null" }),
+  agentCode: text("agent_code"),
   name: text("name").notNull(),
+  gender: text("gender"),
+  address: text("address"),
+  dateOfBirth: date("date_of_birth"),
   phone: text("phone"),
   email: text("email"),
   referralCode: text("referral_code"),
+  publicSlug: text("public_slug"),
+  publicDescription: text("public_description"),
+  publicPageEnabled: boolean("public_page_enabled").notNull().default(true),
   commissionPercent: numeric("commission_percent"),
   monthlyTarget: integer("monthly_target"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   uniqueIndex("idx_agents_referral_code").on(t.referralCode),
+  uniqueIndex("uq_agents_agent_code").on(t.agentCode),
+  uniqueIndex("uq_agents_public_slug").on(t.publicSlug),
   index("idx_agents_branch_id").on(t.branchId),
   index("idx_agents_user_id").on(t.userId),
 ]);

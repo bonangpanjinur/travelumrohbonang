@@ -18,6 +18,7 @@ import wishlistsRouter from "./wishlists";
 import pilgrimTestimonialsRouter from "./pilgrim-testimonials";
 import paymentGatewayWebhooksRouter from "./payment-gateway-webhooks";
 import agentRouter from "./agent";
+import publicAgentsRouter from "./public-agents";
 import muthawifRouter from "./muthawif";
 import savingsRouter from "./savings";
 import cronRouter from "./admin/cron";
@@ -37,6 +38,10 @@ router.use("/track", trackRouter);
 
 // Public CMS content (blog, pages, gallery, settings, etc.)
 router.use("/cms", cmsRouter);
+
+// Public agent directory pages, used as QR destinations. This is deliberately
+// mounted outside the authenticated /api/agent portal route.
+router.use("/agents", publicAgentsRouter);
 
 // Misc public helpers (currencies, tenant-site, payment-settings)
 // Mounted at both root (legacy) and /misc (new canonical) so existing callers
