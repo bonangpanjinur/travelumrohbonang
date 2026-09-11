@@ -2,26 +2,16 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 export type HealthStatus = "checking" | "online" | "offline" | "recovering";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const SUPABASE_ANON_KEY = (
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-  || import.meta.env.VITE_SUPABASE_ANON_KEY
-) as string | undefined;
 const CHECK_INTERVAL_MS = 30_000;  // re-check every 30 s while visible
 const TIMEOUT_MS = 6_000;          // fail-fast timeout per check
 const RECOVER_HIDE_DELAY_MS = 4_000; // how long to show the "restored" banner
 
 /** True when we have both a real Supabase URL and anon key to ping with. */
 function isConfigured(): boolean {
-  return (
-    !!SUPABASE_URL &&
-    !SUPABASE_URL.includes("placeholder") &&
-    !!SUPABASE_ANON_KEY &&
-    !SUPABASE_ANON_KEY.includes("placeholder")
-  );
+  return true;
 }
 
-/** Ping the Supabase Auth health endpoint; unlike REST root it does not need a table API key. */
+/** Check the application/backend instead of calling Supabase directly from the browser. */
 async function pingSupabase(): Promise<boolean> {
   if (!isConfigured()) return false;
 
@@ -29,7 +19,7 @@ async function pingSupabase(): Promise<boolean> {
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/health`, {
+    const res = await fetch("/api/healthz", {
       method: "GET",
       signal: controller.signal,
     });

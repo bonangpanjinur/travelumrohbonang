@@ -89,14 +89,12 @@ const AdminBranches = () => {
 
   useEffect(() => {
     fetchBranches();
-    fetch("https://wilayah.id/api/provinces.json").then((response) => response.json()).then((result) => setProvinces(result.data || [])).catch(() => toast({ title: "Daftar provinsi gagal dimuat", variant: "destructive" }));
+    apiFetch<{ data: { code: string; name: string }[] }>("/api/regions/provinces").then((result) => setProvinces(result.data || [])).catch(() => toast({ title: "Daftar provinsi gagal dimuat", variant: "destructive" }));
   }, []);
 
   const fetchRegions = async (level: "regencies" | "districts" | "villages", code: string) => {
     if (!code) return [];
-    const response = await fetch(`https://wilayah.id/api/${level}/${code}.json`);
-    if (!response.ok) throw new Error("Wilayah gagal dimuat");
-    const result = await response.json();
+    const result = await apiFetch<{ data: { code: string; name: string }[] }>(`/api/regions/${level}/${encodeURIComponent(code)}`);
     return (result.data || []) as { code: string; name: string }[];
   };
 
