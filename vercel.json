@@ -1,8 +1,13 @@
 {
   "framework": "vite",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm run build:vercel",
+  "buildCommand": "pnpm --filter @workspace/api-server run build && pnpm run build:vercel",
   "outputDirectory": "artifacts/umroh-app/dist",
+  "functions": {
+    "api/[...all].mjs": {
+      "includeFiles": "artifacts/api-server/dist/**"
+    }
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
