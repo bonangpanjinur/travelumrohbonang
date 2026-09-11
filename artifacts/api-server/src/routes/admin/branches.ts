@@ -4,8 +4,23 @@ import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
 
-function branchCode() {
-  return `CB-${crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase()}`;
+function codeFromBranchName(name: string) {
+  const words = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toUpperCase().match(/[A-Z0-9]+/g) || [];
+  const initials = words.length > 1 ? words.map((word) => word[0]).join("") : (words[0] || "CABANG");
+  return initials.slice(0, 8) || "CABANG";
+}
+
+async function generateBranchCode(name: string, requestedCode?: unknown, currentId?: string) {
+  const manualCode = String(requestedCode ?? "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
+  const base = manualCode || codeFromBranchName(name);
+  let candidate = base;
+  let suffix = 2;
+  while (true) {
+    const [existing] = await db.select({ id: branches.id }).from(branches).where(eq(branches.code, candidate)).limit(1);
+    if (!existing || existing.id === currentId) return candidate;
+    candidate = `${base.slice(0, Math.max(1, 20 - String(suffix).length))}${suffix}`;
+    suffix += 1;
+  }
 }
 
 async function branchIdsForScope(scope: Awaited<ReturnType<typeof resolveUserScope>>) {
@@ -38,7 +53,7 @@ router.post("/", async (req, res) => {
     const id = crypto.randomUUID();
     const [data] = await db.insert(branches).values({
       ...req.body,
-      code: req.body?.code?.trim() || branchCode(),
+      code: await generateBranchCode(String(req.body?.name || "Cabang"), req.body?.code),
       id,
       createdAt: new Date(),
     }).returning();
@@ -56,8 +71,11 @@ router.patch("/:id", async (req, res) => {
     if (scope.type !== "global" && req.user?.role !== "branch_manager") {
       return res.status(403).json({ error: "Staf hanya dapat melihat data cabang" });
     }
-    const { id: _id, code: _code, isActive: _isActive, ...managerUpdates } = req.body as Record<string, unknown>;
-    const updates = scope.type === "global" ? req.body : managerUpdates;
+    const { id: _id, isActive: _isActive, ...requestedUpdates } = req.body as Record<string, unknown>;
+    const { code: _code, ...managerUpdates } = requestedUpdates;
+    const updates = scope.type === "global"
+      ? { ...requestedUpdates, code: await generateBranchCode(String(requestedUpdates.name || "Cabang"), requestedUpdates.code, req.params.id) }
+      : managerUpdates;
     const [data] = await db.update(branches).set(updates).where(eq(branches.id, req.params.id)).returning();
     if (!data) return res.status(404).json({ error: "Branch not found" });
     res.json(data);
