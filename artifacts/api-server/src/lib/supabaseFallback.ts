@@ -122,3 +122,84 @@ export async function sbGetProfile(userId: string | null, userToken?: string) {
   );
   return rows?.[0] ?? null;
 }
+
+/**
+ * List bookings directly from Supabase for serverless deployments where the
+ * optional Drizzle DATABASE_URL is not configured. RLS still applies because
+ * the caller's JWT is forwarded in Authorization.
+ */
+export async function sbListAdminBookings(
+  params: {
+    status?: string;
+    search?: string;
+    branchId?: string;
+    packageId?: string;
+    limit?: number;
+    offset?: number;
+  },
+  userToken?: string,
+) {
+  const query = new URLSearchParams({
+    select: [
+      "id,booking_code,user_id,package_id,departure_id,branch_id,status,total_price,currency,payment_scheme,notes,created_at,pic_type,pic_id,pic_name,pic_phone,pic_email,pemesan_name,pemesan_phone,pemesan_email",
+      "package:packages(title,slug)",
+      "departure:package_departures(departure_date)",
+      "profile:profiles(name,email,phone)",
+      "branch:branches(name)",
+      "booking_pilgrims(name,created_at)",
+      "payments:payments(amount,status)",
+    ].join(","),
+    order: "created_at.desc",
+    limit: String(Math.min(Math.max(params.limit ?? 20, 1), 500)),
+    offset: String(Math.max(params.offset ?? 0, 0)),
+  });
+  if (params.status && params.status !== "all") query.set("status", `eq.${params.status}`);
+  if (params.branchId && params.branchId !== "__all__") query.set("branch_id", params.branchId === "__none__" ? "is.null" : `eq.${params.branchId}`);
+  if (params.packageId && params.packageId !== "__all__") query.set("package_id", `eq.${params.packageId}`);
+  if (params.search?.trim()) {
+    const term = params.search.trim().replace(/[*(),]/g, "");
+    query.set("or", `(booking_code.ilike.*${term}*,pic_name.ilike.*${term}*,pemesan_name.ilike.*${term}*)`);
+  }
+
+  const rows = await sbRest<any[]>(`/rest/v1/bookings?${query.toString()}`, userToken);
+  if (!rows) return null;
+  const data = rows.map((row) => {
+    const payments = Array.isArray(row.payments) ? row.payments : [];
+    const paid = payments.filter((payment: any) => payment.status !== "voided")
+      .reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0);
+    const pilgrims = Array.isArray(row.booking_pilgrims) ? row.booking_pilgrims : [];
+    return {
+      id: row.id,
+      bookingCode: row.booking_code,
+      userId: row.user_id,
+      packageId: row.package_id,
+      departureId: row.departure_id,
+      branchId: row.branch_id,
+      status: row.status,
+      totalPrice: row.total_price,
+      currency: row.currency,
+      paymentScheme: row.payment_scheme,
+      notes: row.notes,
+      createdAt: row.created_at,
+      picType: row.pic_type,
+      picId: row.pic_id,
+      picName: row.pic_name,
+      picPhone: row.pic_phone,
+      picEmail: row.pic_email,
+      pemesanName: row.pemesan_name ?? row.pic_name ?? row.profile?.name,
+      pemesanPhone: row.pemesan_phone ?? row.pic_phone ?? row.profile?.phone,
+      pemesanEmail: row.pemesan_email,
+      packageTitle: row.package?.title,
+      packageSlug: row.package?.slug,
+      departureDate: row.departure?.departure_date,
+      userName: row.profile?.name,
+      userEmail: row.profile?.email,
+      branchName: row.branch?.name,
+      pilgrimsCount: pilgrims.length,
+      firstJamaahName: pilgrims[0]?.name,
+      paymentStatus: paid >= Number(row.total_price || 0) && Number(row.total_price || 0) > 0
+        ? "paid" : paid > 0 ? "partial" : "unpaid",
+    };
+  });
+  return { data, total: data.length };
+}

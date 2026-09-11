@@ -26,7 +26,7 @@ import {
   sql,
 } from "@workspace/db";
 import { generatePassportRecommendationPdf } from "../../lib/pdf/passportRecommendation";
-import { sbGetBooking, sbGetBookingByCode, sbGetPilgrims, sbGetPayments, sbGetPackage, sbGetDeparture, sbGetBranch, sbGetProfile } from "../../lib/supabaseFallback";
+import { sbGetBooking, sbGetBookingByCode, sbGetPilgrims, sbGetPayments, sbGetPackage, sbGetDeparture, sbGetBranch, sbGetProfile, sbListAdminBookings } from "../../lib/supabaseFallback";
 import {
   BookingListResponse,
   BookingWithDetailsSchema,
@@ -263,6 +263,22 @@ router.get("/", async (req, res) => {
     const total = Number(((countResult as any).rows ?? countResult)[0]?.count ?? 0);
     res.json({ data, total });
   } catch (e) {
+    const authHeader = req.headers.authorization;
+    const userToken = typeof authHeader === "string" && authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : undefined;
+    const fallback = await sbListAdminBookings({
+      status: typeof req.query.status === "string" ? req.query.status : undefined,
+      search: typeof req.query.search === "string" ? req.query.search : undefined,
+      branchId: typeof req.query.branchId === "string" ? req.query.branchId : undefined,
+      packageId: typeof req.query.packageId === "string" ? req.query.packageId : undefined,
+      limit: Number(req.query.limit) || 20,
+      offset: Number(req.query.offset) || 0,
+    }, userToken);
+    if (fallback) {
+      res.json(fallback);
+      return;
+    }
     sendAdminError(res, "GET /api/admin/bookings", e);
   }
 });
