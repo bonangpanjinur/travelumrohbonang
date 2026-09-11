@@ -24,6 +24,12 @@ interface Branch {
   email: string | null;
   city: string | null;
   region: string | null;
+  province_code: string | null;
+  regency_code: string | null;
+  district: string | null;
+  district_code: string | null;
+  village: string | null;
+  village_code: string | null;
   postal_code: string | null;
   country: string | null;
   latitude: number | null;
@@ -44,6 +50,12 @@ const empty = {
   email: "",
   city: "",
   region: "",
+  province_code: "",
+  regency_code: "",
+  district: "",
+  district_code: "",
+  village: "",
+  village_code: "",
   postal_code: "",
   country: "ID",
   latitude: "",
@@ -66,11 +78,38 @@ const AdminBranches = () => {
   const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
+  const [provinces, setProvinces] = useState<{ code: string; name: string }[]>([]);
+  const [regencies, setRegencies] = useState<{ code: string; name: string }[]>([]);
+  const [districts, setDistricts] = useState<{ code: string; name: string }[]>([]);
+  const [villages, setVillages] = useState<{ code: string; name: string }[]>([]);
+  const [regionLoading, setRegionLoading] = useState(false);
   const { page, setPage, totalPages, totalCount, paginatedItems, pageSize } = useAdminPagination(branches);
 
   useEffect(() => {
     fetchBranches();
+    fetch("https://wilayah.id/api/provinces.json").then((response) => response.json()).then((result) => setProvinces(result.data || [])).catch(() => toast({ title: "Daftar provinsi gagal dimuat", variant: "destructive" }));
   }, []);
+
+  const fetchRegions = async (level: "regencies" | "districts" | "villages", code: string) => {
+    if (!code) return [];
+    const response = await fetch(`https://wilayah.id/api/${level}/${code}.json`);
+    if (!response.ok) throw new Error("Wilayah gagal dimuat");
+    const result = await response.json();
+    return (result.data || []) as { code: string; name: string }[];
+  };
+
+  useEffect(() => {
+    if (!form.province_code) { setRegencies([]); setDistricts([]); setVillages([]); return; }
+    setRegionLoading(true); fetchRegions("regencies", form.province_code).then(setRegencies).catch(() => setRegencies([])).finally(() => setRegionLoading(false));
+  }, [form.province_code]);
+  useEffect(() => {
+    if (!form.regency_code) { setDistricts([]); setVillages([]); return; }
+    fetchRegions("districts", form.regency_code).then(setDistricts).catch(() => setDistricts([]));
+  }, [form.regency_code]);
+  useEffect(() => {
+    if (!form.district_code) { setVillages([]); return; }
+    fetchRegions("villages", form.district_code).then(setVillages).catch(() => setVillages([]));
+  }, [form.district_code]);
 
   const fetchBranches = async () => {
     try {
@@ -85,6 +124,12 @@ const AdminBranches = () => {
         email: b.email,
         city: b.city,
         region: b.region,
+        province_code: b.provinceCode || "",
+        regency_code: b.regencyCode || "",
+        district: b.district || "",
+        district_code: b.districtCode || "",
+        village: b.village || "",
+        village_code: b.villageCode || "",
         postal_code: b.postalCode,
         country: b.country,
         latitude: b.latitude,
@@ -126,6 +171,12 @@ const AdminBranches = () => {
       email: form.email.trim().toLowerCase() || null,
       city: form.city.trim() || null,
       region: form.region.trim() || null,
+      provinceCode: form.province_code || null,
+      regencyCode: form.regency_code || null,
+      district: form.district.trim() || null,
+      districtCode: form.district_code || null,
+      village: form.village.trim() || null,
+      villageCode: form.village_code || null,
       postalCode: form.postal_code.trim() || null,
       country: form.country || "ID",
       latitude: form.latitude ? parseFloat(form.latitude) : null,
@@ -168,6 +219,12 @@ const AdminBranches = () => {
       email: b.email || "",
       city: b.city || "",
       region: b.region || "",
+      province_code: b.province_code || "",
+      regency_code: b.regency_code || "",
+      district: b.district || "",
+      district_code: b.district_code || "",
+      village: b.village || "",
+      village_code: b.village_code || "",
       postal_code: b.postal_code || "",
       country: b.country || "ID",
       latitude: b.latitude != null ? String(b.latitude) : "",
@@ -261,7 +318,7 @@ const AdminBranches = () => {
               <section className="space-y-3 border-t pt-4">
                 <div className="flex items-center gap-2 border-b pb-2 text-sm font-semibold text-primary"><MapPin className="h-4 w-4" />Alamat Lengkap</div>
                 <div><Label>Alamat Jalan</Label><Textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Nama jalan, nomor, gedung, lantai" rows={2} className="mt-1" /></div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3"><div><Label>Kota/Kabupaten</Label><Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Bandung" className="mt-1" /></div><div><Label>Provinsi</Label><Input value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Jawa Barat" className="mt-1" /></div><div><Label>Kode Pos</Label><Input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} placeholder="40111" inputMode="numeric" className="mt-1" /></div></div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2"><div><Label>Provinsi</Label><select value={form.province_code} onChange={(e) => { const item = provinces.find((option) => option.code === e.target.value); setForm({ ...form, province_code: e.target.value, region: item?.name || "", regency_code: "", city: "", district_code: "", district: "", village_code: "", village: "" }); }} className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="">Pilih provinsi</option>{provinces.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}</select></div><div><Label>Kabupaten/Kota</Label><select value={form.regency_code} disabled={!form.province_code || regionLoading} onChange={(e) => { const item = regencies.find((option) => option.code === e.target.value); setForm({ ...form, regency_code: e.target.value, city: item?.name || "", district_code: "", district: "", village_code: "", village: "" }); }} className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"><option value="">{regionLoading ? "Memuat..." : "Pilih kabupaten/kota"}</option>{regencies.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}</select></div><div><Label>Kecamatan</Label><select value={form.district_code} disabled={!form.regency_code} onChange={(e) => { const item = districts.find((option) => option.code === e.target.value); setForm({ ...form, district_code: e.target.value, district: item?.name || "", village_code: "", village: "" }); }} className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"><option value="">Pilih kecamatan</option>{districts.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}</select></div><div><Label>Kelurahan/Desa</Label><select value={form.village_code} disabled={!form.district_code} onChange={(e) => { const item = villages.find((option) => option.code === e.target.value); setForm({ ...form, village_code: e.target.value, village: item?.name || "" }); }} className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"><option value="">Pilih kelurahan/desa</option>{villages.map((option) => <option key={option.code} value={option.code}>{option.name}</option>)}</select></div><div><Label>Kode Pos</Label><Input value={form.postal_code} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} placeholder="40111" inputMode="numeric" className="mt-1" /></div></div>
                 <div><Label>Negara</Label><Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value.toUpperCase().slice(0, 2) })} placeholder="ID" maxLength={2} className="mt-1 max-w-[160px]" /></div>
               </section>
               <section className="space-y-3 border-t pt-4">
