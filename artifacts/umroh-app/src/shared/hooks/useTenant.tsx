@@ -49,10 +49,12 @@ export const useTenant = () => useContext(TenantContext);
 function getSubdomain(): string | null {
   const hostname = window.location.hostname;
   
-  // localhost, IP, or Replit dev domains - no tenant
+  // localhost, IP, Vercel preview/production domains, or Replit dev domains
+  // are the main app by default, not tenant subdomains.
   if (
     hostname === "localhost" ||
     /^\d+\.\d+\.\d+\.\d+$/.test(hostname) ||
+    hostname.endsWith(".vercel.app") ||
     hostname.endsWith(".replit.dev") ||
     hostname.endsWith(".repl.co") ||
     hostname.endsWith(".replit.app")
