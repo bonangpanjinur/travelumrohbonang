@@ -13,12 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/shared/components/ui/badge";
 import { Switch } from "@/shared/components/ui/switch";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Pencil, Trash2, Users, Building2, Percent, Phone, Search, Download, QrCode, ExternalLink, CalendarDays, Copy } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Building2, Percent, Phone, Search, Download, QrCode, ExternalLink, CalendarDays, Copy, FileBadge } from "lucide-react";
 import { exportToCsv } from "@/shared/lib/exportCsv";
 import { normalizePhone } from "@/shared/lib/phone";
 import AdminPagination from "@/features/admin/components/AdminPagination";
 import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
+import AgentIdCardDialog from "@/features/admin/components/AgentIdCardDialog";
 import { useDeleteConfirm } from "@/features/admin/hooks/useDeleteConfirm";
 
 interface Branch {
@@ -104,6 +105,7 @@ const AdminAgents = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Agent | null>(null);
   const [qrAgent, setQrAgent] = useState<Agent | null>(null);
+  const [idCardAgent, setIdCardAgent] = useState<Agent | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBranch, setFilterBranch] = useState("all");
   const { toast } = useToast();
@@ -396,13 +398,14 @@ const AdminAgents = () => {
           <TableCell>{agent.branch ? <Badge variant="outline" className="font-normal"><Building2 className="w-3 h-3 mr-1" />{agent.branch.code ? `${agent.branch.code} — ` : ""}{agent.branch.name}</Badge> : <span className="text-muted-foreground">Pusat</span>}</TableCell>
           <TableCell><div className="flex items-center gap-2">{agent.publicPageEnabled && agent.isActive && agent.publicSlug ? <><button type="button" onClick={() => setQrAgent(agent)} className="rounded-lg bg-primary/10 p-1.5 text-primary hover:bg-primary/20" title="Tampilkan QR"><QrCode className="w-4 h-4" /></button><a href={`/agen/${agent.publicSlug}`} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline" title="Buka halaman publik"><ExternalLink className="w-3.5 h-3.5" /></a></> : <Badge variant="secondary" className="text-[10px]">Tidak terbit</Badge>}</div></TableCell>
           <TableCell className="text-center"><Switch checked={agent.isActive} onCheckedChange={() => handleToggleActive(agent)} /></TableCell>
-          <TableCell className="text-right whitespace-nowrap"><Button variant="ghost" size="icon" onClick={() => handleEdit(agent)} title="Edit"><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" onClick={() => requestDelete(agent.id)} title="Hapus"><Trash2 className="w-4 h-4 text-destructive" /></Button></TableCell>
+          <TableCell className="text-right whitespace-nowrap"><Button variant="ghost" size="icon" onClick={() => setIdCardAgent(agent)} title="Preview ID Card"><FileBadge className="w-4 h-4 text-primary" /></Button><Button variant="ghost" size="icon" onClick={() => handleEdit(agent)} title="Edit"><Pencil className="w-4 h-4" /></Button><Button variant="ghost" size="icon" onClick={() => requestDelete(agent.id)} title="Hapus"><Trash2 className="w-4 h-4 text-destructive" /></Button></TableCell>
         </TableRow>)}</TableBody></Table></div></div><AdminPagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setPage} />
       </>}
 
       <Dialog open={!!qrAgent} onOpenChange={(open) => { if (!open) setQrAgent(null); }}>
         <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>QR Halaman Agen</DialogTitle><DialogDescription>Scan QR ini untuk membuka halaman publik agen di website.</DialogDescription></DialogHeader>{qrAgent && <div className="flex flex-col items-center gap-4"><div className="bg-white p-5 rounded-2xl border shadow-sm"><QRCodeSVG value={publicUrl(qrAgent)} size={240} level="H" includeMargin /></div><div className="text-center"><p className="font-semibold">{qrAgent.name}</p><p className="text-xs text-muted-foreground break-all mt-1">{publicUrl(qrAgent)}</p></div><div className="flex flex-wrap justify-center gap-2"><Button variant="outline" onClick={() => copyPublicUrl(qrAgent)}><Copy className="w-4 h-4 mr-2" /> Salin Link</Button><Button className="gradient-gold text-primary" onClick={() => downloadQr(qrAgent)}><Download className="w-4 h-4 mr-2" /> Download QR</Button><Button variant="outline" onClick={() => window.open(publicUrl(qrAgent), "_blank")}><ExternalLink className="w-4 h-4 mr-2" /> Buka Halaman</Button></div></div>}</DialogContent>
       </Dialog>
+      <AgentIdCardDialog agent={idCardAgent} onOpenChange={(open) => { if (!open) setIdCardAgent(null); }} />
     </div>
   );
 };
