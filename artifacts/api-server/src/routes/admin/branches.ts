@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db, agents, branches, eq } from "@workspace/db";
+import { sql } from "drizzle-orm";
 import { resolveUserScope } from "../../lib/scopeGuard";
 
 const router = Router();
@@ -31,15 +32,58 @@ async function branchIdsForScope(scope: Awaited<ReturnType<typeof resolveUserSco
   return agent?.branchId ? [agent.branchId] : [];
 }
 
+async function selectLegacyBranches(ids: string[] | null) {
+  const rows = await db.execute(sql`
+    SELECT id, code, name, slug, address, phone, email, city, region,
+      postal_code, country, latitude, longitude, opening_hours,
+      image_url, map_url, description, is_active, created_at
+    FROM branches
+    ${ids === null ? sql`` : sql`WHERE id = ANY(${ids}::text[])`}
+  `);
+  return (rows as any[]).map((row) => ({
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    slug: row.slug,
+    address: row.address,
+    phone: row.phone,
+    email: row.email,
+    city: row.city,
+    region: row.region,
+    provinceCode: null,
+    regencyCode: null,
+    district: null,
+    districtCode: null,
+    village: null,
+    villageCode: null,
+    postalCode: row.postal_code,
+    country: row.country,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    openingHours: row.opening_hours,
+    imageUrl: row.image_url,
+    mapUrl: row.map_url,
+    description: row.description,
+    isActive: row.is_active,
+    createdAt: row.created_at,
+  }));
+}
+
 router.get("/", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
     const ids = await branchIdsForScope(scope);
-    const data = ids === null
-      ? await db.select().from(branches)
-      : ids.length
-        ? await db.select().from(branches).where(eq(branches.id, ids[0]))
-        : [];
+    let data;
+    try {
+      data = ids === null
+        ? await db.select().from(branches)
+        : ids.length
+          ? await db.select().from(branches).where(eq(branches.id, ids[0]))
+          : [];
+    } catch (queryError) {
+      console.error("[admin/branches] current schema query failed; using legacy-compatible read:", queryError);
+      data = await selectLegacyBranches(ids);
+    }
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch branches" });
