@@ -7,4 +7,4 @@ For the agent ID card, avoid relying on CSS `clip-path` for decorative shapes wh
 
 **Why:** The PDF and preview can use the same React data and nominal DOM structure yet still differ at rasterization time when html2canvas does not support a CSS feature equivalently.
 
-**How to apply:** Represent geometric card decorations as inline SVG polygons or another capture-safe graphic primitive, and enable native foreign-object rendering when capturing. Keep PDF and print downstream of the same captured front/back images.
+**How to apply:** Represent geometric card decorations as inline SVG polygons or another capture-safe graphic primitive, but keep html2canvas on its standard renderer in this deployment because `foreignObjectRendering` can produce a completely white canvas. Keep PDF and print downstream of the same captured front/back images.

@@ -23,4 +23,4 @@
 - [CMS metadata database source](cms-metadata-db-source.md) — title, favicon, and SEO tags must share the server CMS settings endpoint as their database source.
 - [SQL migration location](sql-migration-location.md) — ALL SQL files (migrations, seeds, patches) go to `supabase/migrations/` only; naming: `YYYYMMDDNNNNNN_description.sql`.
 - [Workspace pnpm alignment](workspace-pnpm-alignment.md) — packageManager must match the pnpm version available in the Replit runtime or workflows loop on failed self-install.
-- [ID card capture rendering](id-card-capture-rendering.md) — html2canvas can flatten CSS clip-path decorations; use inline SVG polygons plus native foreign-object rendering for preview parity.
+- [ID card capture rendering](id-card-capture-rendering.md) — html2canvas can flatten CSS clip-path decorations; use inline SVG polygons with standard rendering for preview parity.

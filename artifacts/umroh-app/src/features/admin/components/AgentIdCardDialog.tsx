@@ -529,7 +529,6 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
           scale: 3,
           useCORS: true,
           allowTaint: false,
-          foreignObjectRendering: true,
           logging: false,
         });
         return canvas.toDataURL("image/png");
