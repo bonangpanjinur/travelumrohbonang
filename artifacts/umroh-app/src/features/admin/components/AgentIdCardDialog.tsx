@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import QRCode from "qrcode";
 import { QRCodeSVG } from "qrcode.react";
 import html2canvas from "html2canvas";
-import { GState, jsPDF } from "jspdf";
+import { jsPDF } from "jspdf";
 import {
   BadgeCheck,
   Download,
@@ -109,9 +108,12 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
   const branchName = agent.branch?.name || "Kantor Pusat";
   const branchCode = agent.branch?.code ? `${agent.branch.code} · ` : "";
   const url = publicUrlFor(agent);
-  const cardTitle = "ID CARD AGEN";
   const companyName = branding.company_name || defaultBranding.company_name;
 
+  /*
+   * Legacy coordinate-based PDF generator kept disabled for reference while
+   * existing generated files are compared. Download and print must use the
+   * preview capture below so there is only one visual source of truth.
   const generatePdfLegacy = async () => {
     setGenerating(true);
     try {
@@ -387,7 +389,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
     } finally {
       setGenerating(false);
     }
-  };
+  }; */
 
   /**
    * Capture the exact card that is rendered in the preview.
@@ -589,6 +591,8 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
   };
 
   const printCards = async () => {
+    // Open synchronously from the click handler so popup blockers do not
+    // prevent the print flow while the preview images are being captured.
     const printWindow = window.open("", "_blank", "width=900,height=1100");
     if (!printWindow) {
       toast({
@@ -598,58 +602,59 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       });
       return;
     }
-    let qrData = "";
-    if (url) {
-      try {
-        qrData = await QRCode.toDataURL(url, {
-          width: 420,
-          margin: 1,
-          errorCorrectionLevel: "H",
-        });
-      } catch {
-        toast({
-          title: "QR tidak dapat dibuat",
-          description: "Kartu tetap dapat dicetak tanpa QR.",
-          variant: "destructive",
-        });
-      }
-    }
-    const escapeHtml = (value: string) =>
-      value.replace(
-        /[&<>'"]/g,
-        (character) =>
-          ({
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            "'": "&#39;",
-            '"': "&quot;",
-          })[character] || character,
+
+    setGenerating(true);
+    try {
+      const { frontImage, backImage } = await captureCards();
+      const title = `ID Card Agen - ${agent.name.replace(/[<>]/g, "")}`;
+      printWindow.document.write(`<!doctype html>
+        <html>
+          <head>
+            <title>${title}</title>
+            <style>
+              @page { size: ${CARD_WIDTH}mm ${CARD_HEIGHT}mm; margin: 0; }
+              html, body { margin: 0; padding: 0; background: #fff; }
+              .card {
+                width: ${CARD_WIDTH}mm;
+                height: ${CARD_HEIGHT}mm;
+                page-break-after: always;
+                overflow: hidden;
+              }
+              .card:last-child { page-break-after: auto; }
+              img { display: block; width: 100%; height: 100%; }
+            </style>
+          </head>
+          <body>
+            <div class="card"><img src="${frontImage}" alt="Sisi depan ID card agen" /></div>
+            <div class="card"><img src="${backImage}" alt="Sisi belakang ID card agen" /></div>
+          </body>
+        </html>`);
+      printWindow.document.close();
+      printWindow.focus();
+      await Promise.all(
+        Array.from(printWindow.document.images).map(
+          (image) =>
+            image.complete
+              ? Promise.resolve()
+              : new Promise<void>((resolve) => {
+                  image.onload = () => resolve();
+                  image.onerror = () => resolve();
+                }),
+        ),
       );
-    const photo = agent.photoUrl
-      ? `<img class="photo" src="${escapeHtml(agent.photoUrl)}" alt="Foto agen" />`
-      : `<div class="photo placeholder">${escapeHtml(agent.name.charAt(0).toUpperCase())}</div>`;
-    const logo = branding.logo_url
-      ? `<img class="logo" src="${escapeHtml(branding.logo_url)}" alt="${escapeHtml(companyName)}" />`
-      : "";
-    printWindow.document
-      .write(`<!doctype html><html><head><title>ID Card Agen - ${escapeHtml(agent.name)}</title><style>
-      @page{size:53.98mm 85.6mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;font-family:Arial,sans-serif;color:#075c39}.card{position:relative;width:53.98mm;height:85.6mm;overflow:hidden;background:#f8faf9;page-break-after:always;padding:7mm 5mm;text-align:center}.card:last-child{page-break-after:auto}.card:first-child{background:#f8faf9;color:#075c39}.card:first-child .name,.card:first-child .id,.card:first-child .branch{color:#075c39}.back{background:#f8faf9}.corner{position:absolute;z-index:0}.banner{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.12;z-index:0}.top-dark{left:0;top:0;width:25mm;height:18mm;background:#075c39;clip-path:polygon(0 0,100% 0,0 100%)}.top-lime{right:0;top:0;width:54mm;height:11mm;background:#83cc4b;clip-path:polygon(34% 0,100% 0,100% 44%,0 100%)}.bottom-dark{right:0;bottom:0;width:25mm;height:17mm;background:#075c39;clip-path:polygon(100% 0,100% 100%,0 100%)}.bottom-lime{left:0;bottom:0;width:54mm;height:10mm;background:#83cc4b;clip-path:polygon(0 56%,100% 0,100% 100%,0 100%)}.content{position:relative;z-index:1}.brand{font-size:5pt;font-weight:600;letter-spacing:.4px}.logo{display:block;width:24mm;height:14mm;object-fit:contain;margin:0 auto 1mm}.sub{font-size:5pt;letter-spacing:1px}.title{margin-top:2mm;font-size:6pt;font-weight:700}.photo{display:block;width:27mm;height:27mm;margin:5mm auto 3mm;border:1.5mm solid #087443;border-radius:50%;object-fit:cover;background:#fff}.placeholder{display:flex;align-items:center;justify-content:center;color:#087443;font-size:28pt;font-weight:700}.name{font-size:11pt;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.line{width:34mm;height:.5mm;margin:1.5mm auto;background:#087443}.role{font-size:7pt}.id{margin-top:3mm;font-size:7pt;font-weight:700}.branch{font-size:6.5pt;font-weight:700;text-transform:uppercase}.qr{width:15mm;height:15mm;margin:2mm auto 0;padding:1mm;border:1px solid #b7c5bd;border-radius:2mm;background:white}.back{padding:11mm 7mm;text-align:left}.back h1{text-align:center;font-size:11pt;margin:0}.back .accent{width:16mm;height:1mm;margin:3mm auto 8mm;background:#83cc4b}.details{padding:4mm;border:1px solid #b9d9c8;border-radius:3mm;background:rgba(255,255,255,.85);font-size:6.5pt;line-height:1.35}.details div{margin-bottom:2.5mm}.details b{display:block}.notice{margin-top:8mm;text-align:center;font-size:6.5pt;line-height:1.4}@media screen{body{background:#222;padding:20px}.card{margin:0 auto 20px;box-shadow:0 3px 15px #0008;transform:scale(1.35);transform-origin:top center;margin-bottom:130px}}
-      </style></head><body><section class="card"><i class="corner top-dark"></i><i class="corner top-lime"></i><i class="corner bottom-dark"></i><i class="corner bottom-lime"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content">${logo}<div class="brand">${escapeHtml(companyName.toUpperCase())}</div><div class="sub">TRAVEL &amp; TOURS</div><div class="title">ID CARD AGEN</div>${photo}<div class="name">${escapeHtml(agent.name)}</div><div class="line"></div><div class="role">AGEN / MITRA RESMI</div><div class="id">ID ${escapeHtml(agent.agentCode || "-")}</div></div></section><section class="card back"><i class="corner top-dark"></i><i class="corner bottom-dark"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content"><h1>DATA AGEN</h1><div class="accent"></div><div class="details"><div><b>Nama Agen</b>${escapeHtml(agent.name)}</div><div><b>Kode Referral</b>${escapeHtml(agent.referralCode || agent.agentCode || "-")}</div><div><b>No. MOU</b>${escapeHtml(agent.mouNumber || "-")}</div><div><b>Bergabung</b>${escapeHtml(formatDate(agent.joinedAt))}</div><div><b>Berlaku s.d.</b>${escapeHtml(formatDate(agent.validUntil))}</div><div><b>Kontak</b>${escapeHtml(agent.phone || "-")}</div><div><b>Cabang</b>${escapeHtml(`${branchCode}${branchName}`)}</div></div>${qrData ? `<img class="qr" src="${qrData}" alt="QR Code" />` : ""}<div class="notice">Scan barcode untuk membuka profil publik agen.<br/>Kartu ini adalah identitas resmi agen dan berlaku sesuai masa kerja sama.</div></div></section></body></html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    await Promise.all(
-      Array.from(printWindow.document.images).map((image) =>
-        image.complete
-          ? Promise.resolve()
-          : new Promise<void>((resolve) => {
-              image.onload = () => resolve();
-              image.onerror = () => resolve();
-            }),
-      ),
-    );
-    printWindow.print();
-    printWindow.close();
+      printWindow.print();
+      printWindow.close();
+    } catch (error) {
+      console.error(error);
+      printWindow.close();
+      toast({
+        title: "Kartu tidak dapat dicetak",
+        description: "Pastikan gambar/logo dapat dimuat lalu coba lagi.",
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
+    }
   };
 
   return (
