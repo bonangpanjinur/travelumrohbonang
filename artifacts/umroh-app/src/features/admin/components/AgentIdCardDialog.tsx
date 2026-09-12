@@ -476,6 +476,44 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
         targetNode.removeAttribute("class");
       });
 
+      // html2canvas does not always preserve the layout size of inline SVG
+      // elements after a clone is moved outside the dialog. Convert each SVG
+      // to a self-contained image while keeping its actual rendered bounds.
+      const sourceSvgNodes = Array.from(element.querySelectorAll("svg"));
+      const exportSvgNodes = Array.from(exportElement.querySelectorAll("svg"));
+      sourceSvgNodes.forEach((sourceSvg, index) => {
+        const targetSvg = exportSvgNodes[index];
+        if (!targetSvg) return;
+        const rect = sourceSvg.getBoundingClientRect();
+        const svgClone = sourceSvg.cloneNode(true) as SVGElement;
+        svgClone.removeAttribute("class");
+        svgClone.removeAttribute("style");
+        svgClone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+        svgClone.setAttribute("width", String(Math.max(1, rect.width)));
+        svgClone.setAttribute("height", String(Math.max(1, rect.height)));
+
+        const image = document.createElement("img");
+        image.alt = "";
+        image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgClone.outerHTML)}`;
+        const computed = window.getComputedStyle(sourceSvg);
+        for (
+          let propertyIndex = 0;
+          propertyIndex < computed.length;
+          propertyIndex += 1
+        ) {
+          const property = computed.item(propertyIndex);
+          if (property.startsWith("--")) continue;
+          let value = computed.getPropertyValue(property);
+          if (value.includes("oklab") || value.includes("oklch")) {
+            value = colorFallback(property);
+          }
+          image.style.setProperty(property, value);
+        }
+        image.style.width = `${Math.max(1, rect.width)}px`;
+        image.style.height = `${Math.max(1, rect.height)}px`;
+        targetSvg.replaceWith(image);
+      });
+
       // Preserve the actual visible preview dimensions. In particular, do
       // not let the off-screen clone recalculate the aspect-ratio from a
       // different containing block.
