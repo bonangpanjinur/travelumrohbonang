@@ -73,16 +73,16 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
           const context = canvas.getContext("2d"); if (!context) return;
           const size = Math.min(image.naturalWidth, image.naturalHeight); const sourceX = (image.naturalWidth - size) / 2; const sourceY = (image.naturalHeight - size) / 2;
           context.clearRect(0, 0, canvas.width, canvas.height); context.beginPath(); context.arc(450, 450, 450, 0, Math.PI * 2); context.closePath(); context.clip(); context.drawImage(image, sourceX, sourceY, size, size, 0, 0, 900, 900); URL.revokeObjectURL(imageUrl);
-          pdf.addImage(canvas.toDataURL("image/png"), "PNG", 13.2, 24, 27.6, 27.6);
+          pdf.addImage(canvas.toDataURL("image/png"), "PNG", 15.2, 24.5, 23.6, 23.6);
         } catch { /* placeholder remains when remote photo is unavailable */ }
       };
       drawFrame(pdf);
       pdf.setTextColor(7, 92, 57); pdf.setFont("helvetica", "bold"); pdf.setFontSize(13); pdf.text("UMROHPLUS", CARD_WIDTH / 2, 16, { align: "center" }); pdf.setFontSize(5); pdf.setFont("helvetica", "normal"); pdf.text("TRAVEL & TOURS", CARD_WIDTH / 2, 19.5, { align: "center" });
       pdf.setFont("helvetica", "bold"); pdf.setFontSize(6.5); pdf.text(cardTitle, CARD_WIDTH / 2, 22.5, { align: "center" });
-      pdf.setDrawColor(8, 116, 67); pdf.setLineWidth(1.1); pdf.circle(CARD_WIDTH / 2, 37.8, 14.8); await addCircularImage();
-      pdf.setTextColor(7, 92, 57); pdf.setFontSize(9); pdf.text(agent.name.toUpperCase().slice(0, 22), CARD_WIDTH / 2, 56, { align: "center" }); pdf.setDrawColor(8, 116, 67); pdf.setLineWidth(0.45); pdf.line(12, 58.5, CARD_WIDTH - 12, 58.5); pdf.setFont("helvetica", "normal"); pdf.setFontSize(6.5); pdf.text("AGEN / MITRA RESMI", CARD_WIDTH / 2, 62, { align: "center" });
-      pdf.setFont("helvetica", "bold"); pdf.setFontSize(6.5); pdf.text(`ID ${agent.agentCode || "-"}`, CARD_WIDTH / 2, 66, { align: "center" }); pdf.setFontSize(6); pdf.text(`CABANG ${branchName.toUpperCase().slice(0, 22)}`, CARD_WIDTH / 2, 69, { align: "center" });
-      if (url) { try { const qr = await QRCode.toDataURL(url, { width: 320, margin: 1, errorCorrectionLevel: "H" }); pdf.addImage(qr, "PNG", 19.5, 70.5, 15, 15); } catch { /* QR is omitted when no public page exists */ } }
+      pdf.setDrawColor(8, 116, 67); pdf.setLineWidth(1.1); pdf.circle(CARD_WIDTH / 2, 36.3, 12.8); await addCircularImage();
+      pdf.setTextColor(7, 92, 57); pdf.setFontSize(8.2); pdf.text(agent.name.toUpperCase().slice(0, 20), CARD_WIDTH / 2, 52.5, { align: "center" }); pdf.setDrawColor(8, 116, 67); pdf.setLineWidth(0.45); pdf.line(12, 55, CARD_WIDTH - 12, 55); pdf.setFont("helvetica", "normal"); pdf.setFontSize(6.2); pdf.text("AGEN / MITRA RESMI", CARD_WIDTH / 2, 58.5, { align: "center" });
+      pdf.setFont("helvetica", "bold"); pdf.setFontSize(6.2); pdf.text(`ID ${agent.agentCode || "-"}`, CARD_WIDTH / 2, 62.5, { align: "center" }); pdf.setFontSize(5.8); pdf.text(`CABANG ${branchName.toUpperCase().slice(0, 22)}`, CARD_WIDTH / 2, 66, { align: "center" });
+      if (url) { try { const qr = await QRCode.toDataURL(url, { width: 320, margin: 1, errorCorrectionLevel: "H" }); pdf.addImage(qr, "PNG", 21, 69.5, 12, 12); } catch { /* QR is omitted when no public page exists */ } }
       pdf.addPage([CARD_WIDTH, CARD_HEIGHT], "portrait"); drawFrame(pdf); pdf.setTextColor(7, 92, 57); pdf.setFont("helvetica", "bold"); pdf.setFontSize(11); pdf.text("DATA AGEN", CARD_WIDTH / 2, 18, { align: "center" }); pdf.setFont("helvetica", "normal"); pdf.setFontSize(6.2); pdf.text(`Kode Referral : ${agent.referralCode || agent.agentCode || "-"}`, 8, 29); pdf.text(`No. MOU       : ${agent.mouNumber || "-"}`, 8, 35); pdf.text(`Bergabung     : ${formatDate(agent.joinedAt)}`, 8, 41); pdf.text(`Berlaku s.d.  : ${formatDate(agent.validUntil)}`, 8, 47); pdf.text(`Cabang        : ${branchCode}${branchName}`.slice(0, 62), 8, 53); pdf.text(`Telepon       : ${agent.phone || "-"}`, 8, 59); pdf.text(`Email         : ${agent.email || "-"}`.slice(0, 58), 8, 65);
       pdf.save(`id-card-agen-${safeName(agent)}.pdf`);
     } finally { setGenerating(false); }
