@@ -322,11 +322,15 @@ router.post("/", async (req, res) => {
     // Serialize generated-code allocation per year. The unique index remains
     // the final safety net, while this prevents two concurrent requests from
     // both observing the same MAX(sequence).
+    const codeLockKey = `agents:code:${new Date().getFullYear()}`;
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         const data = await db.transaction(async (tx: any) => {
           await tx.execute(
-            sql`SELECT pg_advisory_xact_lock(hashtext('agents:code:${new Date().getFullYear()}'))`,
+            // The bind parameter must be outside the quoted SQL literal.
+            // Interpolating inside quotes makes PostgreSQL see '$1' as text
+            // while the driver still sends an unused parameter.
+            sql`SELECT pg_advisory_xact_lock(hashtext(${codeLockKey}))`,
           );
           const generated = await generateAgentCode(requestedBranchId, tx);
           const [created] = await tx
