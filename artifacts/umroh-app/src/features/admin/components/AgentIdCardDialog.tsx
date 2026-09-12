@@ -417,46 +417,57 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
         await waitForPreview();
         const element = previewCardRef.current;
         if (!element) throw new Error("Preview ID card tidak ditemukan");
-        const canvas = await html2canvas(element, {
+        const exportElement = element.cloneNode(true) as HTMLDivElement;
+        const sourceNodes = [
+          element,
+          ...Array.from(element.querySelectorAll("*")),
+        ];
+        const exportNodes = [
+          exportElement,
+          ...Array.from(exportElement.querySelectorAll("*")),
+        ];
+        const colorFallback = (property: string) =>
+          property.includes("color")
+            ? property === "background-color"
+              ? "#f8faf9"
+              : DARK_GREEN
+            : property.includes("shadow")
+              ? "none"
+              : property.includes("image")
+                ? "none"
+                : "initial";
+        sourceNodes.forEach((sourceNode, index) => {
+          const targetNode = exportNodes[index] as HTMLElement | undefined;
+          if (!targetNode || !(sourceNode instanceof HTMLElement)) return;
+          const computed = window.getComputedStyle(sourceNode);
+          for (
+            let propertyIndex = 0;
+            propertyIndex < computed.length;
+            propertyIndex += 1
+          ) {
+            const property = computed.item(propertyIndex);
+            if (property.startsWith("--")) continue;
+            let value = computed.getPropertyValue(property);
+            if (value.includes("oklab") || value.includes("oklch")) {
+              value = colorFallback(property);
+            }
+            targetNode.style.setProperty(property, value);
+          }
+          targetNode.removeAttribute("class");
+        });
+        exportElement.style.position = "fixed";
+        exportElement.style.left = "-100000px";
+        exportElement.style.top = "0";
+        exportElement.style.margin = "0";
+        document.body.appendChild(exportElement);
+        const canvas = await html2canvas(exportElement, {
           backgroundColor: "#f8faf9",
           scale: 3,
           useCORS: true,
           allowTaint: false,
           logging: false,
-          onclone: (clonedDocument) => {
-            const clonedWindow = clonedDocument.defaultView;
-            if (!clonedWindow) return;
-            const unsupportedProperties = [
-              "color",
-              "backgroundColor",
-              "borderColor",
-              "outlineColor",
-              "textDecorationColor",
-              "boxShadow",
-              "textShadow",
-            ] as const;
-            clonedDocument
-              .querySelectorAll<HTMLElement>("*")
-              .forEach((node) => {
-                const computed = clonedWindow.getComputedStyle(node);
-                unsupportedProperties.forEach((property) => {
-                  const value = computed[property];
-                  if (!value.includes("oklab") && !value.includes("oklch"))
-                    return;
-                  const fallback =
-                    property === "color" || property === "textDecorationColor"
-                      ? DARK_GREEN
-                      : property === "borderColor" ||
-                          property === "outlineColor"
-                        ? "#b9d9c8"
-                        : property === "backgroundColor"
-                          ? "#f8faf9"
-                          : "none";
-                  node.style.setProperty(property, fallback, "important");
-                });
-              });
-          },
         });
+        exportElement.remove();
         return canvas.toDataURL("image/png");
       };
       const frontImage = await captureSide("front");
