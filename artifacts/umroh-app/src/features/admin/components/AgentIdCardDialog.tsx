@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { QRCodeSVG } from "qrcode.react";
+import html2canvas from "html2canvas";
 import { GState, jsPDF } from "jspdf";
 import {
   BadgeCheck,
@@ -73,6 +74,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
   const [side, setSide] = useState<"front" | "back">("front");
   const [generating, setGenerating] = useState(false);
   const [branding, setBranding] = useState<Branding>(defaultBranding);
+  const previewCardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   useEffect(() => {
     if (!agent) return;
@@ -110,7 +112,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
   const cardTitle = "ID CARD AGEN";
   const companyName = branding.company_name || defaultBranding.company_name;
 
-  const generatePdf = async () => {
+  const generatePdfLegacy = async () => {
     setGenerating(true);
     try {
       const pdf = new jsPDF({
@@ -387,6 +389,86 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
     }
   };
 
+  const generatePdf = async () => {
+    if (!previewCardRef.current) return;
+    setGenerating(true);
+    const originalSide = side;
+    try {
+      const waitForPreview = async () => {
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        );
+        const images = Array.from(
+          previewCardRef.current?.querySelectorAll("img") || [],
+        );
+        await Promise.all(
+          images.map(async (image) => {
+            if (image.complete && image.naturalWidth > 0) return;
+            try {
+              await image.decode();
+            } catch {
+              // Optional images may fail without blocking PDF generation.
+            }
+          }),
+        );
+      };
+      const captureSide = async (target: "front" | "back") => {
+        setSide(target);
+        await waitForPreview();
+        const element = previewCardRef.current;
+        if (!element) throw new Error("Preview ID card tidak ditemukan");
+        const canvas = await html2canvas(element, {
+          backgroundColor: "#f8faf9",
+          scale: 3,
+          useCORS: true,
+          allowTaint: false,
+          logging: false,
+        });
+        return canvas.toDataURL("image/png");
+      };
+      const frontImage = await captureSide("front");
+      const backImage = await captureSide("back");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: [CARD_WIDTH, CARD_HEIGHT],
+        compress: true,
+      });
+      pdf.addImage(
+        frontImage,
+        "PNG",
+        0,
+        0,
+        CARD_WIDTH,
+        CARD_HEIGHT,
+        undefined,
+        "FAST",
+      );
+      pdf.addPage([CARD_WIDTH, CARD_HEIGHT], "portrait");
+      pdf.addImage(
+        backImage,
+        "PNG",
+        0,
+        0,
+        CARD_WIDTH,
+        CARD_HEIGHT,
+        undefined,
+        "FAST",
+      );
+      pdf.save(`id-card-agen-${safeName(agent)}.pdf`);
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "PDF tidak dapat dibuat",
+        description: "Pastikan gambar/logo dapat dimuat lalu coba lagi.",
+        variant: "destructive",
+      });
+    } finally {
+      setSide(originalSide);
+      setGenerating(false);
+    }
+  };
+
   const printCards = async () => {
     const printWindow = window.open("", "_blank", "width=900,height=1100");
     if (!printWindow) {
@@ -500,6 +582,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
         </div>
         <div className="flex justify-center rounded-2xl bg-muted/50 p-5 sm:p-10">
           <div
+            ref={previewCardRef}
             className="aspect-[53.98/85.6] w-full max-w-[380px] overflow-hidden rounded-[22px] shadow-2xl"
             style={{ background: "#f8faf9" }}
           >
