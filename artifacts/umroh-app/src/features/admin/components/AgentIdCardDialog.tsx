@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { QRCodeSVG } from "qrcode.react";
-import { jsPDF } from "jspdf";
+import { GState, jsPDF } from "jspdf";
 import {
   BadgeCheck,
   Download,
@@ -118,9 +118,46 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
         unit: "mm",
         format: [CARD_WIDTH, CARD_HEIGHT],
       });
-      const drawFrame = (doc: jsPDF) => {
+      const fetchImageData = async (source: string) => {
+        const response = await fetch(source);
+        if (!response.ok)
+          throw new Error(`Image request failed: ${response.status}`);
+        const blob = await response.blob();
+        const format = blob.type.toLowerCase().includes("png") ? "PNG" : "JPEG";
+        const data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        return { data, format };
+      };
+      const bannerData = agent.bannerIdCardUrl
+        ? await fetchImageData(agent.bannerIdCardUrl).catch(() => null)
+        : null;
+      const drawFrame = async (doc: jsPDF, isFront: boolean) => {
         doc.setFillColor(248, 250, 249);
         doc.rect(0, 0, CARD_WIDTH, CARD_HEIGHT, "F");
+        if (isFront) {
+          doc.setFillColor(37, 37, 37);
+          doc.rect(0, 0, CARD_WIDTH, CARD_HEIGHT, "F");
+        }
+        if (bannerData) {
+          try {
+            doc.setGState(new GState({ opacity: 0.12 }));
+            doc.addImage(
+              bannerData.data,
+              bannerData.format,
+              0,
+              0,
+              CARD_WIDTH,
+              CARD_HEIGHT,
+            );
+            doc.setGState(new GState({ opacity: 1 }));
+          } catch {
+            // Optional banner failures must not prevent PDF generation.
+          }
+        }
         doc.setFillColor(7, 92, 57);
         doc.triangle(0, 0, 25, 0, 0, 18, "F");
         doc.triangle(
@@ -148,6 +185,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
         doc.line(0, 6, CARD_WIDTH, 10);
         doc.line(0, CARD_HEIGHT - 6, CARD_WIDTH, CARD_HEIGHT - 10);
       };
+      let photoLoaded = false;
       const addCircularImage = async () => {
         if (!agent.photoUrl) return;
         try {
@@ -201,6 +239,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
             27,
             27,
           );
+          photoLoaded = true;
         } catch {
           toast({
             title: "Foto agen tidak dapat dimuat",
@@ -234,7 +273,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
           return false;
         }
       };
-      drawFrame(pdf);
+      await drawFrame(pdf, true);
       pdf.setTextColor(255, 255, 255);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(4.5);
@@ -266,6 +305,13 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       pdf.setDrawColor(8, 116, 67);
       pdf.setLineWidth(1.1);
       pdf.circle(CARD_WIDTH / 2, 40, 13.5);
+      if (!photoLoaded) {
+        pdf.setTextColor(8, 116, 67);
+        pdf.setFontSize(22);
+        pdf.text(agent.name.charAt(0).toUpperCase(), CARD_WIDTH / 2, 47, {
+          align: "center",
+        });
+      }
       pdf.setTextColor(7, 92, 57);
       pdf.setFontSize(7.5);
       pdf.text(agent.name.toUpperCase().slice(0, 20), CARD_WIDTH / 2, 57, {
@@ -283,7 +329,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
         align: "center",
       });
       pdf.addPage([CARD_WIDTH, CARD_HEIGHT], "portrait");
-      drawFrame(pdf);
+      await drawFrame(pdf, false);
       pdf.setTextColor(7, 92, 57);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(8);
@@ -385,10 +431,18 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       </style></head><body><section class="card"><i class="corner top-dark"></i><i class="corner top-lime"></i><i class="corner bottom-dark"></i><i class="corner bottom-lime"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content">${logo}<div class="brand">${escapeHtml(companyName.toUpperCase())}</div><div class="sub">TRAVEL &amp; TOURS</div><div class="title">ID CARD AGEN</div>${photo}<div class="name">${escapeHtml(agent.name)}</div><div class="line"></div><div class="role">AGEN / MITRA RESMI</div><div class="id">ID ${escapeHtml(agent.agentCode || "-")}</div></div></section><section class="card back"><i class="corner top-dark"></i><i class="corner bottom-dark"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content"><h1>DATA AGEN</h1><div class="accent"></div><div class="details"><div><b>Nama Agen</b>${escapeHtml(agent.name)}</div><div><b>Kode Referral</b>${escapeHtml(agent.referralCode || agent.agentCode || "-")}</div><div><b>No. MOU</b>${escapeHtml(agent.mouNumber || "-")}</div><div><b>Bergabung</b>${escapeHtml(formatDate(agent.joinedAt))}</div><div><b>Berlaku s.d.</b>${escapeHtml(formatDate(agent.validUntil))}</div><div><b>Kontak</b>${escapeHtml(agent.phone || "-")}</div><div><b>Cabang</b>${escapeHtml(`${branchCode}${branchName}`)}</div></div>${qrData ? `<img class="qr" src="${qrData}" alt="QR Code" />` : ""}<div class="notice">Scan barcode untuk membuka profil publik agen.<br/>Kartu ini adalah identitas resmi agen dan berlaku sesuai masa kerja sama.</div></div></section></body></html>`);
     printWindow.document.close();
     printWindow.focus();
-    window.setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 500);
+    await Promise.all(
+      Array.from(printWindow.document.images).map((image) =>
+        image.complete
+          ? Promise.resolve()
+          : new Promise<void>((resolve) => {
+              image.onload = () => resolve();
+              image.onerror = () => resolve();
+            }),
+      ),
+    );
+    printWindow.print();
+    printWindow.close();
   };
 
   return (
@@ -445,6 +499,13 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
           >
             {side === "front" ? (
               <div className="relative h-full w-full overflow-hidden bg-[#252525] px-[8%] pt-[8%] text-white">
+                {agent.bannerIdCardUrl && (
+                  <img
+                    src={agent.bannerIdCardUrl}
+                    alt=""
+                    className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover opacity-[0.12]"
+                  />
+                )}
                 <div
                   className="absolute left-0 top-0 h-[18%] w-[45%] bg-[#075c39]"
                   style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }}
@@ -510,6 +571,13 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
               </div>
             ) : (
               <div className="relative h-full w-full overflow-hidden px-[10%] pt-[12%] text-[#075c39]">
+                {agent.bannerIdCardUrl && (
+                  <img
+                    src={agent.bannerIdCardUrl}
+                    alt=""
+                    className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover opacity-[0.12]"
+                  />
+                )}
                 <div
                   className="absolute left-0 top-0 h-[16%] w-[42%] bg-[#075c39]"
                   style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }}
