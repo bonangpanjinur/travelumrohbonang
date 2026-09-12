@@ -135,13 +135,9 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       const bannerData = agent.bannerIdCardUrl
         ? await fetchImageData(agent.bannerIdCardUrl).catch(() => null)
         : null;
-      const drawFrame = async (doc: jsPDF, isFront: boolean) => {
+      const drawFrame = async (doc: jsPDF) => {
         doc.setFillColor(248, 250, 249);
         doc.rect(0, 0, CARD_WIDTH, CARD_HEIGHT, "F");
-        if (isFront) {
-          doc.setFillColor(37, 37, 37);
-          doc.rect(0, 0, CARD_WIDTH, CARD_HEIGHT, "F");
-        }
         if (bannerData) {
           try {
             doc.setGState(new GState({ opacity: 0.12 }));
@@ -273,8 +269,8 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
           return false;
         }
       };
-      await drawFrame(pdf, true);
-      pdf.setTextColor(255, 255, 255);
+      await drawFrame(pdf);
+      pdf.setTextColor(7, 92, 57);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(4.5);
       pdf.text(companyName.toUpperCase().slice(0, 28), CARD_WIDTH / 2, 21, {
@@ -297,7 +293,16 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
         } catch {
           await addBrandLogo();
         }
+      } else {
+        pdf.setFillColor(7, 92, 57);
+        pdf.roundedRect(17, 7, 20, 11, 2, 2, "F");
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(9);
+        pdf.text(companyName.charAt(0).toUpperCase(), CARD_WIDTH / 2, 14.5, {
+          align: "center",
+        });
       }
+      pdf.setTextColor(7, 92, 57);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(5.8);
       pdf.text(cardTitle, CARD_WIDTH / 2, 25, { align: "center" });
@@ -329,11 +334,11 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
         align: "center",
       });
       pdf.addPage([CARD_WIDTH, CARD_HEIGHT], "portrait");
-      await drawFrame(pdf, false);
+      await drawFrame(pdf);
       pdf.setTextColor(7, 92, 57);
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(8);
-      pdf.text("KETENTUAN & DATA AGEN", CARD_WIDTH / 2, 16, {
+      pdf.text("DATA AGEN", CARD_WIDTH / 2, 16, {
         align: "center",
       });
       pdf.setFont("helvetica", "normal");
@@ -347,10 +352,11 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       pdf.text(`No. MOU        : ${agent.mouNumber || "-"}`, 7, 37);
       pdf.text(`Bergabung      : ${formatDate(agent.joinedAt)}`, 7, 43);
       pdf.text(`Berlaku s.d.   : ${formatDate(agent.validUntil)}`, 7, 49);
+      pdf.text(`Kontak         : ${agent.phone || agent.email || "-"}`, 7, 55);
       pdf.text(
         `Cabang         : ${branchCode}${branchName}`.slice(0, 62),
         7,
-        55,
+        61,
       );
       if (url) {
         try {
@@ -359,7 +365,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
             margin: 1,
             errorCorrectionLevel: "H",
           });
-          pdf.addImage(qr, "PNG", 20, 60, 16, 16);
+          pdf.addImage(qr, "PNG", 20, 65, 16, 16);
         } catch {
           toast({
             title: "QR tidak dapat dibuat",
@@ -372,7 +378,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       pdf.text(
         "Scan barcode untuk membuka profil publik agen",
         CARD_WIDTH / 2,
-        79,
+        83,
         { align: "center" },
       );
       pdf.save(`id-card-agen-${safeName(agent)}.pdf`);
@@ -427,7 +433,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       : "";
     printWindow.document
       .write(`<!doctype html><html><head><title>ID Card Agen - ${escapeHtml(agent.name)}</title><style>
-      @page{size:53.98mm 85.6mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;font-family:Arial,sans-serif;color:#075c39}.card{position:relative;width:53.98mm;height:85.6mm;overflow:hidden;background:#f8faf9;page-break-after:always;padding:7mm 5mm;text-align:center}.card:last-child{page-break-after:auto}.card:first-child{background:#252525;color:#fff}.card:first-child .name,.card:first-child .id,.card:first-child .branch{color:#fff}.back{background:linear-gradient(155deg,#252525 0 29%,#fff 29% 100%)}.corner{position:absolute;z-index:0}.banner{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.12;z-index:0}.top-dark{left:0;top:0;width:25mm;height:18mm;background:#075c39;clip-path:polygon(0 0,100% 0,0 100%)}.top-lime{right:0;top:0;width:54mm;height:11mm;background:#83cc4b;clip-path:polygon(34% 0,100% 0,100% 44%,0 100%)}.bottom-dark{right:0;bottom:0;width:25mm;height:17mm;background:#075c39;clip-path:polygon(100% 0,100% 100%,0 100%)}.bottom-lime{left:0;bottom:0;width:54mm;height:10mm;background:#83cc4b;clip-path:polygon(0 56%,100% 0,100% 100%,0 100%)}.content{position:relative;z-index:1}.brand{font-size:5pt;font-weight:600;letter-spacing:.4px}.logo{display:block;width:24mm;height:14mm;object-fit:contain;margin:0 auto 1mm}.sub{font-size:5pt;letter-spacing:1px}.title{margin-top:2mm;font-size:6pt;font-weight:700}.photo{display:block;width:27mm;height:27mm;margin:5mm auto 3mm;border:1.5mm solid #087443;border-radius:50%;object-fit:cover;background:#fff}.placeholder{display:flex;align-items:center;justify-content:center;color:#087443;font-size:28pt;font-weight:700}.name{font-size:11pt;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.line{width:34mm;height:.5mm;margin:1.5mm auto;background:#087443}.role{font-size:7pt}.id{margin-top:3mm;font-size:7pt;font-weight:700}.branch{font-size:6.5pt;font-weight:700;text-transform:uppercase}.qr{width:15mm;height:15mm;margin:2mm auto 0;padding:1mm;border:1px solid #b7c5bd;border-radius:2mm;background:white}.back{padding:11mm 7mm;text-align:left}.back h1{text-align:center;font-size:11pt;margin:0}.back .accent{width:16mm;height:1mm;margin:3mm auto 8mm;background:#83cc4b}.details{padding:4mm;border:1px solid #b9d9c8;border-radius:3mm;background:rgba(255,255,255,.85);font-size:6.5pt;line-height:1.35}.details div{margin-bottom:2.5mm}.details b{display:block}.notice{margin-top:8mm;text-align:center;font-size:6.5pt;line-height:1.4}@media screen{body{background:#222;padding:20px}.card{margin:0 auto 20px;box-shadow:0 3px 15px #0008;transform:scale(1.35);transform-origin:top center;margin-bottom:130px}}
+      @page{size:53.98mm 85.6mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;font-family:Arial,sans-serif;color:#075c39}.card{position:relative;width:53.98mm;height:85.6mm;overflow:hidden;background:#f8faf9;page-break-after:always;padding:7mm 5mm;text-align:center}.card:last-child{page-break-after:auto}.card:first-child{background:#f8faf9;color:#075c39}.card:first-child .name,.card:first-child .id,.card:first-child .branch{color:#075c39}.back{background:#f8faf9}.corner{position:absolute;z-index:0}.banner{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.12;z-index:0}.top-dark{left:0;top:0;width:25mm;height:18mm;background:#075c39;clip-path:polygon(0 0,100% 0,0 100%)}.top-lime{right:0;top:0;width:54mm;height:11mm;background:#83cc4b;clip-path:polygon(34% 0,100% 0,100% 44%,0 100%)}.bottom-dark{right:0;bottom:0;width:25mm;height:17mm;background:#075c39;clip-path:polygon(100% 0,100% 100%,0 100%)}.bottom-lime{left:0;bottom:0;width:54mm;height:10mm;background:#83cc4b;clip-path:polygon(0 56%,100% 0,100% 100%,0 100%)}.content{position:relative;z-index:1}.brand{font-size:5pt;font-weight:600;letter-spacing:.4px}.logo{display:block;width:24mm;height:14mm;object-fit:contain;margin:0 auto 1mm}.sub{font-size:5pt;letter-spacing:1px}.title{margin-top:2mm;font-size:6pt;font-weight:700}.photo{display:block;width:27mm;height:27mm;margin:5mm auto 3mm;border:1.5mm solid #087443;border-radius:50%;object-fit:cover;background:#fff}.placeholder{display:flex;align-items:center;justify-content:center;color:#087443;font-size:28pt;font-weight:700}.name{font-size:11pt;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.line{width:34mm;height:.5mm;margin:1.5mm auto;background:#087443}.role{font-size:7pt}.id{margin-top:3mm;font-size:7pt;font-weight:700}.branch{font-size:6.5pt;font-weight:700;text-transform:uppercase}.qr{width:15mm;height:15mm;margin:2mm auto 0;padding:1mm;border:1px solid #b7c5bd;border-radius:2mm;background:white}.back{padding:11mm 7mm;text-align:left}.back h1{text-align:center;font-size:11pt;margin:0}.back .accent{width:16mm;height:1mm;margin:3mm auto 8mm;background:#83cc4b}.details{padding:4mm;border:1px solid #b9d9c8;border-radius:3mm;background:rgba(255,255,255,.85);font-size:6.5pt;line-height:1.35}.details div{margin-bottom:2.5mm}.details b{display:block}.notice{margin-top:8mm;text-align:center;font-size:6.5pt;line-height:1.4}@media screen{body{background:#222;padding:20px}.card{margin:0 auto 20px;box-shadow:0 3px 15px #0008;transform:scale(1.35);transform-origin:top center;margin-bottom:130px}}
       </style></head><body><section class="card"><i class="corner top-dark"></i><i class="corner top-lime"></i><i class="corner bottom-dark"></i><i class="corner bottom-lime"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content">${logo}<div class="brand">${escapeHtml(companyName.toUpperCase())}</div><div class="sub">TRAVEL &amp; TOURS</div><div class="title">ID CARD AGEN</div>${photo}<div class="name">${escapeHtml(agent.name)}</div><div class="line"></div><div class="role">AGEN / MITRA RESMI</div><div class="id">ID ${escapeHtml(agent.agentCode || "-")}</div></div></section><section class="card back"><i class="corner top-dark"></i><i class="corner bottom-dark"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content"><h1>DATA AGEN</h1><div class="accent"></div><div class="details"><div><b>Nama Agen</b>${escapeHtml(agent.name)}</div><div><b>Kode Referral</b>${escapeHtml(agent.referralCode || agent.agentCode || "-")}</div><div><b>No. MOU</b>${escapeHtml(agent.mouNumber || "-")}</div><div><b>Bergabung</b>${escapeHtml(formatDate(agent.joinedAt))}</div><div><b>Berlaku s.d.</b>${escapeHtml(formatDate(agent.validUntil))}</div><div><b>Kontak</b>${escapeHtml(agent.phone || "-")}</div><div><b>Cabang</b>${escapeHtml(`${branchCode}${branchName}`)}</div></div>${qrData ? `<img class="qr" src="${qrData}" alt="QR Code" />` : ""}<div class="notice">Scan barcode untuk membuka profil publik agen.<br/>Kartu ini adalah identitas resmi agen dan berlaku sesuai masa kerja sama.</div></div></section></body></html>`);
     printWindow.document.close();
     printWindow.focus();
@@ -498,7 +504,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
             style={{ background: "#f8faf9" }}
           >
             {side === "front" ? (
-              <div className="relative h-full w-full overflow-hidden bg-[#252525] px-[8%] pt-[8%] text-white">
+              <div className="relative h-full w-full overflow-hidden bg-[#f8faf9] px-[8%] pt-[8%] text-[#075c39]">
                 {agent.bannerIdCardUrl && (
                   <img
                     src={agent.bannerIdCardUrl}
@@ -534,11 +540,11 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                       className="mx-auto mb-1 h-[16%] w-[42%] object-contain"
                     />
                   ) : (
-                    <div className="mx-auto mb-1 flex h-[16%] w-[42%] items-center justify-center rounded-lg bg-white/15 text-[clamp(16px,5vw,30px)] font-black text-white">
+                    <div className="mx-auto mb-1 flex h-[16%] w-[42%] items-center justify-center rounded-lg bg-[#075c39]/10 text-[clamp(16px,5vw,30px)] font-black text-[#075c39]">
                       {companyName.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <div className="text-[clamp(7px,2vw,13px)] font-medium tracking-[.08em] text-white/90">
+                  <div className="text-[clamp(7px,2vw,13px)] font-medium tracking-[.08em] text-[#075c39]">
                     {companyName.toUpperCase()}
                   </div>
                   <div className="mt-[3%] text-[clamp(7px,1.8vw,13px)] font-bold tracking-[.08em]">
