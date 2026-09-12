@@ -1,5 +1,18 @@
 import { Router } from "express";
-import { db, agents, branches, agentCommissions, agentWithdrawals, affiliateClicks, userRoles, eq, desc, and, inArray, like } from "@workspace/db";
+import {
+  db,
+  agents,
+  branches,
+  agentCommissions,
+  agentWithdrawals,
+  affiliateClicks,
+  userRoles,
+  eq,
+  desc,
+  and,
+  inArray,
+  like,
+} from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { requireSuperAdmin } from "../../middlewares/requireAdmin";
 import { journalCommissionWithdrawal } from "../../lib/autoJournal";
@@ -23,28 +36,55 @@ function shortCode() {
   return crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
 }
 
+function parseIsoDate(value: unknown, label: string) {
+  if (value == null || value === "") return null;
+  const candidate = String(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(candidate))
+    throw new Error(`${label} harus berformat YYYY-MM-DD`);
+  const parsed = new Date(`${candidate}T00:00:00Z`);
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== candidate
+  )
+    throw new Error(`${label} bukan tanggal yang valid`);
+  return candidate;
+}
+
 async function generateAgentCode(branchId: string | null) {
   const year = new Date().getFullYear().toString().slice(-2);
   // Agen tanpa branchId memakai identitas kantor pusat VINS.
   let branchCode = "VINS";
   let referralBase = "VINS";
   if (branchId) {
-    const [branch] = await db.select({ code: branches.code, name: branches.name }).from(branches).where(eq(branches.id, branchId)).limit(1);
+    const [branch] = await db
+      .select({ code: branches.code, name: branches.name })
+      .from(branches)
+      .where(eq(branches.id, branchId))
+      .limit(1);
     const fromName = String(branch?.name || "CABANG")
-      .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-    const configuredCode = String(branch?.code || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-    const isHeadOffice = /KANTORPU(SAT)?|PUSAT/i.test(fromName) || configuredCode === "VINS";
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Za-z0-9]/g, "")
+      .toUpperCase();
+    const configuredCode = String(branch?.code || "")
+      .replace(/[^A-Za-z0-9]/g, "")
+      .toUpperCase();
+    const isHeadOffice =
+      /KANTORPU(SAT)?|PUSAT/i.test(fromName) || configuredCode === "VINS";
     if (isHeadOffice) {
       branchCode = "VINSU";
       referralBase = "VINS";
     } else {
-      branchCode = configuredCode.slice(0, 12) || fromName.slice(0, 8) || "CABANG";
+      branchCode =
+        configuredCode.slice(0, 12) || fromName.slice(0, 8) || "CABANG";
       referralBase = branchCode;
     }
   }
   const prefix = `A%${branchCode}${year}`;
-  const existing = await db.select({ agentCode: agents.agentCode }).from(agents).where(like(agents.agentCode, prefix));
+  const existing = await db
+    .select({ agentCode: agents.agentCode })
+    .from(agents)
+    .where(like(agents.agentCode, prefix));
   const used = new Set(existing.map((row) => row.agentCode).filter(Boolean));
   let sequence = 1;
   let candidate = "";
@@ -53,8 +93,13 @@ async function generateAgentCode(branchId: string | null) {
     sequence += 1;
   } while (used.has(candidate));
   const referralPrefix = `A%${referralBase}${year}`;
-  const referralRows = await db.select({ referralCode: agents.referralCode }).from(agents).where(like(agents.referralCode, referralPrefix));
-  const referralUsed = new Set(referralRows.map((row) => row.referralCode).filter(Boolean));
+  const referralRows = await db
+    .select({ referralCode: agents.referralCode })
+    .from(agents)
+    .where(like(agents.referralCode, referralPrefix));
+  const referralUsed = new Set(
+    referralRows.map((row) => row.referralCode).filter(Boolean),
+  );
   let referralSequence = sequence - 1;
   let referralCode = `A${String(referralSequence).padStart(3, "0")}${referralBase}${year}`;
   while (referralUsed.has(referralCode)) {
@@ -64,60 +109,139 @@ async function generateAgentCode(branchId: string | null) {
   return { agentCode: candidate, referralCode };
 }
 
-function normalizeAgentPayload(body: Record<string, unknown>, existingName?: string, generated?: { agentCode: string; referralCode: string }) {
+function normalizeAgentPayload(
+  body: Record<string, unknown>,
+  existingName?: string,
+  generated?: { agentCode: string; referralCode: string },
+) {
   const name = String(body.name ?? existingName ?? "").trim();
   if (!name) throw new Error("Nama agen wajib diisi");
-  const gender = body.gender == null || body.gender === "" ? null : String(body.gender).toUpperCase();
-  if (gender && !ALLOWED_GENDERS.has(gender)) throw new Error("Gender harus L atau P");
-  const dateOfBirth = body.dateOfBirth == null || body.dateOfBirth === "" ? null : String(body.dateOfBirth);
-  if (dateOfBirth && !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) throw new Error("Tanggal lahir harus berformat YYYY-MM-DD");
-  const requestedSlug = body.publicSlug == null || body.publicSlug === "" ? slugify(name) : slugify(String(body.publicSlug));
-  const agentCode = body.agentCode == null || body.agentCode === "" ? (generated?.agentCode || `AG-${shortCode()}`) : String(body.agentCode).trim().toUpperCase().replace(/\s+/g, "-").slice(0, 40);
-  const referralCode = body.referralCode == null || body.referralCode === "" ? (generated?.referralCode || agentCode) : String(body.referralCode).trim().toUpperCase().replace(/\s+/g, "").slice(0, 40);
-  const commissionPercent = body.commissionPercent == null || body.commissionPercent === "" ? 0 : Number(body.commissionPercent);
-  if (!Number.isFinite(commissionPercent) || commissionPercent < 0 || commissionPercent > 100) throw new Error("Komisi harus berada di antara 0 sampai 100 persen");
+  const gender =
+    body.gender == null || body.gender === ""
+      ? null
+      : String(body.gender).toUpperCase();
+  if (gender && !ALLOWED_GENDERS.has(gender))
+    throw new Error("Gender harus L atau P");
+  const dateOfBirth = parseIsoDate(body.dateOfBirth, "Tanggal lahir");
+  const requestedSlug =
+    body.publicSlug == null || body.publicSlug === ""
+      ? slugify(name)
+      : slugify(String(body.publicSlug));
+  const agentCode =
+    body.agentCode == null || body.agentCode === ""
+      ? generated?.agentCode || `AG-${shortCode()}`
+      : String(body.agentCode)
+          .trim()
+          .toUpperCase()
+          .replace(/\s+/g, "-")
+          .slice(0, 40);
+  const referralCode =
+    body.referralCode == null || body.referralCode === ""
+      ? generated?.referralCode || agentCode
+      : String(body.referralCode)
+          .trim()
+          .toUpperCase()
+          .replace(/\s+/g, "")
+          .slice(0, 40);
+  const commissionPercent =
+    body.commissionPercent == null || body.commissionPercent === ""
+      ? 0
+      : Number(body.commissionPercent);
+  if (
+    !Number.isFinite(commissionPercent) ||
+    commissionPercent < 0 ||
+    commissionPercent > 100
+  )
+    throw new Error("Komisi harus berada di antara 0 sampai 100 persen");
+  const joinedAt = parseIsoDate(body.joinedAt, "Tanggal bergabung");
+  const validUntil = parseIsoDate(body.validUntil, "Masa berlaku");
+  if (joinedAt && validUntil && validUntil < joinedAt)
+    throw new Error(
+      "Masa berlaku tidak boleh lebih awal dari tanggal bergabung",
+    );
   return {
     name,
     agentCode: agentCode || null,
     gender,
-    address: body.address == null || body.address === "" ? null : String(body.address).trim().slice(0, 500),
+    address:
+      body.address == null || body.address === ""
+        ? null
+        : String(body.address).trim().slice(0, 500),
     dateOfBirth,
-    phone: body.phone == null || body.phone === "" ? null : String(body.phone).trim().slice(0, 40),
-    email: body.email == null || body.email === "" ? null : String(body.email).trim().toLowerCase().slice(0, 160),
-    photoUrl: body.photoUrl == null || body.photoUrl === "" ? null : String(body.photoUrl).trim().slice(0, 1000),
-    joinedAt: body.joinedAt == null || body.joinedAt === "" ? null : String(body.joinedAt),
-    bannerIdCardUrl: body.bannerIdCardUrl == null || body.bannerIdCardUrl === "" ? null : String(body.bannerIdCardUrl).trim().slice(0, 1000),
-    mouNumber: body.mouNumber == null || body.mouNumber === "" ? null : String(body.mouNumber).trim().slice(0, 100),
-    validUntil: body.validUntil == null || body.validUntil === "" ? null : String(body.validUntil),
+    phone:
+      body.phone == null || body.phone === ""
+        ? null
+        : String(body.phone).trim().slice(0, 40),
+    email:
+      body.email == null || body.email === ""
+        ? null
+        : String(body.email).trim().toLowerCase().slice(0, 160),
+    photoUrl:
+      body.photoUrl == null || body.photoUrl === ""
+        ? null
+        : String(body.photoUrl).trim().slice(0, 1000),
+    joinedAt,
+    bannerIdCardUrl:
+      body.bannerIdCardUrl == null || body.bannerIdCardUrl === ""
+        ? null
+        : String(body.bannerIdCardUrl).trim().slice(0, 1000),
+    mouNumber:
+      body.mouNumber == null || body.mouNumber === ""
+        ? null
+        : String(body.mouNumber).trim().slice(0, 100),
+    validUntil,
     referralCode: referralCode || null,
     publicSlug: requestedSlug || `agen-${shortCode().toLowerCase()}`,
-    publicDescription: body.publicDescription == null || body.publicDescription === "" ? null : String(body.publicDescription).trim().slice(0, 500),
+    publicDescription:
+      body.publicDescription == null || body.publicDescription === ""
+        ? null
+        : String(body.publicDescription).trim().slice(0, 500),
     publicPageEnabled: body.publicPageEnabled !== false,
-    branchId: body.branchId == null || body.branchId === "" ? null : String(body.branchId),
+    branchId:
+      body.branchId == null || body.branchId === ""
+        ? null
+        : String(body.branchId),
     commissionPercent: commissionPercent.toFixed(2),
-    monthlyTarget: body.monthlyTarget == null || body.monthlyTarget === "" ? null : Number(body.monthlyTarget),
+    monthlyTarget:
+      body.monthlyTarget == null || body.monthlyTarget === ""
+        ? null
+        : Number(body.monthlyTarget),
     isActive: body.isActive !== false,
     ...(body.userId ? { userId: String(body.userId) } : {}),
   };
 }
 
-async function agentIdsForScope(scope: Awaited<ReturnType<typeof resolveUserScope>>) {
+async function agentIdsForScope(
+  scope: Awaited<ReturnType<typeof resolveUserScope>>,
+) {
   if (scope.type === "global") return null;
   if (scope.type === "agent") return scope.agentId ? [scope.agentId] : [];
   if (!scope.branchId) return [];
-  const rows = await db.select({ id: agents.id }).from(agents).where(eq(agents.branchId, scope.branchId));
+  const rows = await db
+    .select({ id: agents.id })
+    .from(agents)
+    .where(eq(agents.branchId, scope.branchId));
   return rows.map((row) => row.id);
 }
 
-async function agentInScope(agentId: string, scope: Awaited<ReturnType<typeof resolveUserScope>>) {
+async function agentInScope(
+  agentId: string,
+  scope: Awaited<ReturnType<typeof resolveUserScope>>,
+) {
   const ids = await agentIdsForScope(scope);
   return ids === null || ids.includes(agentId);
 }
 
-async function canCreateAgent(req: any, branchId: string | null, scope: Awaited<ReturnType<typeof resolveUserScope>>) {
+async function canCreateAgent(
+  req: any,
+  branchId: string | null,
+  scope: Awaited<ReturnType<typeof resolveUserScope>>,
+) {
   if (req.user?.role === "agent") return false;
   if (scope.type === "global") return true;
-  return scope.type === "branch" && !!scope.branchId && branchId === scope.branchId;
+  return (
+    scope.type === "branch" && !!scope.branchId && branchId === scope.branchId
+  );
 }
 
 /**
@@ -169,9 +293,17 @@ router.get("/", async (req, res) => {
     const ids = await agentIdsForScope(scope);
     let data;
     try {
-      data = ids === null ? await db.select().from(agents) : ids.length ? await db.select().from(agents).where(inArray(agents.id, ids)) : [];
+      data =
+        ids === null
+          ? await db.select().from(agents)
+          : ids.length
+            ? await db.select().from(agents).where(inArray(agents.id, ids))
+            : [];
     } catch (queryError) {
-      console.error("[admin/agents] current schema query failed; using legacy-compatible read:", queryError);
+      console.error(
+        "[admin/agents] current schema query failed; using legacy-compatible read:",
+        queryError,
+      );
       data = await selectLegacyAgents(ids);
     }
     res.json(data);
@@ -183,21 +315,42 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
-    const requestedBranchId = req.body?.branchId == null || req.body?.branchId === "" ? null : String(req.body.branchId);
+    const requestedBranchId =
+      req.body?.branchId == null || req.body?.branchId === ""
+        ? null
+        : String(req.body.branchId);
     if (!(await canCreateAgent(req, requestedBranchId, scope))) {
-      return res.status(403).json({ error: "Anda hanya dapat mengelola agen pada scope Anda" });
+      return res
+        .status(403)
+        .json({ error: "Anda hanya dapat mengelola agen pada scope Anda" });
     }
     const id = crypto.randomUUID();
     const generated = await generateAgentCode(requestedBranchId);
-    const [data] = await db.insert(agents).values({
-      ...normalizeAgentPayload(req.body as Record<string, unknown>, undefined, generated),
-      id,
-      createdAt: new Date(),
-    }).returning();
+    const [data] = await db
+      .insert(agents)
+      .values({
+        ...normalizeAgentPayload(
+          req.body as Record<string, unknown>,
+          undefined,
+          generated,
+        ),
+        id,
+        createdAt: new Date(),
+      })
+      .returning();
     res.json(data);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to create agent";
-    res.status(message.includes("wajib") || message.includes("harus") || message.includes("Komisi") ? 400 : 500).json({ error: message });
+    const message =
+      err instanceof Error ? err.message : "Failed to create agent";
+    res
+      .status(
+        message.includes("wajib") ||
+          message.includes("harus") ||
+          message.includes("Komisi")
+          ? 400
+          : 500,
+      )
+      .json({ error: message });
   }
 });
 
@@ -205,30 +358,69 @@ router.patch("/:id", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
     if (req.user?.role === "agent" && req.body?.branchId !== undefined) {
-      return res.status(403).json({ error: "Agen tidak dapat memindahkan agen ke cabang lain" });
+      return res
+        .status(403)
+        .json({ error: "Agen tidak dapat memindahkan agen ke cabang lain" });
     }
-    const existing = await db.select().from(agents).where(eq(agents.id, req.params.id)).limit(1);
-    if (!existing[0] || !(await agentInScope(existing[0].id, scope))) return res.status(404).json({ error: "Agent not found" });
+    const existing = await db
+      .select()
+      .from(agents)
+      .where(eq(agents.id, req.params.id))
+      .limit(1);
+    if (!existing[0] || !(await agentInScope(existing[0].id, scope)))
+      return res.status(404).json({ error: "Agent not found" });
     // Strip immutable fields to prevent accidental overwrite of PK / createdAt
-    const { id: _id, createdAt: _createdAt, ...body } = req.body as Record<string, unknown>;
+    const {
+      id: _id,
+      createdAt: _createdAt,
+      ...body
+    } = req.body as Record<string, unknown>;
     const mergedAgent = { ...existing[0], ...body };
-    const generated = mergedAgent.agentCode ? undefined : await generateAgentCode(mergedAgent.branchId ? String(mergedAgent.branchId) : null);
-    const updates = normalizeAgentPayload(mergedAgent, existing[0].name, generated);
-    const [data] = await db.update(agents).set(updates).where(eq(agents.id, req.params.id)).returning();
+    const generated = mergedAgent.agentCode
+      ? undefined
+      : await generateAgentCode(
+          mergedAgent.branchId ? String(mergedAgent.branchId) : null,
+        );
+    const updates = normalizeAgentPayload(
+      mergedAgent,
+      existing[0].name,
+      generated,
+    );
+    const [data] = await db
+      .update(agents)
+      .set(updates)
+      .where(eq(agents.id, req.params.id))
+      .returning();
     if (!data) return res.status(404).json({ error: "Agent not found" });
     res.json(data);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to update agent";
-    res.status(message.includes("wajib") || message.includes("harus") || message.includes("Komisi") ? 400 : 500).json({ error: message });
+    const message =
+      err instanceof Error ? err.message : "Failed to update agent";
+    res
+      .status(
+        message.includes("wajib") ||
+          message.includes("harus") ||
+          message.includes("Komisi")
+          ? 400
+          : 500,
+      )
+      .json({ error: message });
   }
 });
 
 router.delete("/:id", async (req, res) => {
   try {
-    if (req.user?.role === "agent") return res.status(403).json({ error: "Agen tidak dapat menghapus data agen" });
+    if (req.user?.role === "agent")
+      return res
+        .status(403)
+        .json({ error: "Agen tidak dapat menghapus data agen" });
     const scope = await resolveUserScope(req);
-    if (!(await agentInScope(req.params.id, scope))) return res.status(404).json({ error: "Agent not found" });
-    const [deleted] = await db.delete(agents).where(eq(agents.id, req.params.id as string)).returning();
+    if (!(await agentInScope(req.params.id, scope)))
+      return res.status(404).json({ error: "Agent not found" });
+    const [deleted] = await db
+      .delete(agents)
+      .where(eq(agents.id, req.params.id as string))
+      .returning();
     if (!deleted) return res.status(404).json({ error: "Agent not found" });
     res.json({ success: true });
   } catch (err) {
@@ -241,9 +433,19 @@ router.get("/commissions", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
     const ids = await agentIdsForScope(scope);
-    const query = ids === null
-      ? db.select().from(agentCommissions).orderBy(desc(agentCommissions.createdAt))
-      : ids.length ? db.select().from(agentCommissions).where(inArray(agentCommissions.agentId, ids)).orderBy(desc(agentCommissions.createdAt)) : Promise.resolve([]);
+    const query =
+      ids === null
+        ? db
+            .select()
+            .from(agentCommissions)
+            .orderBy(desc(agentCommissions.createdAt))
+        : ids.length
+          ? db
+              .select()
+              .from(agentCommissions)
+              .where(inArray(agentCommissions.agentId, ids))
+              .orderBy(desc(agentCommissions.createdAt))
+          : Promise.resolve([]);
     const data = await query;
     res.json(data);
   } catch (err) {
@@ -254,9 +456,18 @@ router.get("/commissions", async (req, res) => {
 router.patch("/commissions/:id", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
-    const [commission] = await db.select({ agentId: agentCommissions.agentId }).from(agentCommissions).where(eq(agentCommissions.id, req.params.id)).limit(1);
-    if (!commission || !(await agentInScope(commission.agentId, scope))) return res.status(404).json({ error: "Komisi tidak ditemukan" });
-    const [data] = await db.update(agentCommissions).set(req.body).where(eq(agentCommissions.id, req.params.id)).returning();
+    const [commission] = await db
+      .select({ agentId: agentCommissions.agentId })
+      .from(agentCommissions)
+      .where(eq(agentCommissions.id, req.params.id))
+      .limit(1);
+    if (!commission || !(await agentInScope(commission.agentId, scope)))
+      return res.status(404).json({ error: "Komisi tidak ditemukan" });
+    const [data] = await db
+      .update(agentCommissions)
+      .set(req.body)
+      .where(eq(agentCommissions.id, req.params.id))
+      .returning();
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to update commission" });
@@ -302,7 +513,7 @@ router.get("/withdrawals", async (req, res) => {
 // Status machine untuk withdrawal: transisi yang diizinkan
 const WITHDRAWAL_TRANSITIONS: Record<string, string[]> = {
   requested: ["approved", "rejected"],
-  approved:  ["paid", "rejected"],
+  approved: ["paid", "rejected"],
   // paid & rejected adalah terminal
 };
 
@@ -319,13 +530,18 @@ router.patch("/withdrawals/:id", async (req, res) => {
     const scope = await resolveUserScope(req);
     // Ambil data withdrawal sebelum update (untuk jurnal dan state-machine check)
     const [before] = await db
-      .select({ agentId: agentWithdrawals.agentId, amount: agentWithdrawals.amount, status: agentWithdrawals.status })
+      .select({
+        agentId: agentWithdrawals.agentId,
+        amount: agentWithdrawals.amount,
+        status: agentWithdrawals.status,
+      })
       .from(agentWithdrawals)
       .where(eq(agentWithdrawals.id, req.params.id))
       .limit(1);
 
     if (!before) return res.status(404).json({ error: "Withdrawal not found" });
-    if (!(await agentInScope(before.agentId, scope))) return res.status(404).json({ error: "Withdrawal not found" });
+    if (!(await agentInScope(before.agentId, scope)))
+      return res.status(404).json({ error: "Withdrawal not found" });
 
     // State-machine — tolak transisi yang tidak diizinkan
     if (status && status !== before.status) {
@@ -352,10 +568,15 @@ router.patch("/withdrawals/:id", async (req, res) => {
     if (!data) return res.status(404).json({ error: "Withdrawal not found" });
 
     // F-6: Auto-posting jurnal komisi withdrawal (fire-and-forget)
-    if (status === "paid" && before?.status !== "paid" && before?.agentId && before?.amount != null) {
+    if (
+      status === "paid" &&
+      before?.status !== "paid" &&
+      before?.agentId &&
+      before?.amount != null
+    ) {
       void journalCommissionWithdrawal({
-        agentId:      before.agentId,
-        amount:       Number(before.amount),
+        agentId: before.agentId,
+        amount: Number(before.amount),
         withdrawalId: req.params.id,
         adminId,
       });
@@ -372,11 +593,19 @@ router.get("/affiliate-clicks", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
     const ids = await agentIdsForScope(scope);
-    const data = ids === null
-      ? await db.select().from(affiliateClicks).orderBy(desc(affiliateClicks.createdAt))
-      : ids.length
-        ? await db.select().from(affiliateClicks).where(inArray(affiliateClicks.agentId, ids)).orderBy(desc(affiliateClicks.createdAt))
-        : [];
+    const data =
+      ids === null
+        ? await db
+            .select()
+            .from(affiliateClicks)
+            .orderBy(desc(affiliateClicks.createdAt))
+        : ids.length
+          ? await db
+              .select()
+              .from(affiliateClicks)
+              .where(inArray(affiliateClicks.agentId, ids))
+              .orderBy(desc(affiliateClicks.createdAt))
+          : [];
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch affiliate clicks" });
@@ -396,11 +625,14 @@ router.get("/roles", async (_req, res) => {
 router.post("/roles", requireSuperAdmin, async (req, res) => {
   try {
     const id = crypto.randomUUID();
-    const [data] = await db.insert(userRoles).values({
-      ...req.body,
-      id,
-      createdAt: new Date(),
-    }).returning();
+    const [data] = await db
+      .insert(userRoles)
+      .values({
+        ...req.body,
+        id,
+        createdAt: new Date(),
+      })
+      .returning();
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: "Failed to create user role" });
@@ -409,7 +641,10 @@ router.post("/roles", requireSuperAdmin, async (req, res) => {
 
 router.delete("/roles/:id", requireSuperAdmin, async (req, res) => {
   try {
-    const [deleted] = await db.delete(userRoles).where(eq(userRoles.id, req.params.id as string)).returning();
+    const [deleted] = await db
+      .delete(userRoles)
+      .where(eq(userRoles.id, req.params.id as string))
+      .returning();
     if (!deleted) return res.status(404).json({ error: "User role not found" });
     res.json({ success: true });
   } catch (err) {

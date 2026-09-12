@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db, agents, branches, and, eq } from "@workspace/db";
+import { sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -10,8 +11,11 @@ const router = Router();
  */
 router.get("/:slug", async (req, res) => {
   try {
-    const slug = String(req.params.slug || "").trim().toLowerCase();
-    if (!slug || slug.length > 100) return res.status(404).json({ error: "Agent not found" });
+    const slug = String(req.params.slug || "")
+      .trim()
+      .toLowerCase();
+    if (!slug || slug.length > 100)
+      return res.status(404).json({ error: "Agent not found" });
 
     const [agent] = await db
       .select({
@@ -36,11 +40,14 @@ router.get("/:slug", async (req, res) => {
       })
       .from(agents)
       .leftJoin(branches, eq(agents.branchId, branches.id))
-      .where(and(
-        eq(agents.publicSlug, slug),
-        eq(agents.isActive, true),
-        eq(agents.publicPageEnabled, true),
-      ))
+      .where(
+        and(
+          eq(agents.publicSlug, slug),
+          eq(agents.isActive, true),
+          eq(agents.publicPageEnabled, true),
+          sql`(${agents.validUntil} IS NULL OR ${agents.validUntil} >= CURRENT_DATE)`,
+        ),
+      )
       .limit(1);
 
     if (!agent) return res.status(404).json({ error: "Agent not found" });
@@ -57,20 +64,24 @@ router.get("/:slug", async (req, res) => {
       publicSlug: agent.publicSlug,
       publicDescription: agent.publicDescription,
       status: "Agen Resmi",
-      branch: agent.branchId ? {
-        id: agent.branchId,
-        code: agent.branchCode,
-        name: agent.branchName,
-        address: agent.branchAddress,
-        city: agent.branchCity,
-        region: agent.branchRegion,
-        phone: agent.branchPhone,
-        mapUrl: agent.branchMapUrl,
-      } : null,
+      branch: agent.branchId
+        ? {
+            id: agent.branchId,
+            code: agent.branchCode,
+            name: agent.branchName,
+            address: agent.branchAddress,
+            city: agent.branchCity,
+            region: agent.branchRegion,
+            phone: agent.branchPhone,
+            mapUrl: agent.branchMapUrl,
+          }
+        : null,
     });
   } catch (error) {
     console.error("[public-agents/profile]", error);
-    return res.status(500).json({ error: "Failed to fetch public agent profile" });
+    return res
+      .status(500)
+      .json({ error: "Failed to fetch public agent profile" });
   }
 });
 
