@@ -277,6 +277,31 @@ async function selectLegacyAgents(ids: string[] | null) {
   }));
 }
 
+function isMissingColumnError(error: unknown) {
+  const e = error as any;
+  const code = e?.code ?? e?.cause?.code;
+  const message = `${e?.message ?? ""} ${e?.cause?.message ?? ""}`.toLowerCase();
+  return code === "42703" || (message.includes("column") && message.includes("does not exist"));
+}
+
+async function insertLegacyAgent(tx: any, values: Record<string, unknown>) {
+  const result = await tx.execute(sql`
+    INSERT INTO agents (
+      id, user_id, branch_id, name, phone, email, referral_code,
+      commission_percent, monthly_target, is_active, created_at
+    ) VALUES (
+      ${values.id}, ${values.userId ?? null}, ${values.branchId ?? null},
+      ${values.name}, ${values.phone ?? null}, ${values.email ?? null},
+      ${values.referralCode ?? null}, ${values.commissionPercent ?? "0.00"},
+      ${values.monthlyTarget ?? null}, ${values.isActive !== false},
+      ${values.createdAt ?? new Date()}
+    )
+    RETURNING *
+  `);
+  const [created] = ((result as any).rows ?? result) as any[];
+  return created;
+}
+
 // Agents
 router.get("/", async (req, res) => {
   try {
@@ -336,9 +361,35 @@ router.post("/", async (req, res) => {
             sql`SELECT pg_advisory_xact_lock(hashtext(${codeLockKey}))`,
           );
           const generated = await generateAgentCode(requestedBranchId, tx);
-          const [created] = await tx
-            .insert(agents)
-            .values({
+          const values = {
+            ...normalizeAgentPayload(
+              req.body as Record<string, unknown>,
+              undefined,
+              generated,
+            ),
+            id: crypto.randomUUID(),
+            createdAt: new Date(),
+          };
+          let created;
+          try {
+            [created] = await tx.insert(agents).values(values).returning();
+          } catch (insertError) {
+            if (!isMissingColumnError(insertError)) throw insertError;
+            // Production may be running before the latest agent migrations.
+            // Retry is safe because the failed statement aborts this transaction;
+            // the outer handler starts a fresh transaction below.
+            throw Object.assign(insertError as object, {
+              __agentSchemaLag: true,
+            });
+          }
+          return created;
+        });
+        return res.json(data);
+      } catch (error) {
+        if ((error as any)?.__agentSchemaLag || isMissingColumnError(error)) {
+          const legacyData = await db.transaction(async (tx: any) => {
+            const generated = await generateAgentCode(requestedBranchId, tx);
+            const values = {
               ...normalizeAgentPayload(
                 req.body as Record<string, unknown>,
                 undefined,
@@ -346,12 +397,11 @@ router.post("/", async (req, res) => {
               ),
               id: crypto.randomUUID(),
               createdAt: new Date(),
-            })
-            .returning();
-          return created;
-        });
-        return res.json(data);
-      } catch (error) {
+            };
+            return insertLegacyAgent(tx, values);
+          });
+          return res.json(legacyData);
+        }
         // A manually supplied code can still race with another insert. Retry
         // only database unique violations; validation errors must be returned.
         if ((error as { code?: string })?.code !== "23505" || attempt === 2)
