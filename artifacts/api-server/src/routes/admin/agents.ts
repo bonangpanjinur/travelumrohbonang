@@ -127,14 +127,10 @@ function normalizeAgentPayload(
           .toUpperCase()
           .replace(/\s+/g, "-")
           .slice(0, 40);
-  const referralCode =
-    body.referralCode == null || body.referralCode === ""
-      ? generated?.referralCode || agentCode
-      : String(body.referralCode)
-          .trim()
-          .toUpperCase()
-          .replace(/\s+/g, "")
-          .slice(0, 40);
+  // Referral/legacy is intentionally the same identifier as the agent code.
+  // Keep accepting the old request field for backward-compatible clients, but
+  // never allow it to diverge from agentCode.
+  const referralCode = agentCode || null;
   const commissionPercent =
     body.commissionPercent == null || body.commissionPercent === ""
       ? 0

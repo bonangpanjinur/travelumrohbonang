@@ -101,7 +101,6 @@ type AgentForm = {
   bannerIdCardUrl: string;
   mouNumber: string;
   validUntil: string;
-  referralCode: string;
   publicSlug: string;
   publicDescription: string;
   publicPageEnabled: boolean;
@@ -123,7 +122,6 @@ const emptyForm: AgentForm = {
   bannerIdCardUrl: "",
   mouNumber: "",
   validUntil: "",
-  referralCode: "",
   publicSlug: "",
   publicDescription: "",
   publicPageEnabled: true,
@@ -205,7 +203,6 @@ const AdminAgents = () => {
       bannerIdCardUrl: form.bannerIdCardUrl.trim() || null,
       mouNumber: form.mouNumber.trim() || null,
       validUntil: form.validUntil || null,
-      referralCode: form.referralCode.trim().toUpperCase() || null,
       publicSlug: form.publicSlug.trim() || null,
       publicDescription: form.publicDescription.trim() || null,
       publicPageEnabled: form.publicPageEnabled,
@@ -296,7 +293,6 @@ const AdminAgents = () => {
       bannerIdCardUrl: agent.bannerIdCardUrl || "",
       mouNumber: agent.mouNumber || "",
       validUntil: agent.validUntil || "",
-      referralCode: agent.referralCode || "",
       publicSlug: agent.publicSlug || "",
       publicDescription: agent.publicDescription || "",
       publicPageEnabled: agent.publicPageEnabled !== false,
@@ -729,24 +725,10 @@ const AdminAgents = () => {
                       className="mt-1"
                     />
                   </div>
-                  <div>
-                    <Label>Kode Referral / Legacy</Label>
-                    <Input
-                      value={form.referralCode}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          referralCode: e.target.value
-                            .toUpperCase()
-                            .replace(/\s+/g, ""),
-                        })
-                      }
-                      placeholder="A001VINS26"
-                      className="mt-1 font-mono"
-                    />
-                    <p className="text-[11px] text-muted-foreground mt-1">
-                      Untuk atribusi booking lama; otomatis mengikuti kode agen
-                      bila kosong.
+                  <div className="rounded-md border border-dashed border-border bg-muted/40 p-3 text-sm">
+                    <p className="font-medium">Kode Referral / Legacy</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Otomatis sama dengan Kode Agen. Tidak perlu diisi manual.
                     </p>
                   </div>
                 </div>
