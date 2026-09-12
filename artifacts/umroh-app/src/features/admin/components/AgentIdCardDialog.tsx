@@ -389,77 +389,139 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
     }
   };
 
-  const generatePdf = async () => {
-    if (!previewCardRef.current) return;
-    setGenerating(true);
+  /**
+   * Capture the exact card that is rendered in the preview.
+   *
+   * Download and Print intentionally share this function. The old
+   * implementation had separate coordinate-based PDF and HTML-print layouts,
+   * which inevitably drifted away from the JSX preview.
+   */
+  const captureCards = async () => {
+    if (!previewCardRef.current) {
+      throw new Error("Preview ID card tidak ditemukan");
+    }
+
     const originalSide = side;
-    try {
-      const waitForPreview = async () => {
-        await new Promise<void>((resolve) =>
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-        );
-        const images = Array.from(
-          previewCardRef.current?.querySelectorAll("img") || [],
-        );
-        await Promise.all(
-          images.map(async (image) => {
-            if (image.complete && image.naturalWidth > 0) return;
-            try {
-              await image.decode();
-            } catch {
-              // Optional images may fail without blocking PDF generation.
-            }
-          }),
-        );
-      };
-      const captureSide = async (target: "front" | "back") => {
-        setSide(target);
-        await waitForPreview();
-        const element = previewCardRef.current;
-        if (!element) throw new Error("Preview ID card tidak ditemukan");
-        const exportElement = element.cloneNode(true) as HTMLDivElement;
-        const sourceNodes = [
-          element,
-          ...Array.from(element.querySelectorAll("*")),
-        ];
-        const exportNodes = [
-          exportElement,
-          ...Array.from(exportElement.querySelectorAll("*")),
-        ];
-        const colorFallback = (property: string) =>
-          property.includes("color")
-            ? property === "background-color"
-              ? "#f8faf9"
-              : DARK_GREEN
-            : property.includes("shadow")
+    const waitForPreview = async () => {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => resolve()),
+        ),
+      );
+      if (document.fonts?.ready) await document.fonts.ready;
+      const images = Array.from(
+        previewCardRef.current?.querySelectorAll("img") || [],
+      );
+      await Promise.all(
+        images.map(
+          (image) =>
+            image.complete && image.naturalWidth > 0
+              ? Promise.resolve()
+              : new Promise<void>((resolve) => {
+                  image.onload = () => resolve();
+                  image.onerror = () => resolve();
+                }),
+        ),
+      );
+    };
+
+    const captureSide = async (target: "front" | "back") => {
+      setSide(target);
+      await waitForPreview();
+      const element = previewCardRef.current;
+      if (!element) throw new Error("Preview ID card tidak ditemukan");
+
+      const rect = element.getBoundingClientRect();
+      const exportElement = element.cloneNode(true) as HTMLDivElement;
+      const sourceNodes = [
+        element,
+        ...Array.from(element.querySelectorAll("*")),
+      ];
+      const exportNodes = [
+        exportElement,
+        ...Array.from(exportElement.querySelectorAll("*")),
+      ];
+      const colorFallback = (property: string) =>
+        property.includes("color")
+          ? property === "background-color"
+            ? "#f8faf9"
+            : DARK_GREEN
+          : property.includes("shadow")
+            ? "none"
+            : property.includes("image")
               ? "none"
-              : property.includes("image")
-                ? "none"
-                : "initial";
-        sourceNodes.forEach((sourceNode, index) => {
-          const targetNode = exportNodes[index] as HTMLElement | undefined;
-          if (!targetNode || !(sourceNode instanceof HTMLElement)) return;
-          const computed = window.getComputedStyle(sourceNode);
-          for (
-            let propertyIndex = 0;
-            propertyIndex < computed.length;
-            propertyIndex += 1
-          ) {
-            const property = computed.item(propertyIndex);
-            if (property.startsWith("--")) continue;
-            let value = computed.getPropertyValue(property);
-            if (value.includes("oklab") || value.includes("oklch")) {
-              value = colorFallback(property);
-            }
-            targetNode.style.setProperty(property, value);
+              : "initial";
+
+      // Inline computed styles so the export cannot be affected by the
+      // dialog/container CSS after it is moved outside the preview.
+      sourceNodes.forEach((sourceNode, index) => {
+        const targetNode = exportNodes[index] as HTMLElement | undefined;
+        if (!targetNode || !(sourceNode instanceof HTMLElement)) return;
+        const computed = window.getComputedStyle(sourceNode);
+        for (
+          let propertyIndex = 0;
+          propertyIndex < computed.length;
+          propertyIndex += 1
+        ) {
+          const property = computed.item(propertyIndex);
+          if (property.startsWith("--")) continue;
+          let value = computed.getPropertyValue(property);
+          if (value.includes("oklab") || value.includes("oklch")) {
+            value = colorFallback(property);
           }
-          targetNode.removeAttribute("class");
-        });
-        exportElement.style.position = "fixed";
-        exportElement.style.left = "-100000px";
-        exportElement.style.top = "0";
-        exportElement.style.margin = "0";
-        document.body.appendChild(exportElement);
+          targetNode.style.setProperty(property, value);
+        }
+        targetNode.removeAttribute("class");
+      });
+
+      // Preserve the actual visible preview dimensions. In particular, do
+      // not let the off-screen clone recalculate the aspect-ratio from a
+      // different containing block.
+      exportElement.style.position = "fixed";
+      exportElement.style.left = "-100000px";
+      exportElement.style.top = "0";
+      exportElement.style.margin = "0";
+      exportElement.style.width = `${rect.width}px`;
+      exportElement.style.height = `${rect.height}px`;
+      exportElement.style.maxWidth = "none";
+      exportElement.style.aspectRatio = "auto";
+      document.body.appendChild(exportElement);
+
+      // Same-origin/data URLs are embedded before capture to avoid a
+      // cross-origin image turning the canvas into a tainted canvas.
+      await Promise.all(
+        Array.from(exportElement.querySelectorAll("img")).map(
+          async (image) => {
+            if (!image.src || image.src.startsWith("data:")) return;
+            try {
+              const response = await fetch(image.src);
+              if (!response.ok) return;
+              const blob = await response.blob();
+              image.src = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result));
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+            } catch {
+              // html2canvas can still use a CORS-enabled source image.
+            }
+          },
+        ),
+      );
+      await Promise.all(
+        Array.from(exportElement.querySelectorAll("img")).map(
+          (image) =>
+            image.complete && image.naturalWidth > 0
+              ? Promise.resolve()
+              : new Promise<void>((resolve) => {
+                  image.onload = () => resolve();
+                  image.onerror = () => resolve();
+                }),
+        ),
+      );
+
+      try {
         const canvas = await html2canvas(exportElement, {
           backgroundColor: "#f8faf9",
           scale: 3,
@@ -467,11 +529,25 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
           allowTaint: false,
           logging: false,
         });
-        exportElement.remove();
         return canvas.toDataURL("image/png");
-      };
+      } finally {
+        exportElement.remove();
+      }
+    };
+
+    try {
       const frontImage = await captureSide("front");
       const backImage = await captureSide("back");
+      return { frontImage, backImage };
+    } finally {
+      setSide(originalSide);
+    }
+  };
+
+  const generatePdf = async () => {
+    setGenerating(true);
+    try {
+      const { frontImage, backImage } = await captureCards();
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -508,7 +584,6 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
         variant: "destructive",
       });
     } finally {
-      setSide(originalSide);
       setGenerating(false);
     }
   };
