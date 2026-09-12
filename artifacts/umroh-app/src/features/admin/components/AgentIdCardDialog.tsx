@@ -152,7 +152,11 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
         if (!agent.photoUrl) return;
         try {
           const imageUrl = await fetch(agent.photoUrl)
-            .then((response) => response.blob())
+            .then((response) => {
+              if (!response.ok)
+                throw new Error(`Photo request failed: ${response.status}`);
+              return response.blob();
+            })
             .then((blob) => URL.createObjectURL(blob));
           const image = await new Promise<HTMLImageElement>(
             (resolve, reject) => {
@@ -167,9 +171,11 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
           canvas.height = 900;
           const context = canvas.getContext("2d");
           if (!context) return;
-          const size = Math.min(image.naturalWidth, image.naturalHeight);
-          const sourceX = (image.naturalWidth - size) / 2;
-          const sourceY = (image.naturalHeight - size) / 2;
+          const sourceWidth = image.naturalWidth || image.width;
+          const sourceHeight = image.naturalHeight || image.height;
+          const size = Math.min(sourceWidth, sourceHeight);
+          const sourceX = (sourceWidth - size) / 2;
+          const sourceY = (sourceHeight - size) / 2;
           context.clearRect(0, 0, canvas.width, canvas.height);
           context.beginPath();
           context.arc(450, 450, 450, 0, Math.PI * 2);
@@ -190,10 +196,10 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
           pdf.addImage(
             canvas.toDataURL("image/png"),
             "PNG",
-            15.2,
-            24.5,
-            23.6,
-            23.6,
+            13.5,
+            26.5,
+            27,
+            27,
           );
         } catch {
           toast({
@@ -256,10 +262,10 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(5.8);
       pdf.text(cardTitle, CARD_WIDTH / 2, 25, { align: "center" });
+      await addCircularImage();
       pdf.setDrawColor(8, 116, 67);
       pdf.setLineWidth(1.1);
       pdf.circle(CARD_WIDTH / 2, 40, 13.5);
-      await addCircularImage();
       pdf.setTextColor(7, 92, 57);
       pdf.setFontSize(7.5);
       pdf.text(agent.name.toUpperCase().slice(0, 20), CARD_WIDTH / 2, 57, {
@@ -276,13 +282,6 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       pdf.text(`ID ${agent.agentCode || "-"}`, CARD_WIDTH / 2, 68, {
         align: "center",
       });
-      pdf.setFontSize(5.8);
-      pdf.text(
-        `CABANG ${branchName.toUpperCase().slice(0, 22)}`,
-        CARD_WIDTH / 2,
-        72,
-        { align: "center" },
-      );
       pdf.addPage([CARD_WIDTH, CARD_HEIGHT], "portrait");
       drawFrame(pdf);
       pdf.setTextColor(7, 92, 57);
@@ -383,7 +382,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
     printWindow.document
       .write(`<!doctype html><html><head><title>ID Card Agen - ${escapeHtml(agent.name)}</title><style>
       @page{size:53.98mm 85.6mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;font-family:Arial,sans-serif;color:#075c39}.card{position:relative;width:53.98mm;height:85.6mm;overflow:hidden;background:#f8faf9;page-break-after:always;padding:7mm 5mm;text-align:center}.card:last-child{page-break-after:auto}.card:first-child{background:#252525;color:#fff}.card:first-child .name,.card:first-child .id,.card:first-child .branch{color:#fff}.back{background:linear-gradient(155deg,#252525 0 29%,#fff 29% 100%)}.corner{position:absolute;z-index:0}.banner{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.12;z-index:0}.top-dark{left:0;top:0;width:25mm;height:18mm;background:#075c39;clip-path:polygon(0 0,100% 0,0 100%)}.top-lime{right:0;top:0;width:54mm;height:11mm;background:#83cc4b;clip-path:polygon(34% 0,100% 0,100% 44%,0 100%)}.bottom-dark{right:0;bottom:0;width:25mm;height:17mm;background:#075c39;clip-path:polygon(100% 0,100% 100%,0 100%)}.bottom-lime{left:0;bottom:0;width:54mm;height:10mm;background:#83cc4b;clip-path:polygon(0 56%,100% 0,100% 100%,0 100%)}.content{position:relative;z-index:1}.brand{font-size:5pt;font-weight:600;letter-spacing:.4px}.logo{display:block;width:24mm;height:14mm;object-fit:contain;margin:0 auto 1mm}.sub{font-size:5pt;letter-spacing:1px}.title{margin-top:2mm;font-size:6pt;font-weight:700}.photo{display:block;width:27mm;height:27mm;margin:5mm auto 3mm;border:1.5mm solid #087443;border-radius:50%;object-fit:cover;background:#fff}.placeholder{display:flex;align-items:center;justify-content:center;color:#087443;font-size:28pt;font-weight:700}.name{font-size:11pt;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.line{width:34mm;height:.5mm;margin:1.5mm auto;background:#087443}.role{font-size:7pt}.id{margin-top:3mm;font-size:7pt;font-weight:700}.branch{font-size:6.5pt;font-weight:700;text-transform:uppercase}.qr{width:15mm;height:15mm;margin:2mm auto 0;padding:1mm;border:1px solid #b7c5bd;border-radius:2mm;background:white}.back{padding:11mm 7mm;text-align:left}.back h1{text-align:center;font-size:11pt;margin:0}.back .accent{width:16mm;height:1mm;margin:3mm auto 8mm;background:#83cc4b}.details{padding:4mm;border:1px solid #b9d9c8;border-radius:3mm;background:rgba(255,255,255,.85);font-size:6.5pt;line-height:1.35}.details div{margin-bottom:2.5mm}.details b{display:block}.notice{margin-top:8mm;text-align:center;font-size:6.5pt;line-height:1.4}@media screen{body{background:#222;padding:20px}.card{margin:0 auto 20px;box-shadow:0 3px 15px #0008;transform:scale(1.35);transform-origin:top center;margin-bottom:130px}}
-      </style></head><body><section class="card"><i class="corner top-dark"></i><i class="corner top-lime"></i><i class="corner bottom-dark"></i><i class="corner bottom-lime"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content">${logo}<div class="brand">${escapeHtml(companyName.toUpperCase())}</div><div class="sub">TRAVEL &amp; TOURS</div><div class="title">ID CARD AGEN</div>${photo}<div class="name">${escapeHtml(agent.name)}</div><div class="line"></div><div class="role">AGEN / MITRA RESMI</div><div class="id">ID ${escapeHtml(agent.agentCode || "-")}</div><div class="branch">CABANG ${escapeHtml(branchName)}</div></div></section><section class="card back"><i class="corner top-dark"></i><i class="corner bottom-dark"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content"><h1>DATA AGEN</h1><div class="accent"></div><div class="details"><div><b>Nama Agen</b>${escapeHtml(agent.name)}</div><div><b>Kode Referral</b>${escapeHtml(agent.referralCode || agent.agentCode || "-")}</div><div><b>No. MOU</b>${escapeHtml(agent.mouNumber || "-")}</div><div><b>Bergabung</b>${escapeHtml(formatDate(agent.joinedAt))}</div><div><b>Berlaku s.d.</b>${escapeHtml(formatDate(agent.validUntil))}</div><div><b>Kontak</b>${escapeHtml(agent.phone || "-")}</div><div><b>Cabang</b>${escapeHtml(`${branchCode}${branchName}`)}</div></div>${qrData ? `<img class="qr" src="${qrData}" alt="QR Code" />` : ""}<div class="notice">Scan barcode untuk membuka profil publik agen.<br/>Kartu ini adalah identitas resmi agen dan berlaku sesuai masa kerja sama.</div></div></section></body></html>`);
+      </style></head><body><section class="card"><i class="corner top-dark"></i><i class="corner top-lime"></i><i class="corner bottom-dark"></i><i class="corner bottom-lime"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content">${logo}<div class="brand">${escapeHtml(companyName.toUpperCase())}</div><div class="sub">TRAVEL &amp; TOURS</div><div class="title">ID CARD AGEN</div>${photo}<div class="name">${escapeHtml(agent.name)}</div><div class="line"></div><div class="role">AGEN / MITRA RESMI</div><div class="id">ID ${escapeHtml(agent.agentCode || "-")}</div></div></section><section class="card back"><i class="corner top-dark"></i><i class="corner bottom-dark"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content"><h1>DATA AGEN</h1><div class="accent"></div><div class="details"><div><b>Nama Agen</b>${escapeHtml(agent.name)}</div><div><b>Kode Referral</b>${escapeHtml(agent.referralCode || agent.agentCode || "-")}</div><div><b>No. MOU</b>${escapeHtml(agent.mouNumber || "-")}</div><div><b>Bergabung</b>${escapeHtml(formatDate(agent.joinedAt))}</div><div><b>Berlaku s.d.</b>${escapeHtml(formatDate(agent.validUntil))}</div><div><b>Kontak</b>${escapeHtml(agent.phone || "-")}</div><div><b>Cabang</b>${escapeHtml(`${branchCode}${branchName}`)}</div></div>${qrData ? `<img class="qr" src="${qrData}" alt="QR Code" />` : ""}<div class="notice">Scan barcode untuk membuka profil publik agen.<br/>Kartu ini adalah identitas resmi agen dan berlaku sesuai masa kerja sama.</div></div></section></body></html>`);
     printWindow.document.close();
     printWindow.focus();
     window.setTimeout(() => {
@@ -506,9 +505,6 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                   </div>
                   <div className="mt-[5%] text-[clamp(9px,2.4vw,17px)] font-bold">
                     ID {agent.agentCode || "-"}
-                  </div>
-                  <div className="text-[clamp(8px,2.1vw,15px)] font-bold uppercase">
-                    CABANG {branchName}
                   </div>
                 </div>
               </div>
