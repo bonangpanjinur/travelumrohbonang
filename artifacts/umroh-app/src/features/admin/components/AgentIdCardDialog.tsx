@@ -404,7 +404,18 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
     }
 
     const originalSide = side;
-    const waitForPreview = async () => {
+    const waitForPreview = async (target: "front" | "back") => {
+      // setSide is asynchronous; wait for React to commit the requested side
+      // instead of relying on a fixed number of animation frames.
+      const deadline = performance.now() + 2500;
+      while (previewCardRef.current?.dataset.cardSide !== target) {
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => resolve()),
+        );
+        if (performance.now() > deadline) {
+          throw new Error(`Sisi ${target} ID card belum selesai dirender`);
+        }
+      }
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
@@ -426,7 +437,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
 
     const captureSide = async (target: "front" | "back") => {
       setSide(target);
-      await waitForPreview();
+      await waitForPreview(target);
       const element = previewCardRef.current;
       if (!element) throw new Error("Preview ID card tidak ditemukan");
 
@@ -757,6 +768,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
         <div className="flex justify-center rounded-2xl bg-muted/50 p-5 sm:p-10">
           <div
             ref={previewCardRef}
+            data-card-side={side}
             className="aspect-[53.98/85.6] w-full max-w-[380px] overflow-hidden rounded-[22px] shadow-2xl"
             style={{ background: "#f8faf9" }}
           >
