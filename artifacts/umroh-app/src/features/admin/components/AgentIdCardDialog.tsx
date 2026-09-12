@@ -406,23 +406,20 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
     const originalSide = side;
     const waitForPreview = async () => {
       await new Promise<void>((resolve) =>
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => resolve()),
-        ),
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
       if (document.fonts?.ready) await document.fonts.ready;
       const images = Array.from(
         previewCardRef.current?.querySelectorAll("img") || [],
       );
       await Promise.all(
-        images.map(
-          (image) =>
-            image.complete && image.naturalWidth > 0
-              ? Promise.resolve()
-              : new Promise<void>((resolve) => {
-                  image.onload = () => resolve();
-                  image.onerror = () => resolve();
-                }),
+        images.map((image) =>
+          image.complete && image.naturalWidth > 0
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                image.onload = () => resolve();
+                image.onerror = () => resolve();
+              }),
         ),
       );
     };
@@ -453,6 +450,10 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
             : property.includes("image")
               ? "none"
               : "initial";
+
+      const photoFallback = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600"><rect width="600" height="600" fill="#e7f3eb"/><circle cx="300" cy="230" r="105" fill="#087443"/><path d="M120 535c18-115 83-170 180-170s162 55 180 170" fill="#087443"/><text x="300" y="585" text-anchor="middle" font-family="Arial" font-size="34" fill="#075c39">${(agent.name || "A").slice(0, 1).toUpperCase()}</text></svg>`,
+      )}`;
 
       // Inline computed styles so the export cannot be affected by the
       // dialog/container CSS after it is moved outside the preview.
@@ -518,46 +519,58 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       // not let the off-screen clone recalculate the aspect-ratio from a
       // different containing block.
       exportElement.style.position = "fixed";
-      exportElement.style.left = "-100000px";
+      // Keep the clone inside the viewport. html2canvas can return a blank or
+      // partially rendered canvas for fixed elements positioned far outside
+      // the viewport (the previous -100000px placement caused missing cards).
+      exportElement.style.left = "0";
       exportElement.style.top = "0";
       exportElement.style.margin = "0";
       exportElement.style.width = `${rect.width}px`;
       exportElement.style.height = `${rect.height}px`;
       exportElement.style.maxWidth = "none";
       exportElement.style.aspectRatio = "auto";
+      exportElement.style.zIndex = "-1000";
+      exportElement.style.pointerEvents = "none";
       document.body.appendChild(exportElement);
 
       // Same-origin/data URLs are embedded before capture to avoid a
       // cross-origin image turning the canvas into a tainted canvas.
       await Promise.all(
-        Array.from(exportElement.querySelectorAll("img")).map(
-          async (image) => {
-            if (!image.src || image.src.startsWith("data:")) return;
-            try {
-              const response = await fetch(image.src);
-              if (!response.ok) return;
-              const blob = await response.blob();
-              image.src = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(String(reader.result));
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-              });
-            } catch {
-              // html2canvas can still use a CORS-enabled source image.
-            }
-          },
-        ),
+        Array.from(exportElement.querySelectorAll("img")).map(async (image) => {
+          if (!image.src || image.src.startsWith("data:")) return;
+          try {
+            const controller = new AbortController();
+            const timeout = window.setTimeout(() => controller.abort(), 8000);
+            const response = await fetch(image.src, {
+              signal: controller.signal,
+              credentials: "omit",
+            });
+            window.clearTimeout(timeout);
+            if (!response.ok) return;
+            const blob = await response.blob();
+            image.src = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(String(reader.result));
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+          } catch {
+            // Do not leave a broken cross-origin image in the canvas. A
+            // broken photo becomes a deterministic initials placeholder;
+            // optional branding/banner images are removed.
+            if (image.alt === agent.name) image.src = photoFallback;
+            else image.remove();
+          }
+        }),
       );
       await Promise.all(
-        Array.from(exportElement.querySelectorAll("img")).map(
-          (image) =>
-            image.complete && image.naturalWidth > 0
-              ? Promise.resolve()
-              : new Promise<void>((resolve) => {
-                  image.onload = () => resolve();
-                  image.onerror = () => resolve();
-                }),
+        Array.from(exportElement.querySelectorAll("img")).map((image) =>
+          image.complete && image.naturalWidth > 0
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                image.onload = () => resolve();
+                image.onerror = () => resolve();
+              }),
         ),
       );
 
@@ -670,14 +683,13 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       printWindow.document.close();
       printWindow.focus();
       await Promise.all(
-        Array.from(printWindow.document.images).map(
-          (image) =>
-            image.complete
-              ? Promise.resolve()
-              : new Promise<void>((resolve) => {
-                  image.onload = () => resolve();
-                  image.onerror = () => resolve();
-                }),
+        Array.from(printWindow.document.images).map((image) =>
+          image.complete
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                image.onload = () => resolve();
+                image.onerror = () => resolve();
+              }),
         ),
       );
       printWindow.print();
