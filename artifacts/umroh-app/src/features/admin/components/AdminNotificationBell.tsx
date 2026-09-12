@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, Package, CreditCard, RefreshCw, ExternalLink } from "lucide-react";
+import { Bell, Check, Package, CreditCard, RefreshCw, ExternalLink, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
@@ -13,6 +13,15 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { useAdminNotifications, type AdminNotif } from "@/features/admin/hooks/useAdminNotifications";
+import {
+  enableRingtone,
+  getRingtonePreset,
+  isRingtoneEnabled,
+  playRingtone,
+  RINGTONE_PRESETS,
+  setRingtonePreset,
+  type RingtonePreset,
+} from "@/shared/lib/ringtone";
 
 const NotifIcon = ({ type }: { type: AdminNotif["type"] }) =>
   type === "booking" ? (
@@ -71,6 +80,8 @@ const EmptyState = ({ label }: { label: string }) => (
 const AdminNotificationBell = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [ringtoneEnabled, setRingtoneEnabled] = useState(isRingtoneEnabled);
+  const [ringtonePreset, setRingtonePresetState] = useState<RingtonePreset>(getRingtonePreset);
   const {
     notifications,
     loading,
@@ -89,6 +100,27 @@ const AdminNotificationBell = () => {
     markAsRead(notif.id);
     navigate(notif.link);
     setIsOpen(false);
+  };
+
+  const handleEnableRingtone = async () => {
+    const enabled = await enableRingtone();
+    setRingtoneEnabled(enabled);
+    if (enabled) await playRingtone(ringtonePreset);
+  };
+
+  const handleToggleRingtone = async () => {
+    if (ringtoneEnabled) {
+      localStorage.setItem("order_ringtone_enabled", "false");
+      setRingtoneEnabled(false);
+    } else {
+      await handleEnableRingtone();
+    }
+  };
+
+  const handlePresetChange = async (preset: RingtonePreset) => {
+    setRingtonePreset(preset);
+    setRingtonePresetState(preset);
+    if (ringtoneEnabled) await playRingtone(preset);
   };
 
   return (
@@ -247,6 +279,30 @@ const AdminNotificationBell = () => {
                 {unreadPayments}
               </Badge>
             )}
+          </Button>
+        </div>
+        <div className="border-t px-3 py-2 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleToggleRingtone}
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            title={ringtoneEnabled ? "Matikan suara order" : "Aktifkan suara order"}
+          >
+            {ringtoneEnabled ? <Volume2 className="w-3.5 h-3.5 text-emerald-600" /> : <VolumeX className="w-3.5 h-3.5" />}
+            {ringtoneEnabled ? "Suara aktif" : "Aktifkan suara"}
+          </button>
+          <select
+            aria-label="Nada dering order"
+            value={ringtonePreset}
+            onChange={(event) => void handlePresetChange(event.target.value as RingtonePreset)}
+            className="ml-auto h-7 rounded-md border bg-background px-2 text-xs"
+          >
+            {RINGTONE_PRESETS.map((preset) => (
+              <option key={preset.value} value={preset.value}>{preset.label}</option>
+            ))}
+          </select>
+          <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => void handleEnableRingtone()}>
+            Tes
           </Button>
         </div>
       </PopoverContent>
