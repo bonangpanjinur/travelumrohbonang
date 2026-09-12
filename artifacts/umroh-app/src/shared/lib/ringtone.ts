@@ -2,6 +2,7 @@ export type RingtonePreset = "urgent" | "classic" | "soft";
 
 export const RINGTONE_STORAGE_KEY = "order_ringtone_preset";
 export const RINGTONE_ENABLED_STORAGE_KEY = "order_ringtone_enabled";
+export const VIBRATION_ENABLED_STORAGE_KEY = "order_vibration_enabled";
 
 export const RINGTONE_PRESETS: Array<{
   value: RingtonePreset;
@@ -70,6 +71,33 @@ export function disableRingtone(): void {
     localStorage.setItem(RINGTONE_ENABLED_STORAGE_KEY, "false");
   } catch {
     // Ignore storage errors.
+  }
+}
+
+/** Vibration is enabled by default; browsers without Vibration API are ignored. */
+export function isVibrationEnabled(): boolean {
+  try {
+    return localStorage.getItem(VIBRATION_ENABLED_STORAGE_KEY) !== "false";
+  } catch {
+    return true;
+  }
+}
+
+export function setVibrationEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(VIBRATION_ENABLED_STORAGE_KEY, String(enabled));
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
+/** Triggers a strong, short alert pattern when the device supports vibration. */
+export function vibrateOrder(): void {
+  if (!isVibrationEnabled() || typeof navigator === "undefined" || !navigator.vibrate) return;
+  try {
+    navigator.vibrate([350, 120, 350, 120, 600]);
+  } catch {
+    // Vibration must never break the notification flow.
   }
 }
 

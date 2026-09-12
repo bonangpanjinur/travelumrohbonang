@@ -5,7 +5,7 @@ import { apiFetch } from "@/shared/lib/apiClient";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { playRingtone } from "@/shared/lib/ringtone";
+import { playRingtone, vibrateOrder } from "@/shared/lib/ringtone";
 
 /** Safely format a date string; returns "-" if null/invalid. */
 function safeDistanceToNow(dateStr: string | null | undefined): string {
@@ -206,6 +206,7 @@ export function useAdminNotifications() {
           if (!notif.is_read) {
             showToast(notif);
             void playRingtone();
+            vibrateOrder();
           }
         }
       )

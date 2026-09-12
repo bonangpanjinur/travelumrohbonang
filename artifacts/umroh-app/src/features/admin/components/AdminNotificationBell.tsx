@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, Package, CreditCard, RefreshCw, ExternalLink, Volume2, VolumeX } from "lucide-react";
+import { Bell, Check, Package, CreditCard, RefreshCw, ExternalLink, Volume2, VolumeX, Smartphone } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
@@ -20,6 +20,9 @@ import {
   playRingtone,
   RINGTONE_PRESETS,
   setRingtonePreset,
+  isVibrationEnabled,
+  setVibrationEnabled,
+  vibrateOrder,
   type RingtonePreset,
 } from "@/shared/lib/ringtone";
 
@@ -82,6 +85,7 @@ const AdminNotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [ringtoneEnabled, setRingtoneEnabled] = useState(isRingtoneEnabled);
   const [ringtonePreset, setRingtonePresetState] = useState<RingtonePreset>(getRingtonePreset);
+  const [vibrationEnabled, setVibrationEnabledState] = useState(isVibrationEnabled);
   const {
     notifications,
     loading,
@@ -121,6 +125,13 @@ const AdminNotificationBell = () => {
     setRingtonePreset(preset);
     setRingtonePresetState(preset);
     if (ringtoneEnabled) await playRingtone(preset);
+  };
+
+  const handleToggleVibration = () => {
+    const next = !vibrationEnabled;
+    setVibrationEnabled(next);
+    setVibrationEnabledState(next);
+    if (next) vibrateOrder();
   };
 
   return (
@@ -303,6 +314,20 @@ const AdminNotificationBell = () => {
           </select>
           <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => void handleEnableRingtone()}>
             Tes
+          </Button>
+        </div>
+        <div className="border-t px-3 py-2 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleToggleVibration}
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            title={vibrationEnabled ? "Matikan getar order" : "Aktifkan getar order"}
+          >
+            <Smartphone className={`w-3.5 h-3.5 ${vibrationEnabled ? "text-emerald-600" : ""}`} />
+            {vibrationEnabled ? "Getar aktif" : "Aktifkan getar"}
+          </button>
+          <Button variant="outline" size="sm" className="ml-auto h-7 px-2 text-xs" onClick={vibrateOrder}>
+            Tes getar
           </Button>
         </div>
       </PopoverContent>
