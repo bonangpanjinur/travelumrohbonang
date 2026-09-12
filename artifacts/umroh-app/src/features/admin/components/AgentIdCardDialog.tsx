@@ -812,7 +812,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                 </div>
               </div>
             ) : (
-              <div className="relative h-full w-full overflow-hidden px-[10%] pt-[12%] text-[#075c39]">
+              <div className="relative h-full w-full overflow-hidden px-[9%] pb-[6%] pt-[9%] text-[#075c39]">
                 {agent.bannerIdCardUrl && (
                   <img
                     src={agent.bannerIdCardUrl}
@@ -829,70 +829,95 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                   <polygon points="0,0 42,0 0,16" fill={DARK_GREEN} />
                   <polygon points="100,84 100,100 58,100" fill={DARK_GREEN} />
                 </svg>
-                <div className="relative">
-                  <div className="text-center text-[clamp(17px,5vw,32px)] font-black tracking-widest">
+                <div className="relative flex h-full flex-col">
+                  <div className="text-center text-[clamp(16px,4.8vw,29px)] font-black tracking-[0.16em]">
                     DATA AGEN
                   </div>
-                  <div className="mx-auto mt-[4%] h-1 w-16 rounded bg-[#83cc4b]" />
-                  <div className="mt-[8%] space-y-[3%] rounded-2xl border border-[#b9d9c8] bg-white/90 p-[6%] text-[clamp(8px,2.1vw,14px)] shadow-sm">
-                    <div>
-                      <span className="font-bold">Nama Agen</span>
-                      <br />
-                      {agent.name}
-                    </div>
-                    <div>
-                      <span className="font-bold">Kode Referral</span>
-                      <br />
-                      {agent.referralCode || agent.agentCode || "-"}
-                    </div>
-                    <div>
-                      <span className="font-bold">No. MOU</span>
-                      <br />
-                      {agent.mouNumber || "-"}
-                    </div>
-                    <div>
-                      <span className="font-bold">Bergabung</span>
-                      <br />
-                      {formatDate(agent.joinedAt)}
-                    </div>
-                    <div>
-                      <span className="font-bold">Berlaku s.d.</span>
-                      <br />
-                      {formatDate(agent.validUntil)}
-                    </div>
-                    <div>
-                      <span className="font-bold">Kontak</span>
-                      <br />
-                      {agent.phone || agent.email || "-"}
-                    </div>
-                    <div>
-                      <span className="font-bold">Cabang</span>
-                      <br />
-                      {branchCode}
-                      {branchName}
+                  <div className="mx-auto mt-[3%] h-1 w-14 rounded-full bg-[#83cc4b]" />
+                  <div className="mt-[6%] rounded-[18px] border border-[#b9d9c8] bg-white/90 p-[5%] text-[clamp(8px,2vw,13px)] leading-snug shadow-sm">
+                    <div className="grid grid-cols-2 gap-x-[7%] gap-y-[6%]">
+                      <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[4%]">
+                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
+                          Nama Agen
+                        </span>
+                        <span className="mt-0.5 block truncate font-semibold">
+                          {agent.name}
+                        </span>
+                      </div>
+                      <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[4%]">
+                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
+                          Kode Referral
+                        </span>
+                        <span className="mt-0.5 block truncate font-semibold">
+                          {agent.referralCode || agent.agentCode || "-"}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
+                          No. MOU
+                        </span>
+                        <span className="mt-0.5 block truncate">
+                          {agent.mouNumber || "-"}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
+                          Bergabung
+                        </span>
+                        <span className="mt-0.5 block truncate">
+                          {formatDate(agent.joinedAt)}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
+                          Berlaku s.d.
+                        </span>
+                        <span className="mt-0.5 block truncate">
+                          {formatDate(agent.validUntil)}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
+                          Kontak
+                        </span>
+                        <span className="mt-0.5 block truncate">
+                          {agent.phone || agent.email || "-"}
+                        </span>
+                      </div>
+                      <div className="col-span-2 min-w-0 border-t border-[#dbece2] pt-[4%]">
+                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
+                          Cabang
+                        </span>
+                        <span className="mt-0.5 block truncate">
+                          {branchCode}
+                          {branchName}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-[5%] flex flex-col items-center gap-1">
+                  <div className="mt-auto flex flex-col items-center gap-1 pt-[5%]">
                     {url ? (
                       <QRCodeSVG
                         value={url}
                         size={180}
                         level="H"
-                        className="h-[22%] w-[22%] rounded-lg border-4 border-white bg-white p-1 shadow-sm"
+                        className="h-auto w-[24%] rounded-lg border-4 border-white bg-white p-1 shadow-sm"
                       />
                     ) : (
-                      <div className="flex aspect-square w-[22%] items-center justify-center rounded-lg border border-slate-300 bg-white text-[#087443]">
+                      <div className="flex aspect-square w-[24%] items-center justify-center rounded-lg border border-slate-300 bg-white text-[#087443]">
                         <QrCode className="h-1/2 w-1/2" />
                       </div>
                     )}
-                    <span className="text-[clamp(7px,1.7vw,11px)] text-muted-foreground">
+                    <span className="text-center text-[clamp(7px,1.6vw,10px)] text-muted-foreground">
                       Scan untuk membuka profil publik
                     </span>
                   </div>
-                  <div className="mt-[4%] flex items-center justify-center gap-2 text-center text-[clamp(8px,1.9vw,13px)]">
-                    <ShieldCheck className="h-5 w-5 text-[#087443]" /> Kartu ini
-                    adalah identitas resmi agen dan berlaku sesuai masa kerja
-                    sama.
+                  <div className="mt-[3%] flex items-center justify-center gap-1.5 text-center text-[clamp(7px,1.7vw,11px)] leading-snug text-[#075c39]/80">
+                    <ShieldCheck className="h-4 w-4 shrink-0 text-[#087443]" />
+                    <span>
+                      Kartu ini adalah identitas resmi agen dan berlaku sesuai
+                      masa kerja sama.
+                    </span>
                   </div>
                 </div>
               </div>
