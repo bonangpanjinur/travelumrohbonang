@@ -229,80 +229,107 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
         }
       };
       drawFrame(pdf);
-      pdf.setTextColor(7, 92, 57);
+      pdf.setTextColor(255, 255, 255);
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(10);
-      pdf.text(companyName.toUpperCase().slice(0, 23), CARD_WIDTH / 2, 16, {
+      pdf.setFontSize(4.5);
+      pdf.text(companyName.toUpperCase().slice(0, 28), CARD_WIDTH / 2, 21, {
         align: "center",
       });
-      await addBrandLogo();
-      pdf.setFontSize(5);
-      pdf.setFont("helvetica", "normal");
-      pdf.text("TRAVEL & TOURS", CARD_WIDTH / 2, 19.5, { align: "center" });
+      if (branding.logo_url) {
+        try {
+          const image = await fetch(branding.logo_url)
+            .then((response) => response.blob())
+            .then(
+              (blob) =>
+                new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(String(reader.result));
+                  reader.onerror = reject;
+                  reader.readAsDataURL(blob);
+                }),
+            );
+          pdf.addImage(image, "PNG", 17, 7, 20, 11);
+        } catch {
+          await addBrandLogo();
+        }
+      }
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(6.5);
-      pdf.text(cardTitle, CARD_WIDTH / 2, 22.5, { align: "center" });
+      pdf.setFontSize(5.8);
+      pdf.text(cardTitle, CARD_WIDTH / 2, 25, { align: "center" });
       pdf.setDrawColor(8, 116, 67);
       pdf.setLineWidth(1.1);
-      pdf.circle(CARD_WIDTH / 2, 36.3, 12.8);
+      pdf.circle(CARD_WIDTH / 2, 40, 13.5);
       await addCircularImage();
       pdf.setTextColor(7, 92, 57);
-      pdf.setFontSize(8.2);
-      pdf.text(agent.name.toUpperCase().slice(0, 20), CARD_WIDTH / 2, 52.5, {
+      pdf.setFontSize(7.5);
+      pdf.text(agent.name.toUpperCase().slice(0, 20), CARD_WIDTH / 2, 57, {
         align: "center",
       });
       pdf.setDrawColor(8, 116, 67);
       pdf.setLineWidth(0.45);
-      pdf.line(12, 55, CARD_WIDTH - 12, 55);
+      pdf.line(12, 59.5, CARD_WIDTH - 12, 59.5);
       pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(6.2);
-      pdf.text("AGEN / MITRA RESMI", CARD_WIDTH / 2, 58.5, { align: "center" });
+      pdf.setFontSize(5.5);
+      pdf.text("AGEN / MITRA RESMI", CARD_WIDTH / 2, 63, { align: "center" });
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(6.2);
-      pdf.text(`ID ${agent.agentCode || "-"}`, CARD_WIDTH / 2, 62.5, {
+      pdf.setFontSize(6);
+      pdf.text(`ID ${agent.agentCode || "-"}`, CARD_WIDTH / 2, 68, {
         align: "center",
       });
       pdf.setFontSize(5.8);
       pdf.text(
         `CABANG ${branchName.toUpperCase().slice(0, 22)}`,
         CARD_WIDTH / 2,
-        66,
+        72,
         { align: "center" },
       );
-      if (url) {
-        try {
-          const qr = await QRCode.toDataURL(url, {
-            width: 320,
-            margin: 1,
-            errorCorrectionLevel: "H",
-          });
-          pdf.addImage(qr, "PNG", 21, 69.5, 12, 12);
-        } catch {
-          /* QR is omitted when no public page exists */
-        }
-      }
       pdf.addPage([CARD_WIDTH, CARD_HEIGHT], "portrait");
       drawFrame(pdf);
       pdf.setTextColor(7, 92, 57);
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(11);
-      pdf.text("DATA AGEN", CARD_WIDTH / 2, 18, { align: "center" });
+      pdf.setFontSize(8);
+      pdf.text("KETENTUAN & DATA AGEN", CARD_WIDTH / 2, 16, {
+        align: "center",
+      });
       pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(6.2);
+      pdf.setFontSize(5.8);
+      pdf.text(`Kode Agen      : ${agent.agentCode || "-"}`, 7, 25);
       pdf.text(
-        `Kode Referral : ${agent.referralCode || agent.agentCode || "-"}`,
-        8,
-        29,
+        `Kode Referral  : ${agent.referralCode || agent.agentCode || "-"}`,
+        7,
+        31,
       );
-      pdf.text(`No. MOU       : ${agent.mouNumber || "-"}`, 8, 35);
-      pdf.text(`Bergabung     : ${formatDate(agent.joinedAt)}`, 8, 41);
-      pdf.text(`Berlaku s.d.  : ${formatDate(agent.validUntil)}`, 8, 47);
+      pdf.text(`No. MOU        : ${agent.mouNumber || "-"}`, 7, 37);
+      pdf.text(`Bergabung      : ${formatDate(agent.joinedAt)}`, 7, 43);
+      pdf.text(`Berlaku s.d.   : ${formatDate(agent.validUntil)}`, 7, 49);
       pdf.text(
-        `Cabang        : ${branchCode}${branchName}`.slice(0, 62),
-        8,
-        53,
+        `Cabang         : ${branchCode}${branchName}`.slice(0, 62),
+        7,
+        55,
       );
-      pdf.text(`Telepon       : ${agent.phone || "-"}`, 8, 59);
+      if (url) {
+        try {
+          const qr = await QRCode.toDataURL(url, {
+            width: 420,
+            margin: 1,
+            errorCorrectionLevel: "H",
+          });
+          pdf.addImage(qr, "PNG", 20, 60, 16, 16);
+        } catch {
+          toast({
+            title: "QR tidak dapat dibuat",
+            description: "PDF dibuat tanpa barcode.",
+            variant: "destructive",
+          });
+        }
+      }
+      pdf.setFontSize(5);
+      pdf.text(
+        "Scan barcode untuk membuka profil publik agen",
+        CARD_WIDTH / 2,
+        79,
+        { align: "center" },
+      );
       pdf.save(`id-card-agen-${safeName(agent)}.pdf`);
     } finally {
       setGenerating(false);
@@ -355,8 +382,8 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       : "";
     printWindow.document
       .write(`<!doctype html><html><head><title>ID Card Agen - ${escapeHtml(agent.name)}</title><style>
-      @page{size:53.98mm 85.6mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;font-family:Arial,sans-serif;color:#075c39}.card{position:relative;width:53.98mm;height:85.6mm;overflow:hidden;background:#f8faf9;page-break-after:always;padding:7mm 5mm;text-align:center}.card:last-child{page-break-after:auto}.corner{position:absolute;z-index:0}.banner{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.12;z-index:0}.top-dark{left:0;top:0;width:25mm;height:18mm;background:#075c39;clip-path:polygon(0 0,100% 0,0 100%)}.top-lime{right:0;top:0;width:54mm;height:11mm;background:#83cc4b;clip-path:polygon(34% 0,100% 0,100% 44%,0 100%)}.bottom-dark{right:0;bottom:0;width:25mm;height:17mm;background:#075c39;clip-path:polygon(100% 0,100% 100%,0 100%)}.bottom-lime{left:0;bottom:0;width:54mm;height:10mm;background:#83cc4b;clip-path:polygon(0 56%,100% 0,100% 100%,0 100%)}.content{position:relative;z-index:1}.brand{font-size:11pt;font-weight:800;letter-spacing:1px}.logo{display:block;width:8mm;height:5mm;object-fit:contain;margin:0 auto 1mm}.sub{font-size:5pt;letter-spacing:1px}.title{margin-top:2mm;font-size:6pt;font-weight:700}.photo{display:block;width:27mm;height:27mm;margin:5mm auto 3mm;border:1.5mm solid #087443;border-radius:50%;object-fit:cover;background:#fff}.placeholder{display:flex;align-items:center;justify-content:center;color:#087443;font-size:28pt;font-weight:700}.name{font-size:11pt;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.line{width:34mm;height:.5mm;margin:1.5mm auto;background:#087443}.role{font-size:7pt}.id{margin-top:3mm;font-size:7pt;font-weight:700}.branch{font-size:6.5pt;font-weight:700;text-transform:uppercase}.qr{width:15mm;height:15mm;margin:2mm auto 0;padding:1mm;border:1px solid #b7c5bd;border-radius:2mm;background:white}.back{padding:11mm 7mm;text-align:left}.back h1{text-align:center;font-size:11pt;margin:0}.back .accent{width:16mm;height:1mm;margin:3mm auto 8mm;background:#83cc4b}.details{padding:4mm;border:1px solid #b9d9c8;border-radius:3mm;background:rgba(255,255,255,.85);font-size:6.5pt;line-height:1.35}.details div{margin-bottom:2.5mm}.details b{display:block}.notice{margin-top:8mm;text-align:center;font-size:6.5pt;line-height:1.4}@media screen{body{background:#222;padding:20px}.card{margin:0 auto 20px;box-shadow:0 3px 15px #0008;transform:scale(1.35);transform-origin:top center;margin-bottom:130px}}
-      </style></head><body><section class="card"><i class="corner top-dark"></i><i class="corner top-lime"></i><i class="corner bottom-dark"></i><i class="corner bottom-lime"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content">${logo}<div class="brand">${escapeHtml(companyName.toUpperCase())}</div><div class="sub">TRAVEL &amp; TOURS</div><div class="title">ID CARD AGEN</div>${photo}<div class="name">${escapeHtml(agent.name)}</div><div class="line"></div><div class="role">AGEN / MITRA RESMI</div><div class="id">ID ${escapeHtml(agent.agentCode || "-")}</div><div class="branch">CABANG ${escapeHtml(branchName)}</div>${qrData ? `<img class="qr" src="${qrData}" alt="QR Code" />` : ""}</div></section><section class="card back"><i class="corner top-dark"></i><i class="corner bottom-dark"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content"><h1>DATA AGEN</h1><div class="accent"></div><div class="details"><div><b>Nama Agen</b>${escapeHtml(agent.name)}</div><div><b>Kode Referral</b>${escapeHtml(agent.referralCode || agent.agentCode || "-")}</div><div><b>No. MOU</b>${escapeHtml(agent.mouNumber || "-")}</div><div><b>Bergabung</b>${escapeHtml(formatDate(agent.joinedAt))}</div><div><b>Berlaku s.d.</b>${escapeHtml(formatDate(agent.validUntil))}</div><div><b>Kontak</b>${escapeHtml(agent.phone || "-")}</div><div><b>Cabang</b>${escapeHtml(`${branchCode}${branchName}`)}</div></div><div class="notice">Kartu ini adalah identitas resmi agen dan berlaku sesuai masa kerja sama.</div></div></section></body></html>`);
+      @page{size:53.98mm 85.6mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;font-family:Arial,sans-serif;color:#075c39}.card{position:relative;width:53.98mm;height:85.6mm;overflow:hidden;background:#f8faf9;page-break-after:always;padding:7mm 5mm;text-align:center}.card:last-child{page-break-after:auto}.card:first-child{background:#252525;color:#fff}.card:first-child .name,.card:first-child .id,.card:first-child .branch{color:#fff}.back{background:linear-gradient(155deg,#252525 0 29%,#fff 29% 100%)}.corner{position:absolute;z-index:0}.banner{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.12;z-index:0}.top-dark{left:0;top:0;width:25mm;height:18mm;background:#075c39;clip-path:polygon(0 0,100% 0,0 100%)}.top-lime{right:0;top:0;width:54mm;height:11mm;background:#83cc4b;clip-path:polygon(34% 0,100% 0,100% 44%,0 100%)}.bottom-dark{right:0;bottom:0;width:25mm;height:17mm;background:#075c39;clip-path:polygon(100% 0,100% 100%,0 100%)}.bottom-lime{left:0;bottom:0;width:54mm;height:10mm;background:#83cc4b;clip-path:polygon(0 56%,100% 0,100% 100%,0 100%)}.content{position:relative;z-index:1}.brand{font-size:5pt;font-weight:600;letter-spacing:.4px}.logo{display:block;width:24mm;height:14mm;object-fit:contain;margin:0 auto 1mm}.sub{font-size:5pt;letter-spacing:1px}.title{margin-top:2mm;font-size:6pt;font-weight:700}.photo{display:block;width:27mm;height:27mm;margin:5mm auto 3mm;border:1.5mm solid #087443;border-radius:50%;object-fit:cover;background:#fff}.placeholder{display:flex;align-items:center;justify-content:center;color:#087443;font-size:28pt;font-weight:700}.name{font-size:11pt;font-weight:800;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.line{width:34mm;height:.5mm;margin:1.5mm auto;background:#087443}.role{font-size:7pt}.id{margin-top:3mm;font-size:7pt;font-weight:700}.branch{font-size:6.5pt;font-weight:700;text-transform:uppercase}.qr{width:15mm;height:15mm;margin:2mm auto 0;padding:1mm;border:1px solid #b7c5bd;border-radius:2mm;background:white}.back{padding:11mm 7mm;text-align:left}.back h1{text-align:center;font-size:11pt;margin:0}.back .accent{width:16mm;height:1mm;margin:3mm auto 8mm;background:#83cc4b}.details{padding:4mm;border:1px solid #b9d9c8;border-radius:3mm;background:rgba(255,255,255,.85);font-size:6.5pt;line-height:1.35}.details div{margin-bottom:2.5mm}.details b{display:block}.notice{margin-top:8mm;text-align:center;font-size:6.5pt;line-height:1.4}@media screen{body{background:#222;padding:20px}.card{margin:0 auto 20px;box-shadow:0 3px 15px #0008;transform:scale(1.35);transform-origin:top center;margin-bottom:130px}}
+      </style></head><body><section class="card"><i class="corner top-dark"></i><i class="corner top-lime"></i><i class="corner bottom-dark"></i><i class="corner bottom-lime"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content">${logo}<div class="brand">${escapeHtml(companyName.toUpperCase())}</div><div class="sub">TRAVEL &amp; TOURS</div><div class="title">ID CARD AGEN</div>${photo}<div class="name">${escapeHtml(agent.name)}</div><div class="line"></div><div class="role">AGEN / MITRA RESMI</div><div class="id">ID ${escapeHtml(agent.agentCode || "-")}</div><div class="branch">CABANG ${escapeHtml(branchName)}</div></div></section><section class="card back"><i class="corner top-dark"></i><i class="corner bottom-dark"></i>${agent.bannerIdCardUrl ? `<img class="banner" src="${escapeHtml(agent.bannerIdCardUrl)}" alt="" />` : ""}<div class="content"><h1>DATA AGEN</h1><div class="accent"></div><div class="details"><div><b>Nama Agen</b>${escapeHtml(agent.name)}</div><div><b>Kode Referral</b>${escapeHtml(agent.referralCode || agent.agentCode || "-")}</div><div><b>No. MOU</b>${escapeHtml(agent.mouNumber || "-")}</div><div><b>Bergabung</b>${escapeHtml(formatDate(agent.joinedAt))}</div><div><b>Berlaku s.d.</b>${escapeHtml(formatDate(agent.validUntil))}</div><div><b>Kontak</b>${escapeHtml(agent.phone || "-")}</div><div><b>Cabang</b>${escapeHtml(`${branchCode}${branchName}`)}</div></div>${qrData ? `<img class="qr" src="${qrData}" alt="QR Code" />` : ""}<div class="notice">Scan barcode untuk membuka profil publik agen.<br/>Kartu ini adalah identitas resmi agen dan berlaku sesuai masa kerja sama.</div></div></section></body></html>`);
     printWindow.document.close();
     printWindow.focus();
     window.setTimeout(() => {
@@ -418,7 +445,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
             style={{ background: "#f8faf9" }}
           >
             {side === "front" ? (
-              <div className="relative h-full w-full overflow-hidden px-[8%] pt-[8%] text-[#075c39]">
+              <div className="relative h-full w-full overflow-hidden bg-[#252525] px-[8%] pt-[8%] text-white">
                 <div
                   className="absolute left-0 top-0 h-[18%] w-[45%] bg-[#075c39]"
                   style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }}
@@ -440,18 +467,19 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                   }}
                 />
                 <div className="relative text-center">
-                  {branding.logo_url && (
+                  {branding.logo_url ? (
                     <img
                       src={branding.logo_url}
                       alt={companyName}
-                      className="mx-auto mb-1 h-7 w-auto max-w-[46%] object-contain"
+                      className="mx-auto mb-1 h-[16%] w-[42%] object-contain"
                     />
+                  ) : (
+                    <div className="mx-auto mb-1 flex h-[16%] w-[42%] items-center justify-center rounded-lg bg-white/15 text-[clamp(16px,5vw,30px)] font-black text-white">
+                      {companyName.charAt(0).toUpperCase()}
+                    </div>
                   )}
-                  <div className="text-[clamp(15px,4.8vw,32px)] font-black tracking-[.12em]">
+                  <div className="text-[clamp(7px,2vw,13px)] font-medium tracking-[.08em] text-white/90">
                     {companyName.toUpperCase()}
-                  </div>
-                  <div className="text-[clamp(7px,1.8vw,13px)] tracking-[.2em]">
-                    TRAVEL & TOURS
                   </div>
                   <div className="mt-[3%] text-[clamp(7px,1.8vw,13px)] font-bold tracking-[.08em]">
                     ID CARD AGEN
@@ -482,20 +510,6 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                   <div className="text-[clamp(8px,2.1vw,15px)] font-bold uppercase">
                     CABANG {branchName}
                   </div>
-                  <div className="mx-auto mt-[3%] w-[34%] rounded-xl border border-slate-300 bg-white p-[2.5%]">
-                    {url ? (
-                      <QRCodeSVG
-                        value={url}
-                        size={180}
-                        level="H"
-                        className="h-full w-full"
-                      />
-                    ) : (
-                      <div className="flex aspect-square items-center justify-center text-[#087443]">
-                        <QrCode className="h-1/2 w-1/2" />
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
             ) : (
@@ -513,7 +527,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                     DATA AGEN
                   </div>
                   <div className="mx-auto mt-[4%] h-1 w-16 rounded bg-[#83cc4b]" />
-                  <div className="mt-[10%] space-y-[4%] rounded-2xl border border-[#b9d9c8] bg-white/80 p-[7%] text-[clamp(8px,2.1vw,14px)] shadow-sm">
+                  <div className="mt-[8%] space-y-[3%] rounded-2xl border border-[#b9d9c8] bg-white/90 p-[6%] text-[clamp(8px,2.1vw,14px)] shadow-sm">
                     <div>
                       <span className="font-bold">Nama Agen</span>
                       <br />
@@ -551,7 +565,24 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                       {branchName}
                     </div>
                   </div>
-                  <div className="mt-[9%] flex items-center justify-center gap-2 text-center text-[clamp(8px,1.9vw,13px)]">
+                  <div className="mt-[5%] flex flex-col items-center gap-1">
+                    {url ? (
+                      <QRCodeSVG
+                        value={url}
+                        size={180}
+                        level="H"
+                        className="h-[22%] w-[22%] rounded-lg border-4 border-white bg-white p-1 shadow-sm"
+                      />
+                    ) : (
+                      <div className="flex aspect-square w-[22%] items-center justify-center rounded-lg border border-slate-300 bg-white text-[#087443]">
+                        <QrCode className="h-1/2 w-1/2" />
+                      </div>
+                    )}
+                    <span className="text-[clamp(7px,1.7vw,11px)] text-muted-foreground">
+                      Scan untuk membuka profil publik
+                    </span>
+                  </div>
+                  <div className="mt-[4%] flex items-center justify-center gap-2 text-center text-[clamp(8px,1.9vw,13px)]">
                     <ShieldCheck className="h-5 w-5 text-[#087443]" /> Kartu ini
                     adalah identitas resmi agen dan berlaku sesuai masa kerja
                     sama.
