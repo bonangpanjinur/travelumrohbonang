@@ -11,7 +11,6 @@ import {
   desc,
   and,
   inArray,
-  like,
 } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { requireSuperAdmin } from "../../middlewares/requireAdmin";
@@ -50,13 +49,13 @@ function parseIsoDate(value: unknown, label: string) {
   return candidate;
 }
 
-async function generateAgentCode(branchId: string | null) {
+async function generateAgentCode(branchId: string | null, client = db) {
   const year = new Date().getFullYear().toString().slice(-2);
   // Agen tanpa branchId memakai identitas kantor pusat VINS.
   let branchCode = "VINS";
   let referralBase = "VINS";
   if (branchId) {
-    const [branch] = await db
+    const [branch] = await client
       .select({ code: branches.code, name: branches.name })
       .from(branches)
       .where(eq(branches.id, branchId))
@@ -80,32 +79,25 @@ async function generateAgentCode(branchId: string | null) {
       referralBase = branchCode;
     }
   }
-  const prefix = `A%${branchCode}${year}`;
-  const existing = await db
-    .select({ agentCode: agents.agentCode })
-    .from(agents)
-    .where(like(agents.agentCode, prefix));
-  const used = new Set(existing.map((row) => row.agentCode).filter(Boolean));
-  let sequence = 1;
-  let candidate = "";
-  do {
-    candidate = `A${String(sequence).padStart(3, "0")}${branchCode}${year}`;
-    sequence += 1;
-  } while (used.has(candidate));
-  const referralPrefix = `A%${referralBase}${year}`;
-  const referralRows = await db
-    .select({ referralCode: agents.referralCode })
-    .from(agents)
-    .where(like(agents.referralCode, referralPrefix));
-  const referralUsed = new Set(
-    referralRows.map((row) => row.referralCode).filter(Boolean),
-  );
-  let referralSequence = sequence - 1;
-  let referralCode = `A${String(referralSequence).padStart(3, "0")}${referralBase}${year}`;
-  while (referralUsed.has(referralCode)) {
-    referralSequence += 1;
-    referralCode = `A${String(referralSequence).padStart(3, "0")}${referralBase}${year}`;
-  }
+  // The sequence is deliberately global for the year. Filtering by branch here
+  // used to produce A001 for every branch (and VINS/VINSU was also split), which
+  // made the directory show duplicate-looking agent numbers. The transaction
+  // lock in the create handler makes this read/increment operation atomic.
+  const [last] = (await client.execute(sql`
+    SELECT COALESCE(MAX(sequence), 0) AS sequence
+    FROM (
+      SELECT substring(agent_code from '^A([0-9]{3})')::integer AS sequence
+      FROM agents
+      WHERE agent_code ~ ${`^A[0-9]{3}[A-Z0-9]+${year}$`}
+      UNION ALL
+      SELECT substring(referral_code from '^A([0-9]{3})')::integer AS sequence
+      FROM agents
+      WHERE referral_code ~ ${`^A[0-9]{3}[A-Z0-9]+${year}$`}
+    ) used_sequences
+  `)) as any[];
+  const sequence = Number(last?.sequence || 0) + 1;
+  const candidate = `A${String(sequence).padStart(3, "0")}${branchCode}${year}`;
+  const referralCode = `A${String(sequence).padStart(3, "0")}${referralBase}${year}`;
   return { agentCode: candidate, referralCode };
 }
 
@@ -221,7 +213,7 @@ async function agentIdsForScope(
     .select({ id: agents.id })
     .from(agents)
     .where(eq(agents.branchId, scope.branchId));
-  return rows.map((row) => row.id);
+  return rows.map((row: { id: string }) => row.id);
 }
 
 async function agentInScope(
@@ -324,21 +316,38 @@ router.post("/", async (req, res) => {
         .status(403)
         .json({ error: "Anda hanya dapat mengelola agen pada scope Anda" });
     }
-    const id = crypto.randomUUID();
-    const generated = await generateAgentCode(requestedBranchId);
-    const [data] = await db
-      .insert(agents)
-      .values({
-        ...normalizeAgentPayload(
-          req.body as Record<string, unknown>,
-          undefined,
-          generated,
-        ),
-        id,
-        createdAt: new Date(),
-      })
-      .returning();
-    res.json(data);
+    // Serialize generated-code allocation per year. The unique index remains
+    // the final safety net, while this prevents two concurrent requests from
+    // both observing the same MAX(sequence).
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const data = await db.transaction(async (tx: any) => {
+          await tx.execute(
+            sql`SELECT pg_advisory_xact_lock(hashtext('agents:code:${new Date().getFullYear()}'))`,
+          );
+          const generated = await generateAgentCode(requestedBranchId, tx);
+          const [created] = await tx
+            .insert(agents)
+            .values({
+              ...normalizeAgentPayload(
+                req.body as Record<string, unknown>,
+                undefined,
+                generated,
+              ),
+              id: crypto.randomUUID(),
+              createdAt: new Date(),
+            })
+            .returning();
+          return created;
+        });
+        return res.json(data);
+      } catch (error) {
+        // A manually supplied code can still race with another insert. Retry
+        // only database unique violations; validation errors must be returned.
+        if ((error as { code?: string })?.code !== "23505" || attempt === 2)
+          throw error;
+      }
+    }
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to create agent";
