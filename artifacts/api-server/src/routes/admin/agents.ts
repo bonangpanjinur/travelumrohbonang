@@ -83,7 +83,7 @@ async function generateAgentCode(branchId: string | null, client = db) {
   // used to produce A001 for every branch (and VINS/VINSU was also split), which
   // made the directory show duplicate-looking agent numbers. The transaction
   // lock in the create handler makes this read/increment operation atomic.
-  const [last] = (await client.execute(sql`
+  const result = await client.execute(sql`
     SELECT COALESCE(MAX(sequence), 0) AS sequence
     FROM (
       SELECT substring(agent_code from '^A([0-9]{3})')::integer AS sequence
@@ -94,7 +94,10 @@ async function generateAgentCode(branchId: string | null, client = db) {
       FROM agents
       WHERE referral_code ~ ${`^A[0-9]{3}[A-Z0-9]+${year}$`}
     ) used_sequences
-  `)) as any[];
+  `);
+  const [last] = ((result as any).rows ?? result) as Array<{
+    sequence: number | string | null;
+  }>;
   const sequence = Number(last?.sequence || 0) + 1;
   const candidate = `A${String(sequence).padStart(3, "0")}${branchCode}${year}`;
   const referralCode = `A${String(sequence).padStart(3, "0")}${referralBase}${year}`;
