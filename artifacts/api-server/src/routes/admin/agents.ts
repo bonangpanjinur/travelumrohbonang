@@ -263,7 +263,7 @@ async function selectLegacyAgents(ids: string[] | null) {
     bannerIdCardUrl: null,
     mouNumber: null,
     validUntil: null,
-    referralCode: row.referral_code,
+    referralCode: row.agent_code,
     publicSlug: row.public_slug,
     publicDescription: row.public_description,
     publicPageEnabled: row.public_page_enabled,
@@ -294,7 +294,14 @@ router.get("/", async (req, res) => {
       );
       data = await selectLegacyAgents(ids);
     }
-    res.json(data);
+    // agent_code is canonical; this also keeps the UI correct before the
+    // database synchronization migration has been applied.
+    res.json(
+      data.map((agent: { agentCode: string | null }) => ({
+        ...agent,
+        referralCode: agent.agentCode,
+      })),
+    );
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch agents" });
   }
