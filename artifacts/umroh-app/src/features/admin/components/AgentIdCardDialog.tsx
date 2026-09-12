@@ -423,6 +423,39 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
           useCORS: true,
           allowTaint: false,
           logging: false,
+          onclone: (clonedDocument) => {
+            const clonedWindow = clonedDocument.defaultView;
+            if (!clonedWindow) return;
+            const unsupportedProperties = [
+              "color",
+              "backgroundColor",
+              "borderColor",
+              "outlineColor",
+              "textDecorationColor",
+              "boxShadow",
+              "textShadow",
+            ] as const;
+            clonedDocument
+              .querySelectorAll<HTMLElement>("*")
+              .forEach((node) => {
+                const computed = clonedWindow.getComputedStyle(node);
+                unsupportedProperties.forEach((property) => {
+                  const value = computed[property];
+                  if (!value.includes("oklab") && !value.includes("oklch"))
+                    return;
+                  const fallback =
+                    property === "color" || property === "textDecorationColor"
+                      ? DARK_GREEN
+                      : property === "borderColor" ||
+                          property === "outlineColor"
+                        ? "#b9d9c8"
+                        : property === "backgroundColor"
+                          ? "#f8faf9"
+                          : "none";
+                  node.style.setProperty(property, fallback, "important");
+                });
+              });
+          },
         });
         return canvas.toDataURL("image/png");
       };
