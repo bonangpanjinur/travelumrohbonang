@@ -529,6 +529,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
           scale: 3,
           useCORS: true,
           allowTaint: false,
+          foreignObjectRendering: true,
           logging: false,
         });
         return canvas.toDataURL("image/png");
@@ -719,26 +720,17 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                     className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover opacity-[0.12]"
                   />
                 )}
-                <div
-                  className="absolute left-0 top-0 h-[18%] w-[45%] bg-[#075c39]"
-                  style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }}
-                />
-                <div
-                  className="absolute right-0 top-0 h-[12%] w-full bg-[#83cc4b]"
-                  style={{
-                    clipPath: "polygon(34% 0, 100% 0, 100% 44%, 0 100%)",
-                  }}
-                />
-                <div
-                  className="absolute bottom-0 right-0 h-[18%] w-[46%] bg-[#075c39]"
-                  style={{ clipPath: "polygon(100% 0, 100% 100%, 0 100%)" }}
-                />
-                <div
-                  className="absolute bottom-0 left-0 h-[12%] w-full bg-[#83cc4b]"
-                  style={{
-                    clipPath: "polygon(0 56%, 100% 0, 100% 100%, 0 100%)",
-                  }}
-                />
+                <svg
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                >
+                  <polygon points="0,0 45,0 0,18" fill={DARK_GREEN} />
+                  <polygon points="34,0 100,0 100,5.28 0,12" fill={LIME} />
+                  <polygon points="100,82 100,100 54,100" fill={DARK_GREEN} />
+                  <polygon points="0,94.72 100,88 100,100 0,100" fill={LIME} />
+                </svg>
                 <div className="relative text-center">
                   {branding.logo_url ? (
                     <img
@@ -791,14 +783,15 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                     className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover opacity-[0.12]"
                   />
                 )}
-                <div
-                  className="absolute left-0 top-0 h-[16%] w-[42%] bg-[#075c39]"
-                  style={{ clipPath: "polygon(0 0, 100% 0, 0 100%)" }}
-                />
-                <div
-                  className="absolute bottom-0 right-0 h-[16%] w-[42%] bg-[#075c39]"
-                  style={{ clipPath: "polygon(100% 0, 100% 100%, 0 100%)" }}
-                />
+                <svg
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                >
+                  <polygon points="0,0 42,0 0,16" fill={DARK_GREEN} />
+                  <polygon points="100,84 100,100 58,100" fill={DARK_GREEN} />
+                </svg>
                 <div className="relative">
                   <div className="text-center text-[clamp(17px,5vw,32px)] font-black tracking-widest">
                     DATA AGEN
