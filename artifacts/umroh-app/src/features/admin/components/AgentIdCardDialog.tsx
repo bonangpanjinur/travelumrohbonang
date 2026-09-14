@@ -570,8 +570,9 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       );
       if (exportedName) {
         exportedName.style.height = "auto";
-        exportedName.style.minHeight = "0";
+        exportedName.style.minHeight = "1.35em";
         exportedName.style.lineHeight = "1.2";
+        exportedName.style.paddingTop = "1px";
         exportedName.style.paddingBottom = "2px";
       }
 
@@ -985,18 +986,21 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                       </div>
                     )}
                   </div>
-                  <div
-                    data-card-agent-name
-                    className="mt-[5%] truncate text-[clamp(14px,4.1vw,28px)] font-black uppercase leading-[1.2] tracking-wide"
-                  >
-                    {agent.name}
-                  </div>
-                  <div className="mx-auto mt-[2.5%] h-0.5 w-[68%] bg-[#087443]" />
-                  <div className="mt-1 text-[clamp(8px,2.1vw,15px)] tracking-wide">
-                    AGEN / MITRA RESMI
-                  </div>
-                  <div className="mt-[5%] text-[clamp(9px,2.4vw,17px)] font-bold">
-                    ID {agent.agentCode || "-"}
+                  <div className="mt-[5%] flex flex-col items-center">
+                    <div
+                      data-card-agent-name
+                      className="flex min-h-[1.35em] max-w-full items-center justify-center overflow-hidden px-[2%] text-[clamp(14px,4.1vw,28px)] font-black uppercase leading-[1.2] tracking-wide whitespace-nowrap text-ellipsis"
+                      title={agent.name}
+                    >
+                      {agent.name}
+                    </div>
+                    <div className="mx-auto mt-[2.5%] h-0.5 w-[68%] shrink-0 bg-[#087443]" />
+                    <div className="mt-[2%] text-[clamp(8px,2.1vw,15px)] leading-[1.2] tracking-wide">
+                      AGEN / MITRA RESMI
+                    </div>
+                    <div className="mt-[4%] text-[clamp(9px,2.4vw,17px)] font-bold leading-[1.2]">
+                      ID {agent.agentCode || "-"}
+                    </div>
                   </div>
                 </div>
               </div>
