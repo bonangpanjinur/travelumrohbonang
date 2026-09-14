@@ -75,6 +75,11 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
   const [generating, setGenerating] = useState(false);
   const [branding, setBranding] = useState<Branding>(defaultBranding);
   const previewCardRef = useRef<HTMLDivElement>(null);
+  const captureCacheRef = useRef<{
+    key: string;
+    frontImage: string;
+    backImage: string;
+  } | null>(null);
   const sideRenderWaiterRef = useRef<{
     target: "front" | "back";
     resolve: () => void;
@@ -417,7 +422,17 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       throw new Error("Preview ID card tidak ditemukan");
     }
 
+    const captureKey = JSON.stringify({ agent, companyName });
+    const cachedCards = captureCacheRef.current;
+    if (cachedCards?.key === captureKey) {
+      return {
+        frontImage: cachedCards.frontImage,
+        backImage: cachedCards.backImage,
+      };
+    }
+
     const originalSide = side;
+    const embeddedImagePromises = new Map<string, Promise<string | null>>();
     const waitForPreview = async (target: "front" | "back") => {
       if (previewCardRef.current?.dataset.cardSide !== target) {
         await new Promise<void>((resolve, reject) => {
@@ -565,33 +580,50 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       document.body.appendChild(exportElement);
 
       // Same-origin/data URLs are embedded before capture to avoid a
-      // cross-origin image turning the canvas into a tainted canvas.
-      await Promise.all(
-        Array.from(exportElement.querySelectorAll("img")).map(async (image) => {
-          if (!image.src || image.src.startsWith("data:")) return;
+      // cross-origin image turning the canvas into a tainted canvas. Cache
+      // the result because the banner is used by both card sides.
+      const embedImage = (source: string) => {
+        const cached = embeddedImagePromises.get(source);
+        if (cached) return cached;
+
+        const promise = (async () => {
           try {
             const controller = new AbortController();
             const timeout = window.setTimeout(() => controller.abort(), 8000);
-            const response = await fetch(image.src, {
-              signal: controller.signal,
-              credentials: "omit",
-            });
-            window.clearTimeout(timeout);
-            if (!response.ok) return;
-            const blob = await response.blob();
-            image.src = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(String(reader.result));
-              reader.onerror = reject;
-              reader.readAsDataURL(blob);
-            });
+            try {
+              const response = await fetch(source, {
+                signal: controller.signal,
+                credentials: "omit",
+              });
+              if (!response.ok) return null;
+              const blob = await response.blob();
+              return await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result));
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
+            } finally {
+              window.clearTimeout(timeout);
+            }
           } catch {
-            // Do not leave a broken cross-origin image in the canvas. A
-            // broken photo becomes a deterministic initials placeholder;
-            // optional branding/banner images are removed.
-            if (image.alt === agent.name) image.src = photoFallback;
-            else image.remove();
+            return null;
           }
+        })();
+        embeddedImagePromises.set(source, promise);
+        return promise;
+      };
+
+      await Promise.all(
+        Array.from(exportElement.querySelectorAll("img")).map(async (image) => {
+          if (!image.src || image.src.startsWith("data:")) return;
+          const embeddedImage = await embedImage(image.src);
+          // Do not leave a broken cross-origin image in the canvas. A broken
+          // photo becomes a deterministic initials placeholder; optional
+          // branding/banner images are removed.
+          if (embeddedImage) image.src = embeddedImage;
+          else if (image.alt === agent.name) image.src = photoFallback;
+          else image.remove();
         }),
       );
       await Promise.all(
@@ -608,12 +640,15 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       try {
         const canvas = await html2canvas(exportElement, {
           backgroundColor: "#f8faf9",
-          scale: 3,
+          // The preview is a 380px-wide card. A 2x capture still produces
+          // print-quality CR80 output while avoiding the unnecessary memory
+          // and encoding cost of the previous 3x capture.
+          scale: 2,
           useCORS: true,
           allowTaint: false,
           logging: false,
         });
-        return canvas.toDataURL("image/png");
+        return canvas.toDataURL("image/jpeg", 0.94);
       } finally {
         exportElement.remove();
       }
@@ -622,6 +657,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
     try {
       const frontImage = await captureSide("front");
       const backImage = await captureSide("back");
+      captureCacheRef.current = { key: captureKey, frontImage, backImage };
       return { frontImage, backImage };
     } finally {
       setSide(originalSide);
@@ -640,7 +676,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       });
       pdf.addImage(
         frontImage,
-        "PNG",
+        "JPEG",
         0,
         0,
         CARD_WIDTH,
@@ -651,7 +687,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       pdf.addPage([CARD_WIDTH, CARD_HEIGHT], "portrait");
       pdf.addImage(
         backImage,
-        "PNG",
+        "JPEG",
         0,
         0,
         CARD_WIDTH,
@@ -935,10 +971,10 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                       </div>
                     )}
                   </div>
-                  <div className="mt-[5%] truncate text-[clamp(14px,4.1vw,28px)] font-black uppercase tracking-wide">
+                  <div className="mt-[5%] truncate text-[clamp(14px,4.1vw,28px)] font-black uppercase leading-[1.08] tracking-wide">
                     {agent.name}
                   </div>
-                  <div className="mx-auto mt-1 h-0.5 w-[68%] bg-[#087443]" />
+                  <div className="mx-auto mt-[2.5%] h-0.5 w-[68%] bg-[#087443]" />
                   <div className="mt-1 text-[clamp(8px,2.1vw,15px)] tracking-wide">
                     AGEN / MITRA RESMI
                   </div>
