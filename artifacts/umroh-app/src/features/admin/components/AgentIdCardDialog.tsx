@@ -994,7 +994,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                     >
                       {agent.name}
                     </div>
-                    <div className="mx-auto mt-[2.5%] h-0.5 w-[68%] shrink-0 bg-[#087443]" />
+                    <div className="mx-auto mt-[5%] h-0.5 w-[68%] shrink-0 bg-[#087443]" />
                     <div className="mt-[2%] text-[clamp(8px,2.1vw,15px)] leading-[1.2] tracking-wide">
                       AGEN / MITRA RESMI
                     </div>
