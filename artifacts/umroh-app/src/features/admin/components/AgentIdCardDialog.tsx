@@ -670,29 +670,102 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       const { frontImage, backImage } = await captureCards();
       const title = `ID Card Agen - ${agent.name.replace(/[<>]/g, "")}`;
       printWindow.document.write(`<!doctype html>
-        <html>
+        <html lang="id">
           <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
             <title>${title}</title>
             <style>
-              @page { size: ${CARD_WIDTH}mm ${CARD_HEIGHT}mm; margin: 0; }
-              html, body { margin: 0; padding: 0; background: #fff; }
-              .card {
-                width: ${CARD_WIDTH}mm;
-                height: ${CARD_HEIGHT}mm;
-                page-break-after: always;
-                overflow: hidden;
+              @page {
+                size: ${CARD_WIDTH}mm ${CARD_HEIGHT}mm;
+                margin: 0;
               }
-              .card:last-child { page-break-after: auto; }
-              img { display: block; width: 100%; height: 100%; }
+
+              *, *::before, *::after { box-sizing: border-box; }
+
+              html, body {
+                width: ${CARD_WIDTH}mm;
+                min-width: ${CARD_WIDTH}mm;
+                margin: 0;
+                padding: 0;
+                background: #fff;
+              }
+
+              body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+
+              .card {
+                position: relative;
+                display: block;
+                width: ${CARD_WIDTH}mm;
+                min-width: ${CARD_WIDTH}mm;
+                height: ${CARD_HEIGHT}mm;
+                min-height: ${CARD_HEIGHT}mm;
+                max-height: ${CARD_HEIGHT}mm;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+                break-inside: avoid;
+                page-break-inside: avoid;
+                break-after: page;
+                page-break-after: always;
+              }
+
+              .card:last-child {
+                break-after: auto;
+                page-break-after: auto;
+              }
+
+              .card img {
+                display: block;
+                width: ${CARD_WIDTH}mm;
+                min-width: ${CARD_WIDTH}mm;
+                height: ${CARD_HEIGHT}mm;
+                min-height: ${CARD_HEIGHT}mm;
+                max-height: ${CARD_HEIGHT}mm;
+                margin: 0;
+                padding: 0;
+                border: 0;
+                object-fit: fill;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+
+              @media print {
+                html, body {
+                  width: ${CARD_WIDTH}mm;
+                  min-width: ${CARD_WIDTH}mm;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  overflow: visible;
+                }
+
+                .card {
+                  width: ${CARD_WIDTH}mm !important;
+                  height: ${CARD_HEIGHT}mm !important;
+                  min-height: ${CARD_HEIGHT}mm !important;
+                  max-height: ${CARD_HEIGHT}mm !important;
+                }
+
+                .card img {
+                  width: ${CARD_WIDTH}mm !important;
+                  height: ${CARD_HEIGHT}mm !important;
+                }
+              }
             </style>
           </head>
           <body>
-            <div class="card"><img src="${frontImage}" alt="Sisi depan ID card agen" /></div>
-            <div class="card"><img src="${backImage}" alt="Sisi belakang ID card agen" /></div>
+            <section class="card" aria-label="Sisi depan ID card agen">
+              <img src="${frontImage}" alt="Sisi depan ID card agen" />
+            </section>
+            <section class="card" aria-label="Sisi belakang ID card agen">
+              <img src="${backImage}" alt="Sisi belakang ID card agen" />
+            </section>
           </body>
         </html>`);
       printWindow.document.close();
-      printWindow.focus();
       await Promise.all(
         Array.from(printWindow.document.images).map((image) =>
           image.complete
@@ -700,11 +773,27 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
             : new Promise<void>((resolve) => {
                 image.onload = () => resolve();
                 image.onerror = () => resolve();
-              }),
+          }),
         ),
       );
+
+      await new Promise<void>((resolve) => {
+        printWindow.requestAnimationFrame(() => {
+          printWindow.requestAnimationFrame(() => resolve());
+        });
+      });
+
+      printWindow.focus();
       printWindow.print();
-      printWindow.close();
+
+      let closed = false;
+      const closePrintWindow = () => {
+        if (closed) return;
+        closed = true;
+        printWindow.close();
+      };
+      printWindow.onafterprint = closePrintWindow;
+      window.setTimeout(closePrintWindow, 3000);
     } catch (error) {
       console.error(error);
       printWindow.close();
@@ -752,8 +841,9 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
             </button>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={printCards}>
-              <Printer className="mr-2 h-4 w-4" /> Cetak
+            <Button variant="outline" onClick={printCards} disabled={generating}>
+              <Printer className="mr-2 h-4 w-4" />
+              {generating ? "Menyiapkan cetak…" : "Cetak"}
             </Button>
             <Button
               className="bg-[#087443] text-white hover:bg-[#075c39]"
