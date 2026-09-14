@@ -561,6 +561,20 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
         targetSvg.replaceWith(image);
       });
 
+      // The preview's name can look correct in the browser while the
+      // html2canvas clone clips glyphs when the computed line box is copied
+      // as a fixed pixel height. Let the export clone size this line from its
+      // content and give the font a little vertical breathing room.
+      const exportedName = exportElement.querySelector<HTMLElement>(
+        "[data-card-agent-name]",
+      );
+      if (exportedName) {
+        exportedName.style.height = "auto";
+        exportedName.style.minHeight = "0";
+        exportedName.style.lineHeight = "1.2";
+        exportedName.style.paddingBottom = "2px";
+      }
+
       // Preserve the actual visible preview dimensions. In particular, do
       // not let the off-screen clone recalculate the aspect-ratio from a
       // different containing block.
@@ -971,7 +985,10 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                       </div>
                     )}
                   </div>
-                  <div className="mt-[5%] truncate text-[clamp(14px,4.1vw,28px)] font-black uppercase leading-[1.08] tracking-wide">
+                  <div
+                    data-card-agent-name
+                    className="mt-[5%] truncate text-[clamp(14px,4.1vw,28px)] font-black uppercase leading-[1.2] tracking-wide"
+                  >
                     {agent.name}
                   </div>
                   <div className="mx-auto mt-[2.5%] h-0.5 w-[68%] bg-[#087443]" />
