@@ -105,8 +105,6 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
   );
 
   if (!agent) return null;
-  const branchName = agent.branch?.name || "Kantor Pusat";
-  const branchCode = agent.branch?.code ? `${agent.branch.code} · ` : "";
   const url = publicUrlFor(agent);
   const companyName = branding.company_name || defaultBranding.company_name;
 
@@ -996,15 +994,6 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                         </span>
                         <span className="mt-0.5 block truncate">
                           {agent.phone || agent.email || "-"}
-                        </span>
-                      </div>
-                      <div className="col-span-2 min-w-0 border-t border-[#dbece2] pt-[4%]">
-                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
-                          Cabang
-                        </span>
-                        <span className="mt-0.5 block truncate">
-                          {branchCode}
-                          {branchName}
                         </span>
                       </div>
                     </div>
