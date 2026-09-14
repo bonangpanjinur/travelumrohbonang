@@ -962,7 +962,6 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                   preserveAspectRatio="none"
                 >
                   <polygon points="0,0 42,0 0,16" fill={DARK_GREEN} />
-                  <polygon points="100,84 100,100 58,100" fill={DARK_GREEN} />
                 </svg>
                 <div className="relative flex h-full min-h-0 flex-col">
                   <div className="shrink-0 text-center text-[clamp(14px,7.6cqw,22px)] font-black tracking-[0.16em]">
