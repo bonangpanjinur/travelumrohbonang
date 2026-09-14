@@ -948,9 +948,9 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                     DATA AGEN
                   </div>
                   <div className="mx-auto mt-[3%] h-1 w-14 shrink-0 rounded-full bg-[#83cc4b]" />
-                  <div className="mt-[5%] h-auto shrink-0 rounded-[18px] border border-[#b9d9c8] bg-white/90 p-[5%] text-[clamp(7px,3.2cqw,11px)] leading-[1.12] shadow-sm">
-                    <div className="grid auto-rows-max grid-cols-2 items-start gap-x-[7%] gap-y-[4%]">
-                      <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[4%]">
+                  <div className="mt-[5%] h-auto shrink-0 px-[2%] text-[clamp(7px,3.2cqw,11px)] leading-[1.12]">
+                    <div className="grid auto-rows-max grid-cols-2 items-start gap-x-[8%] gap-y-[5%]">
+                      <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[3%]">
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Nama Agen
                         </span>
@@ -958,7 +958,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                           {agent.name}
                         </span>
                       </div>
-                      <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[4%]">
+                      <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[3%]">
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Kode Referral
                         </span>
