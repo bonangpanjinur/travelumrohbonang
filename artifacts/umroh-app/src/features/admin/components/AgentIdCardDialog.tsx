@@ -962,59 +962,55 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                     DATA AGEN
                   </div>
                   <div className="mx-auto mt-[3%] h-1 w-14 shrink-0 rounded-full bg-[#83cc4b]" />
-                  <div className="mt-[6%] shrink-0 px-[2%]">
-                    <div className="rounded-[5%] border border-[#dbece2] bg-white/75 px-[5%] py-[5%] shadow-sm">
-                      <div className="h-auto text-[clamp(7px,3.2cqw,11px)] leading-[1.24]">
-                        <div className="grid auto-rows-max grid-cols-2 items-start gap-x-[10%] gap-y-[8%]">
-                          <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[4%]">
-                            <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
-                              Nama Agen
-                            </span>
-                            <span className="block whitespace-normal break-words font-semibold leading-tight">
-                              {agent.name}
-                            </span>
-                          </div>
-                          <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[4%]">
-                            <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
-                              Kode Referral
-                            </span>
-                            <span className="block whitespace-normal break-words font-semibold leading-tight">
-                              {agent.referralCode || agent.agentCode || "-"}
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
-                              No. MOU
-                            </span>
-                            <span className="block whitespace-normal break-words leading-tight">
-                              {agent.mouNumber || "-"}
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
-                              Bergabung
-                            </span>
-                            <span className="block whitespace-normal break-words leading-tight">
-                              {formatDate(agent.joinedAt)}
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
-                              Berlaku s.d.
-                            </span>
-                            <span className="block whitespace-normal break-words leading-tight">
-                              {formatDate(agent.validUntil)}
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
-                              Kontak
-                            </span>
-                            <span className="block whitespace-normal break-words leading-tight">
-                              {agent.phone || agent.email || "-"}
-                            </span>
-                          </div>
-                        </div>
+                  <div className="mt-[6%] h-auto shrink-0 px-[2%] text-[clamp(7px,3.2cqw,11px)] leading-[1.24]">
+                    <div className="grid auto-rows-max grid-cols-2 items-start gap-x-[10%] gap-y-[8%]">
+                      <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[4%]">
+                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
+                          Nama Agen
+                        </span>
+                        <span className="block whitespace-normal break-words font-semibold leading-tight">
+                          {agent.name}
+                        </span>
+                      </div>
+                      <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[4%]">
+                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
+                          Kode Referral
+                        </span>
+                        <span className="block whitespace-normal break-words font-semibold leading-tight">
+                          {agent.referralCode || agent.agentCode || "-"}
+                        </span>
+                      </div>
+                      <div className="min-w-0 border-b border-[#dbece2] pb-[4%]">
+                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
+                          No. MOU
+                        </span>
+                        <span className="block whitespace-normal break-words leading-tight">
+                          {agent.mouNumber || "-"}
+                        </span>
+                      </div>
+                      <div className="min-w-0 border-b border-[#dbece2] pb-[4%]">
+                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
+                          Bergabung
+                        </span>
+                        <span className="block whitespace-normal break-words leading-tight">
+                          {formatDate(agent.joinedAt)}
+                        </span>
+                      </div>
+                      <div className="min-w-0 border-b border-[#dbece2] pb-[4%]">
+                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
+                          Berlaku s.d.
+                        </span>
+                        <span className="block whitespace-normal break-words leading-tight">
+                          {formatDate(agent.validUntil)}
+                        </span>
+                      </div>
+                      <div className="min-w-0 border-b border-[#dbece2] pb-[4%]">
+                        <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
+                          Kontak
+                        </span>
+                        <span className="block whitespace-normal break-words leading-tight">
+                          {agent.phone || agent.email || "-"}
+                        </span>
                       </div>
                     </div>
                   </div>
