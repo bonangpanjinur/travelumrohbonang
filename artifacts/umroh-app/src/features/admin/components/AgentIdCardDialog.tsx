@@ -946,7 +946,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                     DATA AGEN
                   </div>
                   <div className="mx-auto mt-[3%] h-1 w-14 rounded-full bg-[#83cc4b]" />
-                  <div className="mt-[6%] rounded-[18px] border border-[#b9d9c8] bg-white/90 p-[5%] text-[clamp(8px,2vw,13px)] leading-snug shadow-sm">
+                  <div className="mt-[6%] shrink-0 rounded-[18px] border border-[#b9d9c8] bg-white/90 p-[5%] text-[clamp(8px,2vw,13px)] leading-snug shadow-sm">
                     <div className="grid grid-cols-2 gap-x-[7%] gap-y-[6%]">
                       <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[4%]">
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
@@ -998,7 +998,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-auto flex flex-col items-center gap-1 pt-[5%]">
+                  <div className="mt-auto flex shrink-0 flex-col items-center gap-1 pt-[5%]">
                     {url ? (
                       <QRCodeSVG
                         value={url}
@@ -1015,7 +1015,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                       Scan untuk membuka profil publik
                     </span>
                   </div>
-                  <div className="mt-[3%] flex items-center justify-center gap-1.5 text-center text-[clamp(7px,1.7vw,11px)] leading-snug text-[#075c39]/80">
+                  <div className="mt-[3%] flex shrink-0 items-center justify-center gap-1.5 text-center text-[clamp(7px,1.7vw,11px)] leading-snug text-[#075c39]/80">
                     <ShieldCheck className="h-4 w-4 shrink-0 text-[#087443]" />
                     <span>
                       Kartu ini adalah identitas resmi agen dan berlaku sesuai
