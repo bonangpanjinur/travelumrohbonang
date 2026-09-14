@@ -946,13 +946,13 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                     DATA AGEN
                   </div>
                   <div className="mx-auto mt-[3%] h-1 w-14 rounded-full bg-[#83cc4b]" />
-                  <div className="mt-[6%] shrink-0 rounded-[18px] border border-[#b9d9c8] bg-white/90 p-[5%] text-[clamp(8px,2vw,13px)] leading-snug shadow-sm">
-                    <div className="grid grid-cols-2 gap-x-[7%] gap-y-[6%]">
+                  <div className="mt-[6%] h-auto shrink-0 rounded-[18px] border border-[#b9d9c8] bg-white/90 p-[5%] text-[clamp(8px,2vw,13px)] leading-snug shadow-sm">
+                    <div className="grid auto-rows-max grid-cols-2 items-start gap-x-[7%] gap-y-[6%]">
                       <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[4%]">
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Nama Agen
                         </span>
-                        <span className="mt-0.5 block truncate font-semibold">
+                        <span className="block truncate font-semibold leading-tight">
                           {agent.name}
                         </span>
                       </div>
@@ -960,7 +960,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Kode Referral
                         </span>
-                        <span className="mt-0.5 block truncate font-semibold">
+                        <span className="block truncate font-semibold leading-tight">
                           {agent.referralCode || agent.agentCode || "-"}
                         </span>
                       </div>
@@ -968,7 +968,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           No. MOU
                         </span>
-                        <span className="mt-0.5 block truncate">
+                        <span className="block truncate leading-tight">
                           {agent.mouNumber || "-"}
                         </span>
                       </div>
@@ -976,7 +976,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Bergabung
                         </span>
-                        <span className="mt-0.5 block truncate">
+                        <span className="block truncate leading-tight">
                           {formatDate(agent.joinedAt)}
                         </span>
                       </div>
@@ -984,7 +984,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Berlaku s.d.
                         </span>
-                        <span className="mt-0.5 block truncate">
+                        <span className="block truncate leading-tight">
                           {formatDate(agent.validUntil)}
                         </span>
                       </div>
@@ -992,7 +992,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Kontak
                         </span>
-                        <span className="mt-0.5 block truncate">
+                        <span className="block truncate leading-tight">
                           {agent.phone || agent.email || "-"}
                         </span>
                       </div>
