@@ -74,6 +74,12 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
   const [generating, setGenerating] = useState(false);
   const [branding, setBranding] = useState<Branding>(defaultBranding);
   const previewCardRef = useRef<HTMLDivElement>(null);
+  const sideRenderWaiterRef = useRef<{
+    target: "front" | "back";
+    resolve: () => void;
+    reject: (error: Error) => void;
+    timeoutId: number;
+  } | null>(null);
   const { toast } = useToast();
   useEffect(() => {
     if (!agent) return;
@@ -90,6 +96,15 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
       })
       .catch(() => undefined);
   }, [agent]);
+  useEffect(() => {
+    const waiter = sideRenderWaiterRef.current;
+    if (!waiter || waiter.target !== side) return;
+    sideRenderWaiterRef.current = null;
+    window.clearTimeout(waiter.timeoutId);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => waiter.resolve());
+    });
+  }, [side]);
   const missing = useMemo(
     () =>
       agent
@@ -403,20 +418,27 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
 
     const originalSide = side;
     const waitForPreview = async (target: "front" | "back") => {
-      // setSide is asynchronous; wait for React to commit the requested side
-      // instead of relying on a fixed number of animation frames.
-      const deadline = performance.now() + 2500;
-      while (previewCardRef.current?.dataset.cardSide !== target) {
+      if (previewCardRef.current?.dataset.cardSide !== target) {
+        await new Promise<void>((resolve, reject) => {
+          const timeoutId = window.setTimeout(() => {
+            if (sideRenderWaiterRef.current?.target === target) {
+              sideRenderWaiterRef.current = null;
+            }
+            reject(new Error(`Sisi ${target} ID card belum selesai dirender`));
+          }, 2500);
+          sideRenderWaiterRef.current = {
+            target,
+            resolve,
+            reject,
+            timeoutId,
+          };
+          setSide(target);
+        });
+      } else {
         await new Promise<void>((resolve) =>
-          requestAnimationFrame(() => resolve()),
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
         );
-        if (performance.now() > deadline) {
-          throw new Error(`Sisi ${target} ID card belum selesai dirender`);
-        }
       }
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
       if (document.fonts?.ready) await document.fonts.ready;
       const images = Array.from(
         previewCardRef.current?.querySelectorAll("img") || [],
@@ -434,7 +456,6 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
     };
 
     const captureSide = async (target: "front" | "back") => {
-      setSide(target);
       await waitForPreview(target);
       const element = previewCardRef.current;
       if (!element) throw new Error("Preview ID card tidak ditemukan");
@@ -954,7 +975,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Nama Agen
                         </span>
-                        <span className="block truncate font-semibold leading-tight">
+                        <span className="block whitespace-normal break-words font-semibold leading-tight">
                           {agent.name}
                         </span>
                       </div>
@@ -962,7 +983,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Kode Referral
                         </span>
-                        <span className="block truncate font-semibold leading-tight">
+                        <span className="block whitespace-normal break-words font-semibold leading-tight">
                           {agent.referralCode || agent.agentCode || "-"}
                         </span>
                       </div>
@@ -970,7 +991,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           No. MOU
                         </span>
-                        <span className="block truncate leading-tight">
+                        <span className="block whitespace-normal break-words leading-tight">
                           {agent.mouNumber || "-"}
                         </span>
                       </div>
@@ -978,7 +999,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Bergabung
                         </span>
-                        <span className="block truncate leading-tight">
+                        <span className="block whitespace-normal break-words leading-tight">
                           {formatDate(agent.joinedAt)}
                         </span>
                       </div>
@@ -986,7 +1007,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Berlaku s.d.
                         </span>
-                        <span className="block truncate leading-tight">
+                        <span className="block whitespace-normal break-words leading-tight">
                           {formatDate(agent.validUntil)}
                         </span>
                       </div>
@@ -994,7 +1015,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Kontak
                         </span>
-                        <span className="block truncate leading-tight">
+                        <span className="block whitespace-normal break-words leading-tight">
                           {agent.phone || agent.email || "-"}
                         </span>
                       </div>
