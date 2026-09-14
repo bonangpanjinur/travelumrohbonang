@@ -963,8 +963,8 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                   </div>
                   <div className="mx-auto mt-[3%] h-1 w-14 shrink-0 rounded-full bg-[#83cc4b]" />
                   <div className="mt-[6%] h-auto shrink-0 px-[2%] text-[clamp(7px,3.2cqw,11px)] leading-[1.24]">
-                    <div className="grid auto-rows-max grid-cols-2 items-start gap-x-[10%] gap-y-[8%]">
-                      <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[4%]">
+                    <div className="grid auto-rows-max grid-cols-1 items-start gap-y-[5%]">
+                      <div className="min-w-0 border-b border-[#dbece2] pb-[3%]">
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Nama Agen
                         </span>
@@ -972,7 +972,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                           {agent.name}
                         </span>
                       </div>
-                      <div className="col-span-2 min-w-0 border-b border-[#dbece2] pb-[4%]">
+                      <div className="min-w-0 border-b border-[#dbece2] pb-[3%]">
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Kode Referral
                         </span>
@@ -980,7 +980,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                           {agent.referralCode || agent.agentCode || "-"}
                         </span>
                       </div>
-                      <div className="min-w-0 border-b border-[#dbece2] pb-[4%]">
+                      <div className="min-w-0 border-b border-[#dbece2] pb-[3%]">
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           No. MOU
                         </span>
@@ -988,7 +988,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                           {agent.mouNumber || "-"}
                         </span>
                       </div>
-                      <div className="min-w-0 border-b border-[#dbece2] pb-[4%]">
+                      <div className="min-w-0 border-b border-[#dbece2] pb-[3%]">
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Bergabung
                         </span>
@@ -996,7 +996,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                           {formatDate(agent.joinedAt)}
                         </span>
                       </div>
-                      <div className="min-w-0 border-b border-[#dbece2] pb-[4%]">
+                      <div className="min-w-0 border-b border-[#dbece2] pb-[3%]">
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Berlaku s.d.
                         </span>
@@ -1004,7 +1004,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                           {formatDate(agent.validUntil)}
                         </span>
                       </div>
-                      <div className="min-w-0 border-b border-[#dbece2] pb-[4%]">
+                      <div className="min-w-0 border-b border-[#dbece2] pb-[3%]">
                         <span className="block text-[0.78em] font-bold uppercase tracking-[0.06em] text-[#075c39]/75">
                           Kontak
                         </span>
