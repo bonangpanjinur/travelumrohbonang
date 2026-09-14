@@ -21,6 +21,7 @@ import {
 } from "@/shared/components/ui/dialog";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { useToast } from "@/shared/hooks/use-toast";
+import { AgentIdCardBackDecoration } from "./AgentIdCardBackDecoration";
 
 type AgentIdCardAgent = {
   id: string;
@@ -955,14 +956,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                     className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover opacity-[0.12]"
                   />
                 )}
-                <svg
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 z-0 h-full w-full"
-                  viewBox="0 0 100 100"
-                  preserveAspectRatio="none"
-                >
-                  <polygon points="0,0 42,0 0,16" fill={DARK_GREEN} />
-                </svg>
+                <AgentIdCardBackDecoration />
                 <div className="relative flex h-full min-h-0 flex-col">
                   <div className="shrink-0 text-center text-[clamp(14px,7.6cqw,22px)] font-black tracking-[0.16em]">
                     DATA AGEN
