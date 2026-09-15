@@ -5,6 +5,46 @@ import { sql } from "drizzle-orm";
 const router = Router();
 
 /**
+ * Public agent directory. Only agents that are active, published, and still
+ * valid are included. Keep this projection intentionally small: addresses and
+ * other private operational fields must not be exposed in the directory.
+ */
+router.get("/", async (_req, res) => {
+  try {
+    const rows = await db
+      .select({
+        id: agents.id,
+        name: agents.name,
+        phone: agents.phone,
+        photoUrl: agents.photoUrl,
+        agentCode: agents.agentCode,
+        publicSlug: agents.publicSlug,
+      })
+      .from(agents)
+      .where(
+        and(
+          eq(agents.isActive, true),
+          eq(agents.publicPageEnabled, true),
+          sql`(${agents.validUntil} IS NULL OR ${agents.validUntil} >= CURRENT_DATE)`,
+          sql`${agents.publicSlug} IS NOT NULL AND length(trim(${agents.publicSlug})) > 0`,
+        ),
+      )
+      .orderBy(sql`lower(${agents.name}) asc`);
+
+    return res.json({
+      data: rows.map((agent) => ({
+        ...agent,
+        publicSlug: agent.publicSlug!,
+        status: "Agen Resmi",
+      })),
+    });
+  } catch (error) {
+    console.error("[public-agents/list]", error);
+    return res.status(500).json({ error: "Failed to fetch public agents" });
+  }
+});
+
+/**
  * Public agent profile, addressed by the stable public slug used in QR codes.
  * Sensitive operational fields (email, commission, user id, date of birth)
  * are intentionally not returned to anonymous visitors.

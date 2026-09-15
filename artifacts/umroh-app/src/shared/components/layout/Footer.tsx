@@ -143,6 +143,7 @@ const Footer = () => {
             <div className="space-y-3">
               <Link to="/" className="block text-sm text-primary-foreground/60 hover:text-gold transition-colors">Beranda</Link>
               <Link to="/paket" className="block text-sm text-primary-foreground/60 hover:text-gold transition-colors">Paket Umroh</Link>
+              <Link to="/agen" className="block text-sm text-primary-foreground/60 hover:text-gold transition-colors">Cari Agen</Link>
               <Link to="/galeri" className="block text-sm text-primary-foreground/60 hover:text-gold transition-colors">Galeri</Link>
               <Link to="/blog" className="block text-sm text-primary-foreground/60 hover:text-gold transition-colors">Blog</Link>
               {dynamicPages.map((page) => (

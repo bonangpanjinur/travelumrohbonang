@@ -126,6 +126,7 @@ import Manasik from "./features/cms/pages/Manasik";
 import Jadwal from "./features/cms/pages/Jadwal";
 import AffiliateRedirect from "./features/agent/pages/AffiliateRedirect";
 import PublicAgentProfile from "./features/agent/pages/PublicAgentProfile";
+import PublicAgentDirectory from "./features/agent/pages/PublicAgentDirectory";
 import Account2FA from "./features/auth/pages/Account2FA";
 import ContractSign from "./features/jamaah/pages/ContractSign";
 const AdminErrorLogs = lazy(() => import("./features/admin/pages/ErrorLogs"));
@@ -246,6 +247,7 @@ const AppContent = () => {
       <Route path="/faq" element={<FAQPage />} />
       <Route path="/manasik" element={<Manasik />} />
       <Route path="/jadwal" element={<Jadwal />} />
+      <Route path="/agen" element={<PublicAgentDirectory />} />
       <Route path="/agen/:slug" element={<PublicAgentProfile />} />
       <Route path="/r/:code" element={<AffiliateRedirect />} />
 
