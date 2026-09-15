@@ -967,7 +967,7 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                       {companyName.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <div className="text-[clamp(7px,2vw,13px)] font-medium tracking-[.08em] text-[#075c39]">
+                  <div className="text-[clamp(8px,2.2vw,14px)] font-semibold tracking-[.06em] text-[#075c39]">
                     {companyName.toUpperCase()}
                   </div>
                   <div className="mt-[3%] text-[clamp(7px,1.8vw,13px)] font-bold tracking-[.08em]">
