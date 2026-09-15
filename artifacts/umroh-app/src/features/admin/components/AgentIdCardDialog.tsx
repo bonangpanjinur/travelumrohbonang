@@ -989,10 +989,12 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                   <div className="mt-[5%] flex flex-col items-center">
                     <div
                       data-card-agent-name
-                      className="flex min-h-[1.35em] max-w-full items-center justify-center overflow-hidden px-[2%] text-[clamp(14px,4.1vw,28px)] font-black uppercase leading-[1.2] tracking-wide whitespace-nowrap text-ellipsis"
+                      className="flex min-h-[1.35em] max-w-full items-center justify-center overflow-visible px-[2%] text-[clamp(14px,4.1vw,28px)] font-black uppercase leading-[1.15] tracking-wide"
                       title={agent.name}
                     >
-                      {agent.name}
+                      <span className="block w-full min-w-0 break-words text-center">
+                        {agent.name}
+                      </span>
                     </div>
                     <div className="mx-auto mt-[5%] h-0.5 w-[68%] shrink-0 bg-[#087443]" />
                     <div className="mt-[2%] text-[clamp(8px,2.1vw,15px)] leading-[1.2] tracking-wide">
