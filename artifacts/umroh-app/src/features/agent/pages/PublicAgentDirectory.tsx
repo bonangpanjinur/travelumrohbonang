@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Phone, RefreshCw, Search, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, CheckCircle2, ListFilter, Phone, RefreshCw, Search, ShieldCheck, Users } from "lucide-react";
 import Navbar from "@/shared/components/layout/Navbar";
 import Footer from "@/shared/components/layout/Footer";
 import SEO from "@/shared/components/seo/SEO";
 import { apiFetch } from "@/shared/lib/apiClient";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 
 export interface PublicAgentSummary {
   id: string;
@@ -18,6 +19,8 @@ export interface PublicAgentSummary {
 
 const normalize = (value: string | null | undefined) => value?.toLocaleLowerCase().replace(/\s+/g, " ").trim() ?? "";
 const normalizeDigits = (value: string | null | undefined) => value?.replace(/\D/g, "") ?? "";
+type SearchField = "all" | "name" | "agentCode";
+type SortOrder = "agentCode-asc" | "agentCode-desc" | "name-asc" | "name-desc";
 
 const AgentSkeleton = () => (
   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Memuat daftar agen">
@@ -122,6 +125,8 @@ const AgentCard = ({ agent }: { agent: PublicAgentSummary }) => (
 const PublicAgentDirectory = () => {
   const [agents, setAgents] = useState<PublicAgentSummary[]>([]);
   const [query, setQuery] = useState("");
+  const [searchField, setSearchField] = useState<SearchField>("all");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("agentCode-asc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -146,16 +151,35 @@ const PublicAgentDirectory = () => {
   const filteredAgents = useMemo(() => {
     const normalizedQuery = normalize(query);
     const digitQuery = normalizeDigits(query);
-    if (!normalizedQuery) return agents;
+    const matchingAgents = agents.filter((agent) => {
+      if (!normalizedQuery) return true;
 
-    return agents.filter((agent) => {
-      const textFields = [agent.name, agent.agentCode, agent.id, agent.phone]
-        .map(normalize)
-        .join(" ");
-      const phoneDigits = normalizeDigits(agent.phone);
-      return textFields.includes(normalizedQuery) || (digitQuery.length > 0 && phoneDigits.includes(digitQuery));
+      const textFields = searchField === "name"
+        ? [agent.name]
+        : searchField === "agentCode"
+          ? [agent.agentCode, agent.id]
+          : [agent.name, agent.agentCode, agent.id, agent.phone];
+      const textMatches = textFields.map(normalize).some((field) => field.includes(normalizedQuery));
+      const phoneMatches = searchField === "all"
+        && digitQuery.length > 0
+        && normalizeDigits(agent.phone).includes(digitQuery);
+
+      return textMatches || phoneMatches;
     });
-  }, [agents, query]);
+
+    const [sortField, sortDirection] = sortOrder.split("-") as ["agentCode" | "name", "asc" | "desc"];
+    return [...matchingAgents].sort((a, b) => {
+      const aValue = normalize(sortField === "name" ? a.name : a.agentCode);
+      const bValue = normalize(sortField === "name" ? b.name : b.agentCode);
+      const aMissing = aValue.length === 0;
+      const bMissing = bValue.length === 0;
+
+      if (aMissing !== bMissing) return aMissing ? 1 : -1;
+      const comparison = aValue.localeCompare(bValue, "id", { numeric: true, sensitivity: "base" });
+      if (comparison !== 0) return sortDirection === "asc" ? comparison : -comparison;
+      return normalize(a.name).localeCompare(normalize(b.name), "id", { sensitivity: "base" });
+    });
+  }, [agents, query, searchField, sortOrder]);
 
   const hasQuery = query.trim().length > 0;
 
@@ -209,6 +233,49 @@ const PublicAgentDirectory = () => {
                   <span aria-hidden="true" className="text-xl leading-none">×</span>
                 </button>
               )}
+            </div>
+
+            <div className="mt-3 grid max-w-2xl gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="agent-search-field" className="mb-1.5 block text-xs font-semibold text-primary-foreground/75">
+                  Filter berdasarkan
+                </label>
+                <Select value={searchField} onValueChange={(value) => setSearchField(value as SearchField)}>
+                  <SelectTrigger
+                    id="agent-search-field"
+                    className="min-h-11 border-white/20 bg-cream text-sm text-foreground shadow-lg shadow-black/10"
+                    data-testid="select-agent-search-field"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua data (nama, ID, HP)</SelectItem>
+                    <SelectItem value="name">Nama agen</SelectItem>
+                    <SelectItem value="agentCode">ID agen</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label htmlFor="agent-sort-order" className="mb-1.5 block text-xs font-semibold text-primary-foreground/75">
+                  Urutkan daftar
+                </label>
+                <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as SortOrder)}>
+                  <SelectTrigger
+                    id="agent-sort-order"
+                    className="min-h-11 border-white/20 bg-cream text-sm text-foreground shadow-lg shadow-black/10"
+                    data-testid="select-agent-sort-order"
+                  >
+                    <ListFilter className="mr-2 h-4 w-4 text-primary/60" aria-hidden="true" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="agentCode-asc">ID agen: kecil ke besar</SelectItem>
+                    <SelectItem value="agentCode-desc">ID agen: besar ke kecil</SelectItem>
+                    <SelectItem value="name-asc">Nama: A–Z</SelectItem>
+                    <SelectItem value="name-desc">Nama: Z–A</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-primary-foreground/65">
