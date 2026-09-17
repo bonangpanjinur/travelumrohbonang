@@ -49,7 +49,7 @@ import {
   Copy,
   FileBadge,
 } from "lucide-react";
-import { exportToCsv } from "@/shared/lib/exportCsv";
+import { exportToCsv, exportToExcel } from "@/shared/lib/exportCsv";
 import { normalizePhone } from "@/shared/lib/phone";
 import AdminPagination from "@/features/admin/components/AdminPagination";
 import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
@@ -921,6 +921,41 @@ const AdminAgents = () => {
           }
         >
           <Download className="w-4 h-4 mr-2" /> Export CSV
+        </Button>
+        <Button
+          variant="outline"
+          className="shrink-0"
+          onClick={() =>
+            exportToExcel(
+              "agents",
+              [
+                "Kode Cabang",
+                "Kode Agen",
+                "Nama",
+                "Gender",
+                "Alamat",
+                "Tgl Lahir",
+                "No Tel",
+                "Cabang",
+                "Komisi (%)",
+                "Status",
+              ],
+              filteredAgents.map((agent) => [
+                agent.branch?.code || "-",
+                agent.agentCode || "-",
+                agent.name,
+                agent.gender || "-",
+                agent.address || "-",
+                agent.dateOfBirth || "-",
+                agent.phone || "-",
+                agent.branch?.name || "-",
+                String(agent.commissionPercent || 0),
+                agent.isActive ? "Aktif" : "Nonaktif",
+              ]),
+            )
+          }
+        >
+          <Download className="w-4 h-4 mr-2" /> Export Excel
         </Button>
         <Button
           variant="outline"
