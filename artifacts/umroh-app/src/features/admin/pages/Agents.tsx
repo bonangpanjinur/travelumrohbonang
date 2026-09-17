@@ -373,8 +373,8 @@ const AdminAgents = () => {
   };
 
   const filteredAgents = useMemo(
-    () =>
-      agents.filter((agent) => {
+    () => {
+      const filtered = agents.filter((agent) => {
         const term = searchTerm.trim().toLowerCase();
         const normalizedSearch = normalizePhone(searchTerm).toLowerCase();
         const agentPhone = normalizePhone(agent.phone || "").toLowerCase();
@@ -388,7 +388,23 @@ const AdminAgents = () => {
           matchesSearch &&
           (filterBranch === "all" || agent.branchId === filterBranch)
         );
-      }),
+      });
+      return filtered.sort((a, b) => {
+        const codeA = a.agentCode || "";
+        const codeB = b.agentCode || "";
+        const sequenceA = Number(
+          codeA.match(/^A(\d+)/i)?.[1] || Number.MAX_SAFE_INTEGER,
+        );
+        const sequenceB = Number(
+          codeB.match(/^A(\d+)/i)?.[1] || Number.MAX_SAFE_INTEGER,
+        );
+        return (
+          sequenceA - sequenceB ||
+          codeA.localeCompare(codeB) ||
+          a.name.localeCompare(b.name)
+        );
+      });
+    },
     [agents, searchTerm, filterBranch],
   );
 
