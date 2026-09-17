@@ -49,10 +49,19 @@ import {
   CalendarDays,
   Copy,
   FileBadge,
+  MoreHorizontal,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
 import { exportToCsv, exportToExcel } from "@/shared/lib/exportCsv";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   isValidIndonesianPhone,
   normalizePhone,
@@ -548,6 +557,23 @@ const AdminAgents = () => {
     },
     [agents, searchTerm, filterBranch],
   );
+
+  const exportAgentRows = filteredAgents.map((agent) => [
+    agent.branch?.code || "-",
+    agent.agentCode || "-",
+    agent.name,
+    agent.gender || "-",
+    agent.address || "-",
+    agent.dateOfBirth || "-",
+    agent.phone || "-",
+    agent.branch?.name || "-",
+    String(agent.commissionPercent || 0),
+    agent.isActive ? "Aktif" : "Nonaktif",
+  ]);
+  const exportAgentHeaders = [
+    "Kode Cabang", "Kode Agen", "Nama", "Gender", "Alamat",
+    "Tgl Lahir", "No Tel", "Cabang", "Komisi (%)", "Status",
+  ];
 
   const {
     page,
@@ -1117,111 +1143,6 @@ const AdminAgents = () => {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-3 mb-6">
-        <input
-          ref={importInputRef}
-          type="file"
-          accept=".csv,text/csv"
-          className="hidden"
-          onChange={handleImportAgents}
-        />
-        <Button
-          variant="outline"
-          className="shrink-0"
-          disabled={importingAgents}
-          onClick={() => importInputRef.current?.click()}
-        >
-          <Download className="w-4 h-4 mr-2" />
-          {importingAgents ? "Mengimport..." : "Import CSV"}
-        </Button>
-        <Button
-          variant="outline"
-          className="shrink-0"
-          onClick={downloadAgentImportTemplate}
-        >
-          <Download className="w-4 h-4 mr-2" /> Template Import
-        </Button>
-        <Button
-          variant="outline"
-          className="shrink-0"
-          onClick={() =>
-            exportToCsv(
-              "agents",
-              [
-                "Kode Cabang",
-                "Kode Agen",
-                "Nama",
-                "Gender",
-                "Alamat",
-                "Tgl Lahir",
-                "No Tel",
-                "Cabang",
-                "Komisi (%)",
-                "Status",
-              ],
-              filteredAgents.map((agent) => [
-                agent.branch?.code || "-",
-                agent.agentCode || "-",
-                agent.name,
-                agent.gender || "-",
-                agent.address || "-",
-                agent.dateOfBirth || "-",
-                agent.phone || "-",
-                agent.branch?.name || "-",
-                String(agent.commissionPercent || 0),
-                agent.isActive ? "Aktif" : "Nonaktif",
-              ]),
-            )
-          }
-        >
-          <Download className="w-4 h-4 mr-2" /> Export CSV
-        </Button>
-        <Button
-          variant="outline"
-          className="shrink-0"
-          onClick={() =>
-            exportToExcel(
-              "agents",
-              [
-                "Kode Cabang",
-                "Kode Agen",
-                "Nama",
-                "Gender",
-                "Alamat",
-                "Tgl Lahir",
-                "No Tel",
-                "Cabang",
-                "Komisi (%)",
-                "Status",
-              ],
-              filteredAgents.map((agent) => [
-                agent.branch?.code || "-",
-                agent.agentCode || "-",
-                agent.name,
-                agent.gender || "-",
-                agent.address || "-",
-                agent.dateOfBirth || "-",
-                agent.phone || "-",
-                agent.branch?.name || "-",
-                String(agent.commissionPercent || 0),
-                agent.isActive ? "Aktif" : "Nonaktif",
-              ]),
-            )
-          }
-        >
-          <Download className="w-4 h-4 mr-2" /> Export Excel
-        </Button>
-        <Button
-          variant="outline"
-          className="shrink-0"
-          onClick={() =>
-            window.open(
-              `${(import.meta.env.VITE_API_URL as string | undefined) ?? ""}/api/admin/reports/commissions.xlsx`,
-              "_blank",
-            )
-          }
-        >
-          <Download className="w-4 h-4 mr-2" /> Export Komisi
-        </Button>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
@@ -1239,14 +1160,46 @@ const AdminAgents = () => {
             <SelectItem value="all">Semua Cabang</SelectItem>
             {branches.map((branch) => (
               <SelectItem key={branch.id} value={branch.id}>
-                {branch.code ? `${branch.code} — ` : ""}
-                {branch.name}
+                {branch.code ? `${branch.code} — ` : ""}{branch.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={handleImportAgents}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="shrink-0">
+              <MoreHorizontal className="w-4 h-4 mr-2" /> Aksi Data
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>Kelola data agen</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem disabled={importingAgents} onClick={() => importInputRef.current?.click()}>
+              Import CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={downloadAgentImportTemplate}>
+              Download template import
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => exportToCsv("agents", exportAgentHeaders, exportAgentRows)}>
+              Export data CSV ({filteredAgents.length})
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportToExcel("agents", exportAgentHeaders, exportAgentRows)}>
+              Export data Excel ({filteredAgents.length})
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => window.open(`${(import.meta.env.VITE_API_URL as string | undefined) ?? ""}/api/admin/reports/commissions.xlsx`, "_blank")}>
+              Export komisi
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-
       {loading ? (
         <div className="flex justify-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold" />
