@@ -10,9 +10,30 @@ installGlobalErrorHandlers();
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch((error) => {
-      console.warn("Service worker tidak dapat didaftarkan", error);
-    });
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    sessionStorage.removeItem("app-hard-refresh");
+    navigator.serviceWorker
+      .register("/sw.js", { updateViaCache: "none" })
+      .then((registration) => {
+        registration.update().catch(() => undefined);
+        registration.addEventListener("updatefound", () => {
+          const installing = registration.installing;
+          if (!installing) return;
+          installing.addEventListener("statechange", () => {
+            if (installing.state === "installed" && navigator.serviceWorker.controller) {
+              installing.postMessage({ type: "SKIP_WAITING" });
+            }
+          });
+        });
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (!hadController || sessionStorage.getItem("app-hard-refresh")) return;
+          sessionStorage.setItem("app-hard-refresh", "1");
+          window.location.reload();
+        });
+      })
+      .catch((error) => {
+        console.warn("Service worker tidak dapat didaftarkan", error);
+      });
   });
 }
 
