@@ -71,7 +71,9 @@ async function generateAgentCode(branchId: string | null, client = db) {
     const isHeadOffice =
       /KANTORPU(SAT)?|PUSAT/i.test(fromName) || configuredCode === "VINS";
     if (isHeadOffice) {
-      branchCode = "VINSU";
+      // Kantor pusat harus seragam: agent_code dan referral_code sama-sama
+      // memakai suffix VINS (mis. A008VINS26), bukan VINSU.
+      branchCode = "VINS";
       referralBase = "VINS";
     } else {
       branchCode =
