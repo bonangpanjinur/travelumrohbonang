@@ -69,6 +69,37 @@ const publicUrlFor = (agent: AgentIdCardAgent) =>
 const safeName = (agent: AgentIdCardAgent) =>
   (agent.agentCode || agent.name).toLowerCase().replace(/[^a-z0-9]+/g, "-");
 const defaultBranding: Branding = { company_name: "UmrohPlus", logo_url: "" };
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const readBranding = (
+  settings: Array<{ key: string; value: unknown }>,
+): Branding => {
+  const brandingSetting = settings.find((item) => item.key === "branding");
+  const brandingValue = isRecord(brandingSetting?.value)
+    ? brandingSetting.value
+    : {};
+  const companyNameSetting = settings.find(
+    (item) => item.key === "company_name",
+  );
+  const logoUrlSetting = settings.find((item) => item.key === "logo_url");
+  const companyNameCandidates = [
+    brandingValue.company_name,
+    companyNameSetting?.value,
+  ];
+  const logoUrlCandidates = [brandingValue.logo_url, logoUrlSetting?.value];
+  const companyName = companyNameCandidates.find(
+    (value): value is string => typeof value === "string" && value.trim() !== "",
+  );
+  const logoUrl = logoUrlCandidates.find(
+    (value): value is string => typeof value === "string" && value.trim() !== "",
+  );
+
+  return {
+    company_name: companyName?.trim() || "",
+    logo_url: logoUrl?.trim() || "",
+  };
+};
 
 export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
   const [side, setSide] = useState<"front" | "back">("front");
@@ -89,18 +120,20 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
   const { toast } = useToast();
   useEffect(() => {
     if (!agent) return;
+    let cancelled = false;
+    setBranding(defaultBranding);
     apiFetch<{ data?: Array<{ key: string; value: unknown }> }>(
       "/api/cms/site-settings",
     )
       .then((result) => {
-        const setting = result?.data?.find((item) => item.key === "branding");
-        if (setting?.value && typeof setting.value === "object")
-          setBranding({
-            ...defaultBranding,
-            ...(setting.value as Partial<Branding>),
-          });
+        if (cancelled) return;
+        const settings = Array.isArray(result?.data) ? result.data : [];
+        setBranding(readBranding(settings));
       })
       .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
   }, [agent]);
   useEffect(() => {
     const waiter = sideRenderWaiterRef.current;
