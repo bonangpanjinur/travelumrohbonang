@@ -243,14 +243,20 @@ async function canCreateAgent(
  * previous agents schema so existing agents remain visible instead of returning
  * a generic 500 error.
  */
-async function selectLegacyAgents(ids: string[] | null) {
+async function selectLegacyAgents(
+  ids: string[] | null,
+  branchId: string | null,
+) {
   const rows = await db.execute(sql`
     SELECT id, user_id, branch_id, agent_code, name, gender, address,
       date_of_birth, phone, email, photo_url, referral_code, public_slug,
       public_description, public_page_enabled, commission_percent,
       monthly_target, is_active, created_at
     FROM agents
-    ${ids === null ? sql`` : sql`WHERE id = ANY(${ids}::text[])`}
+    WHERE (${ids === null ? sql`TRUE` : sql`id = ANY(${ids}::text[])`})
+      AND (${branchId === null ? sql`TRUE` : sql`branch_id = ${branchId}`})
+    ORDER BY COALESCE(substring(agent_code from '^A([0-9]+)')::integer, 2147483647),
+      agent_code NULLS LAST, name, id
   `);
   return (rows as any[]).map((row) => ({
     id: row.id,
@@ -309,20 +315,52 @@ router.get("/", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
     const ids = await agentIdsForScope(scope);
+    const requestedBranchId =
+      typeof req.query.branchId === "string" && req.query.branchId.trim()
+        ? req.query.branchId.trim()
+        : null;
+    if (
+      requestedBranchId &&
+      scope.type === "branch" &&
+      requestedBranchId !== scope.branchId
+    ) {
+      return res.json([]);
+    }
+    const whereClause = requestedBranchId
+      ? ids === null
+        ? eq(agents.branchId, requestedBranchId)
+        : ids.length
+          ? and(
+              eq(agents.branchId, requestedBranchId),
+              inArray(agents.id, ids),
+            )
+          : undefined
+      : ids === null
+        ? undefined
+        : ids.length
+          ? inArray(agents.id, ids)
+          : undefined;
     let data;
     try {
       data =
-        ids === null
-          ? await db.select().from(agents)
-          : ids.length
-            ? await db.select().from(agents).where(inArray(agents.id, ids))
-            : [];
+        whereClause === undefined && ids !== null && ids.length === 0
+          ? []
+          : await db
+              .select()
+              .from(agents)
+              .where(whereClause)
+              .orderBy(
+                sql`COALESCE(substring(${agents.agentCode} from '^A([0-9]+)')::integer, 2147483647)`,
+                sql`${agents.agentCode} NULLS LAST`,
+                agents.name,
+                agents.id,
+              );
     } catch (queryError) {
       console.error(
         "[admin/agents] current schema query failed; using legacy-compatible read:",
         queryError,
       );
-      data = await selectLegacyAgents(ids);
+      data = await selectLegacyAgents(ids, requestedBranchId);
     }
     // agent_code is canonical; this also keeps the UI correct before the
     // database synchronization migration has been applied.
