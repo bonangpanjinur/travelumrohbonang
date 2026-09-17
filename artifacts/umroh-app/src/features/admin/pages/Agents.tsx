@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { QRCodeSVG } from "qrcode.react";
 import { apiFetch } from "@/shared/lib/apiClient";
@@ -162,6 +162,8 @@ const AdminAgents = () => {
   const [createBranchInline, setCreateBranchInline] = useState(false);
   const [newBranchName, setNewBranchName] = useState("");
   const [newBranchAddress, setNewBranchAddress] = useState("");
+  const [importingAgents, setImportingAgents] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchData();
@@ -391,6 +393,89 @@ const AdminAgents = () => {
     link.href = dataUrl;
     link.download = `qr-agen-${agent.publicSlug}.png`;
     link.click();
+  };
+
+  const handleImportAgents = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setImportingAgents(true);
+    try {
+      const Papa = (await import("papaparse")).default;
+      const result = await new Promise<{ data: Record<string, string>[] }>((resolve, reject) => {
+        Papa.parse<Record<string, string>>(file, {
+          header: true,
+          skipEmptyLines: true,
+          transformHeader: (header) => header.trim().toLowerCase(),
+          complete: resolve,
+          error: reject,
+        });
+      });
+      const rows = result.data
+        .map((row) =>
+          Object.fromEntries(
+            Object.entries(row).map(([key, value]) => [key, String(value ?? "").trim()]),
+          ),
+        )
+        .filter((row) => Object.values(row).some(Boolean));
+      if (!rows.length) throw new Error("File CSV tidak memiliki data agen");
+
+      const failures: string[] = [];
+      let imported = 0;
+      for (const [index, row] of rows.entries()) {
+        const line = index + 2;
+        const name = row.nama || row.name || "";
+        const rawPhone = row.telepon || row.phone || row.no_tel || "";
+        const phone = normalizePhone(rawPhone);
+        if (!name) {
+          failures.push(`Baris ${line}: kolom nama wajib diisi`);
+          continue;
+        }
+        if (rawPhone && !isValidIndonesianPhone(phone)) {
+          failures.push(`Baris ${line}: nomor telepon tidak valid`);
+          continue;
+        }
+        const branchValue = row.branch_id || row.branchid || row.kode_cabang || row.branch_code || "";
+        const branch = branchValue
+          ? branches.find(
+              (item) => item.id === branchValue || item.code?.toLowerCase() === branchValue.toLowerCase(),
+            )
+          : null;
+        if (branchValue && !branch) {
+          failures.push(`Baris ${line}: branch_id/kode cabang tidak ditemukan`);
+          continue;
+        }
+        try {
+          await apiFetch("/api/admin/agents", {
+            method: "POST",
+            body: JSON.stringify({
+              name,
+              agentCode: row.kode_agen || row.agent_code || row.agentcode || null,
+              phone: phone || null,
+              gender: row.gender || null,
+              address: row.alamat || row.address || null,
+              email: row.email || null,
+              branchId: branch?.id || null,
+              commissionPercent: row.komisi || row.commission_percent || 0,
+              isActive: !["false", "0", "nonaktif"].includes((row.status || "").toLowerCase()),
+            }),
+          });
+          imported += 1;
+        } catch (error: any) {
+          failures.push(`Baris ${line}: ${error?.message || "gagal disimpan"}`);
+        }
+      }
+      await fetchData();
+      toast({
+        title: `Import selesai: ${imported} berhasil, ${failures.length} gagal`,
+        description: failures.slice(0, 3).join(" | ") || "Semua data berhasil diimport.",
+        variant: failures.length ? "destructive" : "default",
+      });
+    } catch (error: any) {
+      toast({ title: "Import gagal", description: error?.message || "File CSV tidak dapat dibaca", variant: "destructive" });
+    } finally {
+      setImportingAgents(false);
+    }
   };
 
   const filteredAgents = useMemo(
@@ -972,6 +1057,22 @@ const AdminAgents = () => {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-3 mb-6">
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={handleImportAgents}
+        />
+        <Button
+          variant="outline"
+          className="shrink-0"
+          disabled={importingAgents}
+          onClick={() => importInputRef.current?.click()}
+        >
+          <Download className="w-4 h-4 mr-2" />
+          {importingAgents ? "Mengimport..." : "Import CSV"}
+        </Button>
         <Button
           variant="outline"
           className="shrink-0"
