@@ -478,6 +478,38 @@ const AdminAgents = () => {
     }
   };
 
+  const downloadAgentImportTemplate = () => {
+    exportToCsv(
+      "template-import-agen",
+      [
+        "nama",
+        "kode_agen",
+        "telepon",
+        "gender",
+        "alamat",
+        "email",
+        "branch_id",
+        "kode_cabang",
+        "komisi",
+        "status",
+      ],
+      [
+        [
+          "Contoh Agen",
+          "",
+          "081234567890",
+          "P",
+          "Jl. Contoh No. 1",
+          "agen@example.com",
+          "branch_pusat",
+          "VINS",
+          "0",
+          "Aktif",
+        ],
+      ],
+    );
+  };
+
   const filteredAgents = useMemo(
     () => {
       const filtered = agents.filter((agent) => {
@@ -1072,6 +1104,13 @@ const AdminAgents = () => {
         >
           <Download className="w-4 h-4 mr-2" />
           {importingAgents ? "Mengimport..." : "Import CSV"}
+        </Button>
+        <Button
+          variant="outline"
+          className="shrink-0"
+          onClick={downloadAgentImportTemplate}
+        >
+          <Download className="w-4 h-4 mr-2" /> Template Import
         </Button>
         <Button
           variant="outline"
