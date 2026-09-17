@@ -101,6 +101,27 @@ const readBranding = (
   };
 };
 
+const readTenantBranding = (sites: unknown): Branding => {
+  if (!Array.isArray(sites)) return { company_name: "", logo_url: "" };
+  const activeSites = sites.filter(
+    (site): site is Record<string, unknown> =>
+      isRecord(site) && site.isActive !== false,
+  );
+  // The unassigned active site is the main travel brand. Branch/agent sites
+  // are intentionally ignored so an agent card does not use a branch brand.
+  const site =
+    activeSites.find(
+      (candidate) => candidate.branchId == null && candidate.agentId == null,
+    ) || activeSites[0];
+  if (!site) return { company_name: "", logo_url: "" };
+
+  return {
+    company_name:
+      typeof site.siteName === "string" ? site.siteName.trim() : "",
+    logo_url: typeof site.logoUrl === "string" ? site.logoUrl.trim() : "",
+  };
+};
+
 export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
   const [side, setSide] = useState<"front" | "back">("front");
   const [generating, setGenerating] = useState(false);
@@ -122,15 +143,26 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
     if (!agent) return;
     let cancelled = false;
     setBranding(defaultBranding);
-    apiFetch<{ data?: Array<{ key: string; value: unknown }> }>(
-      "/api/cms/site-settings",
-    )
-      .then((result) => {
-        if (cancelled) return;
-        const settings = Array.isArray(result?.data) ? result.data : [];
-        setBranding(readBranding(settings));
-      })
-      .catch(() => undefined);
+    const loadBranding = async () => {
+      const [settingsResult, tenantResult] = await Promise.all([
+        apiFetch<{ data?: Array<{ key: string; value: unknown }> }>(
+          "/api/cms/site-settings",
+        ).catch(() => null),
+        apiFetch<unknown[]>("/api/admin/tenant").catch(() => null),
+      ]);
+      if (cancelled) return;
+
+      const siteSettingsBranding = readBranding(
+        Array.isArray(settingsResult?.data) ? settingsResult.data : [],
+      );
+      const tenantBranding = readTenantBranding(tenantResult);
+      setBranding({
+        company_name:
+          tenantBranding.company_name || siteSettingsBranding.company_name,
+        logo_url: tenantBranding.logo_url || siteSettingsBranding.logo_url,
+      });
+    };
+    loadBranding().catch(() => undefined);
     return () => {
       cancelled = true;
     };
