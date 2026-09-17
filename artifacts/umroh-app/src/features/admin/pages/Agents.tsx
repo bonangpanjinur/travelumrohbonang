@@ -50,12 +50,24 @@ import {
   FileBadge,
 } from "lucide-react";
 import { exportToCsv, exportToExcel } from "@/shared/lib/exportCsv";
-import { normalizePhone } from "@/shared/lib/phone";
+import {
+  isValidIndonesianPhone,
+  normalizePhone,
+} from "@/shared/lib/phone";
 import AdminPagination from "@/features/admin/components/AdminPagination";
 import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
 import AgentIdCardDialog from "@/features/admin/components/AgentIdCardDialog";
 import { useDeleteConfirm } from "@/features/admin/hooks/useDeleteConfirm";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 interface Branch {
   id: string;
@@ -191,13 +203,22 @@ const AdminAgents = () => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    const normalizedPhone = normalizePhone(form.phone);
+    if (form.phone.trim() && !isValidIndonesianPhone(normalizedPhone)) {
+      toast({
+        title: "Nomor telepon tidak valid",
+        description: "Gunakan nomor Indonesia yang valid, contoh: 081234567890.",
+        variant: "destructive",
+      });
+      return;
+    }
     const payload: Record<string, unknown> = {
       name: form.name.trim(),
       agentCode: form.agentCode.trim().toUpperCase() || null,
       gender: form.gender || null,
       address: form.address.trim() || null,
       dateOfBirth: form.dateOfBirth || null,
-      phone: form.phone.trim() || null,
+      phone: normalizedPhone || null,
       email: form.email.trim() || null,
       joinedAt: form.joinedAt || null,
       bannerIdCardUrl: form.bannerIdCardUrl.trim() || null,
@@ -417,6 +438,25 @@ const AdminAgents = () => {
     pageSize,
     resetPage,
   } = useAdminPagination(filteredAgents);
+  const agentBranchStats = useMemo(() => {
+    const counts = new Map<string, number>();
+    agents.forEach((agent) => {
+      const branchId = agent.branchId || "tanpa-branch-id";
+      counts.set(branchId, (counts.get(branchId) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .map(([branchId, jumlah]) => {
+        const branch = branches.find((item) => item.id === branchId);
+        return {
+          branchId,
+          branch: branch
+            ? `${branch.code ? `${branch.code} — ` : ""}${branch.name}`
+            : "Tanpa branch_id",
+          jumlah,
+        };
+      })
+      .sort((a, b) => b.jumlah - a.jumlah || a.branch.localeCompare(b.branch));
+  }, [agents, branches]);
   useEffect(() => {
     resetPage();
   }, [searchTerm, filterBranch]);
@@ -884,6 +924,51 @@ const AdminAgents = () => {
             <p className="text-2xl font-bold">{avgCommission}%</p>
           </div>
         </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-xl p-5 mb-6">
+        <div className="mb-4">
+          <h2 className="font-semibold">Jumlah Agen per Branch</h2>
+          <p className="text-sm text-muted-foreground">
+            Statistik berdasarkan <code>branch_id</code> dari data agen yang
+            sudah diaudit dan diurutkan berdasarkan kode agen.
+          </p>
+        </div>
+        {agentBranchStats.length === 0 ? (
+          <div className="h-[260px] flex items-center justify-center text-muted-foreground">
+            Belum ada data agen.
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart
+              data={agentBranchStats}
+              margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis
+                dataKey="branch"
+                interval={0}
+                angle={-15}
+                textAnchor="end"
+                height={55}
+                className="text-xs"
+              />
+              <YAxis allowDecimals={false} className="text-xs" />
+              <Tooltip
+                formatter={(value) => [value, "Jumlah agen"]}
+                labelFormatter={(label, payload) =>
+                  `${label} (${payload?.[0]?.payload?.branchId || "-"})`
+                }
+              />
+              <Bar
+                dataKey="jumlah"
+                name="Jumlah agen"
+                fill="#b98b2f"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       <div className="flex flex-col lg:flex-row gap-3 mb-6">

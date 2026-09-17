@@ -49,6 +49,27 @@ function parseIsoDate(value: unknown, label: string) {
   return candidate;
 }
 
+function normalizeAgentPhone(value: unknown) {
+  if (value == null || String(value).trim() === "") return null;
+  const raw = String(value).trim().replace(/[\s\-().]/g, "");
+  const digits = raw.startsWith("+62")
+    ? raw.slice(1).replace(/\D/g, "")
+    : raw.replace(/\D/g, "");
+  const normalized = digits.startsWith("62")
+    ? `+${digits}`
+    : digits.startsWith("0")
+      ? `+62${digits.slice(1)}`
+      : digits.startsWith("8")
+        ? `+62${digits}`
+        : `+${digits}`;
+  if (!/^\+628\d{8,11}$/.test(normalized)) {
+    throw new Error(
+      "Nomor telepon agen tidak valid. Gunakan nomor Indonesia, contoh: 081234567890",
+    );
+  }
+  return normalized;
+}
+
 async function generateAgentCode(branchId: string | null, client = db) {
   const year = new Date().getFullYear().toString().slice(-2);
   // Agen tanpa branchId memakai identitas kantor pusat VINS.
@@ -148,6 +169,7 @@ function normalizeAgentPayload(
     throw new Error("Komisi harus berada di antara 0 sampai 100 persen");
   const joinedAt = parseIsoDate(body.joinedAt, "Tanggal bergabung");
   const validUntil = parseIsoDate(body.validUntil, "Masa berlaku");
+  const phone = normalizeAgentPhone(body.phone);
   if (joinedAt && validUntil && validUntil < joinedAt)
     throw new Error(
       "Masa berlaku tidak boleh lebih awal dari tanggal bergabung",
@@ -161,10 +183,7 @@ function normalizeAgentPayload(
         ? null
         : String(body.address).trim().slice(0, 500),
     dateOfBirth,
-    phone:
-      body.phone == null || body.phone === ""
-        ? null
-        : String(body.phone).trim().slice(0, 40),
+    phone,
     email:
       body.email == null || body.email === ""
         ? null
