@@ -69,6 +69,25 @@ async function selectLegacyBranches(ids: string[] | null) {
   }));
 }
 
+async function attachAgentCounts<T extends { id: string }>(rows: T[]) {
+  const counts = await db.execute(sql`
+    SELECT branch_id, count(*)::int AS agent_count
+    FROM agents
+    WHERE branch_id IS NOT NULL
+    GROUP BY branch_id
+  `);
+  const countByBranch = new Map(
+    ((counts as any).rows ?? counts).map((row: any) => [
+      row.branch_id,
+      Number(row.agent_count || 0),
+    ]),
+  );
+  return rows.map((row) => ({
+    ...row,
+    agentCount: countByBranch.get(row.id) || 0,
+  }));
+}
+
 router.get("/", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
@@ -84,7 +103,7 @@ router.get("/", async (req, res) => {
       console.error("[admin/branches] current schema query failed; using legacy-compatible read:", queryError);
       data = await selectLegacyBranches(ids);
     }
-    res.json(data);
+    res.json(await attachAgentCounts(data));
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch branches" });
   }
@@ -132,6 +151,17 @@ router.delete("/:id", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
     if (scope.type !== "global") return res.status(403).json({ error: "Hanya admin pusat yang dapat menghapus cabang" });
+    const agentRows = await db.execute(sql`
+      SELECT count(*)::int AS agent_count
+      FROM agents
+      WHERE branch_id = ${req.params.id}
+    `);
+    const agentCount = Number(((agentRows as any).rows ?? agentRows)[0]?.agent_count || 0);
+    if (agentCount > 0) {
+      return res.status(409).json({
+        error: `Cabang masih memiliki ${agentCount} agen. Pindahkan agen terlebih dahulu sebelum menghapus cabang.`,
+      });
+    }
     await db.delete(branches).where(eq(branches.id, req.params.id));
     res.json({ success: true });
   } catch (err) {

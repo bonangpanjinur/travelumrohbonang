@@ -7,7 +7,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Plus, Pencil, Trash2, Building2, MapPin, Phone, Clock3, Link2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2, MapPin, Phone, Clock3, Link2, Users } from "lucide-react";
 import { Download, Upload, FileSpreadsheet } from "lucide-react";
 import Papa from "papaparse";
 import DeleteAlertDialog from "@/features/admin/components/DeleteAlertDialog";
@@ -16,6 +16,7 @@ import { useAdminPagination } from "@/features/admin/hooks/useAdminPagination";
 
 interface Branch {
   id: string;
+  agentCount: number;
   code: string | null;
   name: string;
   slug: string | null;
@@ -116,6 +117,7 @@ const AdminBranches = () => {
       const data = await apiFetch<any[]>("/api/admin/branches");
       setBranches((data || []).map((b) => ({
         id: b.id,
+        agentCount: Number(b.agentCount || 0),
         code: b.code,
         name: b.name,
         slug: b.slug,
@@ -387,6 +389,7 @@ const AdminBranches = () => {
                 <TableHead>Nama & Alamat</TableHead>
                 <TableHead>Wilayah</TableHead>
                 <TableHead>Kontak</TableHead>
+                <TableHead>Agen</TableHead>
                 <TableHead>Publik</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
@@ -398,6 +401,17 @@ const AdminBranches = () => {
                   <TableCell><div className="font-semibold">{b.name}</div><div className="mt-1 max-w-[260px] truncate text-xs text-muted-foreground" title={b.address || ""}>{b.address || "Alamat belum diisi"}</div></TableCell>
                   <TableCell><div>{b.city || "-"}</div><div className="text-xs text-muted-foreground">{b.region || ""}{b.postal_code ? ` · ${b.postal_code}` : ""}</div></TableCell>
                   <TableCell><div>{b.phone || "-"}</div><div className="max-w-[180px] truncate text-xs text-muted-foreground">{b.email || ""}</div></TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1"
+                      title={`Lihat ${b.agentCount} agen pada cabang ini`}
+                      onClick={() => window.location.assign(`/admin/agents?branchId=${encodeURIComponent(b.id)}`)}
+                    >
+                      <Users className="w-4 h-4" /> {b.agentCount}
+                    </Button>
+                  </TableCell>
                   <TableCell><div className="text-xs text-muted-foreground">/{b.slug || "-"}</div><div className="mt-1 text-xs">{b.map_url ? "Maps tersedia" : "Maps belum diisi"}</div></TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(b)}><Pencil className="w-4 h-4" /></Button>

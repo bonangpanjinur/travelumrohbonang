@@ -164,7 +164,9 @@ const AdminAgents = () => {
   const [qrAgent, setQrAgent] = useState<Agent | null>(null);
   const [idCardAgent, setIdCardAgent] = useState<Agent | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterBranch, setFilterBranch] = useState("all");
+  const [filterBranch, setFilterBranch] = useState(
+    () => new URLSearchParams(window.location.search).get("branchId") || "all",
+  );
   const { toast } = useToast();
   const { isDeleteOpen, requestDelete, cancelDelete, confirmDelete } =
     useDeleteConfirm();
