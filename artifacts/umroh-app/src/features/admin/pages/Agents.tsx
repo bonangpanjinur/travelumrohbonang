@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { QRCodeSVG } from "qrcode.react";
+import Papa from "papaparse";
 import { apiFetch } from "@/shared/lib/apiClient";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
@@ -404,7 +405,6 @@ const AdminAgents = () => {
     if (!file) return;
     setImportingAgents(true);
     try {
-      const Papa = (await import("papaparse")).default;
       const result = await new Promise<{ data: Record<string, string>[] }>((resolve, reject) => {
         Papa.parse<Record<string, string>>(file, {
           header: true,
