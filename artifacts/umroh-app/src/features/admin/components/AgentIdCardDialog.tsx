@@ -1053,12 +1053,15 @@ export default function AgentIdCardDialog({ agent, onOpenChange }: Props) {
                   <div className="mt-[3%] text-[clamp(7px,1.8vw,13px)] font-bold tracking-[.08em]">
                     ID CARD AGEN
                   </div>
-                  <div className="mx-auto mt-[6%] aspect-square w-[52%] overflow-hidden rounded-full border-[5px] border-[#087443] bg-white shadow-md">
+                  <div className="mx-auto mt-[6%] aspect-square w-[52%] shrink-0 overflow-hidden rounded-full border-[5px] border-[#087443] bg-white shadow-md">
                     {agent.photoUrl ? (
-                      <img
-                        src={agent.photoUrl}
-                        alt={agent.name}
-                        className="h-full w-full object-cover"
+                      <div
+                        role="img"
+                        aria-label={agent.name}
+                        className="block h-full w-full bg-cover bg-center bg-no-repeat"
+                        style={{
+                          backgroundImage: `url(${JSON.stringify(agent.photoUrl)})`,
+                        }}
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-[clamp(35px,11vw,74px)] font-bold text-[#087443]">
