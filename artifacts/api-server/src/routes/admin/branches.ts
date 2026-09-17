@@ -103,7 +103,9 @@ router.get("/", async (req, res) => {
       console.error("[admin/branches] current schema query failed; using legacy-compatible read:", queryError);
       data = await selectLegacyBranches(ids);
     }
-    res.json(await attachAgentCounts(data));
+    // The fallback legacy query intentionally returns a reduced shape. Both
+    // query paths share the only field required by attachAgentCounts.
+    res.json(await attachAgentCounts(data as Array<{ id: string }>));
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch branches" });
   }
