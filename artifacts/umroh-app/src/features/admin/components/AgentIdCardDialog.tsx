@@ -85,9 +85,14 @@ const readBranding = (
   const logoUrlSetting = settings.find((item) => item.key === "logo_url");
   const companyNameCandidates = [
     brandingValue.company_name,
+    brandingValue.companyName,
     companyNameSetting?.value,
   ];
-  const logoUrlCandidates = [brandingValue.logo_url, logoUrlSetting?.value];
+  const logoUrlCandidates = [
+    brandingValue.logo_url,
+    brandingValue.logoUrl,
+    logoUrlSetting?.value,
+  ];
   const companyName = companyNameCandidates.find(
     (value): value is string => typeof value === "string" && value.trim() !== "",
   );
@@ -101,24 +106,34 @@ const readBranding = (
   };
 };
 
-const readTenantBranding = (sites: unknown): Branding => {
+const readTenantBranding = (response: unknown): Branding => {
+  const sites = isRecord(response) && Array.isArray(response.data)
+    ? response.data
+    : response;
   if (!Array.isArray(sites)) return { company_name: "", logo_url: "" };
   const activeSites = sites.filter(
     (site): site is Record<string, unknown> =>
-      isRecord(site) && site.isActive !== false,
+      isRecord(site) && (site.isActive ?? site.is_active) !== false,
   );
   // The unassigned active site is the main travel brand. Branch/agent sites
   // are intentionally ignored so an agent card does not use a branch brand.
   const site =
     activeSites.find(
-      (candidate) => candidate.branchId == null && candidate.agentId == null,
+      (candidate) =>
+        (candidate.branchId ?? candidate.branch_id) == null &&
+        (candidate.agentId ?? candidate.agent_id) == null,
     ) || activeSites[0];
   if (!site) return { company_name: "", logo_url: "" };
 
   return {
     company_name:
-      typeof site.siteName === "string" ? site.siteName.trim() : "",
-    logo_url: typeof site.logoUrl === "string" ? site.logoUrl.trim() : "",
+      typeof (site.siteName ?? site.site_name) === "string"
+        ? String(site.siteName ?? site.site_name).trim()
+        : "",
+    logo_url:
+      typeof (site.logoUrl ?? site.logo_url) === "string"
+        ? String(site.logoUrl ?? site.logo_url).trim()
+        : "",
   };
 };
 
