@@ -48,6 +48,8 @@ import {
   CalendarDays,
   Copy,
   FileBadge,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { exportToCsv, exportToExcel } from "@/shared/lib/exportCsv";
 import {
@@ -163,6 +165,7 @@ const AdminAgents = () => {
   const [newBranchName, setNewBranchName] = useState("");
   const [newBranchAddress, setNewBranchAddress] = useState("");
   const [importingAgents, setImportingAgents] = useState(false);
+  const [showBranchStats, setShowBranchStats] = useState(true);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -1044,47 +1047,72 @@ const AdminAgents = () => {
       </div>
 
       <div className="bg-card border border-border rounded-xl p-5 mb-6">
-        <div className="mb-4">
-          <h2 className="font-semibold">Jumlah Agen per Branch</h2>
-          <p className="text-sm text-muted-foreground">
-            Statistik berdasarkan <code>branch_id</code> dari data agen yang
-            sudah diaudit dan diurutkan berdasarkan kode agen.
-          </p>
-        </div>
-        {agentBranchStats.length === 0 ? (
-          <div className="h-[260px] flex items-center justify-center text-muted-foreground">
-            Belum ada data agen.
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Jumlah Agen per Branch</h2>
+            <p className="text-sm text-muted-foreground">
+              Statistik berdasarkan <code>branch_id</code> dari data agen yang
+              sudah diaudit dan diurutkan berdasarkan kode agen.
+            </p>
           </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart
-              data={agentBranchStats}
-              margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis
-                dataKey="branch"
-                interval={0}
-                angle={-15}
-                textAnchor="end"
-                height={55}
-                className="text-xs"
-              />
-              <YAxis allowDecimals={false} className="text-xs" />
-              <Tooltip
-                formatter={(value) => [value, "Jumlah agen"]}
-                labelFormatter={(label, payload) =>
-                  `${label} (${payload?.[0]?.payload?.branchId || "-"})`
-                }
-              />
-              <Bar
-                dataKey="jumlah"
-                name="Jumlah agen"
-                fill="#b98b2f"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            aria-expanded={showBranchStats}
+            aria-controls="agent-branch-statistics"
+            onClick={() => setShowBranchStats((current) => !current)}
+          >
+            {showBranchStats ? (
+              <>
+                <ChevronUp className="w-4 h-4 mr-2" /> Tutup
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4 mr-2" /> Buka
+              </>
+            )}
+          </Button>
+        </div>
+        {showBranchStats && (
+          <div id="agent-branch-statistics" className="mt-4">
+            {agentBranchStats.length === 0 ? (
+              <div className="h-[260px] flex items-center justify-center text-muted-foreground">
+                Belum ada data agen.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart
+                  data={agentBranchStats}
+                  margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis
+                    dataKey="branch"
+                    interval={0}
+                    angle={-15}
+                    textAnchor="end"
+                    height={55}
+                    className="text-xs"
+                  />
+                  <YAxis allowDecimals={false} className="text-xs" />
+                  <Tooltip
+                    formatter={(value) => [value, "Jumlah agen"]}
+                    labelFormatter={(label, payload) =>
+                      `${label} (${payload?.[0]?.payload?.branchId || "-"})`
+                    }
+                  />
+                  <Bar
+                    dataKey="jumlah"
+                    name="Jumlah agen"
+                    fill="#b98b2f"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
         )}
       </div>
 
