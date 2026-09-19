@@ -37,6 +37,14 @@ import { STAFF_ROLES } from "../../lib/roleConstants";
 // mergeParams: true so req.params.packageId from parent router is accessible here
 const router = Router({ mergeParams: true });
 
+// Form admin mengirim string kosong untuk pilihan opsional yang belum diisi.
+// Simpan sebagai NULL agar foreign key nullable tidak menerima nilai palsu.
+const nullableText = (value: unknown): string | null => {
+  if (value == null) return null;
+  const trimmed = String(value).trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 async function canAccessDeparture(req: any, departureId: string) {
   const scope = await resolveUserScope(req);
   if (scope.type === "global") return true;
@@ -517,15 +525,15 @@ router.post("/", async (req, res) => {
 
     const resolvedPackageId      = package_id         ?? _pkgId;
     const resolvedDepDate        = departure_date      ?? _depDate;
-    const resolvedRetDate        = return_date         ?? _retDate ?? null;
-    const resolvedMuthawifId     = muthawif_id         ?? _mId ?? null;
+    const resolvedRetDate        = nullableText(return_date ?? _retDate);
+    const resolvedMuthawifId     = nullableText(muthawif_id ?? _mId);
     const resolvedQuota          = Number(quota) || 45;
-    const resolvedAirlineId      = airline_id          ?? _airId   ?? null;
-    const resolvedFlightNum      = flight_number       ?? _flNum   ?? null;
-    const resolvedDepAirport     = departure_airport_id ?? _depAp  ?? null;
-    const resolvedArrAirport     = arrival_airport_id  ?? _arrAp  ?? null;
-    const resolvedHotelMakkahId  = hotel_makkah_id     ?? _hMkId  ?? null;
-    const resolvedHotelMadinahId = hotel_madinah_id    ?? _hMdId  ?? null;
+    const resolvedAirlineId      = nullableText(airline_id ?? _airId);
+    const resolvedFlightNum      = nullableText(flight_number ?? _flNum);
+    const resolvedDepAirport     = nullableText(departure_airport_id ?? _depAp);
+    const resolvedArrAirport     = nullableText(arrival_airport_id ?? _arrAp);
+    const resolvedHotelMakkahId  = nullableText(hotel_makkah_id ?? _hMkId);
+    const resolvedHotelMadinahId = nullableText(hotel_madinah_id ?? _hMdId);
     const resolvedExtraHotels: any[] = extra_hotels ?? _extraHotels ?? [];
     const resolvedDepartureType  = _depType ?? "direct";
     const resolvedFlightSegments: any[] = _flightSegments ?? [];
@@ -643,24 +651,24 @@ router.patch("/:id", async (req, res) => {
     const incomingPkgId = package_id !== undefined ? package_id : _pkgId;
     if (incomingPkgId !== undefined) updates.packageId = incomingPkgId || null;
     if (departure_date ?? _depDate) updates.departureDate  = departure_date ?? _depDate;
-    if ("return_date" in req.body)  updates.returnDate     = return_date ?? _retDate ?? null;
+    if ("return_date" in req.body || _retDate !== undefined) updates.returnDate = nullableText(return_date ?? _retDate);
     if (muthawif_id  !== undefined) updates.muthawifId     = muthawif_id  || null;
     else if (_mId    !== undefined) updates.muthawifId     = _mId         || null;
     if (rest.quota !== undefined)   updates.quota          = Number(rest.quota);
     // KB-F03: flight fields
-    if (airline_id          !== undefined) updates.airlineId          = airline_id          ?? _airId ?? null;
-    else if (_airId         !== undefined) updates.airlineId          = _airId              || null;
-    if (flight_number       !== undefined) updates.flightNumber       = flight_number       ?? _flNum ?? null;
-    else if (_flNum         !== undefined) updates.flightNumber       = _flNum              || null;
-    if (departure_airport_id !== undefined) updates.departureAirportId = departure_airport_id ?? _depAp ?? null;
-    else if (_depAp          !== undefined) updates.departureAirportId = _depAp              || null;
-    if (arrival_airport_id   !== undefined) updates.arrivalAirportId   = arrival_airport_id  ?? _arrAp ?? null;
-    else if (_arrAp          !== undefined) updates.arrivalAirportId   = _arrAp              || null;
+    if (airline_id          !== undefined) updates.airlineId          = nullableText(airline_id ?? _airId);
+    else if (_airId         !== undefined) updates.airlineId          = nullableText(_airId);
+    if (flight_number       !== undefined) updates.flightNumber       = nullableText(flight_number ?? _flNum);
+    else if (_flNum         !== undefined) updates.flightNumber       = nullableText(_flNum);
+    if (departure_airport_id !== undefined) updates.departureAirportId = nullableText(departure_airport_id ?? _depAp);
+    else if (_depAp          !== undefined) updates.departureAirportId = nullableText(_depAp);
+    if (arrival_airport_id   !== undefined) updates.arrivalAirportId   = nullableText(arrival_airport_id ?? _arrAp);
+    else if (_arrAp          !== undefined) updates.arrivalAirportId   = nullableText(_arrAp);
     // FASE 2: hotel fields
-    if (hotel_makkah_id  !== undefined) updates.hotelMakkahId  = hotel_makkah_id  ?? _hMkId ?? null;
-    else if (_hMkId      !== undefined) updates.hotelMakkahId  = _hMkId           || null;
-    if (hotel_madinah_id !== undefined) updates.hotelMadinahId = hotel_madinah_id ?? _hMdId ?? null;
-    else if (_hMdId      !== undefined) updates.hotelMadinahId = _hMdId           || null;
+    if (hotel_makkah_id  !== undefined) updates.hotelMakkahId  = nullableText(hotel_makkah_id ?? _hMkId);
+    else if (_hMkId      !== undefined) updates.hotelMakkahId  = nullableText(_hMkId);
+    if (hotel_madinah_id !== undefined) updates.hotelMadinahId = nullableText(hotel_madinah_id ?? _hMdId);
+    else if (_hMdId      !== undefined) updates.hotelMadinahId = nullableText(_hMdId);
 
     // Declare resolved vars BEFORE use (fixes temporal dead zone ReferenceError)
     const resolvedExtraHotels: any[] | undefined = extra_hotels ?? _extraHotels;
