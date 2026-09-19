@@ -15,6 +15,21 @@ import { STAFF_ROLES } from "../../lib/roleConstants";
 
 const router = Router();
 
+const nullableText = (value: unknown): string | null => {
+  if (value == null) return null;
+  const trimmed = String(value).trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const toSlug = (value: string): string =>
+  value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 180);
+
 // Agents have read-only access — block writes at the router level
 router.use((req, res, next) => {
   if (req.method === "GET") return next();
@@ -66,17 +81,24 @@ router.post("/", validate(AdminCreatePackageRequest), async (req, res) => {
     const packageId = crypto.randomUUID();
 
     const created = await db.transaction(async (tx) => {
+      const baseSlug = toSlug(nullableText(body.slug) ?? body.title) || `paket-${packageId.slice(0, 8)}`;
+      const [sameSlug] = await tx
+        .select({ id: packages.id })
+        .from(packages)
+        .where(eq(packages.slug, baseSlug))
+        .limit(1);
+      const slug = sameSlug ? `${baseSlug}-${packageId.slice(0, 8)}` : baseSlug;
       const [pkg] = await tx
         .insert(packages)
         .values({
           id: packageId,
-          title: body.title,
-          slug: body.slug,
-          description: body.description ?? null,
-          imageUrl: body.imageUrl ?? null,
+          title: body.title.trim(),
+          slug,
+          description: nullableText(body.description),
+          imageUrl: nullableText(body.imageUrl),
           durationDays: body.durationDays ?? null,
-          packageType: body.packageType ?? null,
-          categoryId: body.categoryId ?? null,
+          packageType: nullableText(body.packageType),
+          categoryId: nullableText(body.categoryId),
           // FASE 1: hotelMakkahId, hotelMadinahId, airlineId, airportId ada di departure
           minimumDp: body.minimumDp ?? null,
           dpDeadlineDays: body.dpDeadlineDays ?? null,
@@ -251,13 +273,13 @@ router.patch("/:id", validate(AdminUpdatePackageRequest), async (req, res) => {
       const [pkg] = await tx
         .update(packages)
         .set({
-          title: updates.title,
-          slug: updates.slug,
-          description: updates.description,
-          imageUrl: updates.imageUrl,
+          title: updates.title?.trim(),
+          slug: updates.slug ? toSlug(updates.slug) : undefined,
+          description: updates.description === undefined ? undefined : nullableText(updates.description),
+          imageUrl: updates.imageUrl === undefined ? undefined : nullableText(updates.imageUrl),
           durationDays: updates.durationDays,
-          packageType: updates.packageType,
-          categoryId: updates.categoryId,
+          packageType: updates.packageType === undefined ? undefined : nullableText(updates.packageType),
+          categoryId: updates.categoryId === undefined ? undefined : nullableText(updates.categoryId),
           minimumDp: updates.minimumDp,
           dpDeadlineDays: updates.dpDeadlineDays,
           fullDeadlineDays: updates.fullDeadlineDays,

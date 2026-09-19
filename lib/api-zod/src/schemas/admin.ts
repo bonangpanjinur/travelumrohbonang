@@ -2,7 +2,8 @@ import { z } from "zod";
 
 export const AdminCreatePackageRequest = z.object({
   title: z.string().trim().min(1, "Nama paket wajib diisi").max(200),
-  slug: z.string().trim().min(1, "Slug wajib diisi").max(200),
+  // Slug boleh dikosongkan; API akan membuatnya dari nama paket.
+  slug: z.string().trim().max(200).nullish(),
   description: z.string().nullish(),
   imageUrl: z.string().nullish(),
   durationDays: z.number().int().positive().nullish(),
