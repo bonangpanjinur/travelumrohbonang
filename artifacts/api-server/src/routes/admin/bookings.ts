@@ -886,8 +886,7 @@ router.post("/group", async (req, res) => {
       res.status(409).json({ error: e.message });
       return;
     }
-    console.error("[POST /api/admin/bookings/group]", e);
-    res.status(500).json({ error: "Gagal membuat booking rombongan" });
+    sendAdminError(res, "POST /api/admin/bookings/group", e);
   }
 });
 
