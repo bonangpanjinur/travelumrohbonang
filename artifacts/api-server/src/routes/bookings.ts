@@ -36,7 +36,7 @@ import QRCode from "qrcode";
 import { branches } from "@workspace/db";
 import { buildBookingPaymentSnapshots, snapshotEffectivePaymentPolicy } from "../lib/paymentPolicyBooking";
 import { resolvePaymentPolicy } from "../lib/paymentPolicyResolver";
-import { calculateAuthoritativeBookingPrice, BookingPricingError } from "../lib/bookingPricing";
+import { calculateAuthoritativeBookingPrice, calculateBookingPaxCount, BookingPricingError } from "../lib/bookingPricing";
 import { validatePaymentAgainstSchedule } from "../lib/paymentScheduleValidation";
 import {
   BookingListResponse,
@@ -486,6 +486,7 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
       throw error;
     }
     const calculatedBasePrice = calculatedPricing.total;
+    const paxCount = calculateBookingPaxCount(calculatedPricing.lines);
 
     // P3-10: Validasi kapasitas keberangkatan sebelum booking dibuat
     if (departureId) {
@@ -501,7 +502,7 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
       // Kursi terpakai dihitung dari booking yang sudah di-approve/confirmed
       const filledMap = await getFilledSeatsMap([departureId]);
       const remainingSeats = Math.max(0, (dep.quota ?? 0) - (filledMap.get(departureId) ?? 0));
-      if (remainingSeats <= 0 || dep.status === "penuh") {
+      if (remainingSeats < paxCount || dep.status === "penuh") {
         res.status(409).json({ error: "Maaf, kapasitas keberangkatan ini sudah penuh. Silakan pilih jadwal lain." });
         return;
       }
@@ -585,6 +586,7 @@ router.post("/", validate(CreateBookingRequest), async (req, res) => {
           picName: groupPicName ?? null,
           picPhone: groupPicPhone ?? null,
           picEmail: groupPicEmail ?? null,
+          paxCount,
           createdAt: new Date(),
         })
         .returning();
@@ -709,6 +711,22 @@ router.post(
       }
 
       const { pilgrims } = req.body as { pilgrims: BookingPilgrim[] };
+
+      // A group booking declares its pax count when created. Do not allow a
+      // retry or a malformed request to add more pilgrims than seats priced.
+      const [bookingMeta] = await db
+        .select({ paxCount: bookings.paxCount })
+        .from(bookings)
+        .where(eq(bookings.id, id))
+        .limit(1);
+      const existingPilgrims = await db
+        .select({ id: bookingPilgrims.id })
+        .from(bookingPilgrims)
+        .where(eq(bookingPilgrims.bookingId, id));
+      if ((bookingMeta?.paxCount ?? 1) < existingPilgrims.length + pilgrims.length) {
+        res.status(400).json({ error: "Jumlah jamaah melebihi jumlah pax booking" });
+        return;
+      }
 
       const rows = pilgrims.map((p) => ({
         id: crypto.randomUUID(),

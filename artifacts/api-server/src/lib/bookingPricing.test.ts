@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BookingPricingError, calculateAuthoritativeBookingPrice } from "./bookingPricing";
+import { BookingPricingError, calculateAuthoritativeBookingPrice, calculateBookingPaxCount } from "./bookingPricing";
 
 describe("authoritative booking pricing", () => {
   const officialPrices = [
@@ -28,6 +28,15 @@ describe("authoritative booking pricing", () => {
     // A manipulated client total is not an input to this helper; the result is always DB price × quantity.
     expect(result.total).not.toBe(1_000);
     expect(result.total).toBe(25_000_000);
+  });
+
+  it("counts all room quantities as booking pax", () => {
+    const result = calculateAuthoritativeBookingPrice(
+      [{ roomType: "double", quantity: 2 }, { roomType: "triple", quantity: 3 }],
+      officialPrices,
+    );
+
+    expect(calculateBookingPaxCount(result.lines)).toBe(5);
   });
 
   it("rejects an unavailable room type", () => {

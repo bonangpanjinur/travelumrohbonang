@@ -60,3 +60,8 @@ export function calculateAuthoritativeBookingPrice(
 
   return { total, lines };
 }
+
+/** Jumlah peserta yang harus dicatat pada booking dan dikurangkan dari kuota. */
+export function calculateBookingPaxCount(lines: Array<{ quantity: number }>): number {
+  return lines.reduce((sum, line) => sum + line.quantity, 0);
+}
