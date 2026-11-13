@@ -17,6 +17,8 @@ import { TenantProvider, useTenant } from "@/shared/hooks/useTenant";
 import { useDynamicFavicon } from "@/shared/hooks/useDynamicFavicon";
 import { useActiveTemplate } from "@/features/tenant/hooks/useActiveTemplate";
 import Index from "./features/cms/pages/Index";
+import HostingNoticePage from "./features/cms/pages/HostingNotice";
+import { useHostingNotice } from "@/features/admin/hooks/useHostingNotice";
 import Paket from "./features/paket/pages/Paket";
 import PackageDetail from "./features/paket/pages/PackageDetail";
 import Auth from "./features/auth/pages/Auth";
@@ -66,6 +68,7 @@ const AdminFAQ = lazy(() => import("./features/admin/pages/FAQ"));
 const AdminFloatingButtons = lazy(() => import("./features/admin/pages/FloatingButtons"));
 const AdminBlog = lazy(() => import("./features/admin/pages/Blog"));
 const AdminSettings = lazy(() => import("./features/admin/pages/Settings"));
+const AdminHostingNoticeSettings = lazy(() => import("./features/admin/pages/HostingNoticeSettings"));
 const AdminInvoiceDesigner = lazy(() => import("./features/admin/pages/InvoiceDesigner"));
 const AdminNavigation = lazy(() => import("./features/admin/pages/Navigation"));
 const AdminPilgrims = lazy(() => import("./features/admin/pages/Pilgrims"));
@@ -187,11 +190,19 @@ const AppContent = () => {
   useDynamicFavicon();
   useActiveTemplate();
   useEffect(() => { installGlobalErrorHandlers(); }, []);
+  const location = useLocation();
+  const { data: hostingNotice, isLoading: hostingNoticeLoading } = useHostingNotice();
   const { isTenantSite, loading: tenantLoading } = useTenant();
 
   if (tenantLoading) {
     return <div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>;
   }
+
+  const isAdminOrAuthRoute = location.pathname === "/admin" || location.pathname.startsWith("/admin/") || location.pathname === "/auth";
+  if (!isAdminOrAuthRoute && hostingNoticeLoading) {
+    return <div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" /></div>;
+  }
+  if (hostingNotice?.active && !isAdminOrAuthRoute) return <HostingNoticePage />;
 
   // If this is a tenant subdomain, render the tenant site
   if (isTenantSite) {
@@ -287,6 +298,7 @@ const AppContent = () => {
           <Route path="guide-steps" element={<AdminGuideSteps />} />
           <Route path="services" element={<AdminServices />} />
           <Route path="settings" element={<AdminSettings />} />
+          <Route path="hosting-notice" element={<AdminHostingNoticeSettings />} />
           <Route path="invoice-designer" element={<AdminInvoiceDesigner />} />
           {/* Premium routes */}
           <Route path="accounting" element={<AdminAccounting />} />

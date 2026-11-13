@@ -14,6 +14,12 @@ describe("admin route access", () => {
     expect(canAccessAdminRoute("/admin/users", "admin")).toBe(true);
   });
 
+  it("restricts website availability controls to super admins", () => {
+    expect(canAccessAdminRoute("/admin/hosting-notice", "super_admin")).toBe(true);
+    expect(canAccessAdminRoute("/admin/hosting-notice", "admin")).toBe(false);
+    expect(canAccessAdminRoute("/admin/hosting-notice", "owner")).toBe(false);
+  });
+
   it("keeps nested operational routes active", () => {
     expect(canAccessAdminRoute("/admin/bookings/booking-1", "staff")).toBe(true);
     expect(getAdminRouteRoles("/admin/bookings/booking-1")).toContain("staff");
