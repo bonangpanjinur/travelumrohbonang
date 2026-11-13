@@ -1,5 +1,5 @@
-const CACHE_NAME = "portal-jamaah-v3";
-const APP_SHELL = ["/", "/portal-jamaah", "/manifest.webmanifest", "/favicon.svg"];
+const CACHE_NAME = "portal-jamaah-v4";
+const APP_SHELL = ["/", "/portal-jamaah", "/manifest.webmanifest"];
 
 self.addEventListener("message", (event) => {
   if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
@@ -18,6 +18,13 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Branding icons are resolved from the database and must not be cached by
+  // the service worker, otherwise a previous logo can remain installed.
+  if (url.pathname === "/api/cms/site-icon") {
+    event.respondWith(fetch(request, { cache: "no-store" }));
+    return;
+  }
 
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(fetch(request).then((response) => {

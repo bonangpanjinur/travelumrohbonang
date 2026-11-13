@@ -333,6 +333,7 @@ const AdminSettings = () => {
   const [resetting, setResetting] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [hexErrors, setHexErrors] = useState<{ primary?: string; accent?: string }>({});
+  const effectiveFaviconUrl = branding.favicon_url.trim() || branding.logo_url.trim();
 
   useEffect(() => {
     fetchSettings();
@@ -401,6 +402,7 @@ const AdminSettings = () => {
         method: "PUT",
         body: JSON.stringify({ category, value }),
       });
+      if (key === "branding") window.dispatchEvent(new Event("site-branding-updated"));
       if (!silent) toast({ title: "Pengaturan disimpan!" });
     } catch (err: any) {
       toast({
@@ -1285,6 +1287,7 @@ const AdminSettings = () => {
                         </label>
                       </Button>
                     </div>
+                    <p className="mt-1 text-xs text-muted-foreground">Opsional. Jika dikosongkan, favicon otomatis mengikuti logo di atas.</p>
                   </div>
                 </div>
               </div>
@@ -1299,8 +1302,8 @@ const AdminSettings = () => {
                   <div>
                     <p className="text-xs text-muted-foreground mb-1.5">Tab Browser</p>
                     <div className="inline-flex items-center gap-2 bg-background border border-border rounded-t-lg px-3 py-2 max-w-[220px]">
-                      {branding.favicon_url ? (
-                        <img src={branding.favicon_url} alt="Favicon preview" className="w-4 h-4 object-contain shrink-0" />
+                      {effectiveFaviconUrl ? (
+                        <img src={effectiveFaviconUrl} alt="Favicon preview" className="w-4 h-4 object-contain shrink-0" />
                       ) : (
                         <div className="w-4 h-4 rounded-sm bg-muted-foreground/30 shrink-0" />
                       )}
