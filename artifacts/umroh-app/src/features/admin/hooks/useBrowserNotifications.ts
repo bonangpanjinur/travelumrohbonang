@@ -24,7 +24,7 @@ export function useBrowserNotifications() {
 
     const n = new Notification(title, {
       body,
-      icon: "/favicon.ico",
+      icon: document.querySelector<HTMLLinkElement>("link[rel~='icon']")?.href ?? "/api/cms/site-icon",
       tag: "chat-message", // Replaces previous notification of same tag
     });
 

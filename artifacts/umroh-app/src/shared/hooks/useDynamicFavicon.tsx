@@ -1,36 +1,38 @@
 import { useEffect } from "react";
-import { supabase } from "@/shared/integrations/supabase/client";
+
+const refreshDatabaseIcon = () => {
+  // The backend endpoint selects favicon_url first, then falls back to the
+  // current branding.logo_url. A cache-busting query helps browsers notice an
+  // updated logo after an admin changes the branding settings.
+  const href = `/api/cms/site-icon?v=${Date.now()}`;
+  document.querySelectorAll("link[rel~='icon'], link[rel='apple-touch-icon']").forEach((link) => link.remove());
+
+  const favicon = document.createElement("link");
+  favicon.rel = "icon";
+  favicon.href = href;
+  document.head.appendChild(favicon);
+
+  const touchIcon = document.createElement("link");
+  touchIcon.rel = "apple-touch-icon";
+  touchIcon.href = href;
+  document.head.appendChild(touchIcon);
+};
 
 export const useDynamicFavicon = () => {
   useEffect(() => {
-    const fetchAndSetFavicon = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("site_settings")
-          .select("key, value")
-          .eq("category", "branding")
-          .eq("key", "branding")
-          .maybeSingle();
-        if (error) throw error;
-        const brandingSetting = data;
-        const value = brandingSetting?.value;
-        const faviconUrl =
-          value && typeof value === "object" && !Array.isArray(value)
-            ? (value as { favicon_url?: unknown }).favicon_url
-            : null;
-
-        if (typeof faviconUrl !== "string" || !faviconUrl.trim()) return;
-
-        document.querySelectorAll("link[rel*='icon']").forEach((link) => link.remove());
-        const link = document.createElement("link");
-        link.rel = "icon";
-        link.href = faviconUrl.trim();
-        document.head.appendChild(link);
-      } catch (error) {
-        console.error("Error fetching favicon settings:", error);
-      }
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshDatabaseIcon();
     };
 
-    fetchAndSetFavicon();
+    refreshDatabaseIcon();
+    window.addEventListener("focus", refreshDatabaseIcon);
+    window.addEventListener("site-branding-updated", refreshDatabaseIcon);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      window.removeEventListener("focus", refreshDatabaseIcon);
+      window.removeEventListener("site-branding-updated", refreshDatabaseIcon);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
   }, []);
 };
