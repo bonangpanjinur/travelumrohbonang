@@ -240,6 +240,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "menu.integrations": "Integrasi & Kunci API",
     "menu.login_settings": "Pengaturan Masuk (2FA)",
     "menu.general_settings": "Pengaturan Umum",
+    "menu.hosting_status": "Status Website",
   },
   en: {
     // Navbar
@@ -481,5 +482,6 @@ export const translations: Record<Language, Record<string, string>> = {
     "menu.integrations": "Integrations & API Keys",
     "menu.login_settings": "Login Settings (2FA)",
     "menu.general_settings": "General Settings",
+    "menu.hosting_status": "Website Availability",
   },
 };
