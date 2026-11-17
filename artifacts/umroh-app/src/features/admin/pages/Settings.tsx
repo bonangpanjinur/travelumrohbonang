@@ -333,7 +333,9 @@ const AdminSettings = () => {
   const [resetting, setResetting] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [hexErrors, setHexErrors] = useState<{ primary?: string; accent?: string }>({});
-  const effectiveFaviconUrl = branding.favicon_url.trim() || branding.logo_url.trim();
+  const effectiveFaviconUrl =
+    (typeof branding.favicon_url === "string" ? branding.favicon_url.trim() : "") ||
+    (typeof branding.logo_url === "string" ? branding.logo_url.trim() : "");
 
   useEffect(() => {
     fetchSettings();
@@ -418,12 +420,13 @@ const AdminSettings = () => {
   const handleResetAppearance = async () => {
     setResetting(true);
     setTemplate(defaultTemplate);
-    setBranding(defaultBranding);
+    const resetBranding = { ...defaultBranding, favicon_url: branding.favicon_url };
+    setBranding(resetBranding);
 
     // Pass silent=true so each saveSetting does NOT fire its own "Pengaturan disimpan!" toast.
     // We show a single reset-specific toast below instead.
     await saveSetting("template", "appearance", defaultTemplate, true);
-    await saveSetting("branding", "general", defaultBranding, true);
+    await saveSetting("branding", "general", resetBranding, true);
 
     toast({ title: "Tampilan dikembalikan ke default!" });
     setResetting(false);
@@ -1272,23 +1275,7 @@ const AdminSettings = () => {
                     </p>
                   </div>
 
-                  <div>
-                    <Label>Favicon</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        value={branding.favicon_url}
-                        onChange={(e) => setBranding({ ...branding, favicon_url: e.target.value })}
-                        placeholder="URL favicon"
-                      />
-                      <Button variant="outline" asChild>
-                        <label className="cursor-pointer">
-                          Upload
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, (url) => setBranding({ ...branding, favicon_url: url }))} />
-                        </label>
-                      </Button>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">Opsional. Jika dikosongkan, favicon otomatis mengikuti logo di atas.</p>
-                  </div>
+                  <p className="text-xs text-muted-foreground">Favicon dan app icon dikelola terpisah melalui menu khusus super admin. Ikon dapat mengikuti logo ini secara otomatis.</p>
                 </div>
               </div>
 

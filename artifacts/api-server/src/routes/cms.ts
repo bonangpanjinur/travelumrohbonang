@@ -23,22 +23,12 @@ import {
   asc,
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth";
+import { readSiteBranding } from "../lib/siteBranding";
+import { resolveSiteIconUrl } from "../lib/siteIcon";
 
 const STAFF_ROLES = new Set(["super_admin", "admin", "branch_manager", "staff"]);
 
 const router = Router();
-
-function resolvePublicIconUrl(value: unknown): string | null {
-  if (typeof value !== "string" || !value.trim()) return null;
-  const candidate = value.trim();
-  if (candidate.startsWith("/") && !candidate.startsWith("//")) return candidate;
-  try {
-    const parsed = new URL(candidate);
-    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.toString() : null;
-  } catch {
-    return null;
-  }
-}
 
 // Blog Posts
 router.get("/blog-posts", async (req, res) => {
@@ -148,18 +138,11 @@ router.get("/site-settings", async (req, res) => {
 // database branding. An explicit favicon is an optional override; otherwise
 // use the logo_url so the site never falls back to a bundled starter icon.
 router.get("/site-icon", async (_req, res) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
   try {
-    const [setting] = await db
-      .select({ value: siteSettings.value })
-      .from(siteSettings)
-      .where(and(eq(siteSettings.category, "branding"), eq(siteSettings.key, "branding")))
-      .limit(1);
-    const branding = setting?.value && typeof setting.value === "object" && !Array.isArray(setting.value)
-      ? setting.value as Record<string, unknown>
-      : {};
-    const iconUrl = resolvePublicIconUrl(branding.favicon_url) ?? resolvePublicIconUrl(branding.logo_url);
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    res.setHeader("Pragma", "no-cache");
+    const branding = await readSiteBranding();
+    const iconUrl = resolveSiteIconUrl(branding);
     if (!iconUrl) return res.status(204).end();
     return res.redirect(302, iconUrl);
   } catch (err) {
