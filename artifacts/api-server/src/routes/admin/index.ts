@@ -18,6 +18,7 @@ import adminDocumentsRouter from "./documents";
 import adminSystemHealthRouter from "./systemHealth";
 import adminAgentsRouter from "./agents";
 import adminSettingsRouter from "./settings";
+import adminAppIconRouter from "./app-icon";
 import adminTenantRouter from "./tenant";
 import adminBranchesRouter from "./branches";
 import adminPilgrimsRouter from "./pilgrims";
@@ -93,6 +94,8 @@ router.use("/payment-policies", requireFinance, adminPaymentPoliciesRouter);
 // ── Full admin routes (super_admin + admin only) ────────────────────────────
 router.use("/users", requireAdmin, adminUsersRouter);
 router.use("/settings", requireAdmin, adminSettingsRouter);
+// Branding icon changes use their own router and requireSuperAdmin per handler.
+router.use("/app-icon", adminAppIconRouter);
 router.use("/tenant", requireAdmin, adminTenantRouter);
 router.use("/system-health", requireAdmin, adminSystemHealthRouter);
 router.use("/logs", requireAdmin, adminLogsRouter);

@@ -149,7 +149,24 @@ router.put("/:key", async (req, res) => {
   try {
     const { category, value } = req.body;
     const key = req.params.key;
-    const [existing] = await db.select({ id: siteSettings.id }).from(siteSettings).where(eq(siteSettings.key, key)).limit(1);
+    const [existing] = await db.select({ id: siteSettings.id, value: siteSettings.value }).from(siteSettings).where(eq(siteSettings.key, key)).limit(1);
+
+    // The separate /admin/app-icon endpoint is super-admin-only. Prevent
+    // regular admins from bypassing that restriction through the generic
+    // branding JSON endpoint while still allowing other branding fields.
+    if (key === "branding" && req.user?.role !== "super_admin") {
+      const currentValue = existing?.value && typeof existing.value === "object" && !Array.isArray(existing.value)
+        ? existing.value as Record<string, unknown>
+        : {};
+      const incomingValue = value && typeof value === "object" && !Array.isArray(value)
+        ? value as Record<string, unknown>
+        : {};
+      const currentFavicon = typeof currentValue.favicon_url === "string" ? currentValue.favicon_url.trim() : "";
+      const incomingFavicon = typeof incomingValue.favicon_url === "string" ? incomingValue.favicon_url.trim() : "";
+      if (incomingFavicon !== currentFavicon) {
+        return res.status(403).json({ error: "Hanya super admin yang dapat mengubah ikon aplikasi" });
+      }
+    }
 
     let item;
     if (existing) {

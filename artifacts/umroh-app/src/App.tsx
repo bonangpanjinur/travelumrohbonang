@@ -68,6 +68,7 @@ const AdminFAQ = lazy(() => import("./features/admin/pages/FAQ"));
 const AdminFloatingButtons = lazy(() => import("./features/admin/pages/FloatingButtons"));
 const AdminBlog = lazy(() => import("./features/admin/pages/Blog"));
 const AdminSettings = lazy(() => import("./features/admin/pages/Settings"));
+const AdminAppIconSettings = lazy(() => import("./features/admin/pages/AppIconSettings"));
 const AdminHostingNoticeSettings = lazy(() => import("./features/admin/pages/HostingNoticeSettings"));
 const AdminInvoiceDesigner = lazy(() => import("./features/admin/pages/InvoiceDesigner"));
 const AdminNavigation = lazy(() => import("./features/admin/pages/Navigation"));
@@ -298,6 +299,7 @@ const AppContent = () => {
           <Route path="guide-steps" element={<AdminGuideSteps />} />
           <Route path="services" element={<AdminServices />} />
           <Route path="settings" element={<AdminSettings />} />
+          <Route path="app-icon" element={<AdminAppIconSettings />} />
           <Route path="hosting-notice" element={<AdminHostingNoticeSettings />} />
           <Route path="invoice-designer" element={<AdminInvoiceDesigner />} />
           {/* Premium routes */}
