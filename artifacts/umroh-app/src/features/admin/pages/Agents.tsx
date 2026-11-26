@@ -409,6 +409,10 @@ const AdminAgents = () => {
   };
 
   const handleToggleActive = async (agent: Agent) => {
+    if (!agent.isActive) {
+      await handleRestore(agent);
+      return;
+    }
     try {
       await apiFetch(`/api/admin/agents/${agent.id}`, {
         method: "PATCH",
