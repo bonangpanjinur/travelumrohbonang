@@ -3,6 +3,7 @@ import {
   db,
   agents,
   branches,
+  bookings,
   agentCommissions,
   agentWithdrawals,
   affiliateClicks,
@@ -11,11 +12,13 @@ import {
   desc,
   and,
   inArray,
+  count,
 } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { requireSuperAdmin } from "../../middlewares/requireAdmin";
 import { journalCommissionWithdrawal } from "../../lib/autoJournal";
 import { resolveUserScope } from "../../lib/scopeGuard";
+import { logSecurityAudit } from "../../lib/securityAudit";
 
 const router = Router();
 
@@ -102,26 +105,24 @@ async function generateAgentCode(branchId: string | null, client = db) {
       referralBase = branchCode;
     }
   }
-  // The sequence is deliberately global for the year. Filtering by branch here
-  // used to produce A001 for every branch (and VINS/VINSU was also split), which
-  // made the directory show duplicate-looking agent numbers. The transaction
-  // lock in the create handler makes this read/increment operation atomic.
+  // Allocation is global per year and monotonic. Never derive the next value
+  // from MAX(agents.agent_code): deleting the highest code would otherwise
+  // make that public identifier available for reuse.
+  const scopeKey = `global:${year}`;
   const result = await client.execute(sql`
-    SELECT COALESCE(MAX(sequence), 0) AS sequence
-    FROM (
-      SELECT substring(agent_code from '^A([0-9]{3})')::integer AS sequence
-      FROM agents
-      WHERE agent_code ~ ${`^A[0-9]{3}[A-Z0-9]+${year}$`}
-      UNION ALL
-      SELECT substring(referral_code from '^A([0-9]{3})')::integer AS sequence
-      FROM agents
-      WHERE referral_code ~ ${`^A[0-9]{3}[A-Z0-9]+${year}$`}
-    ) used_sequences
+    INSERT INTO agent_code_counters (scope_key, last_value, updated_at)
+    VALUES (${scopeKey}, 1, now())
+    ON CONFLICT (scope_key) DO UPDATE
+      SET last_value = agent_code_counters.last_value + 1,
+          updated_at = now()
+    RETURNING last_value
   `);
   const [last] = ((result as any).rows ?? result) as Array<{
-    sequence: number | string | null;
+    last_value: number | string;
   }>;
-  const sequence = Number(last?.sequence || 0) + 1;
+  const sequence = Number(last?.last_value);
+  if (!Number.isInteger(sequence) || sequence < 1)
+    throw new Error("Gagal mengalokasikan nomor kode agen");
   const candidate = `A${String(sequence).padStart(3, "0")}${branchCode}${year}`;
   const referralCode = `A${String(sequence).padStart(3, "0")}${referralBase}${year}`;
   return { agentCode: candidate, referralCode };
@@ -256,6 +257,59 @@ async function canCreateAgent(
   );
 }
 
+const AGENT_DATA_MANAGER_ROLES = new Set(["super_admin", "owner", "admin"]);
+
+function canManageAgentData(req: any) {
+  return AGENT_DATA_MANAGER_ROLES.has(String(req.user?.role || ""));
+}
+
+async function getAgentDeleteImpact(agentId: string) {
+  const [agent] = await db
+    .select({
+      id: agents.id,
+      name: agents.name,
+      agentCode: agents.agentCode,
+      userId: agents.userId,
+      isActive: agents.isActive,
+    })
+    .from(agents)
+    .where(eq(agents.id, agentId))
+    .limit(1);
+  if (!agent) return null;
+
+  const [bookingStats, commissionStats, withdrawalStats, clickStats] =
+    await Promise.all([
+      db
+        .select({ count: count() })
+        .from(bookings)
+        .where(
+          sql`${bookings.agentId} = ${agentId} OR (${bookings.picId} = ${agentId} AND ${bookings.picType} = 'agen')`,
+        ),
+      db
+        .select({ count: count() })
+        .from(agentCommissions)
+        .where(eq(agentCommissions.agentId, agentId)),
+      db
+        .select({ count: count() })
+        .from(agentWithdrawals)
+        .where(eq(agentWithdrawals.agentId, agentId)),
+      db
+        .select({ count: count() })
+        .from(affiliateClicks)
+        .where(eq(affiliateClicks.agentId, agentId)),
+    ]);
+
+  return {
+    agent,
+    bookings: Number(bookingStats[0]?.count ?? 0),
+    commissions: Number(commissionStats[0]?.count ?? 0),
+    withdrawals: Number(withdrawalStats[0]?.count ?? 0),
+    affiliateClicks: Number(clickStats[0]?.count ?? 0),
+    hasActiveAccount: Boolean(agent.userId),
+    recommendedAction: "archive",
+  };
+}
+
 /**
  * Production databases can briefly lag behind the application deploy while the
  * Supabase migration is being applied. Keep the read path compatible with the
@@ -330,6 +384,20 @@ async function insertLegacyAgent(tx: any, values: Record<string, unknown>) {
 }
 
 // Agents
+router.get("/:id/delete-impact", async (req, res) => {
+  try {
+    const scope = await resolveUserScope(req);
+    if (!(await agentInScope(req.params.id, scope)))
+      return res.status(404).json({ error: "Agent not found" });
+    const impact = await getAgentDeleteImpact(req.params.id);
+    if (!impact) return res.status(404).json({ error: "Agent not found" });
+    res.json(impact);
+  } catch (err) {
+    console.error("[admin/agents/delete-impact]", err);
+    res.status(500).json({ error: "Failed to inspect agent impact" });
+  }
+});
+
 router.get("/", async (req, res) => {
   try {
     const scope = await resolveUserScope(req);
@@ -497,6 +565,16 @@ router.patch("/:id", async (req, res) => {
       .limit(1);
     if (!existing[0] || !(await agentInScope(existing[0].id, scope)))
       return res.status(404).json({ error: "Agent not found" });
+    if (
+      req.body?.agentCode !== undefined &&
+      existing[0].agentCode &&
+      String(req.body.agentCode || "").trim().toUpperCase() !==
+        String(existing[0].agentCode).trim().toUpperCase()
+    ) {
+      return res.status(409).json({
+        error: "Kode agen tidak dapat diubah karena merupakan identitas permanen",
+      });
+    }
     // Strip immutable fields to prevent accidental overwrite of PK / createdAt
     const {
       id: _id,
@@ -514,6 +592,23 @@ router.patch("/:id", async (req, res) => {
       existing[0].name,
       generated,
     );
+    if (req.body?.isActive === false) {
+      Object.assign(updates, {
+        isActive: false,
+        publicPageEnabled: false,
+        archivedAt: new Date(),
+        archivedBy: String(req.user?.id || req.user?.email || "admin"),
+        archivedReason: "Dinonaktifkan dari status agent",
+      });
+    } else if (req.body?.isActive === true && existing[0].archivedAt) {
+      Object.assign(updates, {
+        isActive: true,
+        publicPageEnabled: true,
+        archivedAt: null,
+        archivedBy: null,
+        archivedReason: null,
+      });
+    }
     const [data] = await db
       .update(agents)
       .set(updates)
@@ -536,23 +631,126 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.post("/:id/restore", async (req, res) => {
   try {
-    if (req.user?.role === "agent")
-      return res
-        .status(403)
-        .json({ error: "Agen tidak dapat menghapus data agen" });
+    if (!canManageAgentData(req))
+      return res.status(403).json({ error: "Anda tidak memiliki izin memulihkan agen" });
     const scope = await resolveUserScope(req);
     if (!(await agentInScope(req.params.id, scope)))
       return res.status(404).json({ error: "Agent not found" });
-    const [deleted] = await db
-      .delete(agents)
+    const [restored] = await db
+      .update(agents)
+      .set({
+        isActive: true,
+        publicPageEnabled: true,
+        archivedAt: null,
+        archivedBy: null,
+        archivedReason: null,
+      })
+      .where(eq(agents.id, req.params.id))
+      .returning();
+    if (!restored) return res.status(404).json({ error: "Agent not found" });
+    await logSecurityAudit(req, "agent.restore", "success", {
+      entityType: "agent",
+      entityId: restored.id,
+      metadata: {
+        agentCode: restored.agentCode,
+        name: restored.name,
+        action: "restore",
+      },
+    });
+    res.json({ success: true, action: "restored", agent: restored });
+  } catch (err) {
+    console.error("[admin/agents/restore]", err);
+    res.status(500).json({ error: "Failed to restore agent" });
+  }
+});
+
+// DELETE is intentionally an archive operation. Agent history and public codes
+// must remain available for reporting, QR links, and reconciliation.
+router.delete("/:id", async (req, res) => {
+  try {
+    if (!canManageAgentData(req))
+      return res
+        .status(403)
+        .json({ error: "Hanya admin yang dapat mengarsipkan agen" });
+    const scope = await resolveUserScope(req);
+    if (!(await agentInScope(req.params.id, scope)))
+      return res.status(404).json({ error: "Agent not found" });
+    const reason =
+      typeof req.body?.reason === "string"
+        ? req.body.reason.trim().slice(0, 500) || null
+        : null;
+    const [archived] = await db
+      .update(agents)
+      .set({
+        isActive: false,
+        publicPageEnabled: false,
+        archivedAt: new Date(),
+        archivedBy: String(req.user?.id || req.user?.email || "admin"),
+        archivedReason: reason,
+      })
       .where(eq(agents.id, req.params.id as string))
       .returning();
-    if (!deleted) return res.status(404).json({ error: "Agent not found" });
-    res.json({ success: true });
+    if (!archived) return res.status(404).json({ error: "Agent not found" });
+    await logSecurityAudit(req, "agent.archive", "success", {
+      entityType: "agent",
+      entityId: archived.id,
+      reason: reason || undefined,
+      metadata: {
+        agentCode: archived.agentCode,
+        name: archived.name,
+        action: "archive",
+      },
+    });
+    res.json({ success: true, action: "archived", agent: archived });
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete agent" });
+    console.error("[admin/agents/archive]", err);
+    res.status(500).json({ error: "Failed to archive agent" });
+  }
+});
+
+// Permanent deletion is an exceptional operation for clean records only.
+router.post("/:id/hard-delete", requireSuperAdmin, async (req, res) => {
+  try {
+    const agentId = String(req.params.id);
+    const scope = await resolveUserScope(req);
+    if (!(await agentInScope(agentId, scope)))
+      return res.status(404).json({ error: "Agent not found" });
+    const impact = await getAgentDeleteImpact(agentId);
+    if (!impact) return res.status(404).json({ error: "Agent not found" });
+    if (impact.agent.isActive)
+      return res.status(409).json({ error: "Arsipkan agen terlebih dahulu sebelum hard delete" });
+    if (
+      impact.bookings > 0 ||
+      impact.commissions > 0 ||
+      impact.withdrawals > 0 ||
+      impact.affiliateClicks > 0 ||
+      impact.hasActiveAccount
+    ) {
+      return res.status(409).json({
+        error: "Agent memiliki histori, click referral, atau akun aktif; hard delete ditolak",
+        impact,
+      });
+    }
+    const [deleted] = await db
+      .delete(agents)
+      .where(eq(agents.id, agentId))
+      .returning({ id: agents.id });
+    if (!deleted) return res.status(404).json({ error: "Agent not found" });
+    await logSecurityAudit(req, "agent.hard_delete", "success", {
+      entityType: "agent",
+      entityId: deleted.id,
+      metadata: {
+        agentCode: impact.agent.agentCode,
+        name: impact.agent.name,
+        action: "hard_delete",
+      },
+    });
+    res.json({ success: true, action: "hard_deleted", id: deleted.id });
+  } catch (err) {
+    console.error("[admin/agents/hard-delete]", err);
+    res.status(500).json({ error: "Failed to hard delete agent" });
   }
 });
 

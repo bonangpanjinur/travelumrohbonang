@@ -162,6 +162,9 @@ export type Database = {
         Row: {
           address: string | null
           agent_code: string | null
+          archived_at: string | null
+          archived_by: string | null
+          archived_reason: string | null
           branch_id: string | null
           commission_percent: number | null
           created_at: string | null
@@ -182,6 +185,9 @@ export type Database = {
         Insert: {
           address?: string | null
           agent_code?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          archived_reason?: string | null
           branch_id?: string | null
           commission_percent?: number | null
           created_at?: string | null
@@ -202,6 +208,9 @@ export type Database = {
         Update: {
           address?: string | null
           agent_code?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          archived_reason?: string | null
           branch_id?: string | null
           commission_percent?: number | null
           created_at?: string | null
@@ -2916,6 +2925,9 @@ export type Database = {
         Row: {
           address: string | null
           agent_code: string | null
+          archived_at: string | null
+          archived_by: string | null
+          archived_reason: string | null
           branch_id: string | null
           id: string | null
           is_active: boolean | null
@@ -2929,6 +2941,9 @@ export type Database = {
         Insert: {
           address?: string | null
           agent_code?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          archived_reason?: string | null
           branch_id?: string | null
           id?: string | null
           is_active?: boolean | null
@@ -2942,6 +2957,9 @@ export type Database = {
         Update: {
           address?: string | null
           agent_code?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          archived_reason?: string | null
           branch_id?: string | null
           id?: string | null
           is_active?: boolean | null

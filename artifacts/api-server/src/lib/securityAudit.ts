@@ -6,7 +6,10 @@ export type SecurityAuditAction =
   | "admin.test_email"
   | "admin.test_whatsapp"
   | "admin.template_upgrade.submit"
-  | "admin.template_upgrade.update";
+  | "admin.template_upgrade.update"
+  | "agent.archive"
+  | "agent.restore"
+  | "agent.hard_delete";
 
 function redactTarget(value: string): string {
   if (value.includes("@")) {

@@ -39,6 +39,9 @@ export const agents = pgTable("agents", {
   commissionPercent: numeric("commission_percent"),
   monthlyTarget: integer("monthly_target"),
   isActive: boolean("is_active").notNull().default(true),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  archivedBy: text("archived_by"),
+  archivedReason: text("archived_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }),
 }, (t) => [
   uniqueIndex("idx_agents_referral_code").on(t.referralCode),
@@ -47,6 +50,13 @@ export const agents = pgTable("agents", {
   index("idx_agents_branch_id").on(t.branchId),
   index("idx_agents_user_id").on(t.userId),
 ]);
+
+/** Monotonic per-year allocator; values are never decremented or reused. */
+export const agentCodeCounters = pgTable("agent_code_counters", {
+  scopeKey: text("scope_key").primaryKey(),
+  lastValue: integer("last_value").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const userRoles = pgTable("user_roles", {
   id: uuid("id").primaryKey(),

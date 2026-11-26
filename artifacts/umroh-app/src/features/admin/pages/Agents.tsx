@@ -37,7 +37,7 @@ import { useToast } from "@/shared/hooks/use-toast";
 import {
   Plus,
   Pencil,
-  Trash2,
+  Archive,
   Users,
   Building2,
   Percent,
@@ -110,6 +110,7 @@ interface Agent {
   commissionPercent: number | null;
   monthlyTarget: number | null;
   isActive: boolean;
+  archivedAt?: string | null;
   branch?: Branch | null;
 }
 
@@ -178,6 +179,9 @@ const AdminAgents = () => {
   const [newBranchAddress, setNewBranchAddress] = useState("");
   const [importingAgents, setImportingAgents] = useState(false);
   const [showBranchStats, setShowBranchStats] = useState(true);
+  const [archiveDescription, setArchiveDescription] = useState(
+    "Agent akan diarsipkan, dinonaktifkan dari halaman publik, dan histori transaksi tetap disimpan.",
+  );
   const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -354,14 +358,50 @@ const AdminAgents = () => {
     setNewBranchAddress("");
   };
 
+  const requestArchive = async (agent: Agent) => {
+    try {
+      const impact = await apiFetch<any>(
+        `/api/admin/agents/${agent.id}/delete-impact`,
+      );
+      setArchiveDescription(
+        `${agent.name} (${agent.agentCode || "tanpa kode"}) akan diarsipkan. ` +
+          `Booking: ${impact.bookings}, komisi: ${impact.commissions}, ` +
+          `pencairan: ${impact.withdrawals}, referral click: ${impact.affiliateClicks}. ` +
+          "Histori tidak dihapus dan agent dapat dipulihkan.",
+      );
+    } catch {
+      setArchiveDescription(
+        `${agent.name} (${agent.agentCode || "tanpa kode"}) akan diarsipkan. Histori transaksi tetap disimpan dan agent dapat dipulihkan.`,
+      );
+    }
+    requestDelete(agent.id);
+  };
+
   const executeDelete = async (id: string) => {
     try {
-      await apiFetch(`/api/admin/agents/${id}`, { method: "DELETE" });
-      toast({ title: "Agen berhasil dihapus" });
+      await apiFetch(`/api/admin/agents/${id}`, {
+        method: "DELETE",
+        body: JSON.stringify({ reason: "Diarsipkan dari daftar agent" }),
+      });
+      toast({ title: "Agen berhasil diarsipkan" });
       await fetchData();
     } catch (error: any) {
       toast({
-        title: "Gagal menghapus agen",
+        title: "Gagal mengarsipkan agen",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRestore = async (agent: Agent) => {
+    try {
+      await apiFetch(`/api/admin/agents/${agent.id}/restore`, { method: "POST" });
+      toast({ title: "Agen berhasil dipulihkan" });
+      await fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Gagal memulihkan agen",
         description: error.message,
         variant: "destructive",
       });
@@ -628,8 +668,8 @@ const AdminAgents = () => {
         open={isDeleteOpen}
         onOpenChange={cancelDelete}
         onConfirm={() => confirmDelete(executeDelete)}
-        title="Hapus Agen?"
-        description="Data agen dan relasi komisinya akan ikut terdampak. Gunakan status nonaktif bila ingin menyimpan riwayat."
+        title="Arsipkan Agen?"
+        description={archiveDescription}
       />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
@@ -1358,10 +1398,10 @@ const AdminAgents = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => requestDelete(agent.id)}
-                          title="Hapus"
+                          onClick={() => requestArchive(agent)}
+                          title="Arsipkan"
                         >
-                          <Trash2 className="w-4 h-4 text-destructive" />
+                          <Archive className="w-4 h-4 text-destructive" />
                         </Button>
                       </TableCell>
                     </TableRow>
