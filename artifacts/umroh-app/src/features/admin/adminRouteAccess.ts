@@ -38,4 +38,14 @@ export function canAccessAdminRoute(pathname: string, role: AppRole | null): boo
   return !!role && getAdminRouteRoles(pathname).includes(role);
 }
 
+/**
+ * Returns whether a signed-in user may be offered the admin/staff panel.
+ * This is intentionally separate from `isAdmin`, which is also used for
+ * role badges and legacy UI semantics. Menu visibility must match the route
+ * guard's landing-page policy and must never be used as a security boundary.
+ */
+export function canAccessAdminPanel(role: AppRole | null): boolean {
+  return canAccessAdminRoute("/admin", role);
+}
+
 export { FULL_ADMIN, STAFF, OPERATIONAL, FINANCE };

@@ -166,59 +166,70 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!user) return;
-    
+
+    let disposed = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
     const fetchData = async () => {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('name, branch_id')
-        .eq('id', user.id)
-        .maybeSingle();
-      
+      const [{ data: profile }, { data: agentRow }, { data: bookingData }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('name, branch_id')
+          .eq('id', user.id)
+          .maybeSingle(),
+        supabase
+          .from('agents')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+        // Keep this read model intentionally narrow. Related package/departure
+        // data is not embedded because production has no usable FK relationship.
+        supabase
+          .from('bookings')
+          .select('id, status, total_price, payment_scheme, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+      const { data: paymentData } = bookingData
+        ? await supabase
+            .from('payments')
+            .select('id, booking_id, payment_type, status, amount')
+            .eq('booking_id', bookingData.id)
+        : { data: [] };
+
+      if (disposed) return bookingData?.id ?? null;
       setUserName(profile?.name || [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || 'Jamaah');
       setHasBranch(!!profile?.branch_id);
-
-      const { data: agentRow } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
       setIsAgent(!!agentRow);
-
-      // TEMPORARY: production Supabase schema cache has no FK relationship
-      // between bookings/packages/package_departures (confirmed via direct
-      // PostgREST probing — PGRST200 on every embed variant, including
-      // column- and constraint-name hints). Embedding is disabled until the
-      // actual FK constraints are confirmed/restored; see chat report.
-      const { data: bookingData } = await supabase
-        .from('bookings')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (bookingData) {
-        setActiveBooking(bookingData);
-        // Fetch payments for this booking
-        const { data: paymentData } = await supabase
-          .from('payments')
-          .select('*')
-          .eq('booking_id', bookingData.id);
-        setPayments(paymentData || []);
-      }
+      setActiveBooking(bookingData ?? null);
+      setPayments(paymentData || []);
       setLoadingBooking(false);
+      return bookingData?.id ?? null;
     };
 
-    fetchData();
+    fetchData().then((bookingId) => {
+      if (disposed) return;
+      channel = supabase
+        .channel(`dashboard-realtime-${user.id}`)
+        .on('postgres_changes', {
+          event: '*', schema: 'public', table: 'bookings', filter: `user_id=eq.${user.id}`,
+        }, () => { void fetchData(); })
+        .on('postgres_changes', {
+          event: '*', schema: 'public', table: 'payments',
+          ...(bookingId ? { filter: `booking_id=eq.${bookingId}` } : {}),
+        }, () => { void fetchData(); })
+        .subscribe();
+    }).catch(() => {
+      if (!disposed) setLoadingBooking(false);
+    });
 
-    // Realtime subscription for booking & payment updates
-    const channel = supabase
-      .channel('dashboard-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => fetchData())
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      disposed = true;
+      if (channel) void supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const steps = useMemo(() => getSteps(activeBooking, payments), [activeBooking, payments]);

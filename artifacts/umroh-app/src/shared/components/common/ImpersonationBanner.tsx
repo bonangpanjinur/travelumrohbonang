@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { AlertTriangle, LogOut } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { useAuth } from "@/shared/hooks/useAuth";
@@ -14,7 +15,15 @@ const STORAGE_KEY = "impersonation_active";
 
 const ImpersonationBanner = () => {
   const { user, signOut } = useAuth();
+  const location = useLocation();
   const [active, setActive] = useState(false);
+
+  const isAuthenticatedShell = [
+    "/dashboard", "/my-bookings", "/booking", "/profile", "/portal-jamaah",
+    "/my-upgrades", "/my-documents", "/agent-portal", "/agent-commissions",
+    "/muthawif", "/refund-request", "/e-ticket", "/branch-dashboard",
+    "/account", "/contract", "/tabungan", "/chat", "/admin",
+  ].some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`));
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -27,7 +36,7 @@ const ImpersonationBanner = () => {
     setActive(sessionStorage.getItem(STORAGE_KEY) === "1");
   }, []);
 
-  if (!active || !user) return null;
+  if (!active || !user || !isAuthenticatedShell) return null;
 
   const handleExit = async () => {
     try {

@@ -228,6 +228,7 @@ const AdminDashboard = () => {
   const [warningDismissed, setWarningDismissed] = useState(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [, forceRender] = useState(0);
+  const canViewFinance = role === "super_admin" || role === "owner" || role === "admin" || role === "finance";
 
   // Live clock
   useEffect(() => {
@@ -246,7 +247,9 @@ const AdminDashboard = () => {
         const [statsResult, recentResult, financeResult] = await Promise.all([
           apiFetch<DashboardStats>("/api/admin/analytics/dashboard-stats").catch(() => null),
           apiFetch<{ data: RecentBooking[] }>("/api/admin/bookings?limit=5").catch(() => ({ data: [] as RecentBooking[] })),
-          apiFetch<FinanceDashboard>("/api/admin/finance/dashboard").catch(() => null),
+          canViewFinance
+            ? apiFetch<FinanceDashboard>("/api/admin/finance/dashboard").catch(() => null)
+            : Promise.resolve(null),
         ]);
         if (statsResult) {
           const { monthlyTrend: trend, ...counts } = statsResult;
@@ -264,11 +267,13 @@ const AdminDashboard = () => {
       setLoading(false);
       if (isManual) setRefreshing(false);
     }
-  }, [role]);
+  }, [role, canViewFinance]);
 
   useEffect(() => {
     fetchAll(false);
-    tickRef.current = setInterval(() => fetchAll(false), AUTO_REFRESH_MS);
+    tickRef.current = setInterval(() => {
+      if (document.visibilityState === "visible") void fetchAll(false);
+    }, AUTO_REFRESH_MS);
     return () => { if (tickRef.current) clearInterval(tickRef.current); };
   }, [fetchAll]);
 

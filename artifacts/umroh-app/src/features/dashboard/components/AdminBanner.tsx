@@ -3,12 +3,13 @@ import { Card, CardContent } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { Crown, ArrowRight, RefreshCw } from "lucide-react";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { canAccessAdminPanel } from "@/features/admin/adminRouteAccess";
 
 const AdminBanner = () => {
-  const { isAdmin, role, refreshRole } = useAuth();
+  const { role, refreshRole } = useAuth();
   const navigate = useNavigate();
 
-  if (!isAdmin) return null;
+  if (!canAccessAdminPanel(role)) return null;
 
   const roleLabel =
     role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : role || "Admin";

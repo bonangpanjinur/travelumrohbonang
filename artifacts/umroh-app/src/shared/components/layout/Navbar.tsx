@@ -18,6 +18,7 @@ import NotificationBell from "@/shared/components/notifications/NotificationBell
 import LanguageSwitcher from "@/shared/components/common/LanguageSwitcher";
 import ThemeToggle from "@/shared/components/common/ThemeToggle";
 import { CurrencySwitcher } from "@/shared/components/common/CurrencySwitcher";
+import { canAccessAdminPanel } from "@/features/admin/adminRouteAccess";
 
 interface NavItem {
   id: string;
@@ -63,6 +64,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAdmin, role, signOut } = useAuth();
+  const canOpenAdminPanel = canAccessAdminPanel(role);
   const { t } = useLanguage();
 
   useEffect(() => {
@@ -347,7 +349,7 @@ const Navbar = () => {
                   </DropdownMenuItem>
                 )}
                 
-                {isAdmin && (
+                {canOpenAdminPanel && (
                   <>
                     <DropdownMenuSeparator />
                     <div className="px-2 py-1.5">
@@ -375,7 +377,8 @@ const Navbar = () => {
               </>
             ) : (
               <Link to="/auth" className="ml-1">
-                <Button className="gradient-gold text-primary font-semibold hover:opacity-90 transition-opacity">
+                <Button className="gradient-gold text-primary font-semibold hover:opacity-90 transition-opacity gap-2">
+                  <User className="w-4 h-4" aria-hidden="true" />
                   {t("nav.login")}
                 </Button>
               </Link>
@@ -461,7 +464,7 @@ const Navbar = () => {
                     </Link>
                   )}
 
-                  {isAdmin && (
+                  {canOpenAdminPanel && (
                     <div className="pt-2 mt-2 border-t border-primary-foreground/5">
                       <p className="px-4 py-2 text-xs text-gold/60 uppercase tracking-wider">{t("nav.admin")}</p>
                       <Link 
@@ -489,7 +492,8 @@ const Navbar = () => {
               ) : (
                 <div className="pt-4 border-t border-primary-foreground/10">
                   <Link to="/auth" onClick={() => setIsOpen(false)}>
-                    <Button className="w-full gradient-gold text-primary font-semibold">
+                    <Button className="w-full gradient-gold text-primary font-semibold gap-2">
+                      <User className="w-4 h-4" aria-hidden="true" />
                       {t("nav.login")}
                     </Button>
                   </Link>

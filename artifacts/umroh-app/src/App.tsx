@@ -217,7 +217,7 @@ const AppContent = () => {
       <GlobalFloatingWidgets />
       <PWAInstallPrompt />
       <Suspense fallback={<div className="flex min-h-[240px] items-center justify-center p-8">
-              <p className="text-sm text-muted-foreground">Memuat halaman admin...</p>
+              <p className="text-sm text-muted-foreground">Memuat halaman...</p>
             </div>}>
       <Routes>
       {/* Public Routes */}

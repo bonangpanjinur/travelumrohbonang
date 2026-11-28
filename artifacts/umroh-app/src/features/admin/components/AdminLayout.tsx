@@ -14,6 +14,30 @@ import { FeatureFlagsProvider, useFeatureFlags } from "@/features/admin/hooks/us
 import { getFeatureForPath } from "@/features/admin/config/featureDefinitions";
 import AdminFloatingChat from "./AdminFloatingChat";
 
+let cachedAdminBranding: BrandingSettings | null = null;
+let brandingRequest: Promise<BrandingSettings> | null = null;
+
+const loadAdminBranding = async (): Promise<BrandingSettings> => {
+  if (cachedAdminBranding) return cachedAdminBranding;
+  if (!brandingRequest) {
+    brandingRequest = apiFetch<{ data: Array<{ key: string; value: unknown }> }>("/api/cms/site-settings")
+      .then((result) => {
+        const brandingSetting = result?.data?.find((s) => s.key === "branding");
+        if (brandingSetting?.value && typeof brandingSetting.value === "object" && !Array.isArray(brandingSetting.value)) {
+          cachedAdminBranding = { ...defaultBranding, ...(brandingSetting.value as object) };
+        } else {
+          cachedAdminBranding = defaultBranding;
+        }
+        return cachedAdminBranding;
+      })
+      .catch((error) => {
+        brandingRequest = null;
+        throw error;
+      });
+  }
+  return brandingRequest;
+};
+
 const FeatureRouteGuard = () => {
   const location = useLocation();
   const { role } = useAuth();
@@ -37,7 +61,7 @@ const AdminLayout = () => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("admin-sidebar-collapsed") === "1";
   });
-  const [branding, setBranding] = useState<BrandingSettings>(defaultBranding);
+  const [branding, setBranding] = useState<BrandingSettings>(cachedAdminBranding ?? defaultBranding);
 
   const toggleSidebarCollapsed = () => {
     setSidebarCollapsed((prev) => {
@@ -48,18 +72,10 @@ const AdminLayout = () => {
   };
 
   useEffect(() => {
-    const fetchBranding = async () => {
-      try {
-        const result = await apiFetch<{ data: Array<{ key: string; value: unknown }> }>("/api/cms/site-settings");
-        const brandingSetting = result?.data?.find((s) => s.key === "branding");
-        if (brandingSetting?.value && typeof brandingSetting.value === "object" && !Array.isArray(brandingSetting.value)) {
-          setBranding({ ...defaultBranding, ...(brandingSetting.value as object) });
-        }
-      } catch (error) {
-        console.error("Error fetching branding:", error);
-      }
-    };
-    fetchBranding();
+    if (cachedAdminBranding) return;
+    loadAdminBranding()
+      .then(setBranding)
+      .catch((error) => console.error("Error fetching branding:", error));
   }, []);
 
   const handleLogout = async () => {

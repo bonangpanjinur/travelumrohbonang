@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { canAccessAdminRoute, getAdminRouteRoles } from "./adminRouteAccess";
+import { canAccessAdminPanel, canAccessAdminRoute, getAdminRouteRoles } from "./adminRouteAccess";
 import { getFeatureForPath } from "./config/featureDefinitions";
 
 describe("admin route access", () => {
   it("allows operational roles on the admin dashboard", () => {
     expect(canAccessAdminRoute("/admin", "finance")).toBe(true);
     expect(canAccessAdminRoute("/admin", "agent")).toBe(true);
+  });
+
+  it("only offers the panel to signed-in operational roles", () => {
+    expect(canAccessAdminPanel(null)).toBe(false);
+    expect(canAccessAdminPanel("user")).toBe(false);
+    expect(canAccessAdminPanel("buyer")).toBe(false);
+    expect(canAccessAdminPanel("staff")).toBe(true);
+    expect(canAccessAdminPanel("finance")).toBe(true);
   });
 
   it("does not allow finance or agent roles on full-admin settings", () => {
